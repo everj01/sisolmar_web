@@ -1,0 +1,1 @@
+<h1>Hola desde Blade para PDF d</h1>
