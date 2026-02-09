@@ -62,6 +62,7 @@ class RoutingController extends Controller
                 'legajos_pdf' => [FileController::class, 'ViewLegajoPdf'],
                 'dashboard' => [FileController::class, 'ViewDashboard'],
                 'gestion_dj' => [FileController::class, 'indexGestionDj'],
+                'reportes' => [ReporteController::class, 'index'],
             ],
         ];
 

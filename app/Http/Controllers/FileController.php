@@ -58,6 +58,11 @@ class FileController extends Controller{
         return FileControl::getPersonalTotal($request);
     }
 
+    public function getPersonalTotalPrueba(Request $request)
+    {
+        return FileControl::getPersonalTotalPrueba($request);
+    }
+
     public function getDocumentosXPersonal($codPersonal){
         $docs_personal = FileControl::getDocsXPersona($codPersonal);
         return response()->json($docs_personal);

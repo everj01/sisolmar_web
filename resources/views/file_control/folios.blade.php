@@ -11,8 +11,12 @@
 <div class="grid lg:grid-cols-2 gap-6 mt-8">
     <!-- Listado de Folios -->
     <div class="card overflow-hidden lg:col-span-8">
-        <div class="card-header">
+        <div class="card-header flex justify-between items-center">
             <h4 class="card-title">Listado de Folios</h4>
+            <button type="button" id="btnGenerarPDF" 
+                class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white">
+                <i class="fa-solid fa-file-pdf"></i> Generar Reporte PDF
+            </button>
         </div>
         <div class="w-full px-5 py-2 flex flex-col">
             <div class="flex justify-center items-center gap-4 mb-2 mt-4">
@@ -43,26 +47,55 @@
                     <label class="ms-1.5" for="radioCert">CERTIFICADO ({{ $certificado }})</label>
                 </div>
             </div>
-            <div class="w-full px-5 py-2 mt-3">
+            <!-- <div class="w-full px-5 py-2 mt-3">
                 <div class="flex justify-between">
                     <input type="text" id="buscar" placeholder="Buscar..."
                     class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
                     
-                    <div x-data="{ soloEliminados: false }" class="flex items-center">
+                    <div x-data="{ soloActivos: true }" class="flex items-center">
                         <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
-                            x-model="soloEliminados">
-                        <label class="ms-1.5" for="chkEliminados">Solo eliminados</label>
+                            x-model="soloActivos">
+                        <label class="ms-1.5" for="chkEliminados">Solo activos</label>
 
                         <div x-effect="
-                            soloEliminados 
-                                ? aplicarFiltroEliminarFolio(0)
-                                : aplicarFiltroEliminarFolio(1);
+                            soloActivos 
+                                ? aplicarFiltroSoloActivos(1)
+                                : aplicarFiltroSoloActivos(0);
                         "></div>
                     </div>
                 </div>
                 
                 <div id="tblFolios" class="w-full flex-grow mt-3"></div>
+            </div> -->
+
+            <div class="w-full px-5 py-2 mt-3">
+                <div class="flex justify-between items-center mb-3">
+                    <input type="text" id="buscar" placeholder="Buscar..."
+                    class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
+                    
+                    <div class="flex items-center gap-3">
+                        <!-- <button type="button" id="btnGenerarPDF" 
+                            class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white">
+                            <i class="fa-solid fa-file-pdf"></i> Generar Reporte PDF
+                        </button> -->
+                        
+                        <div x-data="{ soloActivos: true }" class="flex items-center">
+                            <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
+                                x-model="soloActivos">
+                            <label class="ms-1.5" for="chkEliminados">Solo activos</label>
+
+                            <div x-effect="
+                                soloActivos 
+                                    ? aplicarFiltroSoloActivos(1)
+                                    : aplicarFiltroSoloActivos(0);
+                            "></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="tblFolios" class="w-full flex-grow mt-3"></div>
             </div>
+
         </div>
     </div>
 

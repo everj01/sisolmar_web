@@ -65,7 +65,8 @@
     <!-- Modal del Formulario -->
     <div id="formModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto flex py-10">
         <!-- Contenedor -->
-        <div class="bg-white rounded-lg shadow-lg max-w-2xl w-auto mx-auto my-10 max-h-[70vh] overflow-y-auto">
+        <!-- <div class="bg-white rounded-lg shadow-lg max-w-2xl w-auto mx-auto my-10 max-h-[70vh] overflow-y-auto"> -->
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl mx-auto my-10 max-h-[85vh] overflow-y-auto">
             <form id="formDatos" method="POST" class="p-6 space-y-8">
                 @csrf
 

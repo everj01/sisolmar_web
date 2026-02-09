@@ -95,7 +95,7 @@ return [
             'driver' => 'sqlsrv',
             'host' => env('DB_HOST_PRUEBA1', '192.168.10.20'),
             'port' => env('DB_PORT_PRUEBA1', '1433'),
-            'database' => env('DB_DATABASE_PRUEBA1', 'prueba1'),
+            'database' => env('DB_DATABASE_PRUEBA1', 'reclusol'),
             'username' => env('DB_USERNAME_PRUEBA1', 'sa'),
             'password' => env('DB_PASSWORD_PRUEBA1', ''),
             'charset' => 'utf8',

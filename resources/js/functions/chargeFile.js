@@ -474,6 +474,15 @@ document.querySelectorAll('input[name="tipo_folio"]').forEach(radio => {
 //Tabla de Legajos
 document.addEventListener('DOMContentLoaded', function() {
 
+    const params = new URLSearchParams(window.location.search);
+    const codPersonal = params.get('codPersonal');
+    const nombre = params.get('nombre');
+
+    if (codPersonal) {
+        abrirFoliosDesdeNotificacion(codPersonal, nombre);
+    }
+
+
     document.getElementById('cargos').addEventListener('change', function () {
         getLegajos();
         //COINCIDENCIAS
@@ -497,6 +506,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function abrirFoliosDesdeNotificacion(codPersonal, nombre) {
+
+    // Setear código
+    document.getElementById('codPersonal').value = codPersonal;
+
+    // Cargar folios
+    getDocsObligatorios(codPersonal);
+
+    // Mostrar / ocultar bloques
+    document.getElementById('dataDocs').classList.remove('hidden');
+    document.getElementById('dataDocsLeg').classList.add('hidden');
+    document.getElementById('divCoincidencias').classList.add('hidden');
+
+    // Título genérico (no tienes el nombre aún)
+    updateCardTitle(nombre);
+
+    // Scroll suave
+    setTimeout(() => {
+        document.getElementById('dataDocs')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+}
+
+
+
+
 
 // Función para asignar nombre a la card de documentos
 function updateCardTitle(nombrePersona) {

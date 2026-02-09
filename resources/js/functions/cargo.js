@@ -192,6 +192,13 @@ window.aplicarFiltroEliminarCargo = (op) => {
     
 }
 
+window.aplicarFiltroSoloActivos = (op) => {
+    if(op === 1) {tblCargos.setFilter("habilitado", "=", "1");}else{
+        tblCargos.clearFilter();
+    }
+    
+}
+
 // Función para CANCELAR
 document.getElementById("cancelButton").addEventListener("click", function () {
 

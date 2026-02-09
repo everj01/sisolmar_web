@@ -13,6 +13,16 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+
+        $schedule->command('app:enviar-alertas-caducidad')
+                 ->dailyAt('06:00')
+                 ->withoutOverlapping()
+                 ->onSuccess(function () {
+                     \Log::info('Comando de envío de alertas de caducidad ejecutado exitosamente.');
+                 })
+                 ->onFailure(function () {
+                     \Log::error('Error al ejecutar el comando de envío de alertas de caducidad.');
+                 });
     }
 
     /**

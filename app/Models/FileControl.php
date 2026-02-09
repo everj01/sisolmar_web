@@ -43,6 +43,32 @@ class FileControl extends Model
         ]);
     }
 
+    public static function getPersonalTotalPrueba(Request $request)
+    {
+        $page = $request->get('page', 1);
+        $size = $request->get('size', 50);
+        $search = $request->get('search', null);
+        $tipo_per = $request->get('tipo_per', null);
+        $vigencia = $request->get('vigencia', null);
+        $codSucursal = $request->get('codSucursal', '0');
+
+        // SP de datos
+        $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_PRUEBA ?, ?, ?, ?', [
+            $codSucursal, $search, $tipo_per, $vigencia
+        ]);
+
+        // SP de total
+        $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
+            $codSucursal, $search, $tipo_per, $vigencia
+        ])[0]->total;
+
+        return response()->json([
+            'data' => $data,
+            'last_page' => ceil($total / $size),
+            'total' => (int) $total,
+        ]);
+    }
+
     public static function getDocsXPersona($codPersonal = '1')
     {
         return DB::select('EXEC SW_LISTAR_FOLIOS_X_PERSONAL ?', [$codPersonal]);

@@ -18,6 +18,8 @@ import Waves from 'node-waves'
 import Alpine from 'alpinejs'
 import DataTable from 'vanilla-datatables'
 import Swal from 'sweetalert2'
+import './functions/notifications'
+
 window.Alpine = Alpine
 Alpine.start()
 

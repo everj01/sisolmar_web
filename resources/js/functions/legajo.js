@@ -315,6 +315,16 @@ window.guardarLegajo = function () {
         .map(row => row.codigo); // Suponiendo que 'codigo' es el valor del folio
 
 
+    if (selecFolios.length === 0) {
+        Swal.fire({
+            title: "Sin folios seleccionados",
+            text: "Debe seleccionar al menos un folio para guardar el legajo",
+            icon: "warning",
+            confirmButtonText: "Entendido"
+        });
+        return;
+    }
+
     const dataPost = {
         folios: selecFolios,
         codCliente: valorCliente,

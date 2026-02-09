@@ -2,6 +2,9 @@ import axios from 'axios';
 import {TabulatorFull as Tabulator} from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import Swal from 'sweetalert2';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarFolios();
@@ -15,7 +18,7 @@ const tblFolios = new Tabulator("#tblFolios", {
     height: "100%",
     layout:"fitDataFill",
     responsiveLayout: "collapse",
-    pagination: true,
+    pagination: false,
     paginationSize: 10,
     locale: "es",
     langs: {
@@ -226,6 +229,13 @@ window.aplicarFiltroEliminarFolio = (op) => {
     
 }
 
+window.aplicarFiltroSoloActivos = (op) => {
+    if(op === 1) {tblFolios.setFilter("habilitado", "=", "1");}else{
+        tblFolios.clearFilter();
+    }
+    
+}
+
 // Función para CANCELAR
 document.getElementById("cancelButton").addEventListener("click", function () {
 
@@ -303,24 +313,57 @@ document.getElementById("buscar").addEventListener("keyup", function () {
 });
 
 // Función para actualizar la tabla con los filtros
-function filterTableByTipoFolio() {
+// function filterTableByTipoFolio() {
+//     const folioFiltroSeleccionado = document.querySelector('input[name="folioFiltro"]:checked')?.value;
+//     if (!folioFiltroSeleccionado) {
+//         tblFolios.clearFilter();
+//     } else if (folioFiltroSeleccionado === "TODOS") {
+//         tblFolios.clearFilter("prioridad");
+//         tblFolios.clearFilter("tipoFolio");
+//     } else if (["DOCUMENTO", "FORMATO", "CERTIFICADO"].includes(folioFiltroSeleccionado)) {
+//         tblFolios.setFilter("tipoFolio", "=", folioFiltroSeleccionado);
+//         //tblFolios.clearFilter("prioridad");
+//     } else {
+//         tblFolios.setFilter("prioridad", "=", folioFiltroSeleccionado);
+//         //tblFolios.clearFilter("tipoFolio");
+//     }
+// }
+
+// document.querySelectorAll('input[name="folioFiltro"]').forEach(radio => {
+//     radio.addEventListener('change', filterTableByTipoFolio);
+// });
+
+// Función para actualizar la tabla con TODOS los filtros
+function aplicarTodosFiltros() {
     const folioFiltroSeleccionado = document.querySelector('input[name="folioFiltro"]:checked')?.value;
-    if (!folioFiltroSeleccionado) {
-        tblFolios.clearFilter();
-    } else if (folioFiltroSeleccionado === "TODOS") {
-        tblFolios.clearFilter("prioridad");
-        tblFolios.clearFilter("tipoFolio");
-    } else if (["DOCUMENTO", "FORMATO", "CERTIFICADO"].includes(folioFiltroSeleccionado)) {
-        tblFolios.setFilter("tipoFolio", "=", folioFiltroSeleccionado);
-        //tblFolios.clearFilter("prioridad");
-    } else {
-        tblFolios.setFilter("prioridad", "=", folioFiltroSeleccionado);
-        //tblFolios.clearFilter("tipoFolio");
+    const soloActivosChecked = document.getElementById('chkEliminados')?.checked || false;
+    
+    // Limpiar todos los filtros primero
+    tblFolios.clearFilter();
+    
+    // Aplicar filtro de activos si está marcado
+    if (soloActivosChecked) {
+        tblFolios.addFilter("habilitado", "=", "1");
+    }
+    
+    // Aplicar filtro de tipo/prioridad según selección
+    if (folioFiltroSeleccionado && folioFiltroSeleccionado !== "TODOS") {
+        if (["DOCUMENTO", "FORMATO", "CERTIFICADO"].includes(folioFiltroSeleccionado)) {
+            tblFolios.addFilter("tipoFolio", "=", folioFiltroSeleccionado);
+        } else {
+            tblFolios.addFilter("prioridad", "=", folioFiltroSeleccionado);
+        }
     }
 }
 
+// Reemplazar la función anterior
+window.aplicarFiltroSoloActivos = function(op) {
+    aplicarTodosFiltros();
+}
+
+// Event listener para los radio buttons de filtro
 document.querySelectorAll('input[name="folioFiltro"]').forEach(radio => {
-    radio.addEventListener('change', filterTableByTipoFolio);
+    radio.addEventListener('change', aplicarTodosFiltros);
 });
 
 
@@ -328,6 +371,9 @@ document.querySelectorAll('input[name="folioFiltro"]').forEach(radio => {
 document.getElementById('switchVencimiento').addEventListener('change', function() {
     document.getElementById('periodoDiv').classList.toggle('hidden', !this.checked);
 });
+
+
+
 
 
 //Función para limpia los campos del modal
@@ -401,6 +447,295 @@ document.getElementById('formSaveFolio').addEventListener('submit', function(eve
             console.error('Error al guardar las fechas:', error);
         });
     }
+});
+
+
+//----------------------------------------------------
+// Función para generar el PDF desde los datos de la tabla
+// Función mejorada para generar PDF profesional
+document.getElementById('btnGenerarPDF').addEventListener('click', function() {
+    const todosLosDatos = tblFolios.getData().filter(folio => folio.habilitado == "1");
+    
+    if (todosLosDatos.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin datos',
+            text: 'No hay folios vigentes para generar el reporte'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Generando PDF...',
+        text: 'Por favor espere',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    setTimeout(() => {
+        const doc = new jsPDF();
+        const fechaActual = new Date().toLocaleDateString('es-PE', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        // ============= ENCABEZADO PRINCIPAL =============
+        // Logo o espacio para logo (opcional)
+        doc.setFillColor(41, 128, 185); // Azul corporativo
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        doc.setFontSize(22);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('REPORTE DE FOLIOS VIGENTES', 105, 15, { align: 'center' });
+        
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Fecha de emisión: ${fechaActual}`, 105, 22, { align: 'center' });
+        
+        // Resumen ejecutivo
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Total de folios activos: ${todosLosDatos.length}`, 105, 28, { align: 'center' });
+        
+        doc.setTextColor(0, 0, 0);
+        let yPosition = 42;
+
+        // ============= SECCIÓN 1: CLASIFICACIÓN POR PRIORIDAD =============
+        doc.setFontSize(13);
+        doc.setFont(undefined, 'bold');
+        doc.setFillColor(52, 73, 94); // Azul oscuro
+        doc.rect(10, yPosition, 190, 7, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text('1. CLASIFICACIÓN POR PRIORIDAD', 12, yPosition + 5);
+        doc.setTextColor(0, 0, 0);
+        yPosition += 10;
+
+        const porPrioridad = {
+            'PRINCIPAL': todosLosDatos.filter(f => f.prioridad === 'PRINCIPAL'),
+            'ADICIONAL': todosLosDatos.filter(f => f.prioridad === 'ADICIONAL')
+        };
+
+        Object.keys(porPrioridad).forEach((prioridad, index) => {
+            const folios = porPrioridad[prioridad];
+            
+            if (folios.length > 0) {
+                // Subtítulo más compacto
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.setFillColor(236, 240, 241);
+                doc.rect(10, yPosition, 190, 6, 'F');
+                doc.setTextColor(44, 62, 80);
+                doc.text(`1.${index + 1} ${prioridad}`, 12, yPosition + 4);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(127, 140, 141);
+                doc.text(`(${folios.length} ${folios.length === 1 ? 'folio' : 'folios'})`, 50, yPosition + 4);
+                doc.setTextColor(0, 0, 0);
+                yPosition += 8;
+
+                // Tabla optimizada
+                autoTable(doc, {
+                    startY: yPosition,
+                    head: [['N°', 'Nombre del Folio', 'Tipo', 'Vencimiento']],
+                    body: folios.map((folio, idx) => [
+                        idx + 1,
+                        folio.nombre,
+                        folio.tipoFolio,
+                        folio.periodo || 'Sin vencimiento'
+                    ]),
+                    styles: { 
+                        fontSize: 8,
+                        cellPadding: 2,
+                        lineColor: [189, 195, 199],
+                        lineWidth: 0.1
+                    },
+                    headStyles: { 
+                        fillColor: [149, 165, 166],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        halign: 'center',
+                        fontSize: 9,
+                        cellPadding: 3
+                    },
+                    alternateRowStyles: { 
+                        fillColor: [250, 250, 250]
+                    },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 12 },
+                        1: { cellWidth: 95 },
+                        2: { halign: 'center', cellWidth: 35 },
+                        3: { halign: 'center', cellWidth: 38 }
+                    },
+                    margin: { left: 10, right: 10 },
+                    theme: 'grid'
+                });
+
+                yPosition = doc.lastAutoTable.finalY + 6;
+                
+                // Control de páginas
+                if (yPosition > 260) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+            }
+        });
+
+        // Nueva página para la segunda clasificación
+        if (yPosition > 150) {
+            doc.addPage();
+            yPosition = 20;
+        } else {
+            yPosition += 5;
+        }
+
+        // ============= SECCIÓN 2: CLASIFICACIÓN POR TIPO =============
+        doc.setFontSize(13);
+        doc.setFont(undefined, 'bold');
+        doc.setFillColor(52, 73, 94);
+        doc.rect(10, yPosition, 190, 7, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text('2. CLASIFICACIÓN POR TIPO DE FOLIO', 12, yPosition + 5);
+        doc.setTextColor(0, 0, 0);
+        yPosition += 10;
+
+        const porTipo = {
+            'DOCUMENTO': todosLosDatos.filter(f => f.tipoFolio === 'DOCUMENTO'),
+            'FORMATO': todosLosDatos.filter(f => f.tipoFolio === 'FORMATO'),
+            'CERTIFICADO': todosLosDatos.filter(f => f.tipoFolio === 'CERTIFICADO')
+        };
+
+        // Colores por tipo
+        const coloresTipo = {
+            'DOCUMENTO': [155, 89, 182],
+            'FORMATO': [241, 196, 15],
+            'CERTIFICADO': [52, 152, 219]
+        };
+
+        Object.keys(porTipo).forEach((tipo, index) => {
+            const folios = porTipo[tipo];
+            
+            if (folios.length > 0) {
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.setFillColor(236, 240, 241);
+                doc.rect(10, yPosition, 190, 6, 'F');
+                
+                // Indicador de color por tipo
+                const color = coloresTipo[tipo];
+                doc.setFillColor(color[0], color[1], color[2]);
+                doc.circle(13, yPosition + 3, 1.5, 'F');
+                
+                doc.setTextColor(44, 62, 80);
+                doc.text(`2.${index + 1} ${tipo}`, 17, yPosition + 4);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(127, 140, 141);
+                doc.text(`(${folios.length} ${folios.length === 1 ? 'folio' : 'folios'})`, 55, yPosition + 4);
+                doc.setTextColor(0, 0, 0);
+                yPosition += 8;
+
+                autoTable(doc, {
+                    startY: yPosition,
+                    head: [['N°', 'Nombre del Folio', 'Prioridad', 'Vencimiento']],
+                    body: folios.map((folio, idx) => [
+                        idx + 1,
+                        folio.nombre,
+                        folio.prioridad,
+                        folio.periodo || 'Sin vencimiento'
+                    ]),
+                    styles: { 
+                        fontSize: 8,
+                        cellPadding: 2,
+                        lineColor: [189, 195, 199],
+                        lineWidth: 0.1
+                    },
+                    headStyles: { 
+                        fillColor: [149, 165, 166],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        halign: 'center',
+                        fontSize: 9,
+                        cellPadding: 3
+                    },
+                    alternateRowStyles: { 
+                        fillColor: [250, 250, 250]
+                    },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 12 },
+                        1: { cellWidth: 95 },
+                        2: { halign: 'center', cellWidth: 35 },
+                        3: { halign: 'center', cellWidth: 38 }
+                    },
+                    margin: { left: 10, right: 10 },
+                    theme: 'grid'
+                });
+
+                yPosition = doc.lastAutoTable.finalY + 6;
+                
+                if (yPosition > 260) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+            }
+        });
+
+        // ============= PIE DE PÁGINA EN TODAS LAS PÁGINAS =============
+        const pageCount = doc.internal.getNumberOfPages();
+        const ahora = new Date();
+        const horaGeneracion = ahora.toLocaleTimeString('es-PE', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Línea separadora
+            doc.setDrawColor(189, 195, 199);
+            doc.setLineWidth(0.5);
+            doc.line(10, 282, 200, 282);
+            
+            // Texto del pie
+            doc.setFontSize(7);
+            doc.setTextColor(127, 140, 141);
+            doc.setFont(undefined, 'normal');
+            doc.text(
+                'Sistema de Gestión de Recursos Humanos',
+                10,
+                287
+            );
+            doc.text(
+                `Generado el ${fechaActual} a las ${horaGeneracion}`,
+                105,
+                287,
+                { align: 'center' }
+            );
+            doc.setFont(undefined, 'bold');
+            doc.text(
+                `Página ${i} de ${pageCount}`,
+                200,
+                287,
+                { align: 'right' }
+            );
+        }
+
+        // Abrir en nueva pestaña
+        const pdfBlob = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+        
+        Swal.close();
+        
+        Swal.fire({
+            icon: 'success',
+            title: '¡PDF generado exitosamente!',
+            text: 'El reporte se ha abierto en una nueva pestaña',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }, 500);
 });
 
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DjController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UbicacionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::get('/get-personal', [FileController::class, 'getPersonal']);
 Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
+
+Route::get('/get-personal-total-prueba', [FileController::class, 'getPersonalTotalPrueba']);
 
 Route::get('/get-personal-legajos', [FileController::class, 'getPersonalLegajos']);
 
@@ -109,6 +112,12 @@ Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula'])
 
 
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
+
+// NOTIFICACIONES
+Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer']);
+
+// REPORTE FOLIOS PENDIENTES POR SUCURSAL
+Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
 
 
 

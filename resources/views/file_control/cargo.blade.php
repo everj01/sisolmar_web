@@ -78,15 +78,15 @@
             <div class="flex justify-between">
                 <input type="text" id="buscarCargo" placeholder="Buscar..."
                 class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
-                <div x-data="{ soloEliminados: false }" class="flex items-center">
+                <div x-data="{ soloActivos: true }" class="flex items-center">
                     <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
-                        x-model="soloEliminados">
-                    <label class="ms-1.5" for="chkEliminados">Solo eliminados</label>
+                        x-model="soloActivos">
+                    <label class="ms-1.5" for="chkEliminados">Solo activos</label>
 
                     <div x-effect="
-                        soloEliminados 
-                            ? aplicarFiltroEliminarCargo(0)
-                            : aplicarFiltroEliminarCargo(1);
+                        soloActivos 
+                            ? aplicarFiltroSoloActivos(1)
+                            : aplicarFiltroSoloActivos(0);
                     "></div>
                 </div>
             </div>
