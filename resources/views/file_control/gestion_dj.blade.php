@@ -358,24 +358,48 @@
                                     <label for="grado_instruccion" class="block text-sm font-medium text-gray-700 mb-1">
                                         Grado de Instrucción
                                     </label>
-                                    <input type="text" id="grado_instruccion" name="grado_instruccion" placeholder="Grado de instrucción"
+                                    <select id="grado_instruccion" name="grado_instruccion"
                                         class="w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                                        <option value="">Seleccionar</option>
+
+                                        @foreach ($grados as $grado)
+                                            <option value="{{ $grado->codigo }}">
+                                                {{ $grado->descripcion }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div>
                                     <label for="institucion" class="block text-sm font-medium text-gray-700 mb-1">
                                         Institución
                                     </label>
-                                    <input type="text" id="institucion" name="institucion" placeholder="Nombre de la institución"
+                                    <select id="institucion" name="institucion"
                                         class="w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                                        <option value="">Seleccionar</option>
+
+                                        @foreach ($instituciones as $institucion)
+                                            <option value="{{ $institucion->codigo }}">
+                                                {{ $institucion->descripcion }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div>
                                     <label for="carrera" class="block text-sm font-medium text-gray-700 mb-1">
                                         Carrera
                                     </label>
-                                    <input type="text" id="carrera" name="carrera" placeholder="Carrera profesional"
+                                    <select id="carrera" name="carrera"
                                         class="w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                                        <option value="">Seleccionar</option>
+
+                                        @foreach ($carreras as $carrera)
+                                            <option value="{{ $carrera->codigo }}">
+                                                {{ $carrera->descripcion }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div>

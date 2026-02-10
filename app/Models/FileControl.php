@@ -448,4 +448,26 @@ class FileControl extends Model
             ->where('CODI_PERS', $codigo)
             ->first();
     }
+
+    public static function getGradosInstruccion()
+    {
+        return DB::table('sw_edu_grado_intruccion')
+            ->where('habilitado', 1)
+            ->get();
+    }
+
+    public static function getCarreras()
+    {
+        return DB::table('sw_edu_carrera')
+            ->where('habilitado', 1)
+            ->get();
+    }
+
+    public static function getInstituciones()
+    {
+        return DB::table('sw_edu_institucion')
+            ->where('habilitado', 1)
+            ->get();
+    }
+
 }

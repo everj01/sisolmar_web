@@ -268,6 +268,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById("celular").value = data.celular ?? '';
             document.getElementById("correo").value = data.correo ?? '';
             document.getElementById("grado_instruccion").value = data.grado_instruccion ?? '';
+
             document.getElementById("curso_sucamec").value = (data.sucamec && data.sucamec.toUpperCase() === "SI") ? "SI" : "NO";
 
             const inputLicencia = document.getElementById("licencia_arma");

@@ -28,9 +28,11 @@ class FileController extends Controller{
 
     public function indexGestionDj()
     {
-        //$personal = FileControl::getPersonal();
+        $grados = FileControl::getGradosInstruccion();
+        $carreras = FileControl::getCarreras();
+        $instituciones = FileControl::getInstituciones();
 
-        return view('file_control.gestion_dj');
+        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones'));
     }
 
     public function getCargosXCliente(Request $request){
