@@ -92,6 +92,24 @@
             </div>
 
             <div id="tblCargos" class="w-full mt-8"></div>
+            <div class="flex items-center gap-2">
+                <label for="page-size" class="text-sm text-gray-600">
+                    Mostrar
+                </label>
+
+                <select id="page-size"
+                     class="w-20 px-3 py-1.5 pr-8 text-sm border border-gray-300 rounded-lg 
+                                    focus:ring-primary focus:border-primary bg-white
+                                    bg-none appearance-auto">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+
+                <span class="text-sm text-gray-600">registros</span>
+            </div>
         </div>
     </div>
     

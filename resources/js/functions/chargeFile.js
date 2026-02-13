@@ -6,6 +6,16 @@ import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 
 getPersonal();
 window.archivosSeleccionados = [];
+let pageSizePersonas = 10;
+
+document.getElementById("page-size-personas")
+    .addEventListener("change", function () {
+
+        pageSizePersonas = parseInt(this.value);
+        tblPersonas.setPageSize(pageSizePersonas);
+
+        reloadTabla();
+});
 
 const tblPersonas = new Tabulator("#tblPersonas", {
     height: "100%",
@@ -13,12 +23,12 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     responsiveLayout: "collapse",
 
     ajaxURL: `${VITE_URL_APP}/api/get-personal-total`,
-    ajaxParams: { page: 1, size: 10 },
+    ajaxParams: { page: 1, size: pageSizePersonas },
     ajaxConfig: "GET",
 
     pagination: true,
     paginationMode: "remote",
-    paginationSize: 10,
+    paginationSize: pageSizePersonas,
 
     paginationDataSent: {
         page: "page",
@@ -107,7 +117,7 @@ function reloadTabla() {
   
     tblPersonas.setData(`${VITE_URL_APP}/api/get-personal-total`, {
         page: 1,
-        size: 10,
+        size: pageSizePersonas,
         search: search,
         codSucursal: codSucursal,
         tipo_per: tipo_per,

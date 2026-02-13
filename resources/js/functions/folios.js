@@ -18,7 +18,7 @@ const tblFolios = new Tabulator("#tblFolios", {
     height: "100%",
     layout:"fitDataFill",
     responsiveLayout: "collapse",
-    pagination: false,
+    pagination: true,
     paginationSize: 10,
     locale: "es",
     langs: {
@@ -235,6 +235,11 @@ window.aplicarFiltroSoloActivos = (op) => {
     }
     
 }
+
+document.getElementById("page-size").addEventListener("change", function () {
+    const size = parseInt(this.value);
+    tblFolios.setPageSize(size);
+});
 
 // Función para CANCELAR
 document.getElementById("cancelButton").addEventListener("click", function () {

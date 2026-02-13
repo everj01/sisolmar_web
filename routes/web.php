@@ -71,7 +71,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/login',[LoginController::class, 'index'])->name('login');
     Route::post('/login/validar', [LoginController::class, 'validar']);
 
-    Route::group(['prefix' => '/', 'where' => ['first' => '^(?!api).*']], function () {
+    Route::group(['prefix' => '/', 'where' => ['first' => '^(?!api|\.well-known).*']], function () {
         Route::get('', [RoutingController::class, 'index'])->name('root');
         Route::get('/home', fn()=>view('index'))->name('home');
         Route::get('{first}/{second}/{third}', [RoutingController::class, 'thirdLevel'])->name('third');

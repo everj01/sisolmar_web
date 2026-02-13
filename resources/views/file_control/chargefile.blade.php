@@ -103,10 +103,43 @@
 
         <div class="w-full px-5 py-2 mt-3">
             <div id="tblPersonas" class="w-full mb-5"></div>
+
             <div class="flex justify-between items-center mb-2">
+
+                <div class="flex items-center gap-3">
+                    
+
+                    <div class="flex items-center gap-2">
+                        <label for="page-size-personas" class="text-sm text-gray-600">
+                            Mostrar
+                        </label>
+
+                        <select id="page-size-personas"
+                            class="w-20 px-3 py-1.5 pr-8 text-sm border border-gray-300 rounded-lg 
+                                    focus:ring-primary focus:border-primary bg-white
+                                    bg-none appearance-auto">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+
+                        <span class="text-sm text-gray-600">registros</span>
+                    </div>
+
+                    <div id="tablaInfo" class="text-sm text-gray-700">Cargando...</div>
+
+                </div>
+
+                <div id="tablaPaginacion"></div>
+
+            </div>
+
+            
+            <!-- <div class="flex justify-between items-center mb-2">
                 <div id="tablaInfo" class="text-sm text-gray-700">Cargando...</div>
                 <div id="tablaPaginacion"></div>
-            </div>
+            </div> -->
         </div>
 
     </div>

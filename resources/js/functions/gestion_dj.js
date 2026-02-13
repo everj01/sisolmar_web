@@ -499,6 +499,11 @@ document.addEventListener('DOMContentLoaded', function () {
         generarDeclaracionJuradaPDF();
     });
 
+    document.getElementById("page-size").addEventListener("change", function () {
+        const size = parseInt(this.value);
+        tblPersonas.setPageSize(size);
+    });
+
 
     async function generarDeclaracionJuradaPDF() {
         const { jsPDF } = window.jspdf

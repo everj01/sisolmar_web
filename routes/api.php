@@ -114,7 +114,7 @@ Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula'])
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
 
 // NOTIFICACIONES
-Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer']);
+Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer'])->name('notificaciones.foliosPorVencer');
 
 // REPORTE FOLIOS PENDIENTES POR SUCURSAL
 Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);

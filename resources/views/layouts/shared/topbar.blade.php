@@ -115,11 +115,19 @@
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
                             @csrf
                         </form>
+
                         <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100"
-                            href="#" onclick="document.getElementById('logout-form').submit();">
+                        href="#"
+                        onclick="sessionStorage.removeItem('folioToastShown'); document.getElementById('logout-form').submit();">
                             <i class="ti-power-off text-primary"></i>
                             Cerrar Sesión
                         </a>
+
+                        <!-- <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100"
+                            href="#" onclick="document.getElementById('logout-form').submit();">
+                            <i class="ti-power-off text-primary"></i>
+                            Cerrar Sesión
+                        </a> -->
                     </div>
                 </div>
             </div>

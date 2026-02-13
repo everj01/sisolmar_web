@@ -185,6 +185,11 @@ const tblCargos = new Tabulator("#tblCargos", {
     }
 });
 
+document.getElementById("page-size").addEventListener("change", function () {
+    const size = parseInt(this.value);
+    tblCargos.setPageSize(size);
+});
+
 window.aplicarFiltroEliminarCargo = (op) => {
     if(op === 0) {tblCargos.setFilter("habilitado", "=", "0");}else{
         tblCargos.clearFilter();
