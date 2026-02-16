@@ -64,9 +64,6 @@ Route::get('/test-email-caducidad', function () {
     return 'Correo enviado (si no hubo error)';
 });
 
-
-
-
 Route::middleware(['auth'])->group(function () {
     Route::get('/login',[LoginController::class, 'index'])->name('login');
     Route::post('/login/validar', [LoginController::class, 'validar']);

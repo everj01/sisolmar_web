@@ -154,10 +154,6 @@
 
 </div>
 
-
-
-
-
 @endsection
 
 @vite(['resources/js/functions/reportes.js'])
