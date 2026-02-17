@@ -22,8 +22,19 @@ class AlertaCaducidadMail extends Mailable
 
     public function build()
     {
-        return $this->subject('⚠️ Documento próximo a vencer')
-                    ->view('emails.alerta-caducidad')
-                    ->with($this->data);
+        return $this->subject('Reporte de documentos por vencer')
+            ->view('emails.alerta-caducidad')
+            ->attach(public_path('pdfs/folios_pendientes.pdf'), [
+                'as' => 'reporte_documentos_pendientes.pdf',
+                'mime' => 'application/pdf',
+            ]);
     }
+
+
+    // public function build()
+    // {
+    //     return $this->subject('⚠️ Documento próximo a vencer')
+    //                 ->view('emails.alerta-caducidad')
+    //                 ->with($this->data);
+    // }
 }

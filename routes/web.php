@@ -39,30 +39,79 @@ Route::get('/preview-email-caducidad', function () {
     ]);
 });
 
+// Route::get('/test-email-caducidad', function () {
+
+//     Mail::to('gilmertiradoam.27@gmail.com')
+//         ->send(new AlertaCaducidadMail([
+//             'nombre_personal' => 'Juan Pérez',
+//             'nombre_empresa'  => 'SISOLMAR',
+//             'documentos' => [
+//                 [
+//                     'nombre' => 'Certificado Médico',
+//                     'tipo' => 'PRINCIPAL',
+//                     'fecha_caducidad' => '05/02/2026',
+//                     'dias_restantes' => 5
+//                 ],
+//                 [
+//                     'nombre' => 'Antecedentes Policiales',
+//                     'tipo' => 'ADICIONAL',
+//                     'fecha_caducidad' => '10/02/2026',
+//                     'dias_restantes' => 10
+//                 ],
+//             ]
+//         ]));
+
+//     return 'Correo enviado (si no hubo error)';
+// });
+
+// Route::get('/test-email-caducidad', function () {
+
+//     Mail::to('webmaster@gruposolmar.com.pe')
+//         ->send(new AlertaCaducidadMail([
+//             'nombre_empresa'  => 'SISOLMAR',
+//             'personas' => [
+//                 [
+//                     'nombre_personal' => 'Juan Pérez',
+//                     'documentos' => [
+//                         [
+//                             'nombre' => 'Certificado Médico',
+//                             'fecha_caducidad' => '05/02/2026',
+//                             'dias_restantes' => 5
+//                         ],
+//                         [
+//                             'nombre' => 'Antecedentes Policiales',
+//                             'fecha_caducidad' => '10/02/2026',
+//                             'dias_restantes' => 10
+//                         ],
+//                     ]
+//                 ],
+//                 [
+//                     'nombre_personal' => 'María López',
+//                     'documentos' => [
+//                         [
+//                             'nombre' => 'Licencia de Conducir',
+//                             'fecha_caducidad' => '03/02/2026',
+//                             'dias_restantes' => 3
+//                         ],
+//                     ]
+//                 ],
+//             ]
+//         ]));
+
+//     return 'Correo enviado (si no hubo error)';
+// });
+
 Route::get('/test-email-caducidad', function () {
 
-    Mail::to('gilmertiradoam.27@gmail.com')
+    Mail::to('webmaster@gruposolmar.com.pe')
         ->send(new AlertaCaducidadMail([
-            'nombre_personal' => 'Juan Pérez',
-            'nombre_empresa'  => 'SISOLMAR',
-            'documentos' => [
-                [
-                    'nombre' => 'Certificado Médico',
-                    'tipo' => 'PRINCIPAL',
-                    'fecha_caducidad' => '05/02/2026',
-                    'dias_restantes' => 5
-                ],
-                [
-                    'nombre' => 'Antecedentes Policiales',
-                    'tipo' => 'ADICIONAL',
-                    'fecha_caducidad' => '10/02/2026',
-                    'dias_restantes' => 10
-                ],
-            ]
+            'nombre_empresa'  => 'SISOLMAR'
         ]));
 
     return 'Correo enviado (si no hubo error)';
 });
+
+
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/login',[LoginController::class, 'index'])->name('login');

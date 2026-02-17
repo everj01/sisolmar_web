@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <div class="card custom-card">
+    <!-- <div class="card custom-card">
         <div class="p-4 md:p-5">
             <h3 class="text-lg font-bold text-default-800">
                 Legajos por cliente - cargo
@@ -66,7 +66,7 @@
                 <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
             </a>
         </div>
-    </div>
+    </div> -->
 
 </div>
 

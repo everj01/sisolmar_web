@@ -13,10 +13,10 @@
     <div class="card overflow-hidden lg:col-span-8">
         <div class="card-header flex justify-between items-center">
             <h4 class="card-title">Listado de Folios</h4>
-            <button type="button" id="btnGenerarPDF" 
+            <!-- <button type="button" id="btnGenerarPDF" 
                 class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white">
                 <i class="fa-solid fa-file-pdf"></i> Generar Reporte PDF
-            </button>
+            </button> -->
         </div>
         <div class="w-full px-5 py-2 flex flex-col">
             <div class="flex justify-center items-center gap-4 mb-2 mt-4">
