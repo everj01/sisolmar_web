@@ -611,6 +611,12 @@ window.restaurarFormCurso = () => {
     const btn = document.getElementById('btnGestion');
     const btnEdit = document.getElementById('btnGestionEditar');
     const title = document.getElementById('txtTitleFile');
+    const btnDownload = document.getElementById('btnDownloadPlantilla');
+
+    if (btnDownload) {
+        btnDownload.classList.add('hidden');
+        btnDownload.href = '#';
+    }
 
     mensaje.textContent = 'Nuevo';
     title.textContent = 'Actualizar plantilla';

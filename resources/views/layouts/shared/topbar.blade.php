@@ -1,5 +1,5 @@
 <!-- Topbar Start -->
-<header class="app-header sticky top-0 z-50 min-h-topbar flex items-center bg-default-100/5 backdrop-blur-lg border-b border-gray-300/50">
+<header class="app-header sticky top-0 z-50 min-h-topbar flex items-center bg-default-100/5 dark:bg-slate-900/95 backdrop-blur-lg transition-colors duration-300">
     <div class="container flex items-center justify-between gap-4 mx-0 py-0">
         <div class="flex items-center gap-5">
             <!-- Botón escritorio -->
@@ -90,6 +90,17 @@
                     <span class="flex items-center justify-center size-6">
                         <i class="i-ph-arrows-out-duotone text-2xl flex group-[-fullscreen]:hidden"></i>
                         <i class="i-ph-arrows-in-duotone text-2xl hidden group-[-fullscreen]:flex"></i>
+                    </span>
+                </button>
+            <!-- Theme Toggle Button -->
+            <div class="flex">
+                <button id="theme-toggle" type="button"
+                    class="p-2 rounded-full bg-white dark:bg-slate-800 border border-default-200 dark:border-slate-700 hover:bg-primary/15 dark:hover:bg-slate-700 transition-all"
+                    title="Cambiar tema">
+                    <span class="sr-only">Toggle theme</span>
+                    <span class="flex items-center justify-center size-6">
+                        <i id="theme-icon-light" class="i-ph-sun-duotone text-2xl text-amber-500"></i>
+                        <i id="theme-icon-dark" class="i-ph-moon-duotone text-2xl text-slate-300 hidden"></i>
                     </span>
                 </button>
             </div>

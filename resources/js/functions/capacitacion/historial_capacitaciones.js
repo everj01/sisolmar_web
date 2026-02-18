@@ -281,7 +281,7 @@ function mostrarModalHistorial(nombre, solicitudes) {
  */
 function configurarEventos() {
     // Buscador local (filtra sobre los datos ya cargados)
-    const inputBuscar = document.getElementById('buscarPersonal');
+    const inputBuscar = document.getElementById('txtBusqueda');
     if (inputBuscar) {
         inputBuscar.addEventListener('keyup', (e) => {
             const term = e.target.value.toLowerCase().trim();

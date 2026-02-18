@@ -1,6 +1,6 @@
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import {TabulatorFull as Tabulator} from 'tabulator-tables';
+import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 
 document.addEventListener('DOMContentLoaded', function () {

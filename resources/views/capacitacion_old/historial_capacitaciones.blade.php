@@ -8,7 +8,7 @@
         <h4 class="card-title">Historial de capacitaciones del personal</h4>
     </div>
     <div class="card-body">
-        <div class="mb-5 flex flex-wrap items-center gap-4">
+        <div class="mb-5 flex items-center gap-4">
              <div class="w-full max-w-sm relative">
                 <label for="txtBusqueda" class="sr-only">Buscar</label>
                 <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
@@ -17,12 +17,6 @@
                 <input type="text" id="txtBusqueda"
                     class="block w-full p-2.5 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Buscar por DNI o Nombres..." autofocus>
-            </div>
-
-            <div class="w-full max-w-xs">
-                <select id="filtroSucursal" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    <option value="">Todas las sucursales</option>
-                </select>
             </div>
             
              <div class="flex items-center gap-2">

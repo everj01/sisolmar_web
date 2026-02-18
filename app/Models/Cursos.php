@@ -24,6 +24,8 @@ class Cursos extends Model
         'tipo_curso',
         'area',
         'periodicidad',
+        'es_periodico',
+        'frecuencia',
     ];
 
     public $timestamps = false;

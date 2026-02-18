@@ -4,17 +4,14 @@ const colors = require('tailwindcss/colors')
 const { iconsPlugin, getIconCollections } = require("@egoist/tailwindcss-icons")
 
 export default {
+  // Dark Mode: activar con clase 'dark' en <html>
+  darkMode: 'class',
+  
   content: [
     "./resources/**/*.blade.php",
-    //"./resources/**/*.js",
     'node_modules/preline/dist/*.js',
     'node_modules/preline/dist/*.js',
   ],
-  /*
-  safelist: [
-    '-translate-x-full',
-    'translate-x-0',
-  ],*/
   theme: {
 
     container: {
@@ -33,9 +30,6 @@ export default {
     },
 
     extend: {
-      translate: {
-        'desktop': '0',
-      },
       colors: {
         primary: {
           "DEFAULT": "#242746",
@@ -65,7 +59,7 @@ export default {
       spacing: {
         15: '60px',
         18: '72px',
-        'sidenav': '240px',
+        'sidenav': '280px',
         'topbar': '80px',
       },
 

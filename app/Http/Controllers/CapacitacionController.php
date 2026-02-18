@@ -134,8 +134,8 @@ class CapacitacionController extends Controller
                     DB::table('sw_curso_sucursales')->insert([
                         'curso_codigo' => $curso->codigo,
                         'sucursal' => $sucursal,
-                        'created_at' => now(),
-                        'updated_at' => now()
+                        'created_at' => date('Y-m-d\TH:i:s.000'),
+                        'updated_at' => date('Y-m-d\TH:i:s.000')
                     ]);
                 }
             }
@@ -307,8 +307,8 @@ class CapacitacionController extends Controller
                     DB::table('sw_curso_sucursales')->insert([
                         'curso_codigo' => $curso->codigo,
                         'sucursal' => $sucursal,
-                        'created_at' => now(),
-                        'updated_at' => now()
+                        'created_at' => date('Y-m-d\TH:i:s.000'),
+                        'updated_at' => date('Y-m-d\TH:i:s.000')
                     ]);
                 }
             }
@@ -1187,11 +1187,6 @@ class CapacitacionController extends Controller
     public function vistaHistorialCapacitaciones()
     {
         return view('capacitacion.historial_capacitaciones');
-    }
-
-    public function vistaGestionCursos()
-    {
-        return view('capacitacion.gestion_cursos');
     }
 
     /**

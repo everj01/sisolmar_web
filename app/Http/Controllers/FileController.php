@@ -8,13 +8,17 @@ use Barryvdh\Snappy\Facades\SnappyPdf;
 use DB;
 use Illuminate\Http\Request;
 use App\Models\FileControl;
+use App\Models\Matricula;
+use App\Models\Cargo;
+use App\Models\Personal;
+use App\Models\Folio;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 use ZipArchive;
+use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller{
     public function index(){
@@ -51,18 +55,95 @@ class FileController extends Controller{
     }
 
     public function getPersonal(Request $request){
-        $personal = FileControl::getPersonal();
-        return response()->json($personal);
-    }
+        try {
+            // Usar el stored procedure original que ya tiene la lógica correcta
+            $allPersonal = FileControl::getPersonal();
+            
+            $cursoId = $request->input('cursoId');
 
-    public function getPersonalTotal(Request $request)
-    {
-        return FileControl::getPersonalTotal($request);
-    }
+            // MODO: Paginación LOCAL vs REMOTA
+            // Si el cliente pide "pagination=off", devolvemos TODO el array plano.
+            $paginationMode = $request->input('pagination');
 
-    public function getPersonalTotalPrueba(Request $request)
-    {
-        return FileControl::getPersonalTotalPrueba($request);
+            if ($paginationMode === 'off') {
+                 // Si se especificó un curso, verificar quién ya está matriculado (Lógica compartida)
+                if ($cursoId) {
+                    if (!is_numeric($cursoId)) throw new \Exception("El ID del curso no es válido.");
+
+                    $matriculados = Matricula::where('cod_curso', $cursoId)
+                        ->pluck('cod_personal')
+                        ->toArray();
+                    
+                    $allPersonal = array_map(function($persona) use ($matriculados) {
+                        $persona->matriculado = in_array($persona->CODI_PERS, $matriculados);
+                        return $persona;
+                    }, $allPersonal);
+                }
+
+                return response()->json(array_values($allPersonal));
+            }
+            
+            // --- LOGICA ANTIGUA (Paginación Remota) SOLO SI NO ES LOCAL ---
+            $page = (int) $request->input('page', 1);
+            $size = (int) $request->input('size', 50);
+            
+            // Filtrar por búsqueda si existe (paginación remota con filtro)
+            $search = $request->input('filter', '');
+            if (!empty($search)) {
+                $searchLower = strtolower($search);
+                $allPersonal = array_filter($allPersonal, function($persona) use ($searchLower) {
+                    $nombre = strtolower($persona->personal ?? '');
+                    $doc = strtolower($persona->nroDoc ?? '');
+                    return str_contains($nombre, $searchLower) || str_contains($doc, $searchLower);
+                });
+                $allPersonal = array_values($allPersonal); // Reindexar
+            }
+            
+            $total = count($allPersonal);
+            
+            // Aplicar paginación en PHP
+            $offset = ($page - 1) * $size;
+            $personalPaginado = array_slice($allPersonal, $offset, $size);
+            
+            // Si se especificó un curso, verificar quién ya está matriculado
+            if ($cursoId) {
+                // Validación manual para evitar que falle el validate() con un 422 JSON que rompa Tabulator
+                // O usamos un try-catch anidado, pero el try general ya lo cubre.
+                if (!is_numeric($cursoId)) {
+                     throw new \Exception("El ID del curso no es válido.");
+                }
+
+                $matriculados = Matricula::where('cod_curso', $cursoId)
+                    ->pluck('cod_personal')
+                    ->toArray();
+                
+                // Agregar campo 'matriculado' a cada registro
+                $personalPaginado = array_map(function($persona) use ($matriculados) {
+                    $persona->matriculado = in_array($persona->CODI_PERS, $matriculados);
+                    return $persona;
+                }, $personalPaginado);
+            }
+            
+            // Formato de respuesta compatible con Tabulator paginación remota
+            return response()->json([
+                'data' => $personalPaginado,
+                'last_page' => (int) ceil($total / $size),
+                'total' => $total,
+                'status' => 'success'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Error en FileController@getPersonal: " . $e->getMessage());
+            
+            // Retornar estructura válida para Tabulator pero vacía y con error
+            return response()->json([
+                'data' => [],
+                'last_page' => 1,
+                'total' => 0,
+                'status' => 'error',
+                'error_message' => $e->getMessage()
+            ]);
+        }
     }
 
     public function getDocumentosXPersonal($codPersonal){
@@ -451,30 +532,14 @@ class FileController extends Controller{
 
     public function ViewCargo()
     {
-        return view('file_control.cargo');
-    }
-
-    public function getCargoCounters()
-    {
-        $todos = \DB::table('sw_cargos')
-                    ->where('habilitado', 1)
-                    ->count();
-
-        $operativo = \DB::table('sw_cargos')
-                    ->where('cod_tipo', 1)
-                    ->where('habilitado', 1)
-                    ->count();
-
-        $administrativo = \DB::table('sw_cargos')
-                    ->where('cod_tipo', 2)
-                    ->where('habilitado', 1)
-                    ->count();
-
-        return response()->json([
-            'todos' => $todos,
-            'operativo' => $operativo,
-            'administrativo' => $administrativo
-        ]);
+        // MIGRACIÓN A ELOQUENT: Cambié DB::table() por modelo Cargo
+        // Uso de scopes (habilitado, operativo, administrativo) para código más limpio y seguro
+        // Esto previene queries crudas que pueden ser vulnerables a SQL injection
+        $todos = Cargo::habilitado()->count();
+        $operativo = Cargo::operativo()->habilitado()->count();
+        $administrativo = Cargo::administrativo()->habilitado()->count();
+        
+        return view('file_control.cargo',compact('todos', 'operativo', 'administrativo'));
     }
 
     public function ViewLegajo()
@@ -488,28 +553,25 @@ class FileController extends Controller{
     public function ViewFolios()
     {
         $periodos = FileControl::getPeriodos();
-        $todos = \DB::table('sw_folios')
-                    ->where('habilitado', 1)
-                    ->count();
-        $principal = \DB::table('sw_folios')
+        
+        // MIGRACIÓN A ELOQUENT: Reemplacé todas las queries DB::table('sw_folios') por modelo Folio
+        // Beneficios: type safety, prepared statements automáticos, código más mantenible
+        // Uso scope habilitado() para evitar repetir where('habilitado', 1) en cada query
+        $todos = Folio::habilitado()->count();
+        $principal = Folio::habilitado()
                     ->where('obligatorio', 1)
-                    ->where('habilitado', 1)
                     ->count();
-        $adicional = \DB::table('sw_folios')
+        $adicional = Folio::habilitado()
                     ->where('obligatorio', 0)
-                    ->where('habilitado', 1)
                     ->count();
-        $documento = \DB::table('sw_folios')
+        $documento = Folio::habilitado()
                     ->where('tipo', 1)
-                    ->where('habilitado', 1)
                     ->count();
-        $formato = \DB::table('sw_folios')
+        $formato = Folio::habilitado()
                     ->where('tipo', 2)
-                    ->where('habilitado', 1)
                     ->count();
-        $certificado = \DB::table('sw_folios')
+        $certificado = Folio::habilitado()
                     ->where('tipo', 3)
-                    ->where('habilitado', 1)
                     ->count();
 
         return view('file_control.folios', compact('periodos', 'todos', 'principal', 'adicional', 'documento', 'formato', 'certificado'));

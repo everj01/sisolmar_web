@@ -20,6 +20,8 @@ class CursoProgramacion extends Model
         'cod_cursos',
         'fecha_inicio',
         'fecha_final',
+        'periodo',
+        'tipo',
         'creado_por',
         'fecha_creacion',
         'modificado_por',

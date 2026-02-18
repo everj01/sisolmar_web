@@ -28,6 +28,9 @@ class DjController extends Controller
 
         $saved = $djService->guardarDeclaracionJurada($request->validated());
 
-        
+        return response()->json([
+            'message' => 'Declaración Jurada guardada correctamente',
+            'data' => $saved
+        ], 200);
     }
 }

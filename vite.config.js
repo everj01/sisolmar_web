@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 
 export default defineConfig({
-    base: '/apps/sisolmarweb/',
+    base: '/',
     plugins: [
         laravel({
             input: [
@@ -17,9 +17,9 @@ export default defineConfig({
                 'node_modules/quill/dist/quill.core.css',
                 'node_modules/quill/dist/quill.bubble.css',
                 'node_modules/quill/dist/quill.snow.css',
-                'node_modules/tabulator-tables/dist/css/tabulator.min.css', // ✅ Tabulator CSS
-                'node_modules/tabulator-tables/dist/js/tabulator.min.js',   // ✅ Tabulator JS
-                'node_modules/axios/dist/axios.min.js', // ✅ Axios global
+                'node_modules/tabulator-tables/dist/css/tabulator.min.css', // Tabulator CSS
+                'node_modules/tabulator-tables/dist/js/tabulator.min.js',   // Tabulator JS
+                'node_modules/axios/dist/axios.min.js', // Axios global
                 "node_modules/sweetalert2/dist/sweetalert2.min.css",
                 "node_modules/sweetalert2/dist/sweetalert2.js",
                 "node_modules/boxicons/dist/boxicons.js",
@@ -48,7 +48,10 @@ export default defineConfig({
                 'resources/js/functions/search_legajos.js',
                 /* CAPACITACION */
                 'resources/js/functions/capacitacion/gestion_cursos.js',
-                'resources/js/functions/capacitacion/gestion_programacion.js',
+                // 'resources/js/functions/capacitacion/gestion_programacion.js', // Archivo no existe
+                // 'resources/js/functions/capacitacion/gestion_matricula.js', // Archivo no existe
+                'resources/js/functions/capacitacion/consulta_matriculas.js',
+                'resources/js/functions/capacitacion/historial_capacitaciones.js',
             ],
             refresh: true,
         }),
