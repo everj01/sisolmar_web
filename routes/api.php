@@ -77,6 +77,10 @@ Route::get('/get-cargo/{codigo}', [FileController::class, 'getCargosXCodigo']);
 Route::post('/delete-notif', [NotificacionController::class, 'deleteNotificacion']);
 Route::post('/save-solicitud', [FileController::class, 'saveSolicitud']);
 
+// Rutas para notificaciones de matrículas
+Route::get('/notificaciones-matriculas', [NotificacionController::class, 'obtenerNotificacionesMatriculas']);
+Route::post('/notificaciones-matriculas/{codigo}/leer', [NotificacionController::class, 'marcarNotificacionLeida']);
+Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
 
 //CAPACITACION
 // Route::get('/get-cursos', [CapacitacionController::class, 'index']);
@@ -98,6 +102,12 @@ Route::patch('/programaciones/{codigo}/habilitado', [CapacitacionController::cla
 Route::get('/get-capacitacion-tipo-cursos', [CapacitacionController::class, 'getTipoCursos']);
 Route::get('/get-capacitacion-areas', [CapacitacionController::class, 'getAreas']);
 
+// Rutas de consulta de capacitación
+Route::get('/get-matriculas-curso/{cursoId}', [CapacitacionController::class, 'getMatriculasPorCurso']);
+Route::get('/get-matriculas-migra-personal/{cursoId}', [CapacitacionController::class, 'getMatriculasMigraPersonal']);
+Route::get('/get-historial-capacitaciones/{personalId}', [CapacitacionController::class, 'getHistorialCapacitaciones']);
+Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'buscarPersonalCapacitacion']);
+Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 

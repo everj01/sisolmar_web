@@ -1,10 +1,10 @@
 <!-- Topbar Start -->
 <header class="app-header sticky top-0 z-50 min-h-topbar flex items-center bg-default-100/5 backdrop-blur-lg border-b border-gray-300/50">
-    <div class="container flex items-center justify-between gap-4">
+    <div class="container flex items-center justify-between gap-4 mx-0 py-0">
         <div class="flex items-center gap-5">
             <!-- Botón escritorio -->
             <div class="lg:flex hidden">
-                <button id="desktop-toggle-sidebar" class="flex items-center ...">
+                <button id="desktop-toggle-sidebar" >
                     <i class="i-ph-list-duotone text-2xl"></i>
                 </button>
             </div>
@@ -19,9 +19,7 @@
             </div>
 
             <!-- Topbar Brand Logo -->
-            <a href="{{ route('any', 'index')}}" class="md:hidden flex">
-                <img src="/images/logo-sm.png" class="h-8" alt="Small logo">
-            </a>
+            
 
             <!-- Topbar Search -->
             <!-- <div class="md:flex hidden items-center relative">

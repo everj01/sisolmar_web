@@ -1,22 +1,12 @@
 <?php
 
-use App\Http\Controllers\ReporteController;
 use App\Mail\AlertaCaducidadMail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoutingController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\CapacitacionController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
 
 Route::get('/preview-email-caducidad', function () {
     return new AlertaCaducidadMail([
@@ -38,68 +28,6 @@ Route::get('/preview-email-caducidad', function () {
         ]
     ]);
 });
-
-// Route::get('/test-email-caducidad', function () {
-
-//     Mail::to('gilmertiradoam.27@gmail.com')
-//         ->send(new AlertaCaducidadMail([
-//             'nombre_personal' => 'Juan Pérez',
-//             'nombre_empresa'  => 'SISOLMAR',
-//             'documentos' => [
-//                 [
-//                     'nombre' => 'Certificado Médico',
-//                     'tipo' => 'PRINCIPAL',
-//                     'fecha_caducidad' => '05/02/2026',
-//                     'dias_restantes' => 5
-//                 ],
-//                 [
-//                     'nombre' => 'Antecedentes Policiales',
-//                     'tipo' => 'ADICIONAL',
-//                     'fecha_caducidad' => '10/02/2026',
-//                     'dias_restantes' => 10
-//                 ],
-//             ]
-//         ]));
-
-//     return 'Correo enviado (si no hubo error)';
-// });
-
-// Route::get('/test-email-caducidad', function () {
-
-//     Mail::to('webmaster@gruposolmar.com.pe')
-//         ->send(new AlertaCaducidadMail([
-//             'nombre_empresa'  => 'SISOLMAR',
-//             'personas' => [
-//                 [
-//                     'nombre_personal' => 'Juan Pérez',
-//                     'documentos' => [
-//                         [
-//                             'nombre' => 'Certificado Médico',
-//                             'fecha_caducidad' => '05/02/2026',
-//                             'dias_restantes' => 5
-//                         ],
-//                         [
-//                             'nombre' => 'Antecedentes Policiales',
-//                             'fecha_caducidad' => '10/02/2026',
-//                             'dias_restantes' => 10
-//                         ],
-//                     ]
-//                 ],
-//                 [
-//                     'nombre_personal' => 'María López',
-//                     'documentos' => [
-//                         [
-//                             'nombre' => 'Licencia de Conducir',
-//                             'fecha_caducidad' => '03/02/2026',
-//                             'dias_restantes' => 3
-//                         ],
-//                     ]
-//                 ],
-//             ]
-//         ]));
-
-//     return 'Correo enviado (si no hubo error)';
-// });
 
 Route::get('/test-email-caducidad', function () {
 
@@ -125,20 +53,35 @@ Route::middleware(['auth'])->group(function () {
         Route::get('{any}', [RoutingController::class, 'root'])->name('any');
     });
 
-    Route::post('/pdf_vacio', [FileController::class, 'pdf_vacio']);
+    Route::get('/debug-notificaciones', function() {
+        $usuarioId = \Illuminate\Support\Facades\Auth::id();
+        $user = \Illuminate\Support\Facades\Auth::user();
+        
+        $notifs = \Illuminate\Support\Facades\DB::table('sw_notificaciones_matriculas')
+            ->select('codigo', 'usuario_id', 'nombre_curso', 'tipo', 'leido', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'usuario_autenticado' => [
+                'id' => $usuarioId,
+                'nombre' => $user->name ?? 'N/A',
+                'email' => $user->email ?? 'N/A'
+            ],
+            'notificaciones_bd' => $notifs,
+            'notificaciones_del_usuario' => \App\Models\NotificacionMatricula::where('usuario_id', $usuarioId)->get()
+        ]);
+    });
 
-    Route::get('/file_control/chargefile', [FileController::class, 'index'])->name('file_control.chargefile');
-    Route::post('/dash-rrhh', [FileController::class, 'dashboard'])->name('dash-rrhh');
-    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    Route::post('/pdf_vacio', [FileController::class, 'pdf_vacio']);
+    Route::post('/dash-rrhh', [FileController::class, 'dashboard']);
+    Route::post('/logout', [LoginController::class, 'logout']);
     Route::post('/generar-pdf', [FileController::class, 'generarPDF']);
     Route::post('/generar-pdf2', [FileController::class, 'generarPDF2']);
     Route::post('/save_cargo', [FileController::class, 'saveCargo']);
-
-    Route::get('/file_control/gestion_dj', [FileController::class, 'indexGestionDj'])->name('file_control.gestiondj');
-
-    Route::get('/file_control/reportes', [ReporteController::class, 'index'])->name('file_control.reportes');
+    Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
 });
-
 
 require __DIR__ . '/auth.php';
 

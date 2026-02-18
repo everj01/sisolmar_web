@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\CapacitacionController;
 
 use Illuminate\Http\Request;
 
@@ -64,6 +65,11 @@ class RoutingController extends Controller
                 'gestion_dj' => [FileController::class, 'indexGestionDj'],
                 'reportes' => [ReporteController::class, 'index'],
             ],
+            'capacitacion' => [
+                'consulta_matriculas' => [CapacitacionController::class, 'vistaConsultaMatriculas'],
+                'historial_capacitaciones'=> [CapacitacionController::class,'vistaHistorialCapacitaciones'],
+                'gestion_cursos'=> [CapacitacionController::class,'vistaGestionCursos']
+            ]
         ];
 
         if(isset($controllers[$first][$second])){
