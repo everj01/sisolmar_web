@@ -640,9 +640,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Code RH 02
             const codeX = titleX + titleW
-            pdf.rect(codeX, y, codeW, headerH)
-            pdf.setFontSize(12)
-            pdf.text("RH 02", codeX + codeW / 2, y + 9, { align: "center" })
+            pdf.setFillColor(255, 255, 255) // Light Blue background (Image 2 style)
+            pdf.rect(codeX, y, codeW, headerH, "FD") // Fill and Draw
+            pdf.setFontSize(18) // "Aumentado"
+            pdf.setFont(undefined, "bold")
+            pdf.setTextColor(0)
+            pdf.text("RH 02", codeX + codeW / 2, y + 11, { align: "center" }) // Centered vertically approx
 
             y += headerH // Eliminar espacio extra
 
