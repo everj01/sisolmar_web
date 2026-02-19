@@ -983,3 +983,10 @@
 [Thu Feb 19 11:34:56 2026] 127.0.0.1:64509 Closing
 [Thu Feb 19 11:34:56 2026] 127.0.0.1:64510 [200]: GET /images/icono.png
 [Thu Feb 19 11:34:56 2026] 127.0.0.1:64510 Closing
+[Thu Feb 19 11:34:58 2026] 127.0.0.1:64516 Accepted
+[Thu Feb 19 11:34:58 2026] 127.0.0.1:64516 Closing
+[Thu Feb 19 11:34:58 2026] 127.0.0.1:64517 Accepted
+[Thu Feb 19 11:34:58 2026] 127.0.0.1:64517 Closing
+[Thu Feb 19 11:34:59 2026] 127.0.0.1:64518 Accepted
+[Thu Feb 19 11:34:59 2026] 127.0.0.1:64518 [200]: GET /images/logo_sol.png
+[Thu Feb 19 11:34:59 2026] 127.0.0.1:64518 Closing
