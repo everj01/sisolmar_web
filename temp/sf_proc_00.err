@@ -5549,3 +5549,10 @@
 [Thu Feb 19 17:33:01 2026] 127.0.0.1:62270 Closing
 [Thu Feb 19 17:33:01 2026] 127.0.0.1:62275 [200]: GET /images/icono.png
 [Thu Feb 19 17:33:01 2026] 127.0.0.1:62275 Closing
+[Thu Feb 19 17:33:02 2026] 127.0.0.1:62276 Accepted
+[Thu Feb 19 17:33:02 2026] 127.0.0.1:62276 Closing
+[Thu Feb 19 17:33:03 2026] 127.0.0.1:62277 Accepted
+[Thu Feb 19 17:33:03 2026] 127.0.0.1:62277 Closing
+[Thu Feb 19 17:33:03 2026] 127.0.0.1:62278 Accepted
+[Thu Feb 19 17:33:03 2026] 127.0.0.1:62278 [200]: GET /images/logo_sol.png
+[Thu Feb 19 17:33:03 2026] 127.0.0.1:62278 Closing
