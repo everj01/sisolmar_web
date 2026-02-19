@@ -804,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const sysPrev = document.getElementById("sistema_previsional")?.value || ""
             const isAFP = sysPrev.includes("AFP")
             const isONP = sysPrev.includes("ONP")
-            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth / 2, y, rowH, 0.5, "center")
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth / 2, y, rowH, 0.408, "center")
             drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.5, "center")
             y += rowH
 
@@ -879,16 +879,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 })
             }
 
-            // Fila 8: Educacion - 4 columnas con ratio 0.5 para alinear etiquetas
-            // Etiquetas terminan en: 12.5%, 37.5%, 62.5%, 87.5% del boxWidth
-            const col1 = boxWidth * 0.25  // Grado de Instrucción: 0-25%
-            const col2 = boxWidth * 0.25  // Institución: 25-50%
-            const col3 = boxWidth * 0.25  // Carrera: 50-75%
-            const col4 = boxWidth * 0.25  // Año de egreso: 75-100%
+            // Fila 8: Educacion - 4 columnas centradas en límites de fila Embargos
+            // Institución centrada en 37.5% (límite Embargos/BCP)
+            const col1 = boxWidth * 0.255  // Grado de Instrucción: 0-25.5%
+            const col2 = boxWidth * 0.24   // Institución: 25.5-49.5% (centro=37.5%)
+            const col3 = boxWidth * 0.26   // Carrera: 49.5-75.5%
+            const col4 = boxWidth * 0.245  // Año de egreso: 75.5-100%
             
             drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.50)
             drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.50)
-            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.50)
+            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.5)
             drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
             y += rowH
 
@@ -900,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const bcpW = boxWidth * 0.25       // Cuenta BCP: 25% del ancho
             const interbankW = boxWidth * 0.375 // Cuenta INTERBANK: 37.5% del ancho
             
-            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.667)
+            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.761)
             drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, 0.50)
             drawField("Cuenta sueldo INTERBANK", "", boxX + embW + bcpW, interbankW, y, rowH, 0.667)
             y += rowH
