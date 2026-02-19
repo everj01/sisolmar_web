@@ -39,6 +39,7 @@
         "glightbox": "^3.3.0",
         "gmaps": "^0.4.25",
         "gridjs": "^6.2.0",
+        "html2pdf.js": "^0.14.0",
         "iconify-icon": "2.0.0",
         "inputmask": "^5.0.7",
         "isotope-layout": "^3.0.6",
