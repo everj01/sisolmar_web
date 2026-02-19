@@ -810,10 +810,70 @@ document.addEventListener('DOMContentLoaded', function () {
             y += rowH
 
             // Fila 8: Educacion
+            // Helper para auto-ajuste de texto (Centrado y escalado)
+            const drawAutoFitField = (label, value, x, w, y, h, labelPct) => {
+                const labelW = w * labelPct
+                const valW = w - labelW
+
+                // Label Background
+                pdf.setFillColor(220) // Gris
+                pdf.rect(x, y, labelW, h, "FD")
+                pdf.setFontSize(6.5)
+                pdf.setTextColor(0)
+                pdf.setFont(undefined, "normal")
+                pdf.text(label, x + 2, y + 4) // Mantener alineacion del label original
+
+                // Value Background
+                pdf.setFillColor(255)
+                pdf.rect(x + labelW, y, valW, h, "FD")
+
+                if (!value) return
+
+                // Auto-fit: reducir fuente para intentar 1 linea
+                let fontSize = 7.5
+                pdf.setFontSize(fontSize)
+                const maxValW = valW - 2 // padding
+
+                while (pdf.getTextWidth(value) > maxValW && fontSize > 6) {
+                    fontSize -= 0.5
+                    pdf.setFontSize(fontSize)
+                }
+
+                // Si no cabe en 1 linea → multilinea capped a 2 lineas max
+                const MAX_LINES = 2
+                let lines = [value]
+
+                if (pdf.getTextWidth(value) > maxValW) {
+                    fontSize = 6
+                    pdf.setFontSize(fontSize)
+                    const allLines = pdf.splitTextToSize(value, maxValW)
+
+                    if (allLines.length <= MAX_LINES) {
+                        lines = allLines
+                    } else {
+                        // Truncar en linea 2 con "..."
+                        lines = allLines.slice(0, MAX_LINES)
+                        let last = lines[MAX_LINES - 1]
+                        while (pdf.getTextWidth(last + "...") > maxValW && last.length > 1) {
+                            last = last.slice(0, -1)
+                        }
+                        lines[MAX_LINES - 1] = last + "..."
+                    }
+                }
+
+                // Posicion segura dentro del cuadro
+                const textX = x + labelW + valW / 2
+                const textY = lines.length === 1
+                    ? y + h / 2 + 1   // centrado vertical 1 linea
+                    : y + 2           // top-aligned multilinea (2 lineas caben en 6.5mm)
+
+                pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 })
+            }
+
             const wEdu = boxWidth / 4
-            drawField("Grado de instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, wEdu, y, rowH, 0.45)
-            drawField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + wEdu, wEdu, y, rowH, 0.3)
-            drawField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + wEdu * 2, wEdu, y, rowH, 0.3)
+            drawAutoFitField("Grado de instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, wEdu, y, rowH, 0.45)
+            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + wEdu, wEdu, y, rowH, 0.3)
+            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + wEdu * 2, wEdu, y, rowH, 0.3)
             drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + wEdu * 3, wEdu, y, rowH, 0.5)
             y += rowH
 
