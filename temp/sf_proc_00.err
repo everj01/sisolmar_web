@@ -1266,3 +1266,13 @@
 [Thu Feb 19 12:10:37 2026] 127.0.0.1:49942 Closing
 [Thu Feb 19 12:10:37 2026] 127.0.0.1:49943 [200]: GET /images/icono.png
 [Thu Feb 19 12:10:37 2026] 127.0.0.1:49943 Closing
+[Thu Feb 19 12:11:50 2026] 127.0.0.1:50072 Accepted
+[Thu Feb 19 12:11:50 2026] 127.0.0.1:50072 Closing
+[Thu Feb 19 12:11:50 2026] 127.0.0.1:50074 Accepted
+[Thu Feb 19 12:11:50 2026] 127.0.0.1:50074 Closing
+[Thu Feb 19 12:12:01 2026] 127.0.0.1:50082 Accepted
+[Thu Feb 19 12:12:01 2026] 127.0.0.1:50082 [200]: GET /images/logo_sol.png
+[Thu Feb 19 12:12:01 2026] 127.0.0.1:50082 Closing
+[Thu Feb 19 12:12:11 2026] 127.0.0.1:50088 Accepted
+[Thu Feb 19 12:12:11 2026] 127.0.0.1:50088 [200]: GET /images/logo_sol.png
+[Thu Feb 19 12:12:11 2026] 127.0.0.1:50088 Closing
