@@ -653,8 +653,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const nombres = (document.getElementById("nombres_apellidos")?.value || "").toUpperCase().trim()
             const dni = document.getElementById("dni")?.value || "".trim()
 
-            pdf.setFontSize(7)
-            const lineHeight = 3 // Altura de linea para texto
+            pdf.setFontSize(8.5) // Aumentado de 7 a 8.5
+            const lineHeight = 3.5 // Aumentado de 3 a 3.5
             const maxWidth = boxWidth - 4
             let currentX = boxX + 2
             let currentY = y + 3.5
@@ -922,14 +922,16 @@ document.addEventListener('DOMContentLoaded', function () {
             drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y)
             y += 5 // Corregido overlap (4->5)
 
-            pdf.setFontSize(7)
+            pdf.setFontSize(8.5) // Aumentado de 7 a 8
             pdf.setFont(undefined, "normal")
             const confText = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento."
-            const splitConf = pdf.splitTextToSize(confText, boxWidth - 4)
 
-            const confBoxH = splitConf.length * 4 + 5
+            const confLines = pdf.splitTextToSize(confText, boxWidth - 4)
+
+            // Calculate height based on new font size and desired line height (3.5)
+            const confBoxH = confLines.length * 3.5 + 5 // Adjusted line height from 4 to 3.5
             pdf.rect(boxX, y, boxWidth, confBoxH)
-            pdf.text(splitConf, boxX + 2, y + 4)
+            pdf.text(confLines, boxX + 2, y + 4) // Ajuste Y+4
             y += confBoxH
 
             // Firmas
