@@ -5556,3 +5556,386 @@
 [Thu Feb 19 17:33:03 2026] 127.0.0.1:62278 Accepted
 [Thu Feb 19 17:33:03 2026] 127.0.0.1:62278 [200]: GET /images/logo_sol.png
 [Thu Feb 19 17:33:03 2026] 127.0.0.1:62278 Closing
+[Thu Feb 19 17:46:25 2026] 127.0.0.1:62531 Accepted
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62531 Closing
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62532 Accepted
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62532 [200]: GET /images/logo-light.png
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62545 Accepted
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62545 [200]: GET /images/user.png
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62532 Closing
+[Thu Feb 19 17:46:26 2026] 127.0.0.1:62545 Closing
+[Thu Feb 19 17:46:27 2026] 127.0.0.1:62547 Accepted
+[Thu Feb 19 17:46:27 2026] 127.0.0.1:62547 Closing
+[Thu Feb 19 17:46:27 2026] 127.0.0.1:62548 Accepted
+[Thu Feb 19 17:46:27 2026] 127.0.0.1:62549 Accepted
+[Thu Feb 19 17:46:28 2026] 127.0.0.1:62548 Closing
+[Thu Feb 19 17:46:28 2026] 127.0.0.1:62550 Accepted
+[Thu Feb 19 17:46:28 2026] 127.0.0.1:62549 Closing
+[Thu Feb 19 17:46:28 2026] 127.0.0.1:62550 [200]: GET /images/icono.png
+[Thu Feb 19 17:46:28 2026] 127.0.0.1:62550 Closing
+[Thu Feb 19 17:46:34 2026] 127.0.0.1:62565 Accepted
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62565 Closing
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62566 Accepted
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62566 [200]: GET /images/logo-light.png
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62571 Accepted
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62571 [200]: GET /images/user.png
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62566 Closing
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62571 Closing
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62573 Accepted
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62573 Closing
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62574 Accepted
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62575 Accepted
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62574 Closing
+[Thu Feb 19 17:46:35 2026] 127.0.0.1:62576 Accepted
+[Thu Feb 19 17:46:36 2026] 127.0.0.1:62575 Closing
+[Thu Feb 19 17:46:36 2026] 127.0.0.1:62576 [200]: GET /images/icono.png
+[Thu Feb 19 17:46:36 2026] 127.0.0.1:62576 Closing
+[Thu Feb 19 17:46:45 2026] 127.0.0.1:62585 Accepted
+[Thu Feb 19 17:46:45 2026] 127.0.0.1:62586 Accepted
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62585 Closing
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62586 [200]: GET /images/logo-light.png
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62592 Accepted
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62592 [200]: GET /images/user.png
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62586 Closing
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62592 Closing
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62594 Accepted
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62594 Closing
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62595 Accepted
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62596 Accepted
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62595 Closing
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62597 Accepted
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62596 Closing
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62597 [200]: GET /images/icono.png
+[Thu Feb 19 17:46:46 2026] 127.0.0.1:62597 Closing
+[Thu Feb 19 17:47:02 2026] 127.0.0.1:62607 Accepted
+[Thu Feb 19 17:47:02 2026] 127.0.0.1:62608 Accepted
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62607 Closing
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62608 [200]: GET /images/logo-light.png
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62615 Accepted
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62615 [200]: GET /images/user.png
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62608 Closing
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62615 Closing
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62617 Accepted
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62617 Closing
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62618 Accepted
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62619 Accepted
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62618 Closing
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62620 Accepted
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62619 Closing
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62620 [200]: GET /images/icono.png
+[Thu Feb 19 17:47:03 2026] 127.0.0.1:62620 Closing
+[Thu Feb 19 17:47:31 2026] 127.0.0.1:62633 Accepted
+[Thu Feb 19 17:47:31 2026] 127.0.0.1:62633 Closing
+[Thu Feb 19 17:47:32 2026] 127.0.0.1:62635 Accepted
+[Thu Feb 19 17:47:32 2026] 127.0.0.1:62635 [200]: GET /images/logo_sol.png
+[Thu Feb 19 17:47:32 2026] 127.0.0.1:62635 Closing
+[Thu Feb 19 17:53:02 2026] 127.0.0.1:62746 Accepted
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62746 Closing
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62747 Accepted
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62757 Accepted
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62747 [200]: GET /images/logo-light.png
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62757 [200]: GET /images/user.png
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62747 Closing
+[Thu Feb 19 17:53:03 2026] 127.0.0.1:62757 Closing
+[Thu Feb 19 17:53:04 2026] 127.0.0.1:62759 Accepted
+[Thu Feb 19 17:53:04 2026] 127.0.0.1:62759 Closing
+[Thu Feb 19 17:53:04 2026] 127.0.0.1:62760 Accepted
+[Thu Feb 19 17:53:04 2026] 127.0.0.1:62761 Accepted
+[Thu Feb 19 17:53:05 2026] 127.0.0.1:62760 Closing
+[Thu Feb 19 17:53:05 2026] 127.0.0.1:62762 Accepted
+[Thu Feb 19 17:53:05 2026] 127.0.0.1:62761 Closing
+[Thu Feb 19 17:53:05 2026] 127.0.0.1:62762 [200]: GET /images/icono.png
+[Thu Feb 19 17:53:05 2026] 127.0.0.1:62762 Closing
+[Thu Feb 19 17:54:19 2026] 127.0.0.1:62795 Accepted
+[Thu Feb 19 17:54:19 2026] 127.0.0.1:62796 Accepted
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62795 Closing
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62796 [200]: GET /images/logo-light.png
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62807 Accepted
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62807 [200]: GET /images/user.png
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62796 Closing
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62807 Closing
+[Thu Feb 19 17:54:20 2026] 127.0.0.1:62810 Accepted
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62810 Closing
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62811 Accepted
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62812 Accepted
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62811 Closing
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62813 Accepted
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62812 Closing
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62813 [200]: GET /images/icono.png
+[Thu Feb 19 17:54:21 2026] 127.0.0.1:62813 Closing
+[Thu Feb 19 17:54:23 2026] 127.0.0.1:62822 Accepted
+[Thu Feb 19 17:54:23 2026] 127.0.0.1:62822 Closing
+[Thu Feb 19 17:54:23 2026] 127.0.0.1:62823 Accepted
+[Thu Feb 19 17:54:23 2026] 127.0.0.1:62823 Closing
+[Thu Feb 19 17:54:24 2026] 127.0.0.1:62824 Accepted
+[Thu Feb 19 17:54:24 2026] 127.0.0.1:62824 [200]: GET /images/logo_sol.png
+[Thu Feb 19 17:54:24 2026] 127.0.0.1:62824 Closing
+[Thu Feb 19 18:02:26 2026] 127.0.0.1:63014 Accepted
+[Thu Feb 19 18:02:26 2026] 127.0.0.1:63015 Accepted
+[Thu Feb 19 18:02:38 2026] 127.0.0.1:63014 Closing
+[Thu Feb 19 18:02:38 2026] 127.0.0.1:63053 Accepted
+[Thu Feb 19 18:02:38 2026] 127.0.0.1:63015 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:02:38 2026] 127.0.0.1:63053 [200]: GET /images/user.png
+[Thu Feb 19 18:02:38 2026] 127.0.0.1:63015 Closing
+[Thu Feb 19 18:02:38 2026] 127.0.0.1:63053 Closing
+[Thu Feb 19 18:02:39 2026] 127.0.0.1:63058 Accepted
+[Thu Feb 19 18:02:39 2026] 127.0.0.1:63058 Closing
+[Thu Feb 19 18:02:39 2026] 127.0.0.1:63059 Accepted
+[Thu Feb 19 18:02:39 2026] 127.0.0.1:63060 Accepted
+[Thu Feb 19 18:02:40 2026] 127.0.0.1:63059 Closing
+[Thu Feb 19 18:02:40 2026] 127.0.0.1:63061 Accepted
+[Thu Feb 19 18:02:40 2026] 127.0.0.1:63060 Closing
+[Thu Feb 19 18:02:40 2026] 127.0.0.1:63061 [200]: GET /images/icono.png
+[Thu Feb 19 18:02:40 2026] 127.0.0.1:63061 Closing
+[Thu Feb 19 18:03:24 2026] 127.0.0.1:63081 Accepted
+[Thu Feb 19 18:03:24 2026] 127.0.0.1:63082 Accepted
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63081 Closing
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63087 Accepted
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63082 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63087 [200]: GET /images/user.png
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63082 Closing
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63087 Closing
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63089 Accepted
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63089 Closing
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63090 Accepted
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63091 Accepted
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63090 Closing
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63092 Accepted
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63091 Closing
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63092 [200]: GET /images/icono.png
+[Thu Feb 19 18:03:25 2026] 127.0.0.1:63092 Closing
+[Thu Feb 19 18:03:29 2026] 127.0.0.1:63099 Accepted
+[Thu Feb 19 18:03:29 2026] 127.0.0.1:63099 Closing
+[Thu Feb 19 18:03:29 2026] 127.0.0.1:63100 Accepted
+[Thu Feb 19 18:03:29 2026] 127.0.0.1:63100 Closing
+[Thu Feb 19 18:03:30 2026] 127.0.0.1:63101 Accepted
+[Thu Feb 19 18:03:30 2026] 127.0.0.1:63101 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:03:30 2026] 127.0.0.1:63101 Closing
+[Thu Feb 19 18:06:29 2026] 127.0.0.1:63132 Accepted
+[Thu Feb 19 18:06:29 2026] 127.0.0.1:63133 Accepted
+[Thu Feb 19 18:06:30 2026] 127.0.0.1:63132 Closing
+[Thu Feb 19 18:06:30 2026] 127.0.0.1:63133 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:06:30 2026] 127.0.0.1:63145 Accepted
+[Thu Feb 19 18:06:30 2026] 127.0.0.1:63145 [200]: GET /images/user.png
+[Thu Feb 19 18:06:30 2026] 127.0.0.1:63133 Closing
+[Thu Feb 19 18:06:30 2026] 127.0.0.1:63145 Closing
+[Thu Feb 19 18:06:31 2026] 127.0.0.1:63156 Accepted
+[Thu Feb 19 18:06:31 2026] 127.0.0.1:63156 Closing
+[Thu Feb 19 18:06:31 2026] 127.0.0.1:63157 Accepted
+[Thu Feb 19 18:06:31 2026] 127.0.0.1:63158 Accepted
+[Thu Feb 19 18:06:32 2026] 127.0.0.1:63157 Closing
+[Thu Feb 19 18:06:32 2026] 127.0.0.1:63159 Accepted
+[Thu Feb 19 18:06:32 2026] 127.0.0.1:63158 Closing
+[Thu Feb 19 18:06:32 2026] 127.0.0.1:63159 [200]: GET /images/icono.png
+[Thu Feb 19 18:06:32 2026] 127.0.0.1:63159 Closing
+[Thu Feb 19 18:06:44 2026] 127.0.0.1:63169 Accepted
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63169 Closing
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63170 Accepted
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63181 Accepted
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63170 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63181 [200]: GET /images/user.png
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63170 Closing
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63181 Closing
+[Thu Feb 19 18:06:45 2026] 127.0.0.1:63184 Accepted
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63184 Closing
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63185 Accepted
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63186 Accepted
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63185 Closing
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63187 Accepted
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63186 Closing
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63187 [200]: GET /images/icono.png
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63187 Closing
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63188 Accepted
+[Thu Feb 19 18:06:46 2026] 127.0.0.1:63188 Closing
+[Thu Feb 19 18:06:47 2026] 127.0.0.1:63189 Accepted
+[Thu Feb 19 18:06:47 2026] 127.0.0.1:63189 Closing
+[Thu Feb 19 18:06:47 2026] 127.0.0.1:63190 Accepted
+[Thu Feb 19 18:06:47 2026] 127.0.0.1:63190 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:06:47 2026] 127.0.0.1:63190 Closing
+[Thu Feb 19 18:13:32 2026] 127.0.0.1:63295 Accepted
+[Thu Feb 19 18:13:32 2026] 127.0.0.1:63296 Accepted
+[Thu Feb 19 18:13:33 2026] 127.0.0.1:63295 Closing
+[Thu Feb 19 18:13:33 2026] 127.0.0.1:63308 Accepted
+[Thu Feb 19 18:13:33 2026] 127.0.0.1:63296 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:13:33 2026] 127.0.0.1:63308 [200]: GET /images/user.png
+[Thu Feb 19 18:13:33 2026] 127.0.0.1:63296 Closing
+[Thu Feb 19 18:13:33 2026] 127.0.0.1:63308 Closing
+[Thu Feb 19 18:13:34 2026] 127.0.0.1:63315 Accepted
+[Thu Feb 19 18:13:34 2026] 127.0.0.1:63315 Closing
+[Thu Feb 19 18:13:34 2026] 127.0.0.1:63316 Accepted
+[Thu Feb 19 18:13:34 2026] 127.0.0.1:63316 [200]: GET /images/icono.png
+[Thu Feb 19 18:13:34 2026] 127.0.0.1:63316 Closing
+[Thu Feb 19 18:16:10 2026] 127.0.0.1:63353 Accepted
+[Thu Feb 19 18:16:10 2026] 127.0.0.1:63354 Accepted
+[Thu Feb 19 18:16:11 2026] 127.0.0.1:63353 Closing
+[Thu Feb 19 18:16:11 2026] 127.0.0.1:63363 Accepted
+[Thu Feb 19 18:16:11 2026] 127.0.0.1:63354 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:16:11 2026] 127.0.0.1:63363 [200]: GET /images/user.png
+[Thu Feb 19 18:16:11 2026] 127.0.0.1:63354 Closing
+[Thu Feb 19 18:16:11 2026] 127.0.0.1:63363 Closing
+[Thu Feb 19 18:16:12 2026] 127.0.0.1:63368 Accepted
+[Thu Feb 19 18:16:12 2026] 127.0.0.1:63368 Closing
+[Thu Feb 19 18:16:12 2026] 127.0.0.1:63369 Accepted
+[Thu Feb 19 18:16:12 2026] 127.0.0.1:63370 Accepted
+[Thu Feb 19 18:16:13 2026] 127.0.0.1:63369 Closing
+[Thu Feb 19 18:16:13 2026] 127.0.0.1:63372 Accepted
+[Thu Feb 19 18:16:13 2026] 127.0.0.1:63370 Closing
+[Thu Feb 19 18:16:13 2026] 127.0.0.1:63372 [200]: GET /images/icono.png
+[Thu Feb 19 18:16:13 2026] 127.0.0.1:63372 Closing
+[Thu Feb 19 18:16:17 2026] 127.0.0.1:63376 Accepted
+[Thu Feb 19 18:16:17 2026] 127.0.0.1:63376 Closing
+[Thu Feb 19 18:17:15 2026] 127.0.0.1:63391 Accepted
+[Thu Feb 19 18:17:15 2026] 127.0.0.1:63391 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:17:15 2026] 127.0.0.1:63391 Closing
+[Thu Feb 19 18:18:05 2026] 127.0.0.1:63406 Accepted
+[Thu Feb 19 18:18:05 2026] 127.0.0.1:63407 Accepted
+[Thu Feb 19 18:18:06 2026] 127.0.0.1:63406 Closing
+[Thu Feb 19 18:18:06 2026] 127.0.0.1:63414 Accepted
+[Thu Feb 19 18:18:06 2026] 127.0.0.1:63407 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:18:06 2026] 127.0.0.1:63414 [200]: GET /images/user.png
+[Thu Feb 19 18:18:06 2026] 127.0.0.1:63407 Closing
+[Thu Feb 19 18:18:06 2026] 127.0.0.1:63414 Closing
+[Thu Feb 19 18:18:07 2026] 127.0.0.1:63419 Accepted
+[Thu Feb 19 18:18:07 2026] 127.0.0.1:63419 Closing
+[Thu Feb 19 18:18:07 2026] 127.0.0.1:63420 Accepted
+[Thu Feb 19 18:18:07 2026] 127.0.0.1:63420 [200]: GET /images/icono.png
+[Thu Feb 19 18:18:07 2026] 127.0.0.1:63420 Closing
+[Thu Feb 19 18:18:18 2026] 127.0.0.1:63426 Accepted
+[Thu Feb 19 18:18:18 2026] 127.0.0.1:63427 Accepted
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63426 Closing
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63427 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63427 Closing
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63434 Accepted
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63434 [200]: GET /images/user.png
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63434 Closing
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63436 Accepted
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63436 Closing
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63437 Accepted
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63438 Accepted
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63437 Closing
+[Thu Feb 19 18:18:19 2026] 127.0.0.1:63439 Accepted
+[Thu Feb 19 18:18:20 2026] 127.0.0.1:63438 Closing
+[Thu Feb 19 18:18:20 2026] 127.0.0.1:63439 [200]: GET /images/icono.png
+[Thu Feb 19 18:18:20 2026] 127.0.0.1:63439 Closing
+[Thu Feb 19 18:18:31 2026] 127.0.0.1:63452 Accepted
+[Thu Feb 19 18:18:31 2026] 127.0.0.1:63453 Accepted
+[Thu Feb 19 18:18:31 2026] 127.0.0.1:63452 Closing
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63462 Accepted
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63453 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63462 [200]: GET /images/user.png
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63453 Closing
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63462 Closing
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63464 Accepted
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63464 Closing
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63465 Accepted
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63465 [200]: GET /images/icono.png
+[Thu Feb 19 18:18:32 2026] 127.0.0.1:63465 Closing
+[Thu Feb 19 18:18:38 2026] 127.0.0.1:63467 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63467 Closing
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63468 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63468 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63475 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63475 [200]: GET /images/user.png
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63468 Closing
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63475 Closing
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63477 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63477 Closing
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63478 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63479 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63478 Closing
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63480 Accepted
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63479 Closing
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63480 [200]: GET /images/icono.png
+[Thu Feb 19 18:18:39 2026] 127.0.0.1:63480 Closing
+[Thu Feb 19 18:18:42 2026] 127.0.0.1:63481 Accepted
+[Thu Feb 19 18:18:42 2026] 127.0.0.1:63481 Closing
+[Thu Feb 19 18:18:42 2026] 127.0.0.1:63482 Accepted
+[Thu Feb 19 18:18:42 2026] 127.0.0.1:63482 Closing
+[Thu Feb 19 18:18:43 2026] 127.0.0.1:63483 Accepted
+[Thu Feb 19 18:18:43 2026] 127.0.0.1:63483 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:18:43 2026] 127.0.0.1:63483 Closing
+[Thu Feb 19 18:20:49 2026] 127.0.0.1:63510 Accepted
+[Thu Feb 19 18:20:49 2026] 127.0.0.1:63510 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:20:49 2026] 127.0.0.1:63510 Closing
+[Thu Feb 19 18:21:34 2026] 127.0.0.1:63528 Accepted
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63528 Closing
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63529 Accepted
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63535 Accepted
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63529 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63535 [200]: GET /images/user.png
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63529 Closing
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63535 Closing
+[Thu Feb 19 18:21:35 2026] 127.0.0.1:63537 Accepted
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63537 Closing
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63538 Accepted
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63539 Accepted
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63538 Closing
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63540 Accepted
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63539 Closing
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63540 [200]: GET /images/icono.png
+[Thu Feb 19 18:21:36 2026] 127.0.0.1:63540 Closing
+[Thu Feb 19 18:21:48 2026] 127.0.0.1:63545 Accepted
+[Thu Feb 19 18:21:48 2026] 127.0.0.1:63545 Closing
+[Thu Feb 19 18:21:48 2026] 127.0.0.1:63546 Accepted
+[Thu Feb 19 18:21:49 2026] 127.0.0.1:63546 Closing
+[Thu Feb 19 18:21:49 2026] 127.0.0.1:63547 Accepted
+[Thu Feb 19 18:21:49 2026] 127.0.0.1:63547 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:21:49 2026] 127.0.0.1:63547 Closing
+[Thu Feb 19 18:25:37 2026] 127.0.0.1:63613 Accepted
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63613 Closing
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63614 Accepted
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63626 Accepted
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63614 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63626 [200]: GET /images/user.png
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63614 Closing
+[Thu Feb 19 18:25:38 2026] 127.0.0.1:63626 Closing
+[Thu Feb 19 18:25:39 2026] 127.0.0.1:63628 Accepted
+[Thu Feb 19 18:25:39 2026] 127.0.0.1:63628 Closing
+[Thu Feb 19 18:25:39 2026] 127.0.0.1:63629 Accepted
+[Thu Feb 19 18:25:39 2026] 127.0.0.1:63630 Accepted
+[Thu Feb 19 18:25:40 2026] 127.0.0.1:63629 Closing
+[Thu Feb 19 18:25:40 2026] 127.0.0.1:63631 Accepted
+[Thu Feb 19 18:25:40 2026] 127.0.0.1:63630 Closing
+[Thu Feb 19 18:25:40 2026] 127.0.0.1:63631 [200]: GET /images/icono.png
+[Thu Feb 19 18:25:40 2026] 127.0.0.1:63631 Closing
+[Thu Feb 19 18:26:07 2026] 127.0.0.1:63640 Accepted
+[Thu Feb 19 18:26:07 2026] 127.0.0.1:63641 Accepted
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63640 Closing
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63641 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63647 Accepted
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63647 [200]: GET /images/user.png
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63641 Closing
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63647 Closing
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63649 Accepted
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63649 Closing
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63650 Accepted
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63651 Accepted
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63650 Closing
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63652 Accepted
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63651 Closing
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63652 [200]: GET /images/icono.png
+[Thu Feb 19 18:26:08 2026] 127.0.0.1:63652 Closing
+[Thu Feb 19 18:27:05 2026] 127.0.0.1:63663 Accepted
+[Thu Feb 19 18:27:05 2026] 127.0.0.1:63663 Closing
+[Thu Feb 19 18:27:05 2026] 127.0.0.1:63664 Accepted
+[Thu Feb 19 18:27:06 2026] 127.0.0.1:63664 Closing
+[Thu Feb 19 18:27:06 2026] 127.0.0.1:63665 Accepted
+[Thu Feb 19 18:27:06 2026] 127.0.0.1:63665 [200]: GET /images/logo_sol.png
+[Thu Feb 19 18:27:06 2026] 127.0.0.1:63665 Closing
+[Thu Feb 19 18:28:03 2026] 127.0.0.1:63676 Accepted
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63676 Closing
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63677 Accepted
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63677 [200]: GET /images/logo-light.png
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63683 Accepted
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63683 [200]: GET /images/user.png
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63677 Closing
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63683 Closing
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63689 Accepted
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63689 Closing
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63690 Accepted
+[Thu Feb 19 18:28:04 2026] 127.0.0.1:63691 Accepted
+[Thu Feb 19 18:28:05 2026] 127.0.0.1:63690 Closing
+[Thu Feb 19 18:28:05 2026] 127.0.0.1:63692 Accepted
+[Thu Feb 19 18:28:05 2026] 127.0.0.1:63691 Closing
+[Thu Feb 19 18:28:05 2026] 127.0.0.1:63692 [200]: GET /images/icono.png
+[Thu Feb 19 18:28:05 2026] 127.0.0.1:63692 Closing

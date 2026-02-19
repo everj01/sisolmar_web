@@ -554,12 +554,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 const labelPadding = 1
                 const valStr = String(value || "").toUpperCase()
 
-                // Label box
+                // 1) Fill areas (sin borde)
                 pdf.setFillColor(...colors.labelBg)
                 pdf.rect(x, fieldY, labelWidth, inputHeight, "F")
+                pdf.setFillColor(255, 255, 255)
+                pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight, "F")
+
+                // 2) UN solo borde exterior + divisor interno
                 pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.2)
-                pdf.rect(x, fieldY, labelWidth, inputHeight)
+                pdf.setLineWidth(0.15)
+                pdf.rect(x, fieldY, width, inputHeight)
+                pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight)
 
                 // Label text
                 pdf.setFont(undefined, "normal")
@@ -567,11 +572,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 const labelFontSize = fitText(label, labelWidth - 2, 8, 6)
                 pdf.setFontSize(labelFontSize)
                 pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" })
-
-                // Value box
-                pdf.setFillColor(255, 255, 255)
-                pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight, "F")
-                pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight)
 
                 // Value text
                 pdf.setFont(undefined, "normal")
@@ -588,7 +588,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.setFillColor(...colors.sectionBg)
                 pdf.rect(boxX, yPos, boxWidth, 5, "F") // 5mm altura header
                 pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.2)
+                pdf.setLineWidth(0.15)
                 pdf.rect(boxX, yPos, boxWidth, 5)
 
                 pdf.setFontSize(8)
@@ -619,13 +619,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const titleW = boxWidth - logoW - codeW
 
             // Logo
-            pdf.setDrawColor(0); pdf.setLineWidth(0.3);
-            pdf.rect(boxX, y, logoW, headerH)
             await drawLogo(boxX, y, logoW, headerH)
 
             // Title
             const titleX = boxX + logoW
-            pdf.rect(titleX, y, titleW, headerH)
 
             pdf.setFontSize(10)
             pdf.setTextColor(200, 0, 0)
@@ -638,8 +635,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Code RH 02
             const codeX = titleX + titleW
-            pdf.setFillColor(255, 255, 255) // Light Blue background (Image 2 style)
-            pdf.rect(codeX, y, codeW, headerH, "FD") // Fill and Draw
+            pdf.setFillColor(255, 255, 255)
+            pdf.rect(codeX, y, codeW, headerH, "F")
+
+            // UN solo borde exterior + divisores internos del header
+            pdf.setDrawColor(0); pdf.setLineWidth(0.2);
+            pdf.rect(boxX, y, boxWidth, headerH)
+            pdf.line(boxX + logoW, y, boxX + logoW, y + headerH)
+            pdf.line(codeX, y, codeX, y + headerH)
             pdf.setFontSize(18) // "Aumentado"
             pdf.setFont(undefined, "bold")
             pdf.setTextColor(0)
@@ -687,7 +690,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const declBoxH = (simLines * lineHeight) + 3
 
             // Dibujar caja
-            pdf.setDrawColor(0); pdf.setLineWidth(0.2);
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
             pdf.rect(boxX, y, boxWidth, declBoxH)
 
             // Renderizado Real
@@ -750,8 +753,8 @@ document.addEventListener('DOMContentLoaded', function () {
             drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.22)
 
             // Foto
-            // Foto
             const fotoH = rowH * 6 // 6 filas (Incluye Afiliacion)
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
             pdf.rect(boxX + colMain, y, colFoto, fotoH)
             pdf.setFontSize(8); pdf.setFont(undefined, "normal"); pdf.setTextColor(150);
             pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" })
@@ -792,12 +795,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const row6LabelW = colMain * 0.6125 // Alineado con fin de Talla (Mt.)
             const row6InputW = row6W - row6LabelW
 
-            pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F"); pdf.rect(boxX, y, row6LabelW, rowH);
+            pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
+            pdf.setFillColor(255); pdf.rect(boxX + row6LabelW, y, row6InputW, rowH, "F");
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, row6W, rowH)
+            pdf.line(boxX + row6LabelW, y, boxX + row6LabelW, y + rowH)
             pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
             pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 4)
-
-            pdf.setFillColor(255); // Reset fill
-            pdf.rect(boxX + row6LabelW, y, row6InputW, rowH)
             y += rowH
 
             // Fila 7: AFP/ONP
@@ -814,9 +818,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 const labelW = w * labelPct
                 const valW = w - labelW
 
-                // Label Background
+                // 1) Fill areas (sin borde)
                 pdf.setFillColor(220) // Gris
-                pdf.rect(x, y, labelW, h, "FD")
+                pdf.rect(x, y, labelW, h, "F")
+                pdf.setFillColor(255)
+                pdf.rect(x + labelW, y, valW, h, "F")
+
+                // 2) UN solo borde exterior + divisor interno
+                pdf.setDrawColor(0)
+                pdf.setLineWidth(0.15)
+                pdf.rect(x, y, w, h)
+                pdf.line(x + labelW, y, x + labelW, y + h)
+
                 // Label — tamaño estandarizado 8
                 pdf.setFont(undefined, "normal")
                 pdf.setTextColor(0)
@@ -831,10 +844,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     : y + (h - lblBlockH) / 2 + lblLineH
                 pdf.text(labelLines, x + labelW / 2, lblY, { align: "center", lineHeightFactor: 1.15 })
                 pdf.setFont(undefined, "normal")
-
-                // Value Background
-                pdf.setFillColor(255)
-                pdf.rect(x + labelW, y, valW, h, "FD")
 
                 if (!value) return
 
@@ -879,30 +888,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 })
             }
 
-            // Fila 8: Educacion - 4 columnas centradas en límites de fila Embargos
-            // Institución centrada en 37.5% (límite Embargos/BCP)
-            const col1 = boxWidth * 0.255  // Grado de Instrucción: 0-25.5%
-            const col2 = boxWidth * 0.24   // Institución: 25.5-49.5% (centro=37.5%)
-            const col3 = boxWidth * 0.26   // Carrera: 49.5-75.5%
-            const col4 = boxWidth * 0.245  // Año de egreso: 75.5-100%
-            
-            drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.50)
-            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.50)
-            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.5)
-            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
+            // Fila 8: Educacion - 4 columnas - Alineación con fila inferior (Embargos/BCP)
+            // (Embargos = 37.5% | BCP = 25% | Interbank = 37.5%)
+            // Ajustamos Grado+Institución para sumar 37.5%
+            const col1 = boxWidth * 0.175  // Grado de Instrucción (17.5%)
+            const col2 = boxWidth * 0.20   // Institución: (20%) - Total 37.5%
+            const col3 = boxWidth * 0.25   // Carrera: 25% (Alineado con BCP)
+            const col4 = boxWidth * 0.375  // Año de egreso: 37.5% (Alineado con Interbank)
+
+            drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.40)
+            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.35)
+            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.25)
+            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.25)
             y += rowH
 
-            // Fila 9: Embargos - posiciones calculadas para alinear con etiquetas de fila superior
-            // Embargos: 0-37.5% (etiqueta termina en 25% = inicio Institución)
-            // Cuenta BCP: 37.5-62.5% (etiqueta empieza en 37.5% = fin etiqueta Institución, termina en 50% = inicio Carrera)
-            // Cuenta INTERBANK: 62.5-100% (etiqueta empieza en 62.5% = fin etiqueta Carrera, termina en 87.5% = fin etiqueta Año egreso)
+            // Fila 9: Embargos - posiciones fijas (NO TOCAR: 37.5% | 25% | 37.5%)
             const embW = boxWidth * 0.375      // Embargos: 37.5% del ancho
             const bcpW = boxWidth * 0.25       // Cuenta BCP: 25% del ancho
             const interbankW = boxWidth * 0.375 // Cuenta INTERBANK: 37.5% del ancho
-            
-            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.761)
+
+            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.60)
             drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, 0.50)
-            drawField("Cuenta sueldo INTERBANK", "", boxX + embW + bcpW, interbankW, y, rowH, 0.667)
+            drawField("Cuenta sueldo INTERBANK", "", boxX + embW + bcpW, interbankW, y, rowH, 0.50)
             y += rowH
 
             // Fila 10: Direccion Actual
@@ -917,9 +924,11 @@ document.addEventListener('DOMContentLoaded', function () {
             drawField("En caso de Emergencia llamar a", document.getElementById("contacto_emergencia")?.value || "", boxX, boxWidth, y, rowH, 0.27)
             y += rowH
 
-            // Fila 13: Emergencia 2
-            drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, boxWidth / 2, y, rowH, 0.3)
-            drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.3)
+            // Fila 13: Emergencia 2 - 50/50
+            const wCelEmergencia = boxWidth * 0.5
+            const wParEmergencia = boxWidth * 0.5
+            drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, wCelEmergencia, y, rowH, 0.25)
+            drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.20)
             y += rowH
             // ========== DATOS LABORALES ==========
             checkPageBreak(5 * rowH + 5 + 3)
@@ -947,10 +956,10 @@ document.addEventListener('DOMContentLoaded', function () {
             drawField("Vehículo Propio", document.getElementById("vehiculo_propio")?.value || "", boxX + wLab3 * 5, wLab3, y, rowH, 0.65)
             y += rowH
 
-            // Fila 4
-            drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.4, y, rowH, 0.3)
-            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", boxX + boxWidth * 0.4, boxWidth * 0.3, y, rowH, 0.3)
-            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.7, boxWidth * 0.3, y, rowH, 0.3)
+            // Fila 4 - Duración alineada con inicio de Interbank (62.5%)
+            drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.30)
+            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", boxX + boxWidth * 0.375, boxWidth * 0.25, y, rowH, 0.25)
+            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.625, boxWidth * 0.375, y, rowH, 0.25)
             y += rowH
 
             // Fila 5
@@ -963,25 +972,31 @@ document.addEventListener('DOMContentLoaded', function () {
             drawSectionTitle("MIS DATOS FAMILIARES", y)
             y += 5 // Corregido overlap (4->5)
 
-            // Headers
-            const fmC1 = boxWidth * 0.2
-            const fmC2 = boxWidth * 0.6
-            const fmC3 = boxWidth * 0.2
+            // Headers - Fecha Nacimiento más estrecha con texto en 2 líneas
+            const fmC1 = boxWidth * 0.15
+            const fmC2 = boxWidth * 0.70
+            const fmC3 = boxWidth * 0.15
+            const fmHeaderH = rowH * 1.3 // Altura extra para 2 líneas en header
 
+            // Fill headers (sin borde)
             pdf.setFillColor(...colors.labelBg)
-            pdf.rect(boxX, y, fmC1, rowH, "FD")
+            pdf.rect(boxX, y, fmC1, fmHeaderH, "F")
+            pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F")
+            pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F")
+            // UN solo borde exterior + divisores internos
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, boxWidth, fmHeaderH)
+            pdf.line(boxX + fmC1, y, boxX + fmC1, y + fmHeaderH)
+            pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH)
+            // Textos
             pdf.setFontSize(8)
             pdf.setFont(undefined, "normal")
-            pdf.text("PARENTESCO", boxX + 2, y + 3)
-
-            pdf.setFillColor(...colors.labelBg) // Re-set fill color
-            pdf.rect(boxX + fmC1, y, fmC2, rowH, "FD")
-            pdf.text("APELLIDOS Y NOMBRES", boxX + fmC1 + 2, y + 3)
-
-            pdf.setFillColor(...colors.labelBg) // Re-set fill color
-            pdf.rect(boxX + fmC1 + fmC2, y, fmC3, rowH, "FD")
-            pdf.text("FECHA NACIMIENTO", boxX + fmC1 + fmC2 + 2, y + 3)
-            y += rowH
+            pdf.text("Parentesco", boxX + fmC1 / 2, y + fmHeaderH / 2 + 1, { align: "center" })
+            pdf.text("Apellidos y Nombres", boxX + fmC1 + fmC2 / 2, y + fmHeaderH / 2 + 1, { align: "center" })
+            // Fecha Nacimiento en 2 líneas
+            const fnLines = pdf.splitTextToSize("Fecha Nacimiento", fmC3 - 4)
+            pdf.text(fnLines, boxX + fmC1 + fmC2 + fmC3 / 2, y + fmHeaderH / 2 - (fnLines.length > 1 ? 1.5 : 0) + 1, { align: "center" })
+            y += fmHeaderH
 
             // Filas datos
             const parentescos = document.getElementsByName("parentesco[]")
@@ -995,10 +1010,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 const nom = nombresFam[i]?.value || ""
                 const fec = formatDateToDMY(fechasFam[i]?.value || "")
 
-                pdf.setFillColor(255);
-                pdf.rect(boxX, y, fmC1, rowH); pdf.text(par.toUpperCase(), boxX + 2, y + 3)
-                pdf.rect(boxX + fmC1, y, fmC2, rowH); pdf.text(nom.toUpperCase(), boxX + fmC1 + 2, y + 3)
-                pdf.rect(boxX + fmC1 + fmC2, y, fmC3, rowH); pdf.text(fec, boxX + fmC1 + fmC2 + 2, y + 3)
+                // UN solo borde exterior + divisores internos
+                pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+                pdf.rect(boxX, y, boxWidth, rowH)
+                pdf.line(boxX + fmC1, y, boxX + fmC1, y + rowH)
+                pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + rowH)
+                pdf.setTextColor(0)
+                pdf.text(par.toUpperCase(), boxX + 2, y + 3)
+                pdf.text(nom.toUpperCase(), boxX + fmC1 + 2, y + 3)
+                pdf.text(fec, boxX + fmC1 + fmC2 + 2, y + 3)
                 y += rowH
             }
             // ========== CONFORMIDAD ==========
@@ -1014,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Calculate height based on new font size and desired line height (3.5)
             const confBoxH = confLines.length * 3.5 + 5 // Adjusted line height from 4 to 3.5
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
             pdf.rect(boxX, y, boxWidth, confBoxH)
             pdf.text(confLines, boxX + 2, y + 4) // Ajuste Y+4
             y += confBoxH
@@ -1025,8 +1046,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const firmaH = Math.max(30, espacioDisponible) // Usar todo el espacio, minimo 30mm
             const halfW = boxWidth / 2
 
-            pdf.rect(boxX, y, halfW, firmaH)
-            pdf.rect(boxX + halfW, y, halfW, firmaH)
+            pdf.setLineWidth(0.15)
+            pdf.rect(boxX, y, boxWidth, firmaH)
+            pdf.line(boxX + halfW, y, boxX + halfW, y + firmaH)
 
             pdf.setFont(undefined, "bold")
             pdf.setFontSize(8)
@@ -1040,26 +1062,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
             y += firmaH
 
-            // Barra inferior final (si entra)
+            // Barra inferior final (si entra) - 2 columnas 50/50
             if (y + rowH <= pageHeight - marginBottom) {
+                const halfBar = boxWidth / 2
+                // Fill areas (sin borde)
                 pdf.setFillColor(...colors.labelBg)
-                pdf.rect(boxX, y, 40, rowH, "FD")
+                pdf.rect(boxX, y, halfBar * 0.55, rowH, "F")
+                pdf.setFillColor(255)
+                pdf.rect(boxX + halfBar * 0.55, y, halfBar - halfBar * 0.55, rowH, "F")
+                pdf.setFillColor(...colors.labelBg)
+                pdf.rect(boxX + halfBar, y, halfBar * 0.3, rowH, "F")
+                pdf.setFillColor(255)
+                pdf.rect(boxX + halfBar + halfBar * 0.3, y, halfBar - halfBar * 0.3, rowH, "F")
+                // UN solo borde exterior + divisores internos
+                pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+                pdf.rect(boxX, y, boxWidth, rowH)
+                pdf.line(boxX + halfBar * 0.55, y, boxX + halfBar * 0.55, y + rowH)
+                pdf.line(boxX + halfBar, y, boxX + halfBar, y + rowH)
+                pdf.line(boxX + halfBar + halfBar * 0.3, y, boxX + halfBar + halfBar * 0.3, y + rowH)
+                // Textos
+                pdf.setFont(undefined, "normal")
                 pdf.text("Fecha de la declaración", boxX + 2, y + 4)
-
                 const fechaHoy = new Date().toLocaleDateString("es-PE")
-                pdf.setFillColor(255)
-                pdf.rect(boxX + 40, y, 40, rowH, "FD")
-                pdf.setFont(undefined, "normal")
-                pdf.text(fechaHoy, boxX + 42, y + 4)
-
-                pdf.setFillColor(...colors.labelBg)
-                pdf.setFont(undefined, "normal")
-                pdf.rect(boxX + 80, y, 20, rowH, "FD")
-                pdf.text("Nombre", boxX + 82, y + 4)
-
-                pdf.setFillColor(255)
-                pdf.rect(boxX + 100, y, boxWidth - 100, rowH, "FD")
-                pdf.text(nombres, boxX + 102, y + 4)
+                pdf.text(fechaHoy, boxX + halfBar * 0.55 + 2, y + 4)
+                pdf.text("Nombre", boxX + halfBar + 2, y + 4)
+                pdf.text(nombres, boxX + halfBar + halfBar * 0.3 + 2, y + 4)
             }
 
 
