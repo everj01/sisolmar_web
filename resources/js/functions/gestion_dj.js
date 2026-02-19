@@ -535,15 +535,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 borderColor: [0, 0, 0],
             }
 
-            // Helper: fitText
-            // Helper: fitText (Base font aumentada)
-            // Helper: fitText (Base font aumentada)
-            function fitText(text, maxWidth, initialFontSize = 8.5, minFontSize = 5) {
+            // Helper: fitText (Tamaño estandarizado a 8)
+            function fitText(text, maxWidth, initialFontSize = 8, minFontSize = 6) {
                 pdf.setFontSize(initialFontSize)
                 let textWidth = pdf.getTextWidth(text)
                 let currentSize = initialFontSize
                 while (textWidth > maxWidth && currentSize > minFontSize) {
-                    currentSize -= 0.4
+                    currentSize -= 0.3
                     pdf.setFontSize(currentSize)
                     textWidth = pdf.getTextWidth(text)
                 }
@@ -564,9 +562,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.rect(x, fieldY, labelWidth, inputHeight)
 
                 // Label text
-                pdf.setFont(undefined, "bold")
+                pdf.setFont(undefined, "normal")
                 pdf.setTextColor(...colors.labelText)
-                const labelFontSize = fitText(label, labelWidth - 2, 7, 4.5)
+                const labelFontSize = fitText(label, labelWidth - 2, 8, 6)
                 pdf.setFontSize(labelFontSize)
                 pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" })
 
@@ -579,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.setFont(undefined, "normal")
                 pdf.setTextColor(...colors.inputText)
                 const maxValW = valueWidth - (alignValue === "center" ? 1 : 2)
-                const valFontSize = fitText(valStr, maxValW, 7.5, 4.5)
+                const valFontSize = fitText(valStr, maxValW, 8, 6)
                 pdf.setFontSize(valFontSize)
                 const textY = fieldY + inputHeight / 2 + 1
                 const valX = alignValue === "center" ? x + labelWidth + valueWidth / 2 : x + labelWidth + 1
@@ -596,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.setFontSize(8)
                 pdf.setFont(undefined, "bold")
                 pdf.setTextColor(...colors.sectionText)
-                pdf.text(title, boxX + boxWidth / 2, yPos + 2.8, { align: "center" })
+                pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" })
             }
 
             function formatDateToDMY(fechaStr) {
@@ -653,8 +651,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const nombres = (document.getElementById("nombres_apellidos")?.value || "").toUpperCase().trim()
             const dni = document.getElementById("dni")?.value || "".trim()
 
-            pdf.setFontSize(8.5) // Aumentado de 7 a 8.5
-            const lineHeight = 3.5 // Aumentado de 3 a 3.5
+            pdf.setFontSize(8)
+            const lineHeight = 3.5
             const maxWidth = boxWidth - 4
             let currentX = boxX + 2
             let currentY = y + 3.5
@@ -749,13 +747,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const rowH = 6.5 // 6.5mm altura fila (Optimizado 1 pag)
 
             // Fila 1: Nombres
-            drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.25)
+            drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.22)
 
             // Foto
             // Foto
             const fotoH = rowH * 6 // 6 filas (Incluye Afiliacion)
             pdf.rect(boxX + colMain, y, colFoto, fotoH)
-            pdf.setFontSize(6); pdf.setFont(undefined, "normal"); pdf.setTextColor(150);
+            pdf.setFontSize(8); pdf.setFont(undefined, "normal"); pdf.setTextColor(150);
             pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" })
             y += rowH
 
@@ -764,38 +762,39 @@ document.addEventListener('DOMContentLoaded', function () {
             drawField("DNI", dni, boxX, w1, y, rowH, 0.3)
             drawField("Caduca", document.getElementById("caduca")?.value || "", boxX + w1, w1, y, rowH, 0.4)
             drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + w1 * 2, w1, y, rowH, 0.45)
-            drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + w1 * 3, w1, y, rowH, 0.3)
+            drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + w1 * 3, w1, y, rowH, 0.45)
             y += rowH
 
             // Fila 3: Fecha...
             const w2 = colMain / 2
-            drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, w2, y, rowH, 0.3)
-            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + w2, w2, y, rowH, 0.2)
+            drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, w2, y, rowH, 0.325)
+            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + w2, w2, y, rowH, 0.225)
             y += rowH
 
             // Fila 4: Tipo Sangre...
             const w3 = colMain / 4
-            drawField("Tipo Sangre", document.getElementById("tipo_sangre")?.value || "", boxX, w3, y, rowH, 0.5)
-            drawField("Peso (Kg.)", document.getElementById("peso")?.value || "", boxX + w3, w3, y, rowH, 0.5)
-            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + w3 * 2, w3, y, rowH, 0.5)
-            drawField("Celular", document.getElementById("celular")?.value || "", boxX + w3 * 3, w3, y, rowH, 0.4)
+            drawField("Tipo Sangre", document.getElementById("tipo_sangre")?.value || "", boxX, w3, y, rowH, 0.65)
+            drawField("Peso (Kg.)", document.getElementById("peso")?.value || "", boxX + w3, w3, y, rowH, 0.40)
+            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + w3 * 2, w3, y, rowH, 0.45)
+            drawField("Celular", document.getElementById("celular")?.value || "", boxX + w3 * 3, w3, y, rowH, 0.45)
             y += rowH
 
             // Fila 5: Correo...
             const wMail = w3 * 3
             const wWsp = w3
-            drawField("Correo electrónico", document.getElementById("correo")?.value || "", boxX, wMail, y, rowH, 0.2)
+            drawField("Correo electrónico", document.getElementById("correo")?.value || "", boxX, wMail, y, rowH, 0.217)
             drawField("WhatsApp", document.getElementById("whatsapp")?.value || "", boxX + wMail, wWsp, y, rowH, 0.45)
             y += rowH
 
             // Fila 6: Afiliacion Texto (Ajustado a colMain para dejar espacio a Foto)
+            // Etiqueta debe terminar alineada con fin de etiqueta Talla (Mt.)
             const row6W = colMain
-            const row6LabelW = row6W * 0.75 // Dar mas espacio al texto
+            const row6LabelW = colMain * 0.6125 // Alineado con fin de Talla (Mt.)
             const row6InputW = row6W - row6LabelW
 
             pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F"); pdf.rect(boxX, y, row6LabelW, rowH);
-            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(6.5);
-            pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 3)
+            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
+            pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 4)
 
             pdf.setFillColor(255); // Reset fill
             pdf.rect(boxX + row6LabelW, y, row6InputW, rowH)
@@ -805,8 +804,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const sysPrev = document.getElementById("sistema_previsional")?.value || ""
             const isAFP = sysPrev.includes("AFP")
             const isONP = sysPrev.includes("ONP")
-            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth / 2, y, rowH, 0.8, "center")
-            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.8, "center")
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth / 2, y, rowH, 0.5, "center")
+            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.5, "center")
             y += rowH
 
             // Fila 8: Educacion
@@ -818,10 +817,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Label Background
                 pdf.setFillColor(220) // Gris
                 pdf.rect(x, y, labelW, h, "FD")
-                pdf.setFontSize(6.5)
-                pdf.setTextColor(0)
+                // Label — tamaño estandarizado 8
                 pdf.setFont(undefined, "normal")
-                pdf.text(label, x + 2, y + 4) // Mantener alineacion del label original
+                pdf.setTextColor(0)
+                const lblFontSize = fitText(label, labelW - 2, 8, 6)
+                pdf.setFontSize(lblFontSize)
+                const maxLabelW = labelW - 2
+                const labelLines = pdf.splitTextToSize(label, maxLabelW)
+                const lblLineH = lblFontSize * 0.3527 * 1.15
+                const lblBlockH = labelLines.length * lblLineH
+                const lblY = labelLines.length === 1
+                    ? y + h / 2 + 1
+                    : y + (h - lblBlockH) / 2 + lblLineH
+                pdf.text(labelLines, x + labelW / 2, lblY, { align: "center", lineHeightFactor: 1.15 })
+                pdf.setFont(undefined, "normal")
 
                 // Value Background
                 pdf.setFillColor(255)
@@ -829,13 +838,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (!value) return
 
-                // Auto-fit: reducir fuente para intentar 1 linea
-                let fontSize = 7.5
+                // Auto-fit: tamaño estandarizado 8
+                let fontSize = 8
                 pdf.setFontSize(fontSize)
                 const maxValW = valW - 2 // padding
 
                 while (pdf.getTextWidth(value) > maxValW && fontSize > 6) {
-                    fontSize -= 0.5
+                    fontSize -= 0.3
                     pdf.setFontSize(fontSize)
                 }
 
@@ -870,18 +879,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 })
             }
 
-            const wEdu = boxWidth / 4
-            drawAutoFitField("Grado de instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, wEdu, y, rowH, 0.45)
-            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + wEdu, wEdu, y, rowH, 0.3)
-            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + wEdu * 2, wEdu, y, rowH, 0.3)
-            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + wEdu * 3, wEdu, y, rowH, 0.5)
+            // Fila 8: Educacion - 4 columnas con ratio 0.5 para alinear etiquetas
+            // Etiquetas terminan en: 12.5%, 37.5%, 62.5%, 87.5% del boxWidth
+            const col1 = boxWidth * 0.25  // Grado de Instrucción: 0-25%
+            const col2 = boxWidth * 0.25  // Institución: 25-50%
+            const col3 = boxWidth * 0.25  // Carrera: 50-75%
+            const col4 = boxWidth * 0.25  // Año de egreso: 75-100%
+            
+            drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.50)
+            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.50)
+            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.50)
+            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
             y += rowH
 
-            // Fila 9: Embargos
-            const wFin = boxWidth / 3
-            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, wFin, y, rowH, 0.8)
-            drawField("Cuenta sueldo", "", boxX + wFin, wFin, y, rowH, 0.4)
-            drawField("Cuenta sueldo", "", boxX + wFin * 2, wFin, y, rowH, 0.4)
+            // Fila 9: Embargos - posiciones calculadas para alinear con etiquetas de fila superior
+            // Embargos: 0-37.5% (etiqueta termina en 25% = inicio Institución)
+            // Cuenta BCP: 37.5-62.5% (etiqueta empieza en 37.5% = fin etiqueta Institución, termina en 50% = inicio Carrera)
+            // Cuenta INTERBANK: 62.5-100% (etiqueta empieza en 62.5% = fin etiqueta Carrera, termina en 87.5% = fin etiqueta Año egreso)
+            const embW = boxWidth * 0.375      // Embargos: 37.5% del ancho
+            const bcpW = boxWidth * 0.25       // Cuenta BCP: 25% del ancho
+            const interbankW = boxWidth * 0.375 // Cuenta INTERBANK: 37.5% del ancho
+            
+            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.667)
+            drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, 0.50)
+            drawField("Cuenta sueldo INTERBANK", "", boxX + embW + bcpW, interbankW, y, rowH, 0.667)
             y += rowH
 
             // Fila 10: Direccion Actual
@@ -893,13 +914,13 @@ document.addEventListener('DOMContentLoaded', function () {
             y += rowH
 
             // Fila 12: Emergencia 1
-            const wEmer1 = boxWidth * 0.6
-            drawField("En caso de Emergencia llamar a", document.getElementById("contacto_emergencia")?.value || "", boxX, wEmer1, y, rowH, 0.4)
+            drawField("En caso de Emergencia llamar a", document.getElementById("contacto_emergencia")?.value || "", boxX, boxWidth, y, rowH, 0.27)
             y += rowH
 
             // Fila 13: Emergencia 2
             drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, boxWidth / 2, y, rowH, 0.3)
             drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.3)
+            y += rowH
             // ========== DATOS LABORALES ==========
             checkPageBreak(5 * rowH + 5 + 3)
             drawSectionTitle("MIS DATOS LABORALES", y)
@@ -935,6 +956,8 @@ document.addEventListener('DOMContentLoaded', function () {
             // Fila 5
             drawField("Profesión u Ocupación Alterna 1", "", boxX, boxWidth / 2, y, rowH, 0.4)
             drawField("Profesión u Ocupación Alterna 2", "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.4)
+            y += rowH
+
             // ========== DATOS FAMILIARES ==========
             checkPageBreak(40)
             drawSectionTitle("MIS DATOS FAMILIARES", y)
@@ -947,16 +970,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
             pdf.setFillColor(...colors.labelBg)
             pdf.rect(boxX, y, fmC1, rowH, "FD")
-            pdf.setFontSize(7)
-            pdf.text("Parentesco", boxX + 2, y + 3)
+            pdf.setFontSize(8)
+            pdf.setFont(undefined, "normal")
+            pdf.text("PARENTESCO", boxX + 2, y + 3)
 
             pdf.setFillColor(...colors.labelBg) // Re-set fill color
             pdf.rect(boxX + fmC1, y, fmC2, rowH, "FD")
-            pdf.text("Apellidos y Nombres", boxX + fmC1 + 2, y + 3)
+            pdf.text("APELLIDOS Y NOMBRES", boxX + fmC1 + 2, y + 3)
 
             pdf.setFillColor(...colors.labelBg) // Re-set fill color
             pdf.rect(boxX + fmC1 + fmC2, y, fmC3, rowH, "FD")
-            pdf.text("Fecha Nacimiento", boxX + fmC1 + fmC2 + 2, y + 3)
+            pdf.text("FECHA NACIMIENTO", boxX + fmC1 + fmC2 + 2, y + 3)
             y += rowH
 
             // Filas datos
@@ -982,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', function () {
             drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y)
             y += 5 // Corregido overlap (4->5)
 
-            pdf.setFontSize(8.5) // Aumentado de 7 a 8
+            pdf.setFontSize(8)
             pdf.setFont(undefined, "normal")
             const confText = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento."
 
@@ -1005,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pdf.rect(boxX + halfW, y, halfW, firmaH)
 
             pdf.setFont(undefined, "bold")
-            pdf.setFontSize(6.5)
+            pdf.setFontSize(8)
 
             const footerY = y + firmaH - 5
             pdf.text("Firma Registrada", boxX + halfW / 2, footerY, { align: "center" })
@@ -1029,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.text(fechaHoy, boxX + 42, y + 4)
 
                 pdf.setFillColor(...colors.labelBg)
-                pdf.setFont(undefined, "bold")
+                pdf.setFont(undefined, "normal")
                 pdf.rect(boxX + 80, y, 20, rowH, "FD")
                 pdf.text("Nombre", boxX + 82, y + 4)
 
@@ -1042,8 +1066,8 @@ document.addEventListener('DOMContentLoaded', function () {
             async function drawLogo(x, y, w, h) {
                 if (!window.logoUrl) {
                     // Fallback
-                    pdf.setFontSize(9); pdf.setTextColor(0);
-                    pdf.setFont(undefined, "bold");
+                    pdf.setFontSize(8); pdf.setTextColor(0);
+                    pdf.setFont(undefined, "normal");
                     pdf.text("SOLMAR", x + w / 2, y + h / 2, { align: "center" });
                     return;
                 }
