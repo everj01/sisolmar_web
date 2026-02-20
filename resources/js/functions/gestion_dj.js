@@ -952,22 +952,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Fila 2
             drawField("Familiar en la Empresa", "", boxX, boxWidth * 0.25, y, rowH, 0.816)
-            drawField("Nombre Completo", "", boxX + boxWidth * 0.25, boxWidth * 0.5, y, rowH, 0.3)
-            drawField("Parentesco", "", boxX + boxWidth * 0.75, boxWidth * 0.25, y, rowH, 0.4)
+            drawField("Nombre Completo", "", boxX + boxWidth * 0.25, boxWidth * 0.46584, y, rowH, 0.3)
+            drawField("Parentesco", "", boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4)
             y += rowH
 
             // Fila 3: SMO...
             const wLab3 = boxWidth / 6
             drawField("SMO", document.getElementById("smo")?.value || "", boxX, wLab3, y, rowH, 0.4)
-            drawField("Institución", document.getElementById("institucion_laboral")?.value || "", boxX + wLab3, wLab3, y, rowH, 0.5)
-            drawField("Nº Brevete", document.getElementById("brevete")?.value || "", boxX + wLab3 * 2, wLab3, y, rowH, 0.6)
+            drawField("Institución", document.getElementById("institucion_laboral")?.value || "", boxX + wLab3 * 0.75, wLab3 * 1.25, y, rowH, 0.379)
+            drawField("Nº Brevete", document.getElementById("brevete")?.value || "", boxX + wLab3 * 1.85, wLab3 * 1.15, y, rowH, 0.522)
             drawField("Clase", document.getElementById("clase_brevete")?.value || "", boxX + wLab3 * 3, wLab3, y, rowH, 0.4)
-            drawField("Tipo", "", boxX + wLab3 * 4, wLab3, y, rowH, 0.4)
-            drawField("Vehículo Propio", document.getElementById("vehiculo_propio")?.value || "", boxX + wLab3 * 5, wLab3, y, rowH, 0.65)
+            drawField("Tipo", "", boxX + wLab3 * 4, wLab3, y, rowH, 0.289)
+            drawField("Vehículo Propio", document.getElementById("vehiculo_propio")?.value || "", boxX + boxWidth * 0.755, boxWidth * 0.245, y, rowH, 0.52)
             y += rowH
 
             // Fila 4 - Duración alineada con inicio de Interbank (62.5%)
-            drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.30)
+            drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.40)
             drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", boxX + boxWidth * 0.375, boxWidth * 0.25, y, rowH, 0.25)
             drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.625, boxWidth * 0.375, y, rowH, 0.25)
             y += rowH
