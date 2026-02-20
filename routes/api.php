@@ -129,7 +129,8 @@ Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 
 // REPORTE FOLIOS PENDIENTES POR SUCURSAL
 Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
 
-
+// REPORTE FOLIOS POR VENCER CON FILTROS
+Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
 
 
 
