@@ -562,9 +562,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // 2) UN solo borde exterior + divisor interno
                 pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.15)
-                pdf.rect(x, fieldY, width, inputHeight)
-                pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight)
+                pdf.setLineWidth(0.10)
+                // Borde exterior: solo lados necesarios
+                // Borde superior solo para la primera fila o si omitTopBorder no está activo
+                if (!(arguments.length > 7 && arguments[7])) {
+                    pdf.line(x, fieldY, x + width, fieldY); // arriba
+                }
+                pdf.line(x, fieldY, x, fieldY + inputHeight); // izquierda
+                // Borde derecho solo si omitRightBorder no está activo
+                if (!(arguments.length > 8 && arguments[8])) {
+                    pdf.line(x + width, fieldY, x + width, fieldY + inputHeight); // derecha
+                }
+                pdf.line(x, fieldY + inputHeight, x + width, fieldY + inputHeight); // abajo
+                // Línea divisoria fina entre etiqueta gris y campo blanco
+                // Línea divisoria fina entre etiqueta gris y campo blanco solo si omitRightBorder no está activo
+                if (!(arguments.length > 8 && arguments[8])) {
+                    pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight);
+                }
 
                 // Label text
                 pdf.setFont(undefined, "normal")
@@ -597,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.setFillColor(...colors.sectionBg)
                 pdf.rect(boxX, yPos, boxWidth, 5, "F") // 5mm altura header
                 pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.15)
+                pdf.setLineWidth(0.10)
                 pdf.rect(boxX, yPos, boxWidth, 5)
 
                 pdf.setFontSize(8)
@@ -968,13 +982,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Fila 4 - Duración alineada con inicio de Interbank (62.5%)
             drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.40)
-            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", boxX + boxWidth * 0.375, boxWidth * 0.25, y, rowH, 0.25)
+            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", boxX + wLab3 * 1.85, boxWidth * 0.25, y, rowH, 0.25, undefined, undefined, true)
             drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.625, boxWidth * 0.375, y, rowH, 0.25)
             y += rowH
 
             // Fila 5
-            drawField("Profesión u Ocupación Alterna 1", "", boxX, boxWidth / 2, y, rowH, 0.4)
-            drawField("Profesión u Ocupación Alterna 2", "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.4)
+            drawField("Profesión u Ocupación Alterna 1", "", boxX, boxWidth / 2, y, rowH, 0.45)
+            drawField("Profesión u Ocupación Alterna 2", "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.45)
             y += rowH
 
             // ========== DATOS FAMILIARES ==========
