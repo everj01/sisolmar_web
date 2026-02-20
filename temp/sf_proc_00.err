@@ -3354,3 +3354,10 @@
 [Fri Feb 20 14:54:42 2026] 127.0.0.1:59095 Closing
 [Fri Feb 20 14:54:42 2026] 127.0.0.1:59096 [200]: GET /images/icono.png
 [Fri Feb 20 14:54:42 2026] 127.0.0.1:59096 Closing
+[Fri Feb 20 14:54:44 2026] 127.0.0.1:59098 Accepted
+[Fri Feb 20 14:54:44 2026] 127.0.0.1:59098 Closing
+[Fri Feb 20 14:54:44 2026] 127.0.0.1:59099 Accepted
+[Fri Feb 20 14:54:45 2026] 127.0.0.1:59099 Closing
+[Fri Feb 20 14:54:45 2026] 127.0.0.1:59100 Accepted
+[Fri Feb 20 14:54:45 2026] 127.0.0.1:59100 [200]: GET /images/logo_sol.png
+[Fri Feb 20 14:54:45 2026] 127.0.0.1:59100 Closing
