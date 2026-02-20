@@ -773,35 +773,35 @@ document.addEventListener('DOMContentLoaded', function () {
             const w1 = colMain / 4
             drawField("DNI", dni, boxX, w1, y, rowH, 0.3)
             drawField("Caduca", document.getElementById("caduca")?.value || "", boxX + w1, boxWidth * 0.381 - w1, y, rowH, 0.461)
-            drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + boxWidth * 0.381, colMain - boxWidth * 0.381 - w1, y, rowH, 0.5414)
-            drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + colMain - w1, w1, y, rowH, 0.55)
+            drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
+            drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
             y += rowH
 
             // Fila 3: Fecha...
             const w2 = colMain / 2
             drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, boxWidth * 0.381, y, rowH, 0.394)
-            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + boxWidth * 0.381, colMain - boxWidth * 0.381, y, rowH, 0.2875)
+            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
             y += rowH
 
             // Fila 4: Tipo Sangre...
             const w3 = colMain / 4
             drawField("Tipo Sangre", document.getElementById("tipo_sangre")?.value || "", boxX, w3, y, rowH, 0.735)
             drawField("Peso (Kg.)", document.getElementById("peso")?.value || "", boxX + w3, boxWidth * 0.381 - w3, y, rowH, 0.461)
-            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + boxWidth * 0.381, colMain - boxWidth * 0.381 - w3, y, rowH, 0.5414)
-            drawField("Celular", document.getElementById("celular")?.value || "", boxX + colMain - w3, w3, y, rowH, 0.55)
+            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
+            drawField("Celular", document.getElementById("celular")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
             y += rowH
 
             // Fila 5: Correo...
             const wMail = w3 * 3
             const wWsp = w3
-            drawField("Correo electrónico", document.getElementById("correo")?.value || "", boxX, wMail, y, rowH, 0.245)
-            drawField("WhatsApp", document.getElementById("whatsapp")?.value || "", boxX + wMail, wWsp, y, rowH, 0.55)
+            drawField("Correo electrónico", document.getElementById("correo")?.value || "", boxX, boxWidth * 0.6279, y, rowH, 0.239)
+            drawField("WhatsApp", document.getElementById("whatsapp")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
             y += rowH
 
             // Fila 6: Afiliacion Texto (Ajustado a colMain para dejar espacio a Foto)
             // Etiqueta debe terminar alineada con fin de etiqueta Talla (Mt.)
             const row6W = colMain
-            const row6LabelW = colMain * 0.6203 // Alineado con inicio de Carrera
+            const row6LabelW = boxWidth * 0.5264 // Alineado con inicio de Carrera
             const row6InputW = row6W - row6LabelW
 
             pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
@@ -817,8 +817,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const sysPrev = document.getElementById("sistema_previsional")?.value || ""
             const isAFP = sysPrev.includes("AFP")
             const isONP = sysPrev.includes("ONP")
-            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.506, y, rowH, 0.403, "center")
-            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.506, boxWidth * 0.494, y, rowH, 0.441, "center")
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.5264, y, rowH, 0.403, "center")
+            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.441, "center")
             y += rowH
 
             // Fila 8: Educacion
@@ -900,24 +900,26 @@ document.addEventListener('DOMContentLoaded', function () {
             // Fila 8: Educacion - 4 columnas - Alineación con fila inferior (Embargos/BCP)
             // Institución inicia donde termina el label de "Embargos en inst. financieras" (embW*0.60 = 22.5%)
             const col1 = boxWidth * 0.285  // Grado de Instrucción (28.5% - alineado con fin label Embargos)
-            const col2 = boxWidth * 0.221  // Institución (22.1%) - termina en 50.6% (fin label BCP)
-            const col3 = (wMail + wWsp * 0.55) - col1 - col2  // Carrera: hasta fin label ONP/WhatsApp
-            const col4 = boxWidth - (wMail + wWsp * 0.55)       // Año de egreso: desde fin label ONP
+            const col2 = boxWidth * 0.2414  // Institución - termina alineado con fin label BCP
+            const col3 = (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441) - col1 - col2  // Carrera: hasta fin label ONP
+            const col4 = boxWidth - (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441)       // Año de egreso: alineado fin label ONP
 
             drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.526)
-            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.434)
+            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.398)
             drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.486)
-            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + wMail + wWsp * 0.55, col4, y, rowH, 0.40)
+            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
             y += rowH
 
-            // Fila 9: Embargos - posiciones fijas (NO TOCAR: 37.5% | 25% | 37.5%)
+            // Fila 9: Embargos
             const embW = boxWidth * 0.381      // Embargos: 38.1% (alineado con fin label Institución)
-            const bcpW = wMail - embW             // Cuenta BCP: hasta inicio WhatsApp
-            const interbankW = boxWidth - wMail    // Cuenta INTERBANK: desde inicio WhatsApp
+            const interbankStart = col1 + col2 + col3 * 0.486  // Inicio INTERBANK alineado con fin de etiqueta gris de Carrera
+            const bcpW = interbankStart - embW
+            const bcpLabelRatio = ((wMail - embW) * 0.63) / bcpW  // Preserva posición exacta del label gris de BCP
+            const interbankW = boxWidth - interbankStart
 
             drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.75)
-            drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, 0.5414)
-            drawField("Cuenta sueldo INTERBANK", "", boxX + wMail, interbankW, y, rowH, 0.573)
+            drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, bcpLabelRatio)
+            drawField("Cuenta sueldo INTERBANK", "", boxX + interbankStart, interbankW, y, rowH, 0.644)
             y += rowH
 
             // Fila 10: Direccion Actual
