@@ -982,8 +982,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Fila 4 - Duración alineada con inicio de Interbank (62.5%)
             drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.40)
-            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", boxX + wLab3 * 1.85, boxWidth * 0.25, y, rowH, 0.25, undefined, undefined, true)
-            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.625, boxWidth * 0.375, y, rowH, 0.25)
+            // El campo blanco de Cargo se extiende hasta el inicio de Duración
+            const cargoStart = boxX + wLab3 * 1.85;
+            const duracionStart = boxX + boxWidth * 0.625;
+            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", cargoStart, duracionStart - cargoStart, y, rowH, 0.25)
+            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.625, boxWidth * 0.375, y, rowH, 0.25, undefined, undefined, true)
             y += rowH
 
             // Fila 5
@@ -1067,24 +1070,25 @@ document.addEventListener('DOMContentLoaded', function () {
             // Calcular espacio restante para firmas antes del pie de pagina
             // pageHeight - marginBottom - rowH (footer) - y actual
             const espacioDisponible = pageHeight - marginBottom - rowH - y - 2
-            const firmaH = Math.max(30, espacioDisponible) // Usar todo el espacio, minimo 30mm
-            const halfW = boxWidth / 2
+            const firmaH = Math.max(45, espacioDisponible) // Usar todo el espacio, minimo 45mm
+            const firmaW = boxWidth * 0.6;
+            const huellaW = boxWidth * 0.4;
 
-            pdf.setLineWidth(0.15)
-            pdf.rect(boxX, y, boxWidth, firmaH)
-            pdf.line(boxX + halfW, y, boxX + halfW, y + firmaH)
+            pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, boxWidth, firmaH);
+            pdf.line(boxX + firmaW, y, boxX + firmaW, y + firmaH);
 
-            pdf.setFont(undefined, "bold")
-            pdf.setFontSize(8)
+            pdf.setFont(undefined, "bold");
+            pdf.setFontSize(8);
 
-            const footerY = y + firmaH - 5
-            pdf.text("Firma Registrada", boxX + halfW / 2, footerY, { align: "center" })
-            pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + halfW / 2, footerY + 2.5, { align: "center" })
+            const footerY = y + firmaH - 5;
+            pdf.text("Firma Registrada", boxX + firmaW / 2, footerY, { align: "center" });
+            pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2, footerY + 2.5, { align: "center" });
 
-            pdf.text("Huella Registrada", boxX + halfW + halfW / 2, footerY, { align: "center" })
-            pdf.text("INDICE DERECHO", boxX + halfW + halfW / 2, footerY + 2.5, { align: "center" })
+            pdf.text("Huella Registrada", boxX + firmaW + huellaW / 2, footerY, { align: "center" });
+            pdf.text("INDICE DERECHO", boxX + firmaW + huellaW / 2, footerY + 2.5, { align: "center" });
 
-            y += firmaH
+            y += firmaH;
 
             // Barra inferior final (si entra) - 2 columnas 50/50
             if (y + rowH <= pageHeight - marginBottom) {
