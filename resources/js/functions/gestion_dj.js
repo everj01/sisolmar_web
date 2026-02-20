@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const sysPrev = document.getElementById("sistema_previsional")?.value || ""
             const isAFP = sysPrev.includes("AFP")
             const isONP = sysPrev.includes("ONP")
-            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.5264, y, rowH, 0.403, "center")
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.5264, y, rowH, 0.3875, "center")
             drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.441, "center")
             y += rowH
 
@@ -935,8 +935,8 @@ document.addEventListener('DOMContentLoaded', function () {
             y += rowH
 
             // Fila 13: Emergencia 2 - 50/50
-            const wCelEmergencia = boxWidth * 0.506
-            const wParEmergencia = boxWidth * 0.494
+            const wCelEmergencia = boxWidth * 0.5264
+            const wParEmergencia = boxWidth * 0.4736
             drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, wCelEmergencia, y, rowH, 0.403)
             drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.25)
             y += rowH
@@ -946,8 +946,8 @@ document.addEventListener('DOMContentLoaded', function () {
             y += 5 // Corregido overlap (4->5)
 
             // Fila 1
-            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.506, y, rowH, 0.564)
-            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.506, boxWidth * 0.494, y, rowH, 0.4)
+            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.5264, y, rowH, 0.475)
+            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4)
             y += rowH
 
             // Fila 2
