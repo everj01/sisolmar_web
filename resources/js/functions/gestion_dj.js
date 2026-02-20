@@ -548,6 +548,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 return currentSize
             }
 
+            // Helper: Obtener texto de select sin "SELECCIONAR" o "SELECCIONE"
+            function getCleanSelectText(id) {
+                const el = document.getElementById(id);
+                if (!el) return "";
+                const text = el.options[el.selectedIndex]?.text || "";
+                const cleanText = text.toUpperCase();
+                if (cleanText.includes("SELECCIONAR") || cleanText.includes("SELECCIONE")) {
+                    return "";
+                }
+                return text;
+            }
+
             function drawField(label, value, x, width, fieldY, inputHeight = 6, labelRatio = 0.35, alignValue = "left", omitTop = false, omitRight = false) {
                 const labelWidth = width * labelRatio
                 const valueWidth = width * (1 - labelRatio)
@@ -792,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Fila 3: Fecha...
             const w2 = colMain / 2
             drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, boxWidth * 0.381, y, rowH, 0.394)
-            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
+            drawField("Ciudad", getCleanSelectText("provincia_actual"), boxX + boxWidth * 0.381, colMain - boxWidth * 0.381, y, rowH, 0.334)
             y += rowH
 
             // Fila 4: Tipo Sangre...
@@ -920,9 +932,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const col3 = (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441) - col1 - col2  // Carrera: hasta fin label ONP
             const col4 = boxWidth - (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441)       // Año de egreso: alineado fin label ONP
 
-            drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.526)
-            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.398)
-            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.486)
+            drawAutoFitField("Grado de Instrucción", getCleanSelectText("grado_instruccion"), boxX, col1, y, rowH, 0.526)
+            drawAutoFitField("Institución", getCleanSelectText("institucion"), boxX + col1, col2, y, rowH, 0.398)
+            drawAutoFitField("Carrera", getCleanSelectText("carrera"), boxX + col1 + col2, col3, y, rowH, 0.486)
             drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
             y += rowH
 
