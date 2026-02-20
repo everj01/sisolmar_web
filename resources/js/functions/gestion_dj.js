@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return currentSize
             }
 
-            function drawField(label, value, x, width, fieldY, inputHeight = 6, labelRatio = 0.35, alignValue = "left") {
+            function drawField(label, value, x, width, fieldY, inputHeight = 6, labelRatio = 0.35, alignValue = "left", omitTop = false, omitRight = false) {
                 const labelWidth = width * labelRatio
                 const valueWidth = width * (1 - labelRatio)
                 const labelPadding = 1
@@ -562,23 +562,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // 2) UN solo borde exterior + divisor interno
                 pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.10)
+                pdf.setLineWidth(0.20)
                 // Borde exterior: solo lados necesarios
-                // Borde superior solo para la primera fila o si omitTopBorder no está activo
-                if (!(arguments.length > 7 && arguments[7])) {
+                // Borde superior solo si omitTop no está activo
+                if (!omitTop) {
                     pdf.line(x, fieldY, x + width, fieldY); // arriba
                 }
                 pdf.line(x, fieldY, x, fieldY + inputHeight); // izquierda
-                // Borde derecho solo si omitRightBorder no está activo
-                if (!(arguments.length > 8 && arguments[8])) {
+                // Borde derecho solo si omitRight no está activo
+                if (!omitRight) {
                     pdf.line(x + width, fieldY, x + width, fieldY + inputHeight); // derecha
                 }
                 pdf.line(x, fieldY + inputHeight, x + width, fieldY + inputHeight); // abajo
+
                 // Línea divisoria fina entre etiqueta gris y campo blanco
-                // Línea divisoria fina entre etiqueta gris y campo blanco solo si omitRightBorder no está activo
-                if (!(arguments.length > 8 && arguments[8])) {
-                    pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight);
-                }
+                pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight);
 
                 // Label text
                 pdf.setFont("Arial", "normal")
@@ -611,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.setFillColor(...colors.sectionBg)
                 pdf.rect(boxX, yPos, boxWidth, 5, "F") // 5mm altura header
                 pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.10)
+                pdf.setLineWidth(0.20)
                 pdf.rect(boxX, yPos, boxWidth, 5)
 
                 pdf.setFontSize(8)
@@ -770,14 +768,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const colMain = boxWidth - 35 // Foto mas ancha (35mm)
             const colFoto = 35
-            const rowH = 6.5 // 6.5mm altura fila (Optimizado 1 pag)
+            const rowH = 6.0 // 6.0mm para optimizar espacio y entrar todo en una hoja
 
             // Fila 1: Nombres
             drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.25)
 
             // Foto
             const fotoH = rowH * 6 // 6 filas (Incluye Afiliacion)
-            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
             pdf.rect(boxX + colMain, y, colFoto, fotoH)
             pdf.setFontSize(8); pdf.setFont(undefined, "normal"); pdf.setTextColor(150);
             pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" })
@@ -820,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
             pdf.setFillColor(255); pdf.rect(boxX + row6LabelW, y, row6InputW, rowH, "F");
-            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
             // Dibujar solo el borde inferior, izquierdo y derecho, sin doble trazo
             pdf.line(boxX, y, boxX + row6W, y); // borde superior
             pdf.line(boxX, y, boxX, y + rowH); // borde izquierdo
@@ -853,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // 2) UN solo borde exterior + divisor interno
                 pdf.setDrawColor(0)
-                pdf.setLineWidth(0.15)
+                pdf.setLineWidth(0.20)
                 pdf.rect(x, y, w, h)
                 pdf.line(x + labelW, y, x + labelW, y + h)
 
@@ -988,9 +986,9 @@ document.addEventListener('DOMContentLoaded', function () {
             drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.40)
             // El campo blanco de Cargo se extiende hasta el inicio de Duración
             const cargoStart = boxX + wLab3 * 1.85;
-            const duracionStart = boxX + boxWidth * 0.625;
+            const duracionStart = boxX + boxWidth * 0.71584;
             drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", cargoStart, duracionStart - cargoStart, y, rowH, 0.25)
-            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", boxX + boxWidth * 0.625, boxWidth * 0.375, y, rowH, 0.25, undefined, undefined, true)
+            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", duracionStart, boxWidth - (duracionStart - boxX), y, rowH, 0.25)
             y += rowH
 
             // Fila 5
@@ -1015,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F")
             pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F")
             // UN solo borde exterior + divisores internos
-            pdf.setDrawColor(0); pdf.setLineWidth(0.10);
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
             pdf.rect(boxX, y, boxWidth, fmHeaderH)
             pdf.line(boxX + fmC1, y, boxX + fmC1, y + fmHeaderH)
             pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH)
@@ -1078,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const firmaW = boxWidth * 0.6;
             const huellaW = boxWidth * 0.4;
 
-            pdf.setLineWidth(0.15);
+            pdf.setLineWidth(0.20);
             pdf.rect(boxX, y, boxWidth, firmaH);
             pdf.line(boxX + firmaW, y, boxX + firmaW, y + firmaH);
 
@@ -1094,32 +1092,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
             y += firmaH;
 
-            // Barra inferior final (si entra) - 2 columnas 50/50
-            if (y + rowH <= pageHeight - marginBottom) {
-                const halfBar = boxWidth / 2
-                // Fill areas (sin borde)
-                pdf.setFillColor(...colors.labelBg)
-                pdf.rect(boxX, y, halfBar * 0.55, rowH, "F")
-                pdf.setFillColor(255)
-                pdf.rect(boxX + halfBar * 0.55, y, halfBar - halfBar * 0.55, rowH, "F")
-                pdf.setFillColor(...colors.labelBg)
-                pdf.rect(boxX + halfBar, y, halfBar * 0.3, rowH, "F")
-                pdf.setFillColor(255)
-                pdf.rect(boxX + halfBar + halfBar * 0.3, y, halfBar - halfBar * 0.3, rowH, "F")
-                // UN solo borde exterior + divisores internos
-                pdf.setDrawColor(0); pdf.setLineWidth(0.15);
-                pdf.rect(boxX, y, boxWidth, rowH)
-                pdf.line(boxX + halfBar * 0.55, y, boxX + halfBar * 0.55, y + rowH)
-                pdf.line(boxX + halfBar, y, boxX + halfBar, y + rowH)
-                pdf.line(boxX + halfBar + halfBar * 0.3, y, boxX + halfBar + halfBar * 0.3, y + rowH)
-                // Textos
-                pdf.setFont(undefined, "normal")
-                pdf.text("Fecha de la declaración", boxX + 2, y + 4)
-                const fechaHoy = new Date().toLocaleDateString("es-PE")
-                pdf.text(fechaHoy, boxX + halfBar * 0.55 + 2, y + 4)
-                pdf.text("Nombre", boxX + halfBar + 2, y + 4)
-                pdf.text(nombres, boxX + halfBar + halfBar * 0.3 + 2, y + 4)
-            }
+            // Fila final fija (Footer Row)
+            const footerRowH = rowH
+            const halfBar = boxWidth / 2
+            // 1) Fill areas
+            pdf.setFillColor(...colors.labelBg)
+            pdf.rect(boxX, y, halfBar * 0.55, footerRowH, "F")
+            pdf.setFillColor(255)
+            pdf.rect(boxX + halfBar * 0.55, y, halfBar - halfBar * 0.55, footerRowH, "F")
+            pdf.setFillColor(...colors.labelBg)
+            pdf.rect(boxX + halfBar, y, halfBar * 0.3, footerRowH, "F")
+            pdf.setFillColor(255)
+            pdf.rect(boxX + halfBar + halfBar * 0.3, y, halfBar - halfBar * 0.3, footerRowH, "F")
+
+            // 2) Borders
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, footerRowH)
+            pdf.line(boxX + halfBar * 0.55, y, boxX + halfBar * 0.55, y + footerRowH)
+            pdf.line(boxX + halfBar, y, boxX + halfBar, y + footerRowH)
+            pdf.line(boxX + halfBar + halfBar * 0.3, y, boxX + halfBar + halfBar * 0.3, y + footerRowH)
+
+            // 3) Text
+            pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
+            pdf.text("Fecha de la declaración", boxX + 2, y + 4)
+            const fechaHoy = new Date().toLocaleDateString("es-PE")
+            pdf.text(fechaHoy, boxX + halfBar * 0.55 + 2, y + 4)
+            pdf.text("Nombre", boxX + halfBar + 2, y + 4)
+            pdf.text(nombres, boxX + halfBar + halfBar * 0.3 + 2, y + 4)
+
+            y += footerRowH
+
 
 
             async function drawLogo(x, y, w, h) {
