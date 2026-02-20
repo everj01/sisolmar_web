@@ -764,21 +764,21 @@ document.addEventListener('DOMContentLoaded', function () {
             const w1 = colMain / 4
             drawField("DNI", dni, boxX, w1, y, rowH, 0.3)
             drawField("Caduca", document.getElementById("caduca")?.value || "", boxX + w1, w1, y, rowH, 0.4)
-            drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + w1 * 2, w1, y, rowH, 0.45)
+            drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + w1 * 2, w1, y, rowH, 0.481)
             drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + w1 * 3, w1, y, rowH, 0.45)
             y += rowH
 
             // Fila 3: Fecha...
             const w2 = colMain / 2
             drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, w2, y, rowH, 0.325)
-            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + w2, w2, y, rowH, 0.225)
+            drawField("Ciudad", document.getElementById("provincia_actual")?.options[document.getElementById("provincia_actual")?.selectedIndex]?.text || "", boxX + w2, w2, y, rowH, 0.2405)
             y += rowH
 
             // Fila 4: Tipo Sangre...
             const w3 = colMain / 4
             drawField("Tipo Sangre", document.getElementById("tipo_sangre")?.value || "", boxX, w3, y, rowH, 0.65)
             drawField("Peso (Kg.)", document.getElementById("peso")?.value || "", boxX + w3, w3, y, rowH, 0.40)
-            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + w3 * 2, w3, y, rowH, 0.45)
+            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + w3 * 2, w3, y, rowH, 0.481)
             drawField("Celular", document.getElementById("celular")?.value || "", boxX + w3 * 3, w3, y, rowH, 0.45)
             y += rowH
 
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Fila 6: Afiliacion Texto (Ajustado a colMain para dejar espacio a Foto)
             // Etiqueta debe terminar alineada con fin de etiqueta Talla (Mt.)
             const row6W = colMain
-            const row6LabelW = colMain * 0.6125 // Alineado con fin de Talla (Mt.)
+            const row6LabelW = colMain * 0.6203 // Alineado con inicio de Carrera
             const row6InputW = row6W - row6LabelW
 
             pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
@@ -808,8 +808,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const sysPrev = document.getElementById("sistema_previsional")?.value || ""
             const isAFP = sysPrev.includes("AFP")
             const isONP = sysPrev.includes("ONP")
-            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth / 2, y, rowH, 0.408, "center")
-            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.5, "center")
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.506, y, rowH, 0.403, "center")
+            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.506, boxWidth * 0.494, y, rowH, 0.40, "center")
             y += rowH
 
             // Fila 8: Educacion
@@ -889,25 +889,24 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Fila 8: Educacion - 4 columnas - Alineación con fila inferior (Embargos/BCP)
-            // (Embargos = 37.5% | BCP = 25% | Interbank = 37.5%)
-            // Ajustamos Grado+Institución para sumar 37.5%
-            const col1 = boxWidth * 0.175  // Grado de Instrucción (17.5%)
-            const col2 = boxWidth * 0.20   // Institución: (20%) - Total 37.5%
-            const col3 = boxWidth * 0.25   // Carrera: 25% (Alineado con BCP)
-            const col4 = boxWidth * 0.375  // Año de egreso: 37.5% (Alineado con Interbank)
+            // Institución inicia donde termina el label de "Embargos en inst. financieras" (embW*0.60 = 22.5%)
+            const col1 = boxWidth * 0.285  // Grado de Instrucción (28.5% - alineado con fin label Embargos)
+            const col2 = boxWidth * 0.221  // Institución (22.1%) - termina en 50.6% (fin label BCP)
+            const col3 = boxWidth * 0.25   // Carrera: 25%
+            const col4 = boxWidth * 0.244  // Año de egreso: 24.4%
 
-            drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.40)
-            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.35)
-            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.25)
-            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.25)
+            drawAutoFitField("Grado de Instrucción", document.getElementById("grado_instruccion")?.options[document.getElementById("grado_instruccion")?.selectedIndex]?.text || "", boxX, col1, y, rowH, 0.466)
+            drawAutoFitField("Institución", document.getElementById("institucion")?.options[document.getElementById("institucion")?.selectedIndex]?.text || "", boxX + col1, col2, y, rowH, 0.434)
+            drawAutoFitField("Carrera", document.getElementById("carrera")?.options[document.getElementById("carrera")?.selectedIndex]?.text || "", boxX + col1 + col2, col3, y, rowH, 0.423)
+            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.55)
             y += rowH
 
             // Fila 9: Embargos - posiciones fijas (NO TOCAR: 37.5% | 25% | 37.5%)
-            const embW = boxWidth * 0.375      // Embargos: 37.5% del ancho
+            const embW = boxWidth * 0.381      // Embargos: 38.1% (alineado con fin label Institución)
             const bcpW = boxWidth * 0.25       // Cuenta BCP: 25% del ancho
-            const interbankW = boxWidth * 0.375 // Cuenta INTERBANK: 37.5% del ancho
+            const interbankW = boxWidth * 0.369 // Cuenta INTERBANK: 36.9% del ancho
 
-            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.60)
+            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.75)
             drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, 0.50)
             drawField("Cuenta sueldo INTERBANK", "", boxX + embW + bcpW, interbankW, y, rowH, 0.50)
             y += rowH
