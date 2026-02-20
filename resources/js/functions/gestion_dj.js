@@ -569,9 +569,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Label text
                 pdf.setFont(undefined, "normal")
                 pdf.setTextColor(...colors.labelText)
-                const labelFontSize = fitText(label, labelWidth - 2, 8, 6)
-                pdf.setFontSize(labelFontSize)
-                pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" })
+                pdf.setFontSize(8)
+                const maxLabelW = labelWidth - 2
+                const labelTextWidth = pdf.getTextWidth(label)
+                if (labelTextWidth <= maxLabelW) {
+                    pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" })
+                } else {
+                    const labelLines = pdf.splitTextToSize(label, maxLabelW)
+                    const lblLineH = 8 * 0.3527 * 1.15
+                    const lblBlockH = labelLines.length * lblLineH
+                    const lblY = fieldY + (inputHeight - lblBlockH) / 2 + lblLineH
+                    pdf.text(labelLines, x + labelPadding, lblY, { align: "left", lineHeightFactor: 1.15 })
+                }
 
                 // Value text
                 pdf.setFont(undefined, "normal")
@@ -924,10 +933,10 @@ document.addEventListener('DOMContentLoaded', function () {
             y += rowH
 
             // Fila 13: Emergencia 2 - 50/50
-            const wCelEmergencia = boxWidth * 0.5
-            const wParEmergencia = boxWidth * 0.5
-            drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, wCelEmergencia, y, rowH, 0.25)
-            drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.20)
+            const wCelEmergencia = boxWidth * 0.506
+            const wParEmergencia = boxWidth * 0.494
+            drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, wCelEmergencia, y, rowH, 0.403)
+            drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.25)
             y += rowH
             // ========== DATOS LABORALES ==========
             checkPageBreak(5 * rowH + 5 + 3)
@@ -935,8 +944,8 @@ document.addEventListener('DOMContentLoaded', function () {
             y += 5 // Corregido overlap (4->5)
 
             // Fila 1
-            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.6, y, rowH, 0.4)
-            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.6, boxWidth * 0.4, y, rowH, 0.4)
+            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.506, y, rowH, 0.564)
+            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.506, boxWidth * 0.494, y, rowH, 0.4)
             y += rowH
 
             // Fila 2
