@@ -523,3 +523,16 @@
 [Fri Feb 20 09:39:28 2026] 127.0.0.1:50270 Closing
 [Fri Feb 20 09:39:28 2026] 127.0.0.1:50277 Closing
 [Fri Feb 20 09:39:29 2026] 127.0.0.1:50283 Accepted
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50283 Closing
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50284 Accepted
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50285 Accepted
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50284 Closing
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50286 Accepted
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50285 Closing
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50286 [200]: GET /images/icono.png
+[Fri Feb 20 09:39:29 2026] 127.0.0.1:50286 Closing
+[Fri Feb 20 09:39:46 2026] 127.0.0.1:50292 Accepted
+[Fri Feb 20 09:39:46 2026] 127.0.0.1:50292 Closing
+[Fri Feb 20 09:39:47 2026] 127.0.0.1:50294 Accepted
+[Fri Feb 20 09:39:47 2026] 127.0.0.1:50294 [200]: GET /images/logo_sol.png
+[Fri Feb 20 09:39:47 2026] 127.0.0.1:50294 Closing
