@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 // Label text
-                pdf.setFont(undefined, "normal")
+                pdf.setFont("Arial", "normal")
                 pdf.setTextColor(...colors.labelText)
                 pdf.setFontSize(8)
                 const maxLabelW = labelWidth - 2
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 // Value text
-                pdf.setFont(undefined, "normal")
+                pdf.setFont("Arial", "normal")
                 pdf.setTextColor(...colors.inputText)
                 const maxValW = valueWidth - (alignValue === "center" ? 1 : 2)
                 const valFontSize = fitText(valStr, maxValW, 8, 6)
@@ -615,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.rect(boxX, yPos, boxWidth, 5)
 
                 pdf.setFontSize(8)
-                pdf.setFont(undefined, "bold")
+                pdf.setFont("Arial", "bold")
                 pdf.setTextColor(...colors.sectionText)
                 pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" })
             }
@@ -649,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             pdf.setFontSize(10)
             pdf.setTextColor(200, 0, 0)
-            pdf.setFont(undefined, "bold")
+            pdf.setFont("Arial", "bold")
             pdf.text("SISTEMA INTEGRADO SOLMAR – SISOLMAR", titleX + titleW / 2, y + 6, { align: "center" })
 
             pdf.setFontSize(14) // Aumentado significativamente
@@ -821,8 +821,12 @@ document.addEventListener('DOMContentLoaded', function () {
             pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
             pdf.setFillColor(255); pdf.rect(boxX + row6LabelW, y, row6InputW, rowH, "F");
             pdf.setDrawColor(0); pdf.setLineWidth(0.15);
-            pdf.rect(boxX, y, row6W, rowH)
-            pdf.line(boxX + row6LabelW, y, boxX + row6LabelW, y + rowH)
+            // Dibujar solo el borde inferior, izquierdo y derecho, sin doble trazo
+            pdf.line(boxX, y, boxX + row6W, y); // borde superior
+            pdf.line(boxX, y, boxX, y + rowH); // borde izquierdo
+            pdf.line(boxX + row6W, y, boxX + row6W, y + rowH); // borde derecho
+            pdf.line(boxX, y + rowH, boxX + row6W, y + rowH); // borde inferior
+            pdf.line(boxX + row6LabelW, y, boxX + row6LabelW, y + rowH); // divisoria interna
             pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
             pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 4)
             y += rowH
@@ -1011,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F")
             pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F")
             // UN solo borde exterior + divisores internos
-            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.setDrawColor(0); pdf.setLineWidth(0.10);
             pdf.rect(boxX, y, boxWidth, fmHeaderH)
             pdf.line(boxX + fmC1, y, boxX + fmC1, y + fmHeaderH)
             pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH)
@@ -1070,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Calcular espacio restante para firmas antes del pie de pagina
             // pageHeight - marginBottom - rowH (footer) - y actual
             const espacioDisponible = pageHeight - marginBottom - rowH - y - 2
-            const firmaH = Math.max(45, espacioDisponible) // Usar todo el espacio, minimo 45mm
+            const firmaH = Math.max(60, espacioDisponible) // Usar todo el espacio, minimo 60mm
             const firmaW = boxWidth * 0.6;
             const huellaW = boxWidth * 0.4;
 
