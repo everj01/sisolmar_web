@@ -630,8 +630,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" })
             }
 
-            function formatDateToDMY(fechaStr) {
-                if (!fechaStr) return "";
+            function formatDateToDMY(fecha) {
+                if (!fecha) return "";
+                if (fecha instanceof Date) {
+                    const y = fecha.getFullYear();
+                    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const d = String(fecha.getDate()).padStart(2, '0');
+                    return `${d}/${m}/${y}`;
+                }
+                const fechaStr = String(fecha);
+                if (!fechaStr.includes("-")) return fechaStr;
                 const partes = fechaStr.split("-");
                 return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : fechaStr;
             }
@@ -1106,31 +1114,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Fila final fija (Footer Row)
             const footerRowH = rowH
-            const halfBar = boxWidth / 2
+            const fechaW = boxWidth * 0.25 // 25% para etiqueta Fecha
+            const fechaValW = boxWidth * 0.15 // 15% para valor Fecha
+            const nombreLabelStart = boxX + fechaW + fechaValW
+            const nombreLabelEnd = boxX + firmaW // Alineado con límite de firma
+
             // 1) Fill areas
             pdf.setFillColor(...colors.labelBg)
-            pdf.rect(boxX, y, halfBar * 0.55, footerRowH, "F")
+            pdf.rect(boxX, y, fechaW, footerRowH, "F")
             pdf.setFillColor(255)
-            pdf.rect(boxX + halfBar * 0.55, y, halfBar - halfBar * 0.55, footerRowH, "F")
+            pdf.rect(boxX + fechaW, y, fechaValW, footerRowH, "F")
             pdf.setFillColor(...colors.labelBg)
-            pdf.rect(boxX + halfBar, y, halfBar * 0.3, footerRowH, "F")
+            pdf.rect(nombreLabelStart, y, nombreLabelEnd - nombreLabelStart, footerRowH, "F")
             pdf.setFillColor(255)
-            pdf.rect(boxX + halfBar + halfBar * 0.3, y, halfBar - halfBar * 0.3, footerRowH, "F")
+            pdf.rect(nombreLabelEnd, y, boxWidth - (nombreLabelEnd - boxX), footerRowH, "F")
 
-            // 2) Borders
+            // 2) Borde exterior y divisores
             pdf.setDrawColor(0); pdf.setLineWidth(0.20);
             pdf.rect(boxX, y, boxWidth, footerRowH)
-            pdf.line(boxX + halfBar * 0.55, y, boxX + halfBar * 0.55, y + footerRowH)
-            pdf.line(boxX + halfBar, y, boxX + halfBar, y + footerRowH)
-            pdf.line(boxX + halfBar + halfBar * 0.3, y, boxX + halfBar + halfBar * 0.3, y + footerRowH)
+            pdf.line(boxX + fechaW, y, boxX + fechaW, y + footerRowH)
+            pdf.line(nombreLabelStart, y, nombreLabelStart, y + footerRowH)
+            pdf.line(nombreLabelEnd, y, nombreLabelEnd, y + footerRowH)
 
-            // 3) Text
-            pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
+            // 3) Textos
+            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
             pdf.text("Fecha de la declaración", boxX + 2, y + 4)
-            const fechaHoy = new Date().toLocaleDateString("es-PE")
-            pdf.text(fechaHoy, boxX + halfBar * 0.55 + 2, y + 4)
-            pdf.text("Nombre", boxX + halfBar + 2, y + 4)
-            pdf.text(nombres, boxX + halfBar + halfBar * 0.3 + 2, y + 4)
+            pdf.text(formatDateToDMY(new Date()), boxX + fechaW + 2, y + 4)
+            pdf.text("Nombre", nombreLabelStart + 2, y + 4)
+            pdf.text(document.getElementById("trabajador")?.value || "", nombreLabelEnd + 2, y + 4)
 
             y += footerRowH
 
