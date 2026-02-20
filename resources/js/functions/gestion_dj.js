@@ -949,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function () {
             y += rowH
 
             // Fila 2
-            drawField("Familiar en la Empresa", "", boxX, boxWidth * 0.25, y, rowH, 0.6)
+            drawField("Familiar en la Empresa", "", boxX, boxWidth * 0.25, y, rowH, 0.816)
             drawField("Nombre Completo", "", boxX + boxWidth * 0.25, boxWidth * 0.5, y, rowH, 0.3)
             drawField("Parentesco", "", boxX + boxWidth * 0.75, boxWidth * 0.25, y, rowH, 0.4)
             y += rowH

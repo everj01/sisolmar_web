@@ -743,3 +743,37 @@
 [Fri Feb 20 11:37:43 2026] 127.0.0.1:53302 Accepted
 [Fri Feb 20 11:37:43 2026] 127.0.0.1:53302 [200]: GET /images/logo_sol.png
 [Fri Feb 20 11:37:43 2026] 127.0.0.1:53302 Closing
+[Fri Feb 20 11:39:36 2026] 127.0.0.1:53335 Accepted
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53335 Closing
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53336 Accepted
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53343 Accepted
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53336 [200]: GET /images/logo-light.png
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53343 [200]: GET /images/user.png
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53336 Closing
+[Fri Feb 20 11:39:37 2026] 127.0.0.1:53343 Closing
+[Fri Feb 20 11:39:38 2026] 127.0.0.1:53351 Accepted
+[Fri Feb 20 11:39:38 2026] 127.0.0.1:53351 Closing
+[Fri Feb 20 11:39:38 2026] 127.0.0.1:53352 Accepted
+[Fri Feb 20 11:39:38 2026] 127.0.0.1:53353 Accepted
+[Fri Feb 20 11:39:38 2026] 127.0.0.1:53352 Closing
+[Fri Feb 20 11:39:38 2026] 127.0.0.1:53354 Accepted
+[Fri Feb 20 11:39:39 2026] 127.0.0.1:53353 Closing
+[Fri Feb 20 11:39:39 2026] 127.0.0.1:53354 [200]: GET /images/icono.png
+[Fri Feb 20 11:39:39 2026] 127.0.0.1:53354 Closing
+[Fri Feb 20 11:40:41 2026] 127.0.0.1:53377 Accepted
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53377 Closing
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53378 Accepted
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53384 Accepted
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53378 [200]: GET /images/logo-light.png
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53384 [200]: GET /images/user.png
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53378 Closing
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53384 Closing
+[Fri Feb 20 11:40:42 2026] 127.0.0.1:53390 Accepted
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53390 Closing
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53391 Accepted
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53392 Accepted
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53391 Closing
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53394 Accepted
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53392 Closing
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53394 [200]: GET /images/icono.png
+[Fri Feb 20 11:40:43 2026] 127.0.0.1:53394 Closing
