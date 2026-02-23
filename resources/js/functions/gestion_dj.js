@@ -272,9 +272,12 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById("curso_sucamec").value = (data.sucamec && data.sucamec.toUpperCase() === "SI") ? "SI" : "NO";
 
             const inputLicencia = document.getElementById("licencia_arma");
-            const tagify = new Tagify(inputLicencia, {
-                maxTags: 2
-            });
+            let tagify = Tagify.getInstance(inputLicencia);
+            if (!tagify) {
+                tagify = new Tagify(inputLicencia, {
+                    maxTags: 2
+                });
+            }
 
             let licencias = data.licencia_arma;
 
@@ -591,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight);
 
                 // Label text
-                pdf.setFont("Arial", "normal")
+                pdf.setFont("helvetica", "normal")
                 pdf.setTextColor(...colors.labelText)
                 pdf.setFontSize(8)
                 const maxLabelW = labelWidth - 2
@@ -607,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 // Value text
-                pdf.setFont("Arial", "normal")
+                pdf.setFont("helvetica", "normal")
                 pdf.setTextColor(...colors.inputText)
                 const maxValW = valueWidth - (alignValue === "center" ? 1 : 2)
                 const valFontSize = fitText(valStr, maxValW, 8, 6)
@@ -625,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.rect(boxX, yPos, boxWidth, 5)
 
                 pdf.setFontSize(8)
-                pdf.setFont("Arial", "bold")
+                pdf.setFont("helvetica", "bold")
                 pdf.setTextColor(...colors.sectionText)
                 pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" })
             }
@@ -667,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             pdf.setFontSize(10)
             pdf.setTextColor(200, 0, 0)
-            pdf.setFont("Arial", "bold")
+            pdf.setFont("helvetica", "bold")
             pdf.text("SISTEMA INTEGRADO SOLMAR – SISOLMAR", titleX + titleW / 2, y + 6, { align: "center" })
 
             pdf.setFontSize(14) // Aumentado significativamente
@@ -1181,6 +1184,42 @@ document.addEventListener('DOMContentLoaded', function () {
                 text: 'Hubo un error al generar el documento: ' + error.message,
             });
         }
+    }
+
+    const form = document.getElementById('formDatos');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnGuardar = document.getElementById('btnGuardar');
+            if (btnGuardar) btnGuardar.disabled = true;
+
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                const payload = {
+                    ...data,
+                    parentesco: formData.getAll('parentesco[]'),
+                    apellidosNombres: formData.getAll('apellidosNombres[]'),
+                    fechaNacimiento: formData.getAll('fechaNacimiento[]')
+                };
+
+                const response = await axios.post(`${VITE_URL_APP}/api/save-declaracion-jurada`, payload);
+
+                if (response.status === 200 || response.status === 201) {
+                    Swal.fire({ icon: 'success', title: 'Éxito', text: 'La Declaración Jurada se guardó correctamente.' });
+                    getPersonal();
+                }
+            } catch (error) {
+                console.error("Error al guardar DJ:", error);
+                let msg = 'Hubo un error al guardar los datos.';
+                if (error.response && error.response.data && error.response.data.errors) {
+                    msg = Object.values(error.response.data.errors).flat().join('<br>');
+                }
+                Swal.fire({ icon: 'error', title: 'Error', html: msg });
+            } finally {
+                if (btnGuardar) btnGuardar.disabled = false;
+            }
+        });
     }
 
 });

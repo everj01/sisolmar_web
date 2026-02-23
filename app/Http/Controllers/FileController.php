@@ -1203,18 +1203,57 @@ class FileController extends Controller{
     public function getPostulantes()
     {
         try {
-            $data = DB::connection('sqlsrv_prueba1')
+            // 1. Obtener postulantes APTOS de la BD de reclutamiento (reclusol)
+            $postulantes = DB::connection('sqlsrv_prueba1')
                 ->table('dbo.postulantes as p')
                 ->join('dbo.estado_postulantes as ep', 'p.estado', '=', 'ep.id')
                 ->select('p.*', 'ep.nombre as estado_nombre')
                 ->where('ep.nombre', 'APTO')
                 ->get();
 
+            $ids = $postulantes->pluck('id')->toArray();
+
+            // 2. Obtener datos ya guardados en la BD principal (sisolm_web)
+            $personalData = DB::table('sw_MIGRA_PERSONAL')
+                ->whereIn('CODI_PERS', $ids)
+                ->get()
+                ->keyBy('CODI_PERS');
+
+            // 3. Fusionar datos: Priorizar lo que ya se guardó en la DJ de sisolm_web
+            $data = $postulantes->map(function ($p) use ($personalData) {
+                if (isset($personalData[$p->id])) {
+                    $saved = $personalData[$p->id];
+
+                    // Actualizar campos con lo guardado en la DJ
+                    $p->dni = $saved->NRO_DOCU_IDEN ?? $p->dni;
+                    $p->nombres = $saved->NOMB_1;
+                    $p->apellido1 = $saved->APEL_1;
+                    $p->apellido2 = $saved->APEL_2;
+                    $p->direccion = $saved->DIRECCION ?? $p->direccion;
+                    $p->correo = $saved->PERS_EMAIL ?? $p->correo;
+                    $p->fecha_nacimiento = $saved->FECH_NACI ?? $p->fecha_nacimiento;
+                    
+                    // Campos adicionales que no vienen de reclusol original pero se necesitan en el form
+                    $p->departamento = $saved->DEPARTAMENTO;
+                    $p->provincia = $saved->PROVINCIA;
+                    $p->distrito = $saved->DISTRITO;
+                    $p->sucamec = $saved->PERS_CONDISCAMEC;
+                    $p->licencia_arma = $saved->PERS_NROLICENCIA;
+                    $p->grado_instruccion = $saved->PERS_GRADO_INSTRUCCION;
+                    
+                    // Para depuración
+                    $p->source = 'sisolm_web';
+                } else {
+                    $p->source = 'reclusol';
+                }
+                return $p;
+            });
+
             return response()->json($data);
         } catch (\Exception $e) {
+            \Log::error("Error en getPostulantes: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
-
     }
 
 }

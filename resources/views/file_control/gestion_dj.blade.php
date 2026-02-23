@@ -90,7 +90,7 @@
 
                 <!-- Mis Datos Personales -->
                 <div class="border rounded-lg shadow mb-2">
-                    <div class="bg-primary text-white px-4 py-2 font-semibold rounded-t-lg"> MIS DATOS PERSONALES</div>
+          +          <div class="bg-primary text-white px-4 py-2 font-semibold rounded-t-lg"> MIS DATOS PERSONALES</div>
                     <div class="p-6 space-y-10">
 
                         <section class="bg-white shadow-md rounded-xl p-6 mb-8 border border-gray-200">
