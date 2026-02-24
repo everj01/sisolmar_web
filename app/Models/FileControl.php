@@ -416,4 +416,10 @@ class FileControl extends Model
             ->where('habilitado', 1)
             ->get();
     }
+    public static function getRoles()
+    {
+        return DB::table('sw_roles')
+            ->where('habilitado', 1)
+            ->get();
+    }
 }

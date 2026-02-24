@@ -526,7 +526,13 @@ class FileController extends Controller{
     }
 
     public function getFolios(){
-        $folios = FileControl::getFolios();
+        $folios = DB::select("EXEC SW_LISTAR_FOLIOS");
+        $encargados = DB::table('sw_folio_encargado')->get()->keyBy('cod_folio');
+        
+        foreach ($folios as $folio) {
+            $folio->cod_responsable = $encargados->get($folio->codigo)->cod_rol ?? null;
+        }
+        
         return response()->json($folios);
     }
 
@@ -574,7 +580,9 @@ class FileController extends Controller{
                     ->where('tipo', 3)
                     ->count();
 
-        return view('file_control.folios', compact('periodos', 'todos', 'principal', 'adicional', 'documento', 'formato', 'certificado'));
+        $roles = FileControl::getRoles();
+
+        return view('file_control.folios', compact('periodos', 'todos', 'principal', 'adicional', 'documento', 'formato', 'certificado', 'roles'));
     }
 
     public function ViewBusquedaLegajo()
@@ -971,10 +979,27 @@ class FileController extends Controller{
         $tipo_fecha = $request->input('periodo');
         $plataforma = $request->input('plataforma');
 
+        $responsable = $request->input('responsable');
+
         if (empty($codigo)) {
             $inserted = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma);
+            if ($inserted) {
+                $lastId = DB::getPdo()->lastInsertId();
+                if ($responsable) {
+                    DB::table('sw_folio_encargado')->insert([
+                        'cod_folio' => $lastId,
+                        'cod_rol' => $responsable
+                    ]);
+                }
+            }
         } else {
             $inserted = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma);
+            if ($inserted && $responsable) {
+                DB::table('sw_folio_encargado')->updateOrInsert(
+                    ['cod_folio' => $codigo],
+                    ['cod_rol' => $responsable]
+                );
+            }
         }
 
         if ($inserted) {
