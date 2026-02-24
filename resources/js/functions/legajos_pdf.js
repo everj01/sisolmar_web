@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {TabulatorFull as Tabulator} from 'tabulator-tables';
+import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import { jsPDF } from "jspdf";
 
@@ -17,7 +17,7 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     responsiveLayout: "collapse",
     pagination: true,
     paginationSize: 10,
-    rowHeader:{formatter:"responsiveCollapse", width:30, minWidth:30, hozAlign:"center", resizable:false, headerSort:false},
+    rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
     locale: "es",
     langs: {
         "es": {
@@ -44,18 +44,19 @@ const tblPersonas = new Tabulator("#tblPersonas", {
             }
         }
     },
-    columns:[
-        {title:"Código", field:"CODI_PERS", hozAlign:"center", width: '15%'},
-        {title:"Personal", field:"personal", hozAlign:"left", width: '40%'},
-        {title:"Nro DOC", field:"nroDoc", hozAlign:"center", width: '19%'},
-        {title:"Sucursal", field:"sucursal", hozAlign:"center", width: '20%'},
-        {title: "", field: "select", hozAlign:"center", width: '5%', headerSort: false,
-            formatter: function(cell, formatterParams, onRendered) {
+    columns: [
+        { title: "Código", field: "CODI_PERS", hozAlign: "center", width: '15%' },
+        { title: "Personal", field: "personal", hozAlign: "left", width: '40%' },
+        { title: "Nro DOC", field: "nroDoc", hozAlign: "center", width: '19%' },
+        { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '20%' },
+        {
+            title: "", field: "select", hozAlign: "center", width: '5%', headerSort: false,
+            formatter: function (cell, formatterParams, onRendered) {
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
                 checkbox.classList.add("form-checkbox", "rounded", "text-dark");
                 checkbox.checked = cell.getValue() || false; // Establece si está seleccionado según el valor de la celda
-                checkbox.addEventListener("change", function() {
+                checkbox.addEventListener("change", function () {
                     cell.setValue(checkbox.checked);
 
                     setTimeout(() => {
@@ -82,7 +83,7 @@ const tblPersonas = new Tabulator("#tblPersonas", {
 
 
 // Para activar todos los checkbox del listado de personas
-document.getElementById('select-all-per').addEventListener('change', function() {
+document.getElementById('select-all-per').addEventListener('change', function () {
     const isChecked = this.checked;
     const rows = tblPersonas.getRows();
 
@@ -127,9 +128,10 @@ const tblFolios = new Tabulator("#tblFolios", {
         }
     },
     columns: [
-        { title: "Folios", field: "nombre", hozAlign: "left", width: '60%'},
-        {title: "Tipo",  field: "tipoFolio",  hozAlign: "center", width: '32%',
-            formatter: function(cell, formatterParams) {
+        { title: "Folios", field: "nombre", hozAlign: "left", width: '60%' },
+        {
+            title: "Tipo", field: "tipoFolio", hozAlign: "center", width: '32%',
+            formatter: function (cell, formatterParams) {
                 var tipo = cell.getValue();
                 if (tipo === "FORMATO") {
                     return '<span class="text-yellow2 font-bold">FORMATO</span>'
@@ -141,13 +143,14 @@ const tblFolios = new Tabulator("#tblFolios", {
                 return tipo;
             }
         },
-        {title: "", field: "select", hozAlign:"center", width: '5%', headerSort: false,
-            formatter: function(cell, formatterParams, onRendered) {
+        {
+            title: "", field: "select", hozAlign: "center", width: '5%', headerSort: false,
+            formatter: function (cell, formatterParams, onRendered) {
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
                 checkbox.classList.add("form-checkbox", "rounded", "text-dark");
                 checkbox.checked = cell.getValue() || false; // Establece si está seleccionado según el valor de la celda
-                checkbox.addEventListener("change", function() {
+                checkbox.addEventListener("change", function () {
                     cell.setValue(checkbox.checked);
 
                     setTimeout(() => {
@@ -180,18 +183,20 @@ const tblLegajos = new Tabulator("#tblLegajos", {
     responsiveLayout: "collapse",
     columns: [
         { title: "Folio", field: "documento", hozAlign: "left", width: '40%' },
-        { title: "Emision", field: "fecha_emision", hozAlign: "center", width: '20%',
-            formatter: function(cell, formatterParams){
+        {
+            title: "Emision", field: "fecha_emision", hozAlign: "center", width: '20%',
+            formatter: function (cell, formatterParams) {
                 var emision = cell.getValue();
-                if (emision === null){
+                if (emision === null) {
                     return '-';
-                }else{
+                } else {
                     return emision;
                 }
             }
         },
-        { title: "Caducidad", field: "fecha_caducidad", hozAlign: "center", width: '20%',
-            formatter: function(cell, formatterParams) {
+        {
+            title: "Caducidad", field: "fecha_caducidad", hozAlign: "center", width: '20%',
+            formatter: function (cell, formatterParams) {
                 var vigente = cell.getRow().getData().vigente;
                 var fechaCaducidad = cell.getValue();
                 if (vigente == 1) {
@@ -202,20 +207,21 @@ const tblLegajos = new Tabulator("#tblLegajos", {
                     return '-';
                 }
             }
-         },
-        { title: "Acciones", field: "accionesy", hozAlign: "center", width: '20%', headerSort: false,
-            formatter: function(cell, formatterParams, onRendered) {
+        },
+        {
+            title: "Acciones", field: "accionesy", hozAlign: "center", width: '20%', headerSort: false,
+            formatter: function (cell, formatterParams, onRendered) {
                 var filePath = cell.getRow().getData().ruta_archivo;
                 var url = '/storage/' + filePath; // Concatenar el link a la ruta del archivo
-                if(filePath){
+                if (filePath) {
                     var viewBtn = `<a href="${url}" target="_blank" class="btn rounded-full view-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-eye view-btn"></i></a>`;
-                }else{
+                } else {
                     var viewBtn = `<a href="${url}" target="_blank" class="pointer-events-none btn rounded-full view-btn bg-warning/25 text-warning-opa bg-gray-200 hover:bg-gray-200"><i class="fa fa-eye"></i></a>`;
                 }
                 var chargeBtnLeg = `<button type="button" class="btn rounded-full charge-btn bg-success/25 text-success hover:bg-success hover:text-white"><i class="fa fa-cloud-upload charge-btn"></i></button>`;
-                return chargeBtnLeg+' '+viewBtn;
+                return chargeBtnLeg + ' ' + viewBtn;
             },
-            cellClick: function(e, cell) {
+            cellClick: function (e, cell) {
                 if (e.target.classList.contains('charge-btn-leg')) {
                     const documento = cell.getRow().getData().documento;
                     const periodo = cell.getRow().getData().periodo;
@@ -245,7 +251,7 @@ const tblLegajos = new Tabulator("#tblLegajos", {
 });
 
 
-document.getElementById('select-all-fol').addEventListener('change', function() {
+document.getElementById('select-all-fol').addEventListener('change', function () {
     const isChecked = this.checked;
     const rows = tblFolios.getRows(); // Obtener todas las filas de la tabla
 
@@ -264,7 +270,7 @@ document.getElementById('btnLeg3').classList.add("hidden");
 const links = document.querySelectorAll('.card a');
 
 links.forEach(link => {
-    link.addEventListener('click', function(e) {
+    link.addEventListener('click', function (e) {
         e.preventDefault(); // Prevenir el comportamiento por defecto del enlace
 
         // Eliminar la clase 'active' de todas las cards
@@ -278,7 +284,7 @@ links.forEach(link => {
 });
 
 // Función para el MOSTRAR LAS CARDS de cada LEGAJO
-document.getElementById("legajo1").addEventListener("click", function() {
+document.getElementById("legajo1").addEventListener("click", function () {
     document.getElementById('personasDiv').classList.remove("hidden");
     document.getElementById('foliosDiv').classList.remove("hidden");
     document.getElementById('legajosDiv').classList.add("hidden");
@@ -289,7 +295,7 @@ document.getElementById("legajo1").addEventListener("click", function() {
     //tblFolios.redraw();
 
 });
-document.getElementById("legajo2").addEventListener("click", function() {
+document.getElementById("legajo2").addEventListener("click", function () {
     document.getElementById('personasDiv').classList.remove("hidden");
     document.getElementById('legajosDiv').classList.remove("hidden");
     document.getElementById('foliosDiv').classList.add("hidden");
@@ -300,7 +306,7 @@ document.getElementById("legajo2").addEventListener("click", function() {
     //tblFolios.redraw();
 
 });
-document.getElementById("legajo3").addEventListener("click", function() {
+document.getElementById("legajo3").addEventListener("click", function () {
     document.getElementById('personasDiv').classList.add("hidden");
     document.getElementById('legajosDiv').classList.add("hidden");
     document.getElementById('foliosDiv').classList.add("hidden");
@@ -309,7 +315,7 @@ document.getElementById("legajo3").addEventListener("click", function() {
     document.getElementById('btnLeg3').classList.remove("hidden");
 
 });
-document.getElementById("legajo4").addEventListener("click", function() {
+document.getElementById("legajo4").addEventListener("click", function () {
     document.getElementById('personasDiv').classList.add("hidden");
     document.getElementById('legajosDiv').classList.add("hidden");
     document.getElementById('foliosDiv').classList.add("hidden");
@@ -319,7 +325,7 @@ document.getElementById("legajo4").addEventListener("click", function() {
 });
 
 // Llenado de la tabla de legajos
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('clientes').addEventListener('change', function () {
         document.getElementById('divCargos').classList.remove("hidden");
     });
@@ -337,7 +343,7 @@ function getLegajos() {
 
     // Obtener las personas seleccionadas
     var selectedPersona = null;
-    tblPersonas.getRows().forEach(function(row) {
+    tblPersonas.getRows().forEach(function (row) {
         if (row.getCell("select").getValue()) {
             var codiPers = row.getData().CODI_PERS;
 
@@ -349,20 +355,20 @@ function getLegajos() {
     });
 
     const codigoPer = selectedPersona;
-    axios.get(`${ VITE_URL_APP }/api/get-legajos`, {
+    axios.get(`${VITE_URL_APP}/api/get-legajos`, {
         params: {
             cliente: cliente,
             cargo: cargo,
             codigo: codigoPer
         }
     })
-    .then(function (response) {
-        console.log(response.data);
-        tblLegajos.setData(response.data);
-    })
-    .catch(function (error) {
-        console.error("Error al obtener los legajos tabla:", error);
-    });
+        .then(function (response) {
+            console.log(response.data);
+            tblLegajos.setData(response.data);
+        })
+        .catch(function (error) {
+            console.error("Error al obtener los legajos tabla:", error);
+        });
 };
 
 // Función para actualizar la tabla de personas por SUCURSAL
@@ -370,10 +376,10 @@ function filtroXSucursal() {
     const sucursalSeleccionada = document.getElementById('sucursal').value;
     if (!sucursalSeleccionada) {
         tblPersonas.clearFilter();
-    } else if(sucursalSeleccionada == 'TODOS'){
+    } else if (sucursalSeleccionada == 'TODOS') {
         tblPersonas.clearFilter();
-    } else{
-        tblPersonas.setFilter("sucursal","=",sucursalSeleccionada);
+    } else {
+        tblPersonas.setFilter("sucursal", "=", sucursalSeleccionada);
     }
 }
 document.getElementById('sucursal').addEventListener('change', filtroXSucursal);
@@ -394,8 +400,8 @@ document.getElementById("buscarPer").addEventListener("keyup", function () {
     let valor = this.value.toLowerCase().trim();
     tblPersonas.setFilter([
         [
-            { field: "CODI_PERS", type: 'like',  value: valor },
-            { field: "personal", type: 'like',  value: valor },
+            { field: "CODI_PERS", type: 'like', value: valor },
+            { field: "personal", type: 'like', value: valor },
             { field: "nroDoc", type: 'like', value: valor },
             { field: "sucursal", type: 'like', value: valor },
             { field: "col", type: 'like', value: valor },
@@ -406,8 +412,8 @@ document.getElementById("buscarFol").addEventListener("keyup", function () {
     let valor = this.value.toLowerCase().trim();
     tblFolios.setFilter([
         [
-            { field: "nombre", type: 'like',  value: valor },
-            { field: "periodo", type: 'like',  value: valor },
+            { field: "nombre", type: 'like', value: valor },
+            { field: "periodo", type: 'like', value: valor },
             { field: "tipoFolio", type: 'like', value: valor },
         ]
     ]);
@@ -416,7 +422,7 @@ document.getElementById("buscarFol").addEventListener("keyup", function () {
 // Función para el BOTON GENERAR PDF
 document.getElementById("btnLeg1").addEventListener("click", async function () {
     var selectedFolios = [];
-    tblFolios.getRows().forEach(function(row) {
+    tblFolios.getRows().forEach(function (row) {
         if (row.getCell("select").getValue()) {
             selectedFolios.push(row.getData());
         }
@@ -490,7 +496,7 @@ document.getElementById("btnLeg2").addEventListener("click", async function () {
 // });
 
 // Función para el BOTON GENERAR PDF 3
-document.getElementById("btnLeg3").addEventListener("click", async function() {
+document.getElementById("btnLeg3").addEventListener("click", async function () {
     /*var selectedPersonas = [];
     tblPersonas.getRows().forEach(function(row) {
         if (row.getCell("select").getValue()) {
@@ -510,9 +516,9 @@ document.getElementById("btnLeg3").addEventListener("click", async function() {
     getArchivosXPersonas(selectedPersonas, selectedFolios, 3);*/
     //Para las pruebas del generador de PDF
     //alert("Hola");
-    
+
     try {
-        const response = await axios.post(`${ VITE_URL_APP }/pdf_vacio`, {}, {
+        const response = await axios.post(`${VITE_URL_APP}/pdf_vacio`, {}, {
             responseType: 'blob'  // Muy importante para recibir archivos binarios (PDF)
         });
 
@@ -528,7 +534,7 @@ document.getElementById("btnLeg3").addEventListener("click", async function() {
     } catch (error) {
         console.error('Error al generar PDF vacío:', error);
     }
-        
+
 });
 
 
@@ -543,30 +549,30 @@ function generarPDF(data) {
                 Swal.showLoading();
             }
         });
-        axios.post(`${ VITE_URL_APP }/generar-pdf`, {
+        axios.post(`${VITE_URL_APP}/generar-pdf`, {
             resultados: data
         }, {
             responseType: 'blob'
         })
-        .then(response => {
-            Swal.close();
+            .then(response => {
+                Swal.close();
 
-            const blob = new Blob([response.data], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
+                const blob = new Blob([response.data], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
 
-            const nombreArchivo = response.headers['x-nombre-archivo'] || 'reporte.pdf';
-            link.download = nombreArchivo;
+                const nombreArchivo = response.headers['x-nombre-archivo'] || 'reporte.pdf';
+                link.download = nombreArchivo;
 
-            link.click();
-            resolve();
-        })
-        .catch(error => {
-            Swal.fire('Error', 'No se pudo generar el PDF', 'error');
-            console.error("Error al generar el PDF:", error);
-            reject(error);
-        });
+                link.click();
+                resolve();
+            })
+            .catch(error => {
+                Swal.fire('Error', 'No se pudo generar el PDF', 'error');
+                console.error("Error al generar el PDF:", error);
+                reject(error);
+            });
     });
 }
 
@@ -574,47 +580,51 @@ function generarPDF(data) {
 
 // Función para generar el PDF
 function generarPDF2(data) {
-    axios.post(`${ VITE_URL_APP }/generar-pdf2`, {
+    axios.post(`${VITE_URL_APP}/generar-pdf2`, {
         resultados: data
     }, {
         responseType: 'blob' // Para recibir el PDF
     })
-    .then(response => {
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'reporte.pdf';
-        link.click();
-    })
-    .catch(error => {
-        console.error("Error al generar el PDF:", error);
-    });
+        .then(response => {
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'reporte.pdf';
+            link.click();
+        })
+        .catch(error => {
+            console.error("Error al generar el PDF:", error);
+        });
 }
 
 
 
 //========================================== DATA CON AXIOS ==========================================//
 // Función para obtener el listados de personas
-function getPersonal(){
-    axios.get(`${ VITE_URL_APP }/api/get-personal`)
-    .then(response => {
-        const datosTabla = response.data;
-        tblPersonas.setData(datosTabla);
+function getPersonal() {
+    axios.get(`${VITE_URL_APP}/api/get-personal`, {
+        params: {
+            pagination: 'off'
+        }
     })
-    .catch(error => {
-        console.error("Hubo un error:", error);
-    });
+        .then(response => {
+            const datosTabla = response.data;
+            tblPersonas.setData(datosTabla);
+        })
+        .catch(error => {
+            console.error("Hubo un error:", error);
+        });
 }
 // Función para obtener los folios
-function getFolios(){
-    axios.get(`${ VITE_URL_APP }/api/get-folios`)
-    .then(response => {
-        tblFolios.setData(response.data);
-    })
-    .catch(error => {
-        console.error("Error al obtener los datos:", error);
-    });
+function getFolios() {
+    axios.get(`${VITE_URL_APP}/api/get-folios`)
+        .then(response => {
+            tblFolios.setData(response.data);
+        })
+        .catch(error => {
+            console.error("Error al obtener los datos:", error);
+        });
 };
 
 
@@ -627,7 +637,7 @@ async function getArchivosXPersona_uno(codPersonal, selectedFolios, tipo) {
     }
 
     try {
-        const response = await axios.get(`${ VITE_URL_APP }/api/get-folios-persona_uno`, {
+        const response = await axios.get(`${VITE_URL_APP}/api/get-folios-persona_uno`, {
             params: {
                 codPersona: codPersonal,
                 folios: selectedFolios,
@@ -646,46 +656,46 @@ async function getArchivosXPersona_uno(codPersonal, selectedFolios, tipo) {
 
 
 
-function getArchivosXPersonas(selectedPersonas, selectedFolios, tipo){
+function getArchivosXPersonas(selectedPersonas, selectedFolios, tipo) {
     //console.log(selectedPersonas);
     //console.log(selectedFolios);
-    if(tipo == 3){
+    if (tipo == 3) {
         generarPDF2([]);
         return;
     }
-    axios.get(`${ VITE_URL_APP }/api/get-folios-personas`, {
+    axios.get(`${VITE_URL_APP}/api/get-folios-personas`, {
         params: {
             personas: selectedPersonas,
             folios: selectedFolios,
         }
     })
-    .then(function (response) {
-        // console.log(response);
-        // return;
-        generarPDF(response.data);
-    })
-    .catch(function (error) {
-        console.error("Error al obtener los folios por persona:", error);
-    });
+        .then(function (response) {
+            // console.log(response);
+            // return;
+            generarPDF(response.data);
+        })
+        .catch(function (error) {
+            console.error("Error al obtener los folios por persona:", error);
+        });
 }
 
 // Función para obtener los folios por persona
-function getDocsObligatorios(codigo){
-    axios.get(`${ VITE_URL_APP }/api/get-documentos/${codigo}`)
-    .then(response => {
-        tblDocs.setData(response.data);
-        // Aplicar filtro "PRINCIPAL" por defecto después de cargar los datos
-        filterTableByTipoFolio();
-    })
-    .catch(error => {
-        console.error("Error al obtener los datos:", error);
-    });
+function getDocsObligatorios(codigo) {
+    axios.get(`${VITE_URL_APP}/api/get-documentos/${codigo}`)
+        .then(response => {
+            tblDocs.setData(response.data);
+            // Aplicar filtro "PRINCIPAL" por defecto después de cargar los datos
+            filterTableByTipoFolio();
+        })
+        .catch(error => {
+            console.error("Error al obtener los datos:", error);
+        });
 }
 
 // Función para obtener las coincidencias
 async function getFoliosClienteCargo(cliente, cargo) {
     try {
-        const response = await axios.get(`${ VITE_URL_APP }/api/get-folios-cliente-cargo`, {
+        const response = await axios.get(`${VITE_URL_APP}/api/get-folios-cliente-cargo`, {
             params: {
                 cliente: cliente,
                 cargo: cargo
@@ -701,7 +711,7 @@ async function getFoliosClienteCargo(cliente, cargo) {
 }
 
 //================================ GUARDAR LOS DATOS POR AXIOS ================================//
-document.getElementById('formFolioPersonal').addEventListener('submit', function(event) {
+document.getElementById('formFolioPersonal').addEventListener('submit', function (event) {
     event.preventDefault();
     var fechaEmision = document.getElementById('fecha_emision').value;
     var fechaCaducidad = document.getElementById('fecha_caducidad').value;
@@ -710,21 +720,21 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
 
     if (fechaEmision /*&& fechaCaducidad*/) {
         // Enviar los datos al servidor usando Axios
-        axios.post(`${ VITE_URL_APP }/api/save_folio_persona`, {
+        axios.post(`${VITE_URL_APP}/api/save_folio_persona`, {
             fecha_emision: fechaEmision,
             fecha_caducidad: fechaCaducidad,
             codFolio: codFolio,
             codPersonal: codigoPer,
         })
-        .then(function(response) {
-            //console.log('Datos guardados:', response.data);
-            document.getElementById('btn-modal-docs-close').click();
-            getDocsObligatorios(codigoPer);
-            document.getElementById('btnTraerFolios').click();
-            limpiarModal();
-        })
-        .catch(function(error) {
-            console.error('Error al guardar las fechas:', error);
-        });
+            .then(function (response) {
+                //console.log('Datos guardados:', response.data);
+                document.getElementById('btn-modal-docs-close').click();
+                getDocsObligatorios(codigoPer);
+                document.getElementById('btnTraerFolios').click();
+                limpiarModal();
+            })
+            .catch(function (error) {
+                console.error('Error al guardar las fechas:', error);
+            });
     }
 });

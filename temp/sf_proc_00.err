@@ -234,3 +234,37 @@
 [Tue Feb 24 17:39:14 2026] 127.0.0.1:57428 Accepted
 [Tue Feb 24 17:39:14 2026] 127.0.0.1:57427 Closing
 [Tue Feb 24 17:39:14 2026] 127.0.0.1:57428 Closing
+[Tue Feb 24 17:44:45 2026] 127.0.0.1:57512 Accepted
+[Tue Feb 24 17:44:45 2026] 127.0.0.1:57513 Accepted
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57512 Closing
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57513 [200]: GET /images/logo-light.png
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57519 Accepted
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57519 [200]: GET /images/user.png
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57513 Closing
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57519 Closing
+[Tue Feb 24 17:44:46 2026] 127.0.0.1:57525 Accepted
+[Tue Feb 24 17:44:47 2026] 127.0.0.1:57525 Closing
+[Tue Feb 24 17:44:47 2026] 127.0.0.1:57526 Accepted
+[Tue Feb 24 17:44:47 2026] 127.0.0.1:57527 Accepted
+[Tue Feb 24 17:44:47 2026] 127.0.0.1:57526 Closing
+[Tue Feb 24 17:44:47 2026] 127.0.0.1:57528 Accepted
+[Tue Feb 24 17:44:48 2026] 127.0.0.1:57527 Closing
+[Tue Feb 24 17:44:48 2026] 127.0.0.1:57528 [200]: GET /images/icono.png
+[Tue Feb 24 17:44:48 2026] 127.0.0.1:57528 Closing
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57539 Accepted
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57540 Accepted
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57539 Closing
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57540 [200]: GET /images/logo-light.png
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57549 Accepted
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57549 [200]: GET /images/user.png
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57540 Closing
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57549 Closing
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57550 Accepted
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57551 Accepted
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57550 Closing
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57552 Accepted
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57551 Closing
+[Tue Feb 24 17:45:07 2026] 127.0.0.1:57553 Accepted
+[Tue Feb 24 17:45:08 2026] 127.0.0.1:57552 Closing
+[Tue Feb 24 17:45:08 2026] 127.0.0.1:57553 [200]: GET /images/icono.png
+[Tue Feb 24 17:45:08 2026] 127.0.0.1:57553 Closing
