@@ -136,22 +136,38 @@ class FileControl extends Model
     }
     public static function disabledFolio($codigo)
     {
-        return DB::table('sw_folios')
+        $updated = DB::table('sw_folios')
             ->where('codigo', $codigo)
             ->update([
                 'habilitado' => 0,
                 'fecha_modificacion' => DB::raw('GETDATE()'),
             ]);
+
+        if ($updated) {
+            DB::table('sw_folio_encargado')
+                ->where('cod_folio', $codigo)
+                ->update(['habilitado' => 0]);
+        }
+
+        return $updated;
     }
 
     public static function activarFolio($codigo)
     {
-        return DB::table('sw_folios')
+        $updated = DB::table('sw_folios')
             ->where('codigo', $codigo)
             ->update([
                 'habilitado' => 1,
                 'fecha_modificacion' => DB::raw('GETDATE()'),
             ]);
+
+        if ($updated) {
+            DB::table('sw_folio_encargado')
+                ->where('cod_folio', $codigo)
+                ->update(['habilitado' => 1]);
+        }
+
+        return $updated;
     }
 
 

@@ -439,7 +439,7 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
         periodo = null;
     }
 
-    if (nombre && tipo) {
+    if (nombre && tipo && responsable) {
         axios.post(`${VITE_URL_APP}/api/save_folio`, {
             codigo: codigo,
             nombre: nombre,
@@ -453,10 +453,29 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
             .then(function (response) {
                 cargarFolios();
                 limpiarForm();
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: response.data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             })
             .catch(function (error) {
                 console.error('Error al guardar las fechas:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Hubo un problema al guardar el folio.'
+                });
             });
+    } else {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos incompletos',
+            text: 'Por favor, complete todos los campos obligatorios: Nombre, Tipo y Responsable.',
+            confirmButtonColor: '#3085d6'
+        });
     }
 });
 

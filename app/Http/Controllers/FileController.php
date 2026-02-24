@@ -971,6 +971,12 @@ class FileController extends Controller{
 
     public function saveFolio(Request $request)
     {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'tipo' => 'required|integer',
+            'responsable' => 'required|integer',
+        ]);
+
         $codigo = $request->input('codigo');
         $nombre = $request->input('nombre');
         $tipo = $request->input('tipo');
@@ -988,7 +994,8 @@ class FileController extends Controller{
                 if ($responsable) {
                     DB::table('sw_folio_encargado')->insert([
                         'cod_folio' => $lastId,
-                        'cod_rol' => $responsable
+                        'cod_rol' => $responsable,
+                        'habilitado' => 1
                     ]);
                 }
             }
@@ -997,7 +1004,7 @@ class FileController extends Controller{
             if ($inserted && $responsable) {
                 DB::table('sw_folio_encargado')->updateOrInsert(
                     ['cod_folio' => $codigo],
-                    ['cod_rol' => $responsable]
+                    ['cod_rol' => $responsable, 'habilitado' => 1]
                 );
             }
         }
