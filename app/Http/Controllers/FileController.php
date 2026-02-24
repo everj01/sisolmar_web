@@ -990,7 +990,7 @@ class FileController extends Controller{
         if (empty($codigo)) {
             $inserted = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma);
             if ($inserted) {
-                $lastId = DB::getPdo()->lastInsertId();
+                $lastId = DB::getPdo()->lastInsertId(); 
                 if ($responsable) {
                     DB::table('sw_folio_encargado')->insert([
                         'cod_folio' => $lastId,
