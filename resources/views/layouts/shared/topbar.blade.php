@@ -56,7 +56,7 @@
                     <div
                         class="hs-dropdown-menu duration mt-2 w-full max-w-sm rounded-lg border border-default-200 bg-white opacity-0 shadow-md transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden">
                         <div class="block px-4 py-2 font-medium text-center text-default-700 rounded-t-lg bg-default-50">
-                            Folios por vencer
+                            Folios por vencer en los próximos 10 días
                         </div>
 
                         <!-- Contenedor con scroll -->

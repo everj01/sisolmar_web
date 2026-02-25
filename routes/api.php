@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ConsultaController;
 use App\Http\Controllers\DjController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UbicacionController;
@@ -128,6 +129,12 @@ Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 
 
 // REPORTE FOLIOS PENDIENTES POR SUCURSAL
 Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
+
+// SUCURSALES POR CLIENTE
+Route::get('/sucursales-por-cliente', [ConsultaController::class, 'getSucursalesXCliente']);
+
+Route::get('/get-folios-vigentes', [ConsultaController::class, 'getFoliosVigentes']);
+
 
 
 
