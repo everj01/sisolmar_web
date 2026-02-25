@@ -625,7 +625,7 @@ const ConsultaFolios = (() => {
     // ─── Modal detalle ────────────────────────────────────────────────────────
     function cerrarModal() {
         document.getElementById('modal-detalle')?.classList.remove('show');
-    }
+    }//
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
     function norm(val) { return (val ?? '').toLowerCase().trim(); }
