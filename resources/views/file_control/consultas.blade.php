@@ -139,6 +139,7 @@
         padding: 13px 14px;
         color: #334155;
         vertical-align: middle;
+        text-align: center;
     }
 
     /* ===== BADGES ===== */
@@ -394,10 +395,19 @@
         <div class="stat-consulta">
             <div>
                 <div class="stat-num" id="stat-total">—</div>
-                <div class="stat-lbl">Total Resultados</div>
+                <div class="stat-lbl">Total Folios</div>
             </div>
             <div class="stat-icon-wrap bg-blue-50">
-                <i class="fa-solid fa-folder-open text-blue-500"></i>
+                <i class="fa-solid fa-file-lines text-blue-500"></i>
+            </div>
+        </div>
+        <div class="stat-consulta">
+            <div>
+                <div class="stat-num" id="stat-personas">—</div>
+                <div class="stat-lbl">Total Personas</div>
+            </div>
+            <div class="stat-icon-wrap bg-indigo-50">
+                <i class="fa-solid fa-users text-indigo-500"></i>
             </div>
         </div>
         <div class="stat-consulta">
@@ -741,6 +751,16 @@
                             </table>
                         </div>
                     </div>
+
+                    {{-- Paginación Pendientes --}}
+                    <div class="card-footer bg-default-50 py-3 px-5 flex items-center justify-between border-t border-default-200">
+                        <div class="text-sm text-default-500" id="pag-info-pendientes">
+                            Sin resultados
+                        </div>
+                        <div class="flex items-center gap-2" id="pag-controles-pendientes">
+                            {{-- Se llena vía JS --}}
+                        </div>
+                    </div>
                 </div>
 
                 {{-- TABLA DOCUMENTOS --}}
@@ -812,6 +832,16 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    {{-- Paginación Próximos --}}
+                    <div class="card-footer bg-default-50 py-3 px-5 flex items-center justify-between border-t border-default-200">
+                        <div class="text-sm text-default-500" id="pag-info-proximos">
+                            Sin resultados
+                        </div>
+                        <div class="flex items-center gap-2" id="pag-controles-proximos">
+                            {{-- Se llena vía JS --}}
                         </div>
                     </div>
                 </div>
