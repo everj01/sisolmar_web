@@ -425,7 +425,7 @@ const ConsultaFolios = (() => {
         setText('stat-por-vencer', porVenc);
         setText('stat-vencido', venc);
     }
-
+    //
     // ─── Limpiar ──────────────────────────────────────────────────────────────
     function limpiar() {
         const panel = document.getElementById(`panel-${tabActual}`);
