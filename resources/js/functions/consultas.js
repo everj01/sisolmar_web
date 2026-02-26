@@ -38,6 +38,7 @@ const ConsultaFolios = (() => {
         cargarCatalogos();
         // Mostrar el panel inicial correctamente
         mostrarPanelResultado('vigentes');
+        actualizarVisibilidadStats('vigentes');
     }
 
     // ─── Cambiar Tab ──────────────────────────────────────────────────────────
@@ -59,6 +60,30 @@ const ConsultaFolios = (() => {
 
         // Mostrar panel de resultados
         mostrarPanelResultado(tab);
+        actualizarVisibilidadStats(tab);
+    }
+
+    function actualizarVisibilidadStats(tab) {
+        const cards = {
+            total: document.getElementById('stat-total')?.closest('.stat-consulta'),
+            personas: document.getElementById('stat-personas')?.closest('.stat-consulta'),
+            vigente: document.getElementById('stat-vigente')?.closest('.stat-consulta'),
+            porVencer: document.getElementById('stat-por-vencer')?.closest('.stat-consulta'),
+            vencido: document.getElementById('stat-vencido')?.closest('.stat-consulta'),
+        };
+
+        Object.values(cards).forEach(c => { if (c) c.style.display = 'none'; });
+
+        if (tab === 'vigentes') {
+            if (cards.total) cards.total.style.display = 'flex';
+            if (cards.vigente) cards.vigente.style.display = 'flex';
+        } else if (tab === 'pendientes') {
+            if (cards.personas) cards.personas.style.display = 'flex';
+            if (cards.vencido) cards.vencido.style.display = 'flex';
+        } else if (tab === 'proximos') {
+            if (cards.personas) cards.personas.style.display = 'flex';
+            if (cards.porVencer) cards.porVencer.style.display = 'flex';
+        }
     }
 
     function mostrarPanelResultado(tab) {
@@ -389,9 +414,10 @@ const ConsultaFolios = (() => {
 
         const vig = resultados.filter(r => norm(r.estado) === 'vigente').length;
         const porVenc = resultados.filter(r => norm(r.estado) === 'por vencer').length;
-        const venc = resultados.filter(r =>
-            ['vencido', 'pendiente', 'falta'].includes(norm(r.estado))
-        ).length;
+        const venc = resultados.filter(r => {
+            const est = r.pendiente == 1 ? 'pendiente' : norm(r.estado);
+            return ['vencido', 'pendiente', 'falta'].includes(est);
+        }).length;
 
         setText('stat-total', total);
         setText('stat-personas', totalPers);
@@ -508,7 +534,32 @@ const ConsultaFolios = (() => {
             'recibido': ['badge-recibido', 'Recibido'],
         };
         const estado = item.pendiente == 1 ? 'pendiente' : norm(item.estado);
-        const [cls, label] = mapa[estado] ?? ['badge-pendiente', item.estado ?? 'Pendiente'];
+        let [cls, label] = mapa[estado] ?? ['badge-pendiente', item.estado ?? 'Pendiente'];
+
+        // Dinámicamente calcular los días si es "por vencer"
+        if (estado === 'por vencer' && item.fecha_caducidad) {
+            try {
+                const soloFecha = String(item.fecha_caducidad).split(' ')[0].split('T')[0];
+                const d = new Date(soloFecha + 'T00:00:00');
+                if (!isNaN(d.getTime())) {
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+
+                    const diffTime = d.getTime() - hoy.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays >= 0) {
+                        label = `Por vencer en ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
+                    } else {
+                        label = 'Vencido';
+                        cls = 'badge-vencido';
+                    }
+                }
+            } catch (e) {
+                // Ignore, keep default label
+            }
+        }
+
         return `<span class="badge-estado ${cls}">${label}</span>`;
     }
 

@@ -47,6 +47,7 @@ export default defineConfig({
                 'resources/js/functions/legajos_pdf.js',
                 'resources/js/functions/search_legajos.js',
                 'resources/js/functions/gestion_dj.js',
+                'resources/js/functions/notifications.js',
                 /* CAPACITACION */
                 'resources/js/functions/capacitacion/gestion_cursos.js',
                 // 'resources/js/functions/capacitacion/gestion_programacion.js', // Archivo no existe

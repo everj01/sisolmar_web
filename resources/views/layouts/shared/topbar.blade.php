@@ -194,4 +194,6 @@
     </div>
 </div>
 
+<!-- Scripts Topbar -->
+@vite(['resources/js/functions/notifications.js'])
 <!-- Topbar End -->

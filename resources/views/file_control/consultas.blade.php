@@ -598,7 +598,8 @@
                                 placeholder="Buscar persona...">
                         </div>
 
-                        <div>
+                        {{-- Ocultado temporalmente --}}
+                        <div style="display: none;">
                             <label class="text-xs font-semibold text-default-500 uppercase tracking-wide mb-1 block">
                                 Código de Servicio
                             </label>
@@ -819,7 +820,7 @@
                                         <th>DNI</th>
                                         <th>Cliente</th>
                                         <th>Sucursal</th>
-                                        <th>Pendientes</th>
+                                        <th>Por Vencer</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-personas-proximos">

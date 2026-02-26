@@ -135,6 +135,7 @@ Route::get('/sucursales-por-cliente', [ConsultaController::class, 'getSucursales
 
 Route::get('/get-folios-vigentes', [ConsultaController::class, 'getFoliosVigentes']);
 Route::get('/get-folios-pendientes', [ConsultaController::class, 'getFoliosPendientes']);
+Route::get('/folios/proximos-vencer', [ConsultaController::class, 'getFoliosProximosVencer']);
 
 
 

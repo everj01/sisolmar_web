@@ -29,4 +29,11 @@ class Consulta extends Model
         return DB::select('EXEC SW_LISTAR_FOLIOS_PENDIENTES_CONSULTAS ?, ?, ?',[$dni, $codCliente, $codSucursal]);
     }
 
+    public static function listarFoliosProximosVencer($dni, $codCliente, $codSucursal, $persona, $servicio, $dias, $fecha_desde, $fecha_hasta)
+    {
+        return DB::select('EXEC SW_LISTAR_FOLIOS_PROXIMOS_VENCER_CONSULTAS ?, ?, ?, ?, ?, ?, ?, ?', [
+            $dni, $codCliente, $codSucursal, $persona, $servicio, $dias, $fecha_desde, $fecha_hasta
+        ]);
+    }
+
 }
