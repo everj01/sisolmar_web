@@ -973,11 +973,24 @@ window.listarProgramaciones = async function (codigoCurso) {
                 const fInicio = formatDate(prog.fecha_inicio);
                 const fFin = formatDate(prog.fecha_final);
 
+                // Validar si la fecha ha pasado
+                let esPasada = false;
+                if (prog.fecha_final) {
+                    const fechaFinal = new Date(prog.fecha_final);
+                    const hoy = new Date();
+                    fechaFinal.setHours(23, 59, 59, 999);
+                    esPasada = fechaFinal < hoy;
+                }
+
+                const trClass = esPasada ? 'bg-gray-100/70' : '';
+                const textCol = esPasada ? 'text-gray-400' : '';
+                const badge = esPasada ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-200 text-gray-600">Finalizada</span>' : '';
+
                 html += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td>${prog.codigo}</td>
-                        <td class="text-sm font-medium">${fInicio} - ${fFin}</td>
+                    <tr class="${trClass}">
+                        <td class="${textCol}">${i + 1}</td>
+                        <td class="${textCol}">${prog.codigo}</td>
+                        <td class="text-sm font-medium ${textCol}">${fInicio} - ${fFin} ${badge}</td>
                         <td>
                             <div class="flex justify-center gap-2">
                                 <button class="btn btn-sm rounded-full bg-info/25 text-info hover:bg-info hover:text-white transition-colors duration-200" 
