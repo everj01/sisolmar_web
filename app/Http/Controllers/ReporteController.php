@@ -17,9 +17,13 @@ class ReporteController extends Controller
 
     public function foliosPendientesPorSucursal(Request $request)
     {
+        // Aumentar memoria y tiempo para manejar reportes grandes (17k+ registros)
+        ini_set('memory_limit', '512M');
+        set_time_limit(300);
+
         $sucursal = $request->get('sucursal', 0);
 
-        if ($sucursal == '00') {
+        if ($sucursal == '00' || $sucursal === 'TODOS') {
             $sucursal = 0;
         }
 
@@ -28,7 +32,6 @@ class ReporteController extends Controller
         $reporte = [];
 
         foreach ($rows as $row) {
-
             $nombreSucursal = $row->sucursal;
             $codPersonal    = $row->codPersonal;
 
@@ -39,6 +42,7 @@ class ReporteController extends Controller
                 ];
             }
 
+            // Usar referencia para evitar copias de arrays grandes en memoria
             if (!isset($reporte[$nombreSucursal]['personal'][$codPersonal])) {
                 $reporte[$nombreSucursal]['personal'][$codPersonal] = [
                     'codPersonal' => $codPersonal,
@@ -50,13 +54,14 @@ class ReporteController extends Controller
             $reporte[$nombreSucursal]['personal'][$codPersonal]['documentos'][] = [
                 'documento'       => $row->documento,
                 'tipo_folio'      => $row->tipo_folio,
-                'fecha_emision'   => $row->fecha_emision,
-                'fecha_caducidad' => $row->fecha_caducidad,
+                // Omitir fechas si no son necesarias para reducir tamaño del JSON (opcional)
+                // 'fecha_emision'   => $row->fecha_emision,
+                // 'fecha_caducidad' => $row->fecha_caducidad,
             ];
         }
 
-        foreach ($reporte as &$sucursal) {
-            $sucursal['personal'] = array_values($sucursal['personal']);
+        foreach ($reporte as &$suc) {
+            $suc['personal'] = array_values($suc['personal']);
         }
 
         return response()->json(array_values($reporte));

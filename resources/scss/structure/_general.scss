@@ -195,7 +195,7 @@ code {
 
 // Page Content
 .page-content {
-    @apply bg-default-100 lg:rounded-s-2xl flex flex-col flex-auto relative transition-all duration-300 h-screen overflow-y-auto;
+    @apply bg-default-100 lg:rounded-s-2xl flex flex-col flex-auto relative transition-all duration-300 min-h-screen;
 }
 
 .dark .page-content {

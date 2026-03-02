@@ -95,6 +95,7 @@ Route::post('/save-cursos', [CapacitacionController::class, 'saveCurso']);
 Route::post('/update-curso', [CapacitacionController::class, 'updateCurso']);
 
 Route::patch('/cursos/{codigo}/habilitado', [CapacitacionController::class, 'updateCursoHab']);
+Route::delete('/cursos/{codigo}', [CapacitacionController::class, 'destroyCurso']);
 
 Route::post('/save-programacion', [CapacitacionController::class, 'saveProgramacion']);
 Route::post('/update-programacion', [CapacitacionController::class, 'updateProgramacion']);

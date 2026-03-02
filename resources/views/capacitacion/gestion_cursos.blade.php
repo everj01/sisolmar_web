@@ -176,7 +176,7 @@
             </div>
     </div>
 
-    <div class="card" x-data="{ panel: 'registro', tituloProgramacion: '' }" @cambiar-panel.window="panel = $event.detail.panel; tituloProgramacion = $event.detail.titulo || ''">
+    <div class="card" x-data="{ panel: 'registro', tituloProgramacion: '', mostrarBotonRegistrarListado: true }" @cambiar-panel.window="panel = $event.detail.panel; tituloProgramacion = $event.detail.titulo || ''; mostrarBotonRegistrarListado = $event.detail.mostrarBtn === undefined ? true : $event.detail.mostrarBtn">
         <!-- Panel Registro de Curso -->
         <div x-show="panel === 'registro'" x-transition>
             <div class="card-header">
@@ -343,16 +343,59 @@
                         <div class="flex items-center gap-2 mb-2">
                              <input type="checkbox" id="chkPeriodicidad"
                                 x-model="activarPeriodicidad"
-                                @change="activarPeriodicidad ? (periodicidad = (periodicidad == 0 ? 1 : periodicidad)) : (periodicidad = 0)"
+                                @change="if(!activarPeriodicidad) { frecuencia = ''; mesInicio = ''; proyeccionAnios = 1; periodicidad = 0; }"
                                 class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2">
                             <label for="chkPeriodicidad" class="text-gray-800 text-base font-medium select-none cursor-pointer">
-                            Periodicidad
+                            Activar Periodicidad
                             </label>
                         </div>
-                        <input type="number" id="txtperiodicidad" min="0"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400"
-                        x-model="periodicidad"
-                        :disabled="!activarPeriodicidad" />
+
+                        <!-- Bloque de configuración de Periodicidad -->
+                        <div x-show="activarPeriodicidad" x-transition class="mt-3 p-4 border border-gray-200 rounded-lg bg-gray-50 flex flex-col gap-4">
+                            
+                            <!-- Select Frecuencia -->
+                            <div class="w-full">
+                                <label for="slcFrecuencia" class="text-gray-800 text-sm font-medium mb-1 block">Frecuencia</label>
+                                <select id="slcFrecuencia" x-model="frecuencia" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="">-- Seleccione Frecuencia --</option>
+                                    <option value="MENSUAL">Mensual</option>
+                                    <option value="BIMESTRAL">Bimestral</option>
+                                    <option value="TRIMESTRAL">Trimestral</option>
+                                    <option value="CUATRIMESTRAL">Cuatrimestral</option>
+                                    <option value="SEMESTRAL">Semestral</option>
+                                    <option value="ANUAL">Anual</option>
+                                    <option value="PERSONALIZADO">Personalizado (Manual)</option>
+                                </select>
+                            </div>
+
+                            <!-- Campos dinámicos para frecuencias estructuradas -->
+                            <template x-if="frecuencia && frecuencia !== 'PERSONALIZADO'">
+                                <div class="grid gap-4 lg:grid-cols-2 mt-2">
+                                    <div>
+                                        <label for="mesInicio" class="text-gray-800 text-sm font-medium mb-1 block">Mes de Inicio</label>
+                                        <input type="month" id="mesInicio" x-model="mesInicio" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label for="proyeccionAnios" class="text-gray-800 text-sm font-medium mb-1 block">Proyectar por (Años)</label>
+                                        <input type="number" id="proyeccionAnios" x-model="proyeccionAnios" min="1" max="10" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div class="col-span-1 lg:col-span-2">
+                                        <p class="text-xs text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100 italic">
+                                            <i class="fa-solid fa-info-circle mr-1"></i> Las programaciones se generarán automáticamente al guardar el curso.
+                                        </p>
+                                    </div>
+                                </div>
+                            </template>
+                            
+                            <!-- Mensaje para personalizado -->
+                            <template x-if="frecuencia === 'PERSONALIZADO'">
+                                <div class="w-full mt-2">
+                                     <p class="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 italic">
+                                        <i class="fa-solid fa-hand-pointer mr-1"></i> Deberá agregar manualmente las programaciones desde el panel tras guardar el curso.
+                                    </p>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
                 <div class="w-full mt-8">
@@ -389,7 +432,6 @@
                         />
                     </div>
                 </div>
-                <hr>
 
                 <div class="flex flex-col py-5">
                     <div class="mt-5">
@@ -472,12 +514,17 @@
                 </button>
             </div>
             <div class="card-body">
-                <div class="flex items-center justify-center gap-2">
+                <div class="flex items-center justify-center gap-2" x-show="mostrarBotonRegistrarListado">
                     <button type="button"
                     class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white"
                     onclick="window.abrirModalRegistro()">
                     <i class='bx bx-plus'></i>&nbsp;Registrar Programación
                     </button>
+                </div>
+                <div x-show="!mostrarBotonRegistrarListado" class="w-full text-center mb-4">
+                    <p class="text-sm text-gray-500 italic bg-gray-50 py-2 px-4 rounded-lg border border-gray-200 inline-block">
+                        <i class="fa-solid fa-lock text-gray-400 mr-1"></i> Programaciones autogeneradas. Registro manual deshabilitado.
+                    </p>
                 </div>
                 <div class="mt-5 overflow-y overflow-x">
                     <table id="tblProgramacion" class="datatable responsive-table">

@@ -353,7 +353,7 @@ function renderTablaCursos(data) {
                 <i class="fa-solid fa-pen-to-square"></i>
             </button>
 
-            <button type="button" @click="activarPanelProgramacion('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+            <button type="button" @click="activarPanelProgramacion('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}', '${curso.frecuencia || ''}')"
             class="me-2 btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white" title="Ver programaciones">
                 <i class="bx bx-calendar-event"></i>
             </button>
@@ -365,8 +365,12 @@ function renderTablaCursos(data) {
                 </button>`
                     :
                     `<button type="button"  @click="gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn rounded-full  bg-success/25 text-success hover:bg-success hover:text-white" title="Habilitar curso">
+                class="me-2 btn rounded-full  bg-success/25 text-success hover:bg-success hover:text-white" title="Habilitar curso">
                     <i class='bx bx-check' ></i>
+                </button>
+                <button type="button"  @click="gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white" title="Eliminar definitivamente de BD">
+                    <i class="fa-solid fa-trash"></i>
                 </button>`
                 }
         </td>
@@ -438,9 +442,11 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
                 alpineData.area = curso.area ?? "";
 
-                const p = curso.periodicidad ?? 0;
-                alpineData.periodicidad = p;
-                alpineData.activarPeriodicidad = (p > 0);
+                // Nuevos campos de periodicidad estructurada
+                alpineData.activarPeriodicidad = (curso.es_periodico == 1);
+                alpineData.frecuencia = curso.frecuencia ?? '';
+                alpineData.proyeccionAnios = curso.proyeccion_anios ?? 1;
+                alpineData.mesInicio = '';
 
                 // Update PAC logic
                 const esPacCurso = curso.tipo_curso?.descripcion?.toUpperCase().includes('PAC') || false;
@@ -481,10 +487,11 @@ window.gestionCurso = async (op, cod, nombre = '') => {
             habilitado: op === 'DEL' ? 0 : 1
         };
 
-        const titulo = op === 'DEL' ? '¿Estás seguro?' : '¿Habilitar curso?';
-        const texto = op === 'DEL' ? `¿Quieres eliminar el curso "${nombre}"?` : `¿Quieres habilitar el curso "${nombre}"?`;
-        const icon = op === 'DEL' ? 'warning' : 'question';
-        const color = op === 'DEL' ? '#d33' : '#3085d6';
+        const titulo = op === 'DEL' ? '¿Estás seguro?' : (op === 'PERMA_DEL' ? '¿Eliminación Definitiva?' : '¿Habilitar curso?');
+        const texto = op === 'DEL' ? `¿Quieres inhabilitar el curso "${nombre}"?` : (op === 'PERMA_DEL' ? `¿Quieres ELIMINAR COMPLETAMENTE y sin retorno el curso "${nombre}" y todas sus programaciones de la Base de Datos?` : `¿Quieres habilitar el curso "${nombre}"?`);
+        const icon = op === 'DEL' || op === 'PERMA_DEL' ? 'warning' : 'question';
+        const color = op === 'DEL' || op === 'PERMA_DEL' ? '#d33' : '#3085d6';
+        const confirmText = op === 'DEL' ? 'Sí, inhabilitar' : (op === 'PERMA_DEL' ? 'Sí, destruir curso' : 'Sí, habilitar');
 
         Swal.fire({
             title: titulo,
@@ -493,23 +500,46 @@ window.gestionCurso = async (op, cod, nombre = '') => {
             showCancelButton: true,
             confirmButtonColor: color,
             cancelButtonColor: '#6c757d',
-            confirmButtonText: op === 'DEL' ? 'Sí, eliminar' : 'Sí, habilitar',
+            confirmButtonText: confirmText,
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.patch(`${VITE_URL_APP}/api/cursos/${cod}/habilitado`, data)
-                    .then(async (res) => {
-                        if (res.status === 200 && res.data.success) {
-                            Swal.fire('Éxito', res.data.message || (op === 'DEL' ? 'Curso Eliminado' : 'Curso Habilitado'), 'success')
-                            await listarCursos()
-                        } else {
-                            Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err)
-                        Swal.fire('Error', 'Ocurrió un problema al actualizar el curso', 'error')
-                    });
+                if (op === 'PERMA_DEL') {
+                    axios.delete(`${VITE_URL_APP}/api/cursos/${cod}`)
+                        .then(async (res) => {
+                            if (res.status === 200 && res.data.success) {
+                                Swal.fire('Éxito', res.data.message || 'Curso eliminado definitivamente', 'success')
+
+                                // Mantener el estado de la vista previa validando el switch local "Solo eliminados"
+                                const toggleEliminados = document.getElementById('chkEliminados');
+                                if (toggleEliminados && toggleEliminados.checked) {
+                                    await window.gestionListarCursos(0); // Forzar recarga de los deshabilitados
+                                } else {
+                                    await listarCursos();
+                                }
+                            } else {
+                                Swal.fire('Error', res.data.message || 'No se pudo eliminar el curso permanentemente', 'error')
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err)
+                            Swal.fire('Error', err.response?.data?.message || 'Ocurrió un problema al eliminar el curso', 'error')
+                        });
+                } else {
+                    axios.patch(`${VITE_URL_APP}/api/cursos/${cod}/habilitado`, data)
+                        .then(async (res) => {
+                            if (res.status === 200 && res.data.success) {
+                                Swal.fire('Éxito', res.data.message || (op === 'DEL' ? 'Curso Eliminado' : 'Curso Habilitado'), 'success')
+                                await listarCursos()
+                            } else {
+                                Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err)
+                            Swal.fire('Error', 'Ocurrió un problema al actualizar el curso', 'error')
+                        });
+                }
             }
         });
     }
@@ -527,13 +557,15 @@ window.gestionListarCursos = (op) => {
 window.editarFormGestionCurso = (e) => {
     if (e) e.preventDefault();
 
+    const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+    if (!formElement || !window.Alpine) return;
+    const alpineData = Alpine.$data(formElement);
+
     const data = {
         codigo: document.getElementById('codGestionEditar').value,
         nombre: document.getElementById('txtNombreCurso').value,
         tipo_curso: document.getElementById('slcTipoCurso').value,
         area: document.getElementById('slcArea').value,
-        periodicidad: document.getElementById('chkPeriodicidad').checked ? (document.getElementById('txtperiodicidad').value || 0) : 0,
-        // Removed: nombre_exa, descripcion
         tiempo: parseInt(document.getElementById('txtLimite').value) || 0,
         nota: parseInt(document.getElementById('txtNota').value) || 0,
         intentos: parseInt(document.getElementById('txtIntentos').value) || 0,
@@ -544,22 +576,29 @@ window.editarFormGestionCurso = (e) => {
     formData.append('nombre', data.nombre);
     formData.append('tipo_curso', data.tipo_curso);
     formData.append('area', data.area);
-    formData.append('periodicidad', data.periodicidad);
-    // Removed: nombre_exa, descripcion
     formData.append('tiempo', data.tiempo);
     formData.append('nota', data.nota);
     formData.append('intentos', data.intentos);
+
+    // Nuevos campos de periodicidad edit
+    formData.append('es_periodico', alpineData.activarPeriodicidad ? 1 : 0);
+    if (alpineData.activarPeriodicidad) {
+        formData.append('frecuencia', alpineData.frecuencia);
+        formData.append('proyeccion_anios', alpineData.proyeccionAnios);
+
+        // Si hay una nueva fecha inicio proyectamos de cero y re-generamos
+        if (alpineData.frecuencia && alpineData.frecuencia !== 'PERSONALIZADO' && alpineData.mesInicio) {
+            const fechas = window.generarFechasProyectadas(alpineData.frecuencia, alpineData.mesInicio, alpineData.proyeccionAnios);
+            formData.append('fechas_generadas', JSON.stringify(fechas));
+        }
+    }
     //formData.append('archivo', archivoSeleccionado);
 
     // Append Sucursales (PAC) - Read from Alpine
-    const formElement = document.querySelector('[x-data="formCursoGestion()"]');
-    if (formElement && window.Alpine) {
-        const alpineData = Alpine.$data(formElement);
-        if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
-            alpineData.sucursalesAsignadas.forEach(suc => {
-                formData.append('sucursales_asignadas[]', suc);
-            });
-        }
+    if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
+        alpineData.sucursalesAsignadas.forEach(suc => {
+            formData.append('sucursales_asignadas[]', suc);
+        });
     }
 
     if (archivoSeleccionado) {
@@ -647,8 +686,11 @@ window.formCursoGestion = function () {
         nombre: '',
         tipoCurso: '',
         area: '',
-        periodicidad: '',
+        // Nueva Periodicidad estructurada
         activarPeriodicidad: false,
+        frecuencia: '',
+        mesInicio: '',
+        proyeccionAnios: 1,
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
         nota: '',
@@ -699,8 +741,10 @@ window.formCursoGestion = function () {
             this.nombre = '';
             this.tipoCurso = '';
             this.area = '';
-            this.periodicidad = '0';
             this.activarPeriodicidad = false;
+            this.frecuencia = '';
+            this.mesInicio = '';
+            this.proyeccionAnios = 1;
             this.limiteTiempo = '0';
             this.nota = '0';
             this.intentos = '0';
@@ -746,7 +790,19 @@ window.formCursoGestion = function () {
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
             formData.append('area', this.area);
-            formData.append('periodicidad', this.activarPeriodicidad ? this.periodicidad : 0);
+
+            formData.append('es_periodico', this.activarPeriodicidad ? 1 : 0);
+            if (this.activarPeriodicidad) {
+                formData.append('frecuencia', this.frecuencia);
+                formData.append('proyeccion_anios', this.proyeccionAnios);
+
+                // Generar fechas estructuradas
+                if (this.frecuencia && this.frecuencia !== 'PERSONALIZADO' && this.mesInicio) {
+                    const fechas = window.generarFechasProyectadas(this.frecuencia, this.mesInicio, this.proyeccionAnios);
+                    formData.append('fechas_generadas', JSON.stringify(fechas));
+                }
+            }
+
             // Removed: nombre_exa, descripcion
             formData.append('tiempo', this.limiteTiempo);
             formData.append('nota', this.nota);
@@ -815,14 +871,55 @@ window.formCursoGestion = function () {
     }
 }
 
+// Helper Generator Func
+window.generarFechasProyectadas = function (frecuencia, mesInicioStr, anios) {
+    if (!mesInicioStr || !frecuencia || frecuencia === 'PERSONALIZADO') return [];
+
+    let [year, month] = mesInicioStr.split('-');
+    let startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+
+    let multiplosMeses = 1;
+    if (frecuencia === 'BIMESTRAL') multiplosMeses = 2;
+    if (frecuencia === 'TRIMESTRAL') multiplosMeses = 3;
+    if (frecuencia === 'CUATRIMESTRAL') multiplosMeses = 4;
+    if (frecuencia === 'SEMESTRAL') multiplosMeses = 6;
+    if (frecuencia === 'ANUAL') multiplosMeses = 12;
+
+    let ciclosPorAnio = 12 / multiplosMeses;
+    let totalCiclos = Math.floor(ciclosPorAnio * parseInt(anios || 1));
+    let arrayFechas = [];
+
+    for (let i = 0; i < totalCiclos; i++) {
+        let currentDate = new Date(startDate.getTime());
+        currentDate.setMonth(currentDate.getMonth() + (i * multiplosMeses));
+
+        let targetYear = currentDate.getFullYear();
+        let targetMonth = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        let targetLastDay = new Date(targetYear, currentDate.getMonth() + 1, 0).getDate();
+
+        arrayFechas.push({
+            inicio: `${targetYear}-${targetMonth}-01`,
+            final: `${targetYear}-${targetMonth}-${targetLastDay}`,
+            periodo: `${targetYear}-${targetMonth}`
+        });
+    }
+    return arrayFechas;
+}
+
 
 // --- Lógica del Panel de Programación ---
 
-window.activarPanelProgramacion = function (codigoCurso, nombreCurso) {
+window.activarPanelProgramacion = function (codigoCurso, nombreCurso, frecuenciaStr) {
+    let mostrarBtn = true;
+    if (frecuenciaStr && frecuenciaStr !== 'PERSONALIZADO' && frecuenciaStr !== 'null' && frecuenciaStr !== 'undefined') {
+        mostrarBtn = false; // Bloquea si es generado estructurado
+    }
+
     window.dispatchEvent(new CustomEvent('cambiar-panel', {
         detail: {
             panel: 'programacion',
-            titulo: nombreCurso
+            titulo: nombreCurso,
+            mostrarBtn: mostrarBtn
         }
     }));
     // Wait a bit for Alpine transition or just setData

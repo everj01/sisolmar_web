@@ -61,6 +61,9 @@ class CapacitacionController extends Controller
                 'nombre' => $curso->nombre,
                 'habilitado' => $curso->habilitado,
                 'periodicidad' => $curso->periodicidad,
+                'es_periodico' => $curso->es_periodico,
+                'frecuencia' => $curso->frecuencia,
+                'proyeccion_anios' => $curso->proyeccion_anios,
             ];
         });
 
@@ -93,7 +96,10 @@ class CapacitacionController extends Controller
             'nombre' => 'required|string|max:100',
             'tipo_curso'=> 'required|integer|exists:sw_capacitacion_tipo_curso,codigo',
             'area'=> 'required|string|max:255',
-            'periodicidad'=> 'required|integer|max:10',
+            'es_periodico'=> 'required|integer|in:0,1',
+            'frecuencia'=> 'nullable|string',
+            'proyeccion_anios'=> 'nullable|integer',
+            'fechas_generadas'=> 'nullable|string',
             'nombre_exa' => 'nullable|string',
             'descripcion' => 'nullable|string',
             'tiempo' => 'required|integer',
@@ -117,13 +123,59 @@ class CapacitacionController extends Controller
             $curso = Cursos::where('codigo', $request->codigo)->firstOrFail();
             $codigo_curso =  $curso->codigo_curso;
 
+            $periodicidadVal = 0;
+            if ($request->input('es_periodico') == 1) {
+                switch ($request->input('frecuencia')) {
+                    case 'MENSUAL': $periodicidadVal = 12; break;
+                    case 'BIMESTRAL': $periodicidadVal = 6; break;
+                    case 'TRIMESTRAL': $periodicidadVal = 4; break;
+                    case 'CUATRIMESTRAL': $periodicidadVal = 3; break;
+                    case 'SEMESTRAL': $periodicidadVal = 2; break;
+                    case 'ANUAL': $periodicidadVal = 1; break;
+                    default: $periodicidadVal = 0; break;
+                }
+            }
+
             $curso->update([
                 'nombre' => $request->nombre,
                 'tipo_curso' => $request->tipo_curso,
                 'area' => $request->area,
-                'periodicidad' => $request->periodicidad,
+                'periodicidad' => $periodicidadVal,
+                'es_periodico' => $request->input('es_periodico'),
+                'frecuencia' => $request->input('frecuencia'),
+                'proyeccion_anios' => $request->input('proyeccion_anios'),
                 'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
             ]);
+            
+            // AUTOGENERAR PROGRAMACIONES SI VIENEN NUEVAS
+            if ($request->has('fechas_generadas')) {
+                $fechasArray = json_decode($request->input('fechas_generadas'), true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($fechasArray)) {
+                    $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
+                    $newProgCod = $lastProg ? intval($lastProg->codigo_programacion) : 1000;
+
+                    foreach ($fechasArray as $fechaItem) {
+                        $existe = CursoProgramacion::where('cod_cursos', $curso->codigo)
+                            ->where('periodo', $fechaItem['periodo'])
+                            ->where('tipo', 'REGULAR')
+                            ->exists();
+
+                        if (!$existe) {
+                            $newProgCod++;
+                            CursoProgramacion::create([
+                                'codigo_programacion' => str_pad($newProgCod, 4, '0', STR_PAD_LEFT),
+                                'cod_cursos'    => $curso->codigo,
+                                'periodo'       => $fechaItem['periodo'],
+                                'tipo'          => 'REGULAR',
+                                'fecha_inicio'  => $fechaItem['inicio'] . 'T00:00:00.000',
+                                'fecha_final'   => $fechaItem['final'] . 'T23:59:59.000',
+                                'fecha_creacion'=> date('Y-m-d\TH:i:s.000'),
+                                'habilitado'    => 1,
+                            ]);
+                        }
+                    }
+                }
+            }
 
             // ACTUALIZAR SUCURSALES (Borrar anteriores e insertar nuevas)
             DB::table('sw_curso_sucursales')->where('curso_codigo', $curso->codigo)->delete();
@@ -247,6 +299,53 @@ class CapacitacionController extends Controller
         ]);
     }
 
+    public function destroyCurso($codigo)
+    {
+        DB::beginTransaction();
+        try {
+            $curso = Cursos::where('codigo', $codigo)->firstOrFail();
+
+            // 1. Delete Sucursales mappings
+            DB::table('sw_curso_sucursales')->where('curso_codigo', $curso->codigo)->delete();
+
+            // 2. Delete Examen & Plantilla Archive
+            $examen = ExamenCurso::where('cod_cursos', $curso->codigo)->first();
+            if ($examen) {
+                if ($examen->file_ruta && Storage::disk('public')->exists($examen->file_ruta)) {
+                    Storage::disk('public')->delete($examen->file_ruta);
+                }
+                $examen->delete();
+            }
+
+            // 3. Delete Programaciones
+            CursoProgramacion::where('cod_cursos', $curso->codigo)->delete();
+
+            // 4. Delete Asistencias / Matriculados / Notas ? 
+            // Esto asume que si estaba eliminado, no tiene matriculas o si las tiene se borran (normalmente dependen del codigo_programacion).
+            // Lo más seguro es que si el usuario lo puede borrar es porque recién lo creó o es un error.
+            
+            // 5. Delete Curso base
+            $curso->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'El curso y todos sus registros han sido ELIMINADOS permanentemente.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al destruir curso permanentemente', [
+                'error' => $e->getMessage(),
+                'codigo' => $codigo
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo eliminar el curso permanentemente debido a registros dependientes (ej: asistencias).'
+            ], 500);
+        }
+    }
+
     public function saveCurso(Request $request)
     {
         try {
@@ -254,7 +353,10 @@ class CapacitacionController extends Controller
                 'nombre' => 'required|string|max:100',
                 'tipo_curso'=> 'required|integer|exists:sw_capacitacion_tipo_curso,codigo',
                 'area'=> 'required|exists:sw_capacitacion_areas,codigo',
-                'periodicidad'=> 'required|integer|max:10',
+                'es_periodico'=> 'required|integer|in:0,1',
+                'frecuencia'=> 'nullable|string',
+                'proyeccion_anios'=> 'nullable|integer',
+                'fechas_generadas'=> 'nullable|string',
                 'nombre_exa' => 'nullable|string',
                 'descripcion' => 'nullable|string',
                 'tiempo' => 'required|integer',
@@ -283,12 +385,28 @@ class CapacitacionController extends Controller
                 $newCode = '10001';
             }
 
+            $periodicidadVal = 0;
+            if ($request->input('es_periodico') == 1) {
+                switch ($request->input('frecuencia')) {
+                    case 'MENSUAL': $periodicidadVal = 12; break;
+                    case 'BIMESTRAL': $periodicidadVal = 6; break;
+                    case 'TRIMESTRAL': $periodicidadVal = 4; break;
+                    case 'CUATRIMESTRAL': $periodicidadVal = 3; break;
+                    case 'SEMESTRAL': $periodicidadVal = 2; break;
+                    case 'ANUAL': $periodicidadVal = 1; break;
+                    default: $periodicidadVal = 0; break;
+                }
+            }
+
             $curso = Cursos::create([
                 'nombre' => $request->nombre,
                 'codigo_curso' => $newCode,
                 'tipo_curso' => $request->tipo_curso,
                 'area' => $request->area,
-                'periodicidad' => $request->periodicidad,
+                'periodicidad' => $periodicidadVal,
+                'es_periodico' => $request->input('es_periodico', 0),
+                'frecuencia' => $request->input('frecuencia'),
+                'proyeccion_anios' => $request->input('proyeccion_anios'),
                 'fecha_creacion' => date('Y-m-d\TH:i:s.000')
             ]);
 
@@ -379,6 +497,29 @@ class CapacitacionController extends Controller
                     'success' => false,
                     'message' => 'Error al registrar el examen en la base de datos.'
                 ], 500);
+            }
+
+            // AUTOGENERAR PROGRAMACIONES SI EXISTEN (FASE 3)
+            if ($request->has('fechas_generadas')) {
+                $fechasArray = json_decode($request->input('fechas_generadas'), true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($fechasArray)) {
+                    $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
+                    $newProgCod = $lastProg ? intval($lastProg->codigo_programacion) : 1000;
+
+                    foreach ($fechasArray as $fechaItem) {
+                        $newProgCod++;
+                        CursoProgramacion::create([
+                            'codigo_programacion' => str_pad($newProgCod, 4, '0', STR_PAD_LEFT),
+                            'cod_cursos'    => $curso->codigo,
+                            'periodo'       => $fechaItem['periodo'],
+                            'tipo'          => 'REGULAR',
+                            'fecha_inicio'  => $fechaItem['inicio'] . 'T00:00:00.000',
+                            'fecha_final'   => $fechaItem['final'] . 'T23:59:59.000',
+                            'fecha_creacion'=> date('Y-m-d\TH:i:s.000'),
+                            'habilitado'    => 1,
+                        ]);
+                    }
+                }
             }
 
             DB::commit();
@@ -1076,7 +1217,8 @@ class CapacitacionController extends Controller
                 $codigo = $p->CODI_PERS ?? $p->codi_pers ?? $p->codigo ?? '';
                 $nombre = $p->personal ?? $p->nombre ?? $p->nombre_completo ?? 'Desconocido';
                 $dni = $p->nroDoc ?? $p->dni ?? $p->NRO_DOCU_IDEN ?? '';
-                $cargo = $p->cargo ?? $p->desc_cargo ?? 'N/A';
+                // Se lee desde cargo o TIPOTRAB, ya que SW_LISTAR_PERSONAL_X_SUCURSAL devuelve TIPOTRAB con "ADMIN"/"OPER"
+                $cargo = $p->cargo ?? $p->desc_cargo ?? $p->TIPOTRAB ?? 'N/A';
                 $sucursal = $p->sucursal ?? 'N/A';
                 
                 return [

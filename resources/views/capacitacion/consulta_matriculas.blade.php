@@ -4,9 +4,9 @@
 @section('content')
     @include("layouts.shared/page-title", ["subtitle" => "Capacitación", "title" => "Consulta de Matrículas"])
 
-    <div class="grid 2xl:grid-cols-3 grid-cols-1 gap-6">
+    <div class="grid lg:grid-cols-3 grid-cols-1 gap-6">
         <!-- Panel de selección de curso -->
-        <div class="card 2xl:col-span-1">
+        <div class="card lg:col-span-1">
             <div class="card-header flex items-center justify-between">
                 <h4 class="card-title">Seleccionar Curso</h4>
             </div>
@@ -148,7 +148,7 @@
         </div>
 
         <!-- Panel de matrículas del curso seleccionado -->
-        <div class="card 2xl:col-span-2">
+        <div class="card lg:col-span-2">
             <div class="card-header flex items-center justify-between">
                 <div>
                     <h4 class="card-title">Matrículas del Curso</h4>
@@ -223,79 +223,80 @@
     <div id="modal-registro"
         class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none">
         <div
-            class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 w-11/12 md:w-1/4 max-w-lg my-8 mx-auto flex flex-col bg-white shadow-sm rounded">
+            class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 my-6 mx-auto flex flex-col bg-white shadow-sm rounded"
+            style="width: 520px; max-width: 95vw;">
             <div class="flex flex-col border border-default-200 shadow-lg rounded-lg pointer-events-auto">
 
                 <!-- Header -->
                 <div
-                    class="flex justify-between items-center py-4 px-6 border-b border-default-200 bg-gradient-to-r from-primary-50 to-primary-100">
+                    class="flex justify-between items-center py-3 px-5 border-b border-default-200 bg-gradient-to-r from-primary-50 to-primary-100">
                     <div>
-                        <h3 class="text-xl font-semibold text-gray-800">Matricular Personal</h3>
-                        <p class="text-sm text-gray-600 mt-1">Seleccione el personal</p>
+                        <h3 class="text-lg font-semibold text-gray-800">Matricular Personal</h3>
+                        <p class="text-xs text-gray-600 mt-0.5">Seleccione el personal</p>
                     </div>
                     <button type="button" class="text-gray-500 hover:text-gray-700 transition-colors"
                         data-hs-overlay="#modal-registro">
-                        <i class="i-tabler-x text-2xl"></i>
+                        <i class="i-tabler-x text-xl"></i>
                     </button>
                 </div>
 
                 <!-- Contenido -->
-                <div class="p-6">
+                <div class="p-4">
                     <!-- Información del curso (Simplificado para modal pequeño) -->
-                    <div class="mb-4 p-2 bg-blue-50 border-l-4 border-blue-500 rounded text-sm">
-                        <span class="font-semibold block">Curso:</span>
-                        <span id="nombreCursoModal" class="truncate block">Cargando...</span>
+                    <div class="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded text-[13px]">
+                        <span class="font-semibold inline-block mr-1">Curso:</span>
+                        <span id="nombreCursoModal" class="inline-block truncate align-bottom max-w-[80%]">Cargando...</span>
                     </div>
 
                     <!-- Selector de Programación -->
-                    <div class="mb-4">
-                        <label for="slcProgramacionMatriculaModal" class="block text-sm font-medium text-gray-700 mb-1">
+                    <div class="mb-3">
+                        <label for="slcProgramacionMatriculaModal" class="block text-xs font-medium text-gray-700 mb-1">
                             Programación
                         </label>
-                        <select id="slcProgramacionMatriculaModal" class="form-select w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <select id="slcProgramacionMatriculaModal" class="form-select w-full rounded-md border-gray-300 shadow-sm text-[13px] py-1.5 focus:ring-1 focus:ring-indigo-500">
                             <option value="">-- Seleccione --</option>
                         </select>
                     </div>
 
                     <!-- Buscador -->
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <div class="relative">
-                            <i class="i-tabler-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="text" id="buscarPersonalModal" class="form-input w-full pl-10 text-sm"
+                            <i class="i-tabler-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" id="buscarPersonalModal" class="form-input w-full pl-9 py-1.5 text-[13px] rounded-md border-gray-300 focus:ring-1 focus:ring-indigo-500"
                                 placeholder="Buscar persona..." />
                         </div>
                     </div>
 
                     <!-- Estadísticas Compactas -->
-                    <div class="flex gap-2 mb-4 text-center">
-                        <div class="flex-1 p-2 bg-green-50 rounded border border-green-100">
-                            <p class="text-[10px] text-gray-600 uppercase">Matriculados</p>
-                            <p class="text-lg font-bold text-green-600" id="countMatriculadosModal">0</p>
+                    <div class="flex gap-2 mb-3 text-center">
+                        <div class="flex-1 p-1.5 bg-green-50 rounded border border-green-100">
+                            <p class="text-[9px] font-semibold text-gray-600 uppercase tracking-wide">Matriculados</p>
+                            <p class="text-base font-bold text-green-600 leading-tight" id="countMatriculadosModal">0</p>
                         </div>
-                        <div class="flex-1 p-2 bg-orange-50 rounded border border-orange-100">
-                            <p class="text-[10px] text-gray-600 uppercase">Disponibles</p>
-                            <p class="text-lg font-bold text-orange-600" id="countDisponiblesModal">0</p>
+                        <div class="flex-1 p-1.5 bg-orange-50 rounded border border-orange-100">
+                            <p class="text-[9px] font-semibold text-gray-600 uppercase tracking-wide">Disponibles</p>
+                            <p class="text-base font-bold text-orange-600 leading-tight" id="countDisponiblesModal">0</p>
                         </div>
-                        <div class="flex-1 p-2 bg-blue-50 rounded border border-blue-100">
-                            <p class="text-[10px] text-gray-600 uppercase">Selección</p>
-                            <p class="text-lg font-bold text-blue-600" id="countSeleccionadosModal">0</p>
+                        <div class="flex-1 p-1.5 bg-blue-50 rounded border border-blue-100">
+                            <p class="text-[9px] font-semibold text-gray-600 uppercase tracking-wide">Selección</p>
+                            <p class="text-base font-bold text-blue-600 leading-tight" id="countSeleccionadosModal">0</p>
                         </div>
                     </div>
 
                     <!-- Tabla con Tabulator -->
-                    <div class="border border-default-200 rounded-lg overflow-hidden">
-                        <div id="tblPersonalMatriculaModal" style="height: 350px;"></div>
+                    <div class="border border-default-200 rounded-lg overflow-hidden text-xs">
+                        <div id="tblPersonalMatriculaModal" style="height: 240px; font-size: 12px;"></div>
                     </div>
                 </div>
 
                 <!-- Footer -->
-                <div class="flex justify-between items-center gap-2 px-6 py-4 bg-gray-50 border-t border-default-200">
-                    <button class="btn bg-gray-200 hover:bg-gray-300 text-sm"
+                <div class="flex justify-between items-center gap-2 px-4 py-2 bg-gray-50 border-t border-default-200">
+                    <button class="btn bg-gray-200 hover:bg-gray-300 text-[13px] px-4 py-1.5"
                         data-hs-overlay="#modal-registro">
                         Cancelar
                     </button>
                     <button id="btnGuardarMatricula"
-                        class="btn bg-success hover:bg-success/90 text-white text-sm">
+                        class="btn bg-success hover:bg-success/90 text-white text-[13px] px-6 py-1.5 shadow-sm">
                         Matricular
                     </button>
                 </div>

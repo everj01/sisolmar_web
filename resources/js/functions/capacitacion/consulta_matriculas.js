@@ -776,7 +776,7 @@ async function cargarPersonalModal(cursoId) {
         },
         pagination: "local",
         paginationSize: 20,
-        height: "350px", // Altura fija
+        height: "240px", // Altura compacta
         layout: "fitColumns",
         columns: [
             {

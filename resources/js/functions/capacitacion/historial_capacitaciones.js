@@ -123,7 +123,13 @@ function inicializarTablaPersonal() {
                 width: 150,
                 headerSort: false,
                 formatter: function (cell) {
-                    return `<span class="text-xs text-gray-600">${cell.getValue() || ''}</span>`;
+                    let nombreCargo = cell.getValue() || '';
+                    if (nombreCargo.toUpperCase() === 'OPER') {
+                        nombreCargo = 'OPERARIO';
+                    } else if (nombreCargo.toUpperCase() === 'ADMIN') {
+                        nombreCargo = 'ADMINISTRATIVO';
+                    }
+                    return `<span class="text-xs text-gray-600">${nombreCargo}</span>`;
                 }
             },
             {
