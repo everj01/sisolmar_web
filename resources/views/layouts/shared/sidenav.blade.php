@@ -44,15 +44,6 @@
                                             </a>
                                         </li>
                                     @endforeach
-                                    @if($menu['modulo'] == 'capacitacion')
-                                        <li class="menu-item">
-                                            <a class="flex items-center gap-x-3.5 rounded-md px-3 py-1.5 text-sm font-medium text-default-100 transition-all hover:bg-default-100/5"
-                                                href="{{ route('capacitacion.historial-capacitaciones') }}">
-                                                <i class="menu-dot"></i>
-                                                Historial por Empleado
-                                            </a>
-                                        </li>
-                                    @endif
                                 </ul>
                             </div>
                         </li>

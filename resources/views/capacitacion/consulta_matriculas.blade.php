@@ -147,30 +147,70 @@
             </div>
         </div>
 
-        <!-- Panel de matrículas del curso seleccionado -->
-        <div class="card lg:col-span-2">
-            <div class="card-header flex items-center justify-between">
-                <div>
-                    <h4 class="card-title">Matrículas del Curso</h4>
-                    <p class="text-sm text-gray-500 mt-1" id="infoCursoSeleccionado">Seleccione un curso para ver sus matrículas</p>
+        <!-- Panel Derecho: Tabs de Historial vs Matrícula -->
+        <div class="card lg:col-span-2" x-data="{ tabActivo: 'personal' }" @cambiar-tab-curso.window="tabActivo = 'curso'">
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-2 px-4 pt-2" aria-label="Tabs">
+                    <button @click="tabActivo = 'personal'" 
+                        :class="tabActivo === 'personal' ? 'bg-white border-gray-200 border-b-white text-primary' : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                        class="whitespace-nowrap py-3 px-4 border-l border-t border-r rounded-t-lg font-medium text-sm transition-colors mt-1 relative z-10"
+                        style="margin-bottom: -1px;">
+                        <i class="i-tabler-id-badge mr-1"></i> Directorio y Kardex
+                    </button>
+                    <button @click="tabActivo = 'curso'" 
+                        :class="tabActivo === 'curso' ? 'bg-white border-gray-200 border-b-white text-primary' : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                        class="whitespace-nowrap py-3 px-4 border-l border-t border-r rounded-t-lg font-medium text-sm transition-colors mt-1 relative z-10"
+                        style="margin-bottom: -1px;" id="btnTabCurso">
+                        <i class="i-tabler-users mr-1"></i> Matrículas del Curso
+                        <span id="badgeCurrentCourse" class="hidden ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">0</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab 1: Directorio y Kardex -->
+            <div x-show="tabActivo === 'personal'" class="p-4" x-transition>
+                <div class="flex flex-wrap items-center gap-4 mb-4">
+                    <div class="w-full md:w-1/3 relative">
+                        <i class="i-tabler-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="txtBusquedaPersonal" class="form-input w-full pl-9 py-2 text-sm" placeholder="Buscar personal por DNI o Nombres..." autofocus>
+                    </div>
+                    <div class="w-full md:w-1/4">
+                        <select id="filtroSucursalPersonal" class="form-select w-full py-2 text-sm text-gray-700">
+                            <option value="">Todas las sucursales</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary" id="badgeTotalMatriculas">
-                        Total: 0
-                    </span>
-                    <button type="button" id="btnExportarExcel" 
-                        class="btn bg-success/25 text-success hover:bg-success hover:text-white hidden">
-                        <i class="i-tabler-file-spreadsheet mr-1"></i> Exportar
-                    </button>
-                    <button type="button" id="btnAbrirModalMatricula" 
-                        class="btn bg-primary text-white hover:bg-primary/90 hidden"
-                        data-hs-overlay="#modal-registro">
-                        <i class="i-tabler-user-plus mr-1"></i> Matricular
-                    </button>
+                
+                <!-- Tabla Tabulator Personal -->
+                <div class="border border-default-200 rounded-lg overflow-hidden">
+                    <div id="tblPersonal" style="min-height: 400px; font-size: 13px;"></div>
                 </div>
             </div>
 
-            <div class="card-body">
+            <!-- Tab 2: Matrículas del Curso -->
+            <div x-show="tabActivo === 'curso'" class="p-4" x-transition style="display: none;">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-800" id="infoCursoSeleccionadoTitulo">Seleccione un Curso</h4>
+                        <p class="text-sm text-gray-500 mt-0.5" id="infoCursoSeleccionado">Haga clic en un curso del panel izquierdo para ver sus alumnos.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary" id="badgeTotalMatriculas">
+                            Total: 0
+                        </span>
+                        <button type="button" id="btnExportarExcel" 
+                            class="btn bg-success/25 text-success hover:bg-success hover:text-white hidden transition-colors">
+                            <i class="i-tabler-file-spreadsheet mr-1"></i> Exportar
+                        </button>
+                        <button type="button" id="btnAbrirModalMatricula" 
+                            class="btn bg-primary text-white hover:bg-primary/90 hidden transition-colors"
+                            data-hs-overlay="#modal-registro">
+                            <i class="i-tabler-user-plus mr-1"></i> Matricular
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Estadísticas rápidas -->
                 <div class="grid grid-cols-4 gap-4 mb-4" id="estadisticasMatriculas" style="display: none;">
                     <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
@@ -192,28 +232,29 @@
                 </div>
 
                 <!-- Buscador y Filtros -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" id="filtrosMatriculaContainer" style="display: none;">
                     <div class="relative">
                         <i class="i-tabler-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                         <input type="text" id="buscarMatricula" class="form-input w-full pl-10"
-                            placeholder="Buscar por nombre, DNI o correo..." disabled />
+                            placeholder="Buscar alumno por nombre, DNI..." />
                     </div>
                     <div>
-                        <select id="slcFiltroProgramacion" class="form-select w-full" disabled>
+                        <select id="slcFiltroProgramacion" class="form-select w-full">
                             <option value="">-- Todas las programaciones --</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Tabla de matrículas -->
-                <div class="border border-default-200 rounded-lg overflow-hidden">
-                    <div id="tblMatriculas" style="min-height: 400px;"></div>
+                <div class="border border-default-200 rounded-lg overflow-hidden" id="contenedorTblMatriculas" style="display: none;">
+                    <div id="tblMatriculas" style="min-height: 400px; font-size: 13px;"></div>
                 </div>
 
                 <!-- Estado vacío -->
-                <div id="estadoVacio" class="text-center py-12">
-                    <i class="i-tabler-clipboard-list text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">Seleccione un curso de la lista para ver las matrículas registradas</p>
+                <div id="estadoVacio" class="text-center py-12 mt-4">
+                    <i class="i-tabler-clipboard-list text-6xl text-gray-200 mb-4 block"></i>
+                    <p class="text-gray-500 font-medium">Seleccione un curso de la lista izquierda</p>
+                    <p class="text-sm text-gray-400">Podrá ver los alumnos matriculados, aprobarlos o exportar actas.</p>
                 </div>
             </div>
         </div>
@@ -298,6 +339,55 @@
                     <button id="btnGuardarMatricula"
                         class="btn bg-success hover:bg-success/90 text-white text-[13px] px-6 py-1.5 shadow-sm">
                         Matricular
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Historial -->
+    <div id="modal-historial"
+        class="hs-overlay hidden w-full h-full fixed top-0 start-0 z-[80] overflow-x-hidden overflow-y-auto pointer-events-none">
+        <div
+            class="hs-overlay-open:opacity-100 hs-overlay-open:duration-500 opacity-0 transition-all sm:max-w-4xl sm:w-full m-3 sm:mx-auto min-h-[calc(100%-3.5rem)] flex items-center justify-center">
+            <div
+                class="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7] w-full pointer-events-auto">
+                <div class="flex justify-between items-center py-3 px-4 border-b dark:border-gray-700">
+                    <h3 class="font-bold text-gray-800 dark:text-gray-200" id="modal-title">
+                        Historial de Capacitaciones
+                    </h3>
+                    <button type="button"
+                        class="flex justify-center items-center w-7 h-7 text-sm font-semibold rounded-lg border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        data-hs-overlay="#modal-historial">
+                        <span class="sr-only">Cerrar</span>
+                        <i class="i-tabler-x text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-4 overflow-y-auto">
+                     <div class="flex flex-col items-center justify-center mb-6">
+                        <div class="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-3 text-2xl font-bold text-gray-600 uppercase" id="avatarPersonal">
+                            <!-- Initials here -->
+                        </div>
+                        <h4 class="text-xl font-bold text-gray-800" id="nombrePersonal"></h4>
+                        <p class="text-sm text-gray-500" id="cargoPersonal"></p>
+                        <p class="text-xs text-gray-400" id="areaPersonal"></p>
+                     </div>
+
+                     <!-- Timeline -->
+                     <div id="historialContainer" class="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-6">
+                         <!-- Items injected via JS -->
+                     </div>
+                     
+                     <div id="noDataMessage" class="hidden flex flex-col items-center justify-center py-8 text-gray-500">
+                            <i class='bx bx-file-blank text-4xl mb-2'></i>
+                            <p>No se encontraron registros de capacitación para este colaborador.</p>
+                     </div>
+                </div>
+                <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t dark:border-gray-700">
+                    <button type="button"
+                        class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        data-hs-overlay="#modal-historial">
+                        Cerrar
                     </button>
                 </div>
             </div>

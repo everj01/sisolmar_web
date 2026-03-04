@@ -21,6 +21,10 @@ let cursoSeleccionado = null;
 let matriculasData = [];
 let tabulatorMatriculas = null;
 
+// Estado para Historial (Tab 1)
+let personalSeleccionado = null;
+let tabulatorPersonal = null;
+
 // Estado para Modal de Matrícula
 let tblPersonalMatriculaModal = null;
 let personasSeleccionadas = new Set();
@@ -32,6 +36,9 @@ let dataTableCursos = null;
 // Inicialización
 document.addEventListener('DOMContentLoaded', async () => {
     await cargarFiltros();
+    cargarSucursales(); // Cargar lista de sucursales (Historial)
+    inicializarTablaPersonal(); // Tabla de Directorio
+    buscarPersonal('', 20000); // Cargar personal inicial
     inicializarTabulator();
     configurarEventos();
 });
@@ -69,6 +76,266 @@ async function cargarFiltros() {
     } catch (error) {
         console.error('Error al cargar filtros:', error);
     }
+}
+
+/**
+ * Cargar sucursales para el filtro (Tab 1)
+ */
+async function cargarSucursales() {
+    try {
+        const response = await axios.get('/api/get-sucursales');
+        if (response.data.success) {
+            const select = document.getElementById('filtroSucursalPersonal');
+            if (select) {
+                response.data.sucursales.forEach((suc) => {
+                    const option = document.createElement('option');
+                    option.value = suc.sucursal;
+                    option.textContent = suc.sucursal;
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error al cargar sucursales:', error);
+    }
+}
+
+/**
+ * Buscar personal (Tab 1)
+ */
+async function buscarPersonal(termino, limite = 100, sucursal = '') {
+    try {
+        if (limite > 100) {
+            Swal.fire({ title: 'Cargando personal...', text: 'Por favor espere', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        }
+        const response = await axios.get('/api/buscar-personal-capacitacion', {
+            params: { q: termino, limite: limite, sucursal: sucursal }
+        });
+        if (limite > 100) Swal.close();
+        if (response.data.success && tabulatorPersonal) {
+            tabulatorPersonal.setData(response.data.personal);
+        }
+    } catch (error) {
+        if (limite > 100) Swal.close();
+        console.error('Error al buscar personal:', error);
+    }
+}
+
+/**
+ * Inicializar Tabla de Personal en Tab 1 (Tabulator)
+ */
+function inicializarTablaPersonal() {
+    tabulatorPersonal = new Tabulator("#tblPersonal", {
+        data: [],
+        layout: "fitColumns",
+        placeholder: "No se encontraron empleados",
+        pagination: "local",
+        paginationSize: 15,
+        paginationSizeSelector: [15, 25, 50],
+        paginationCounter: "rows",
+        locale: true,
+        height: "450px",
+        langs: {
+            "default": {
+                "pagination": { "counter": { "showing": "Mostrando", "of": "de", "rows": "filas", "pages": "páginas" } }
+            }
+        },
+        columns: [
+            { title: "DNI", field: "dni", width: 100, headerSort: false },
+            { title: "Nombre Completo", field: "nombre_completo", minWidth: 200 },
+            {
+                title: "Cargo", field: "cargo", width: 150, headerSort: false,
+                formatter: function (cell) {
+                    let nombreCargo = cell.getValue() || '';
+                    if (nombreCargo.toUpperCase() === 'OPER') nombreCargo = 'OPERARIO';
+                    else if (nombreCargo.toUpperCase() === 'ADMIN') nombreCargo = 'ADMINISTRATIVO';
+                    return `<span class="text-xs text-gray-600">${nombreCargo}</span>`;
+                }
+            },
+            {
+                title: "Sucursal", field: "sucursal", width: 120, headerSort: false,
+                formatter: function (cell) {
+                    return `<span class="text-xs text-blue-600/80">${cell.getValue() || ''}</span>`;
+                }
+            },
+            {
+                title: "Cursos", field: "total_capacitaciones", width: 80, hozAlign: "center", headerSort: false,
+                formatter: function (cell) {
+                    const val = cell.getValue() || 0;
+                    const color = val > 0 ? 'text-blue-600 font-medium' : 'text-gray-400';
+                    return `<span class="${color}">${val}</span>`;
+                }
+            },
+            {
+                title: "Acción", headerSort: false, width: 80, hozAlign: "center",
+                formatter: function () {
+                    return `<button class="btn-seleccionar px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-xs font-medium">
+                                <i class="i-tabler-eye"></i> Ver
+                            </button>`;
+                },
+                cellClick: function (e, cell) {
+                    e.stopPropagation();
+                    const data = cell.getRow().getData();
+                    seleccionarPersonal(data);
+                }
+            }
+        ],
+        rowClick: function (e, row) {
+            seleccionarPersonal(row.getData());
+        }
+    });
+}
+
+/**
+ * Seleccionar persona y cargar historial (Desde Tab 1)
+ */
+async function seleccionarPersonal(persona) {
+    personalSeleccionado = persona;
+    await cargarHistorial(persona.codigo, persona.nombre_completo);
+}
+
+/**
+ * Cargar historial de capacitaciones
+ */
+async function cargarHistorial(personalId, nombrePersonal) {
+    try {
+        Swal.fire({
+            title: 'Cargando...',
+            text: 'Obteniendo historial de capacitaciones',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await axios.get(`/api/get-historial-capacitaciones/${personalId}`);
+
+        Swal.close();
+
+        if (response.data.success) {
+            const historial = response.data.historial;
+            mostrarModalHistorial(nombrePersonal, historial);
+        } else {
+            Swal.fire('Error', response.data.message || 'No se pudo cargar el historial', 'error');
+        }
+    } catch (error) {
+        Swal.close();
+        console.error('Error al cargar historial:', error);
+        Swal.fire('Error', 'Ocurrió un error al cargar el historial', 'error');
+    }
+}
+
+/**
+ * Mostrar Modal con Historial
+ */
+function mostrarModalHistorial(nombre, solicitudes) {
+    let tablaHtml = '';
+
+    if (solicitudes.length === 0) {
+        tablaHtml = `
+            <div class="text-center py-6 text-gray-500">
+                <i class="i-tabler-school text-4xl mb-2 text-gray-300"></i>
+                <p>No está matriculado o no tiene cursos.</p>
+            </div>`;
+    } else {
+        const filas = solicitudes.map(s => {
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const part = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+                const [y, m, d] = part.split('-');
+                return (y && m && d) ? `${d}/${m}/${y}` : dateStr;
+            };
+
+            let fechaStr = '-';
+            if (s.fecha_inicio && s.fecha_final) {
+                fechaStr = `${formatDate(s.fecha_inicio)}<br><small class="text-gray-400">al</small><br>${formatDate(s.fecha_final)}`;
+            } else if (s.fecha_matricula) {
+                fechaStr = formatDate(s.fecha_matricula);
+            }
+
+            const estadoClass = obtenerClaseEstadoHistorial(s.estado, true);
+
+            return `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="p-3 text-left font-medium text-gray-700">${s.nombre_curso || ''}</td>
+                    <td class="p-3 text-xs text-center text-gray-600">${fechaStr}</td>
+                    <td class="p-3 text-xs text-center">${estadoClass}</td>
+                </tr>
+            `;
+        }).join('');
+
+        tablaHtml = `
+            <div class="border border-default-200 rounded-lg overflow-hidden mt-3 mb-1">
+                <table id="tblHistorialPersonal" class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left">Curso</th>
+                            <th class="p-3 text-center">Programación</th>
+                            <th class="p-3 text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filas}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    const escapeHtml = (text) => {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    Swal.fire({
+        title: `<div class="text-lg pb-1">Historial de <br><small class="text-primary font-bold">${escapeHtml(nombre)}</small></div>`,
+        html: tablaHtml,
+        width: '750px',
+        showCloseButton: true,
+        showConfirmButton: false,
+        customClass: {
+            container: 'z-[100]'
+        },
+        didOpen: () => {
+            if (solicitudes.length > 0) {
+                const tableEl = document.getElementById('tblHistorialPersonal');
+                if (tableEl && typeof DataTable !== 'undefined') {
+                    new DataTable(tableEl, {
+                        perPage: 6,
+                        perPageSelect: [6, 12, 20],
+                        searchable: false,
+                        sortable: false,
+                        fixedHeight: false,
+                        labels: {
+                            placeholder: "Buscar...",
+                            perPage: "{select} por página",
+                            noRows: "No hay cursos asignados",
+                            info: "Mostrando {start} a {end} de {rows}"
+                        }
+                    });
+                }
+            }
+        }
+    });
+}
+
+function obtenerClaseEstadoHistorial(estado, isBadge = false) {
+    const colores = {
+        'MATRICULADO': 'bg-blue-100 text-blue-700',
+        'EN_PROGRESO': 'bg-yellow-100 text-yellow-700',
+        'COMPLETADO': 'bg-green-100 text-green-700',
+        'APROBADO': 'bg-green-100 text-green-700',
+        'REPROBADO': 'bg-red-100 text-red-700',
+        'CANCELADO': 'bg-gray-100 text-gray-700',
+        'NO MATRICULADO': 'bg-gray-100 text-gray-500'
+    };
+
+    const clase = colores[estado] || 'bg-gray-100 text-gray-700';
+
+    if (isBadge) {
+        return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${clase}">${estado}</span>`;
+    }
+    return clase;
 }
 
 /**
@@ -145,10 +412,20 @@ function renderizarTablaCursos(cursos) {
             tr.className = 'cursor-pointer border-b border-gray-100';
             tr.dataset.cursoId = curso.codigo;
 
+            // Si el curso está eliminado lógicamente (habilitado == 0), darle fondo rojizo pastel
+            if (curso.habilitado == 0 || curso.habilitado === '0') {
+                tr.style.backgroundColor = '#fff1f1';
+                tr.onmouseenter = () => tr.style.backgroundColor = '#fde8e8';
+                tr.onmouseleave = () => tr.style.backgroundColor = '#fff1f1';
+            } else {
+                tr.classList.add('hover:bg-gray-50');
+            }
+
             // Determinar si está seleccionado
             const isSelected = cursoSeleccionado && cursoSeleccionado.codigo === curso.codigo;
             if (isSelected) {
-                tr.classList.add('bg-primary/10');
+                // Si estaba eliminado y seleccionado a la vez, podríamos agregar outline o un borde primario
+                tr.classList.add('bg-primary/10', 'border-l-4', 'border-primary');
             }
 
             tr.innerHTML = `
@@ -249,22 +526,32 @@ async function seleccionarCurso(curso) {
     cursoSeleccionado = curso;
 
     // Actualizar UI
+    document.getElementById('infoCursoSeleccionadoTitulo').textContent = curso.nombre;
     document.getElementById('infoCursoSeleccionado').innerHTML = `
-        <span class="font-semibold">${escapeHtml(curso.nombre)}</span> 
-        <span class="text-gray-400">(${curso.codigo_curso})</span>
+        <span class="font-bold text-gray-700">Código:</span> ${curso.codigo_curso}
     `;
 
     document.getElementById('buscarMatricula').disabled = false;
-    document.getElementById('estadoVacio').style.display = 'none';
-    document.getElementById('estadisticasMatriculas').style.display = 'grid';
+    document.getElementById('slcFiltroProgramacion').disabled = false;
 
-    document.getElementById('buscarMatricula').disabled = false;
     document.getElementById('estadoVacio').style.display = 'none';
     document.getElementById('estadisticasMatriculas').style.display = 'grid';
+    document.getElementById('filtrosMatriculaContainer').style.display = 'grid';
+    document.getElementById('contenedorTblMatriculas').style.display = 'block';
 
     // Habilitar botón Matricular
     const btnMatricular = document.getElementById('btnAbrirModalMatricula');
     if (btnMatricular) btnMatricular.classList.remove('hidden');
+
+    // Cambiar a Tab de "Matrículas del Curso"
+    window.dispatchEvent(new CustomEvent('cambiar-tab-curso'));
+
+    // Actualizar Badge del Tab 2
+    const badgeCurrentCourse = document.getElementById('badgeCurrentCourse');
+    if (badgeCurrentCourse) {
+        badgeCurrentCourse.textContent = escapeHtml(curso.codigo_curso);
+        badgeCurrentCourse.classList.remove('hidden');
+    }
 
     // Resaltar fila seleccionada (usando el helper compatible con DataTable)
     marcarCursoSeleccionadoVisualmente();
@@ -507,14 +794,39 @@ function actualizarTabulator(data) {
  * Configurar eventos
  */
 function configurarEventos() {
-    // 1. Buscador texto
+    // 1. Buscador texto (Matrículas Tab 2)
     const inputBuscar = document.getElementById('buscarMatricula');
-    inputBuscar.addEventListener('input', _.debounce(aplicarFiltrosCombine, 300));
+    if (inputBuscar) {
+        inputBuscar.addEventListener('input', _.debounce(aplicarFiltrosCombine, 300));
+    }
 
-    // 2. Filtro Programacion
+    // 2. Filtro Programacion (Matrículas Tab 2)
     const selectProg = document.getElementById('slcFiltroProgramacion');
     if (selectProg) {
         selectProg.addEventListener('change', aplicarFiltrosCombine);
+    }
+
+    // 3. Búsqueda y Filtros de Personal (Historial Tab 1)
+    const txtBusquedaPersonal = document.getElementById('txtBusquedaPersonal');
+    const filtroSucursalPersonal = document.getElementById('filtroSucursalPersonal');
+
+    if (txtBusquedaPersonal) {
+        // Uso de keyup con Enter o debounce para evitar saturación
+        txtBusquedaPersonal.addEventListener('keyup', _.debounce((e) => {
+            const termino = e.target.value.trim();
+            const sucursal = filtroSucursalPersonal ? filtroSucursalPersonal.value : '';
+            if (termino.length >= 3 || termino.length === 0) {
+                buscarPersonal(termino, 100, sucursal);
+            }
+        }, 500));
+    }
+
+    if (filtroSucursalPersonal) {
+        filtroSucursalPersonal.addEventListener('change', (e) => {
+            const sucursal = e.target.value;
+            const termino = txtBusquedaPersonal ? txtBusquedaPersonal.value.trim() : '';
+            buscarPersonal(termino, 100, sucursal);
+        });
     }
 
     // 3. Filtros Cards Estado

@@ -1188,9 +1188,12 @@ class CapacitacionController extends Controller
             $rawPersonal = FileControl::getPersonal();
 
             // 2. Cargar conteos de matrículas (Optimizado: una sola query para todos)
-            $matriculasCounts = Matricula::select('cod_personal', \DB::raw('count(*) as total'))
-                ->groupBy('cod_personal')
-                ->pluck('total', 'cod_personal')
+            // Se usa el JOIN con sw_cursos para que coincida exactamente con las filas del Historial (Modal)
+            $matriculasCounts = \DB::table('sw_matriculas as m')
+                ->join('sw_cursos as c', 'm.cod_curso', '=', 'c.codigo')
+                ->select('m.cod_personal', \DB::raw('count(*) as total'))
+                ->groupBy('m.cod_personal')
+                ->pluck('total', 'm.cod_personal')
                 ->toArray();
 
             // --- VERIFICAR MATRÍCULA EN CURSO ACTUAL (SAFE) ---

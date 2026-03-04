@@ -49,7 +49,6 @@ Route::middleware(['auth'])->group(function () {
     
     // Vistas de consulta de capacitación
     Route::get('/capacitacion/consulta-matriculas', [CapacitacionController::class, 'vistaConsultaMatriculas'])->name('capacitacion.consulta-matriculas');
-    Route::get('/capacitacion/historial-capacitaciones', [CapacitacionController::class, 'vistaHistorialCapacitaciones'])->name('capacitacion.historial-capacitaciones');
 
     Route::group(['prefix' => '/', 'where' => ['first' => '^(?!api|\.well-known).*']], function () {
         Route::get('', [RoutingController::class, 'index'])->name('root');
