@@ -1,0 +1,7 @@
+[Wed Feb 18 17:15:59 2026] PHP 8.1.28 Development Server (http://127.0.0.1:8000) started
+[Wed Feb 18 17:22:26 2026] 127.0.0.1:54085 Accepted
+[Wed Feb 18 17:22:26 2026] 127.0.0.1:54086 Accepted
+[Wed Feb 18 17:22:29 2026] 127.0.0.1:54085 Closed without sending a request; it was probably just an unused speculative preconnection
+[Wed Feb 18 17:22:29 2026] 127.0.0.1:54085 Closing
+[Wed Feb 18 17:22:29 2026] 127.0.0.1:54086 Closed without sending a request; it was probably just an unused speculative preconnection
+[Wed Feb 18 17:22:29 2026] 127.0.0.1:54086 Closing
