@@ -485,7 +485,10 @@ table.datatable tbody tr:hover {
 }
 
 
-
+#filtroClienteSelect {
+    position: relative;
+    z-index: 9999;
+}
 
 
 /* Responsive tweaks */

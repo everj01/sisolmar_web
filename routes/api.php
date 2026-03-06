@@ -141,6 +141,8 @@ Route::get('/folios/proximos-vencer', [ConsultaController::class, 'getFoliosProx
 
 
 
+// REPORTE FOLIOS POR VENCER CON FILTROS
+Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
 
 
 

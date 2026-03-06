@@ -6,6 +6,7 @@ use App\Http\Controllers\RoutingController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\CapacitacionController;
+use App\Http\Controllers\ReporteController;
 
 
 Route::get('/preview-email-caducidad', function () {
@@ -44,18 +45,25 @@ Route::get('/test-email-caducidad', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/login',[LoginController::class, 'index'])->name('login');
     Route::post('/login/validar', [LoginController::class, 'validar']);
+     // RUTA PARA REPORTES
+    Route::get('/reportes', [FileController::class, 'ViewReportes'])->name('reportes');
+       
+     Route::get('/reporte/folios-por-vencer-cliente', [ReporteController::class, 'foliosPorVencerXCliente']);
 
     Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
     
     // Vistas de consulta de capacitación
     Route::get('/capacitacion/consulta-matriculas', [CapacitacionController::class, 'vistaConsultaMatriculas'])->name('capacitacion.consulta-matriculas');
 
+    Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
+        
     Route::group(['prefix' => '/', 'where' => ['first' => '^(?!api|\.well-known).*']], function () {
         Route::get('', [RoutingController::class, 'index'])->name('root');
         Route::get('/home', fn()=>view('index'))->name('home');
         Route::get('{first}/{second}/{third}', [RoutingController::class, 'thirdLevel'])->name('third');
         Route::get('{first}/{second}', [RoutingController::class, 'secondLevel'])->name('second');
         Route::get('{any}', [RoutingController::class, 'root'])->name('any');
+
     });
 
     Route::get('/debug-notificaciones', function() {
