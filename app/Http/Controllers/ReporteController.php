@@ -10,10 +10,11 @@ class ReporteController extends Controller
 {
 
     public function index(){
-        $sucursales = FileControl::getSucursales();
+    $sucursales = FileControl::getSucursales();
+    $clientes = FileControl::getClientes();
 
-        return view('file_control.reportes', compact('sucursales'));
-    }
+    return view('file_control.reportes', compact('sucursales', 'clientes'));
+}
 
     public function foliosPendientesPorSucursal(Request $request)
     {
@@ -61,5 +62,35 @@ class ReporteController extends Controller
 
         return response()->json(array_values($reporte));
     }
+    
+   public function foliosPorVencer(Request $request)
+{
+    try {
+        $sucursal = $request->filled('sucursal') ? $request->sucursal : 0;
+        $dias = $request->filled('dias') ? $request->dias : 30;
+
+        $folios = \App\Models\Reporte::getFoliosPorVencer($sucursal, $dias);
+
+        return response()->json($folios);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+public function foliosPorVencerXCliente(Request $request)
+{
+    try {
+        $cliente = $request->filled('cliente') ? $request->cliente : 0;
+        $dias = $request->filled('dias') ? $request->dias : 30;
+
+        $folios = \App\Models\Reporte::getFoliosPorVencerXCliente($cliente, $dias);
+
+        return response()->json($folios);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+
 
 }
