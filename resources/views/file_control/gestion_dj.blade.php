@@ -17,7 +17,7 @@
     </style>
 
 
-    <div class="grid lg:grid-cols-2 gap-6 mt-8">
+    <div id="divListado" class="grid lg:grid-cols-2 gap-6 mt-8">
         <div class="card overflow-hidden">
             <div class="card-header">
                 <h4 class="card-title">Listado de Personal</h4>
@@ -80,11 +80,9 @@
     </div>
 
 
-    <!-- Modal del Formulario -->
-    <div id="formModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto flex py-10">
-        <!-- Contenedor -->
-        <!-- <div class="bg-white rounded-lg shadow-lg max-w-2xl w-auto mx-auto my-10 max-h-[70vh] overflow-y-auto"> -->
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl mx-auto my-10 max-h-[85vh] overflow-y-auto">
+    <!-- Formulario (Inicialmente Oculto) -->
+    <div id="formModal" class="hidden mt-8">
+        <div class="bg-white rounded-lg shadow-lg w-full p-6">
             <form id="formDatos" method="POST" class="p-6 space-y-8">
                 @csrf
 
@@ -92,7 +90,7 @@
 
                 <!-- Mis Datos Personales -->
                 <div class="border rounded-lg shadow mb-2">
-                    <div class="bg-primary text-white px-4 py-2 font-semibold rounded-t-lg"> MIS DATOS PERSONALES</div>
+          +          <div class="bg-primary text-white px-4 py-2 font-semibold rounded-t-lg"> MIS DATOS PERSONALES</div>
                     <div class="p-6 space-y-10">
 
                         <section class="bg-white shadow-md rounded-xl p-6 mb-8 border border-gray-200">
@@ -803,41 +801,21 @@
                             </div>
 
                             <div>
-                            <label for="cargo_anterior" class="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                            <label for="cargo_anterior" class="block text-sm font-medium text-gray-700 mb-1">Cargo Desempeñado</label>
                             <input type="text" id="cargo_anterior" name="cargo_anterior"
                                 class="w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                                placeholder="Cargo desempeñado">
+                                placeholder="Cargo">
                             </div>
 
                             <div>
-                            <label for="duracion_anterior" class="block text-sm font-medium text-gray-700 mb-1">Duración</label>
-                            <input type="text" id="duracion_anterior" name="duracion_anterior"
+                            <label for="duracion_anterior" class="block text-sm font-medium text-gray-700 mb-1">Duración (Años)</label>
+                            <input type="number" id="duracion_anterior" name="duracion_anterior" min="0" step="0.5"
                                 class="w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                                placeholder="Ej: 2 años, 6 meses">
+                                placeholder="Ej: 2">
                             </div>
                         </div>
                         </section>
 
-                        <!-- 🟦 PROFESIÓN ALTERNA -->
-                        <section class="bg-white shadow-md rounded-xl p-6 mb-8 border border-gray-200 mt-4">
-                        <div class="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M12 11c0 1.104-.896 2-2 2H4v5h16v-5h-6a2 2 0 01-2-2v-1a4 4 0 00-8 0v1z" />
-                            </svg>
-                            <h2 class="text-lg font-semibold text-gray-800">Profesión u Ocupación Alterna</h2>
-                        </div>
-
-                        <div>
-                            <label for="profesion_alterna" class="block text-sm font-medium text-gray-700 mb-1">
-                            Profesión u Ocupación Alterna
-                            </label>
-                            <input type="text" id="profesion_alterna" name="profesion_alterna"
-                            class="w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                            placeholder="Otra profesión u ocupación">
-                        </div>
-                        </section>
                     </div>
                 </div>
 
@@ -943,13 +921,10 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- <script>
+    <script>
         window.logoUrl = "{{ asset('images/logo_sol.png') }}";
-    </script> -->
+    </script>
 
 @endsection
 
-@vite(['resources/js/functions/gestion_dj.js'])
-@section('script')
-
-@endsection
+@vite(['resources/js/functions/gestion_dj.js', 'resources/js/functions/gestion_dj_form.js'])

@@ -12,7 +12,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-        @apply rounded-lg bg-slate-300/50;
+        @apply rounded-lg bg-slate-300/50 dark:bg-slate-600/50;
     }
 
     &::-webkit-scrollbar-track {

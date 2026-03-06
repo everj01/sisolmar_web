@@ -158,6 +158,18 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <label for="responsable" class="text-default-800 text-sm font-medium inline-block mb-2">Responsable</label>
+                            <select class="form-select w-full" id="responsable" required>
+                                <option value="" disabled selected>-Seleccionar-</option>
+                                @foreach($roles as $rol)
+                                    <option value="{{ $rol->codigo }}">{{ $rol->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
 
                     <span x-show="tipoSeleccionado === '1'" class="w-full block py-1.5 px-3 rounded-md text-xs font-medium bg-red-100 text-red-800 mb-3">
                         <strong>Documento:</strong> Folio que el personal trae a la empresa

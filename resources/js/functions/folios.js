@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {TabulatorFull as Tabulator} from 'tabulator-tables';
+import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
@@ -16,7 +16,7 @@ let datosOriginales = null;
 //Tabla de Folios
 const tblFolios = new Tabulator("#tblFolios", {
     height: "100%",
-    layout:"fitDataFill",
+    layout: "fitDataFill",
     responsiveLayout: "collapse",
     pagination: true,
     paginationSize: 10,
@@ -48,8 +48,9 @@ const tblFolios = new Tabulator("#tblFolios", {
     },
     columns: [
         { title: "Folios", field: "nombre", hozAlign: "left", width: '40%' },
-        { title: "Tipo", field: "tipoFolio", hozAlign: "center", width: '20%',
-            formatter: function(cell, formatterParams) {
+        {
+            title: "Tipo", field: "tipoFolio", hozAlign: "center", width: '20%',
+            formatter: function (cell, formatterParams) {
                 var tipo = cell.getValue();
                 if (tipo === "FORMATO") {
                     return '<span class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-yellow-500 text-white">FORMATO</span>';
@@ -62,21 +63,22 @@ const tblFolios = new Tabulator("#tblFolios", {
             }
         },
         { title: "Vencimiento", field: "periodo", hozAlign: "center", width: '20%' },
-        { title: "Acciones", field: "acciones", hozAlign: "center", width: '20%', headerSort: false,
-            formatter: function(cell, formatterParams, onRendered) {
+        {
+            title: "Acciones", field: "acciones", hozAlign: "center", width: '20%', headerSort: false,
+            formatter: function (cell, formatterParams, onRendered) {
                 var editBtn = `<button type="button" class="btn rounded-full edit-btn bg-info/25 text-info hover:bg-info hover:text-white" title="Editar"><i class="fa-solid fa-pen-to-square edit-btn"></i></button>`;
-                
-                var deleteBtn = 
-                cell.getData().habilitado == '1' ?
-                `<button type="button" class="btn rounded-full delete-btn bg-danger/25 text-danger hover:bg-danger hover:text-white" title="Eliminar"><i class="fa-solid fa-trash-can delete-btn"></i></button>`
-                : 
-                `<button type="button" class="btn rounded-full activar-btn bg-success/25 text-success hover:bg-success hover:text-white" title="activar">
+
+                var deleteBtn =
+                    cell.getData().habilitado == '1' ?
+                        `<button type="button" class="btn rounded-full delete-btn bg-danger/25 text-danger hover:bg-danger hover:text-white" title="Eliminar"><i class="fa-solid fa-trash-can delete-btn"></i></button>`
+                        :
+                        `<button type="button" class="btn rounded-full activar-btn bg-success/25 text-success hover:bg-success hover:text-white" title="activar">
                 <i class="fa-solid fa-check activar-btn"></i></button>`
-                ;
+                    ;
 
                 return editBtn + ' ' + deleteBtn;
             },
-            cellClick: function(e, cell) {
+            cellClick: function (e, cell) {
                 if (e.target.classList.contains('edit-btn')) {
                     modoEdicion = true;
                     const rowData = cell.getRow().getData();
@@ -88,32 +90,33 @@ const tblFolios = new Tabulator("#tblFolios", {
                     document.querySelector('#codFolio').value = rowData.codigo;
                     document.querySelector('#nombre').value = rowData.nombre;
                     document.querySelector('#tipo').value = rowData.tipo;
+                    document.querySelector('#responsable').value = rowData.cod_responsable ?? '';
 
                     //Bloquear nombre
                     if (rowData.utilizado == 1) {
                         document.querySelector('#nombre').disabled = true;
                     } else {
                         document.querySelector('#nombre').disabled = false;
-                    }                    
+                    }
 
                     var institucionDiv = document.getElementById('institucionDiv');
-                    if(rowData.tipo == 3){
+                    if (rowData.tipo == 3) {
                         institucionDiv.classList.remove('hidden');
-                    }else{
+                    } else {
                         institucionDiv.classList.add('hidden');
                     }
 
-                    if(rowData.obligatorio == 1){
+                    if (rowData.obligatorio == 1) {
                         document.getElementById('radioPrin').checked = true;
-                    }else{
+                    } else {
                         document.getElementById('radioAdi').checked = true;
                     }
 
-                    if(rowData.vencimiento == 1){
+                    if (rowData.vencimiento == 1) {
                         document.querySelector('#switchVencimiento').checked = true;
                         document.getElementById('periodoDiv').classList.remove('hidden');
                         document.querySelector('#periodo').value = rowData.tipo_fecha;
-                    }else{
+                    } else {
                         document.querySelector('#switchVencimiento').checked = false;
                         document.getElementById('periodoDiv').classList.add('hidden');
                     }
@@ -131,7 +134,7 @@ const tblFolios = new Tabulator("#tblFolios", {
                         radioButtons.forEach(radio => {
                             radio.checked = radio.value === values[plataforma];
                         });
-                    }else {
+                    } else {
                         radioButtons.forEach(radio => {
                             radio.checked = false;
                         });
@@ -142,7 +145,7 @@ const tblFolios = new Tabulator("#tblFolios", {
                     document.getElementById('soloEdicion').classList.remove("hidden");
                     document.getElementById('soloEdicion').classList.add("flex");
 
-                }else if (e.target.classList.contains('activar-btn')) { 
+                } else if (e.target.classList.contains('activar-btn')) {
                     const rowData = cell.getRow().getData();
                     document.querySelector('#codFolio').value = rowData.codigo;
                     Swal.fire({
@@ -152,24 +155,24 @@ const tblFolios = new Tabulator("#tblFolios", {
                         showCancelButton: true,
                         confirmButtonText: 'Sí, activalo',
                         cancelButtonText: 'Cancelar'
-                      }).then((result) => {
+                    }).then((result) => {
                         if (result.isConfirmed) {
-                            axios.post(`${ VITE_URL_APP }/api/activar_folio`, {
+                            axios.post(`${VITE_URL_APP}/api/activar_folio`, {
                                 codigo: rowData.codigo,
                                 habilitado: 1
                             })
-                            .then(response => {
-                                console.log(response);
-                                Swal.fire('Habilitado!', 'El folio ha sido activado.', 'success');
-                                cargarFolios();
-                                limpiarForm();
-                            })
-                            .catch(error => {
-                                Swal.fire('Error', 'Hubo un problema al activar el folio.', 'error');
-                            });
+                                .then(response => {
+                                    console.log(response);
+                                    Swal.fire('Habilitado!', 'El folio ha sido activado.', 'success');
+                                    cargarFolios();
+                                    limpiarForm();
+                                })
+                                .catch(error => {
+                                    Swal.fire('Error', 'Hubo un problema al activar el folio.', 'error');
+                                });
                         }
-                      });
-                }else if (e.target.classList.contains('delete-btn')) {
+                    });
+                } else if (e.target.classList.contains('delete-btn')) {
                     const rowData = cell.getRow().getData();
                     document.querySelector('#codFolio').value = rowData.codigo;
                     Swal.fire({
@@ -179,41 +182,41 @@ const tblFolios = new Tabulator("#tblFolios", {
                         showCancelButton: true,
                         confirmButtonText: 'Sí, eliminarlo',
                         cancelButtonText: 'Cancelar'
-                      }).then((result) => {
+                    }).then((result) => {
                         if (result.isConfirmed) {
-                            axios.post(`${ VITE_URL_APP }/api/disabled_folio`, {
+                            axios.post(`${VITE_URL_APP}/api/disabled_folio`, {
                                 codigo: rowData.codigo,
                                 habilitado: 0
                             })
-                            .then(response => {
-                                Swal.fire('Eliminado!', 'El folio ha sido deshabilitado.', 'success');
-                                cargarFolios();
-                                limpiarForm();
-                            })
-                            .catch(error => {
-                                Swal.fire('Error', 'Hubo un problema al deshabilitar el folio.', 'error');
-                            });
+                                .then(response => {
+                                    Swal.fire('Eliminado!', 'El folio ha sido deshabilitado.', 'success');
+                                    cargarFolios();
+                                    limpiarForm();
+                                })
+                                .catch(error => {
+                                    Swal.fire('Error', 'Hubo un problema al deshabilitar el folio.', 'error');
+                                });
                         }
-                      });
+                    });
                 }
             }
         },
     ],
-    rowFormatter: function(row) {
+    rowFormatter: function (row) {
         let data = row.getData();
-        
+
         if (data.habilitado != "1") {
-            row.getElement().style.backgroundColor = "#ffe9e9"; 
-        } 
+            row.getElement().style.backgroundColor = "#ffe9e9";
+        }
     }
 });
 
 //-------- Desactivar/Activar la institucion
-function estadoInstitucion(activo){
+function estadoInstitucion(activo) {
     var institucionDiv = document.getElementById('institucionDiv');
-    if (activo == 1){
+    if (activo == 1) {
         institucionDiv.classList.remove('hidden');
-    }else{
+    } else {
         institucionDiv.classList.add('hidden');
     }
     var radioButtons = institucionDiv.querySelectorAll('input[type="radio"]');
@@ -223,17 +226,17 @@ function estadoInstitucion(activo){
 }
 
 window.aplicarFiltroEliminarFolio = (op) => {
-    if(op === 0) {tblFolios.setFilter("habilitado", "=", "0");}else{
+    if (op === 0) { tblFolios.setFilter("habilitado", "=", "0"); } else {
         tblFolios.clearFilter();
     }
-    
+
 }
 
 window.aplicarFiltroSoloActivos = (op) => {
-    if(op === 1) {tblFolios.setFilter("habilitado", "=", "1");}else{
+    if (op === 1) { tblFolios.setFilter("habilitado", "=", "1"); } else {
         tblFolios.clearFilter();
     }
-    
+
 }
 
 document.getElementById("page-size").addEventListener("change", function () {
@@ -258,7 +261,7 @@ document.getElementById("cancelButton").addEventListener("click", function () {
     let tipoSelect = document.getElementById("tipo");
     tipoSelect.value = datosOriginales.tipo;
     tipoSelect.dispatchEvent(new Event('change'));
-    
+
     if (datosOriginales.tipo == 3) {
         institucionDiv.classList.remove('hidden');
     } else {
@@ -293,12 +296,12 @@ document.getElementById("cancelButton").addEventListener("click", function () {
 });
 
 
-document.getElementById('tipo').addEventListener('change', function() {
+document.getElementById('tipo').addEventListener('change', function () {
     const selectedValue = this.value;
 
     if (selectedValue === "3") {
         estadoInstitucion(1);
-    }else{
+    } else {
         institucionDiv.classList.add('hidden');
     }
 });
@@ -309,8 +312,8 @@ document.getElementById("buscar").addEventListener("keyup", function () {
     let valor = this.value.toLowerCase().trim();
     tblFolios.setFilter([
         [
-            { field: "nombre", type: 'like',  value: valor },
-            { field: "prioridad", type: 'like',  value: valor },
+            { field: "nombre", type: 'like', value: valor },
+            { field: "prioridad", type: 'like', value: valor },
             { field: "tipoFolio", type: 'like', value: valor },
             { field: "periodo", type: 'like', value: valor },
         ]
@@ -342,15 +345,15 @@ document.getElementById("buscar").addEventListener("keyup", function () {
 function aplicarTodosFiltros() {
     const folioFiltroSeleccionado = document.querySelector('input[name="folioFiltro"]:checked')?.value;
     const soloActivosChecked = document.getElementById('chkEliminados')?.checked || false;
-    
+
     // Limpiar todos los filtros primero
     tblFolios.clearFilter();
-    
+
     // Aplicar filtro de activos si está marcado
     if (soloActivosChecked) {
         tblFolios.addFilter("habilitado", "=", "1");
     }
-    
+
     // Aplicar filtro de tipo/prioridad según selección
     if (folioFiltroSeleccionado && folioFiltroSeleccionado !== "TODOS") {
         if (["DOCUMENTO", "FORMATO", "CERTIFICADO"].includes(folioFiltroSeleccionado)) {
@@ -362,7 +365,7 @@ function aplicarTodosFiltros() {
 }
 
 // Reemplazar la función anterior
-window.aplicarFiltroSoloActivos = function(op) {
+window.aplicarFiltroSoloActivos = function (op) {
     aplicarTodosFiltros();
 }
 
@@ -373,7 +376,7 @@ document.querySelectorAll('input[name="folioFiltro"]').forEach(radio => {
 
 
 //Activar los periodos si hay VENCIMIENTO
-document.getElementById('switchVencimiento').addEventListener('change', function() {
+document.getElementById('switchVencimiento').addEventListener('change', function () {
     document.getElementById('periodoDiv').classList.toggle('hidden', !this.checked);
 });
 
@@ -382,21 +385,22 @@ document.getElementById('switchVencimiento').addEventListener('change', function
 
 
 //Función para limpia los campos del modal
-function limpiarForm(){
+function limpiarForm() {
     document.getElementById("txtMensajeNuevo").innerText = "Nuevo registro";
     document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary/25 text-primary-800";
     document.getElementById('soloEdicion').classList.remove("flex");
     document.getElementById('soloEdicion').classList.add("hidden");
 
-    document.getElementById('nombre').value="";
+    document.getElementById('nombre').value = "";
     document.getElementById('tipo').value = '';
+    document.getElementById('responsable').value = '';
     document.getElementById('radioPrin').checked = true;
     document.getElementById('radioAdi').checked = false;
     document.querySelector('#switchVencimiento').checked = false;
     document.getElementById('periodoDiv').classList.add('hidden');
 
     estadoInstitucion(0);
-    document.querySelector('#codFolio').value="";
+    document.querySelector('#codFolio').value = "";
     modoEdicion = false;
     datosOriginales = null;
     const submitButton = document.getElementById('submitButton');
@@ -406,19 +410,19 @@ function limpiarForm(){
 
 //========================================== DATA CON AXIOS ==========================================//
 // Función para obtener los folios
-function cargarFolios(){
-    axios.get(`${ VITE_URL_APP }/api/get-folios`)
-    .then(response => {
-        tblFolios.setData(response.data);
-    })
-    .catch(error => {
-        console.error("Error al obtener los datos:", error);
-    });
+function cargarFolios() {
+    axios.get(`${VITE_URL_APP}/api/get-folios`)
+        .then(response => {
+            tblFolios.setData(response.data);
+        })
+        .catch(error => {
+            console.error("Error al obtener los datos:", error);
+        });
 };
 
 
 //================================ GUARDAR LOS DATOS POR AXIOS ================================//
-document.getElementById('formSaveFolio').addEventListener('submit', function(event) {
+document.getElementById('formSaveFolio').addEventListener('submit', function (event) {
     event.preventDefault();
     var codigo = document.getElementById('codFolio').value;
     var nombre = document.getElementById('nombre').value;
@@ -428,28 +432,49 @@ document.getElementById('formSaveFolio').addEventListener('submit', function(eve
     var switchVencimiento = document.getElementById('switchVencimiento');
     var vencimiento = switchVencimiento.checked ? 1 : 0;
     var periodo = document.getElementById('periodo').value;
+    var responsable = document.getElementById('responsable').value;
     var institucion = document.querySelector('input[name="institucion"]:checked')?.value;
 
-    if(vencimiento == 0){
+    if (vencimiento == 0) {
         periodo = null;
     }
 
-    if (nombre && tipo) {
-        axios.post(`${ VITE_URL_APP }/api/save_folio`, {
+    if (nombre && tipo && responsable) {
+        axios.post(`${VITE_URL_APP}/api/save_folio`, {
             codigo: codigo,
             nombre: nombre,
             tipo: tipo,
             obligatorio: obligatorio,
             vencimiento: vencimiento,
             periodo: periodo,
+            responsable: responsable,
             plataforma: institucion,
         })
-        .then(function(response) {
-            cargarFolios();
-            limpiarForm();
-        })
-        .catch(function(error) {
-            console.error('Error al guardar las fechas:', error);
+            .then(function (response) {
+                cargarFolios();
+                limpiarForm();
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: response.data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            })
+            .catch(function (error) {
+                console.error('Error al guardar las fechas:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Hubo un problema al guardar el folio.'
+                });
+            });
+    } else {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos incompletos',
+            text: 'Por favor, complete todos los campos obligatorios: Nombre, Tipo y Responsable.',
+            confirmButtonColor: '#3085d6'
         });
     }
 });
@@ -458,9 +483,9 @@ document.getElementById('formSaveFolio').addEventListener('submit', function(eve
 //----------------------------------------------------
 // Función para generar el PDF desde los datos de la tabla
 // Función mejorada para generar PDF profesional
-document.getElementById('btnGenerarPDF').addEventListener('click', function() {
+document.getElementById('btnGenerarPDF').addEventListener('click', function () {
     const todosLosDatos = tblFolios.getData().filter(folio => folio.habilitado == "1");
-    
+
     if (todosLosDatos.length === 0) {
         Swal.fire({
             icon: 'warning',
@@ -481,31 +506,31 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
 
     setTimeout(() => {
         const doc = new jsPDF();
-        const fechaActual = new Date().toLocaleDateString('es-PE', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+        const fechaActual = new Date().toLocaleDateString('es-PE', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
-        
+
         // ============= ENCABEZADO PRINCIPAL =============
         // Logo o espacio para logo (opcional)
         doc.setFillColor(41, 128, 185); // Azul corporativo
         doc.rect(0, 0, 210, 35, 'F');
-        
+
         doc.setFontSize(22);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(255, 255, 255);
         doc.text('REPORTE DE FOLIOS VIGENTES', 105, 15, { align: 'center' });
-        
+
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
         doc.text(`Fecha de emisión: ${fechaActual}`, 105, 22, { align: 'center' });
-        
+
         // Resumen ejecutivo
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text(`Total de folios activos: ${todosLosDatos.length}`, 105, 28, { align: 'center' });
-        
+
         doc.setTextColor(0, 0, 0);
         let yPosition = 42;
 
@@ -526,7 +551,7 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
 
         Object.keys(porPrioridad).forEach((prioridad, index) => {
             const folios = porPrioridad[prioridad];
-            
+
             if (folios.length > 0) {
                 // Subtítulo más compacto
                 doc.setFontSize(10);
@@ -551,13 +576,13 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
                         folio.tipoFolio,
                         folio.periodo || 'Sin vencimiento'
                     ]),
-                    styles: { 
+                    styles: {
                         fontSize: 8,
                         cellPadding: 2,
                         lineColor: [189, 195, 199],
                         lineWidth: 0.1
                     },
-                    headStyles: { 
+                    headStyles: {
                         fillColor: [149, 165, 166],
                         textColor: [255, 255, 255],
                         fontStyle: 'bold',
@@ -565,7 +590,7 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
                         fontSize: 9,
                         cellPadding: 3
                     },
-                    alternateRowStyles: { 
+                    alternateRowStyles: {
                         fillColor: [250, 250, 250]
                     },
                     columnStyles: {
@@ -579,7 +604,7 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
                 });
 
                 yPosition = doc.lastAutoTable.finalY + 6;
-                
+
                 // Control de páginas
                 if (yPosition > 260) {
                     doc.addPage();
@@ -621,18 +646,18 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
 
         Object.keys(porTipo).forEach((tipo, index) => {
             const folios = porTipo[tipo];
-            
+
             if (folios.length > 0) {
                 doc.setFontSize(10);
                 doc.setFont(undefined, 'bold');
                 doc.setFillColor(236, 240, 241);
                 doc.rect(10, yPosition, 190, 6, 'F');
-                
+
                 // Indicador de color por tipo
                 const color = coloresTipo[tipo];
                 doc.setFillColor(color[0], color[1], color[2]);
                 doc.circle(13, yPosition + 3, 1.5, 'F');
-                
+
                 doc.setTextColor(44, 62, 80);
                 doc.text(`2.${index + 1} ${tipo}`, 17, yPosition + 4);
                 doc.setFont(undefined, 'normal');
@@ -650,13 +675,13 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
                         folio.prioridad,
                         folio.periodo || 'Sin vencimiento'
                     ]),
-                    styles: { 
+                    styles: {
                         fontSize: 8,
                         cellPadding: 2,
                         lineColor: [189, 195, 199],
                         lineWidth: 0.1
                     },
-                    headStyles: { 
+                    headStyles: {
                         fillColor: [149, 165, 166],
                         textColor: [255, 255, 255],
                         fontStyle: 'bold',
@@ -664,7 +689,7 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
                         fontSize: 9,
                         cellPadding: 3
                     },
-                    alternateRowStyles: { 
+                    alternateRowStyles: {
                         fillColor: [250, 250, 250]
                     },
                     columnStyles: {
@@ -678,7 +703,7 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
                 });
 
                 yPosition = doc.lastAutoTable.finalY + 6;
-                
+
                 if (yPosition > 260) {
                     doc.addPage();
                     yPosition = 20;
@@ -689,19 +714,19 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
         // ============= PIE DE PÁGINA EN TODAS LAS PÁGINAS =============
         const pageCount = doc.internal.getNumberOfPages();
         const ahora = new Date();
-        const horaGeneracion = ahora.toLocaleTimeString('es-PE', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+        const horaGeneracion = ahora.toLocaleTimeString('es-PE', {
+            hour: '2-digit',
+            minute: '2-digit'
         });
 
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            
+
             // Línea separadora
             doc.setDrawColor(189, 195, 199);
             doc.setLineWidth(0.5);
             doc.line(10, 282, 200, 282);
-            
+
             // Texto del pie
             doc.setFontSize(7);
             doc.setTextColor(127, 140, 141);
@@ -730,9 +755,9 @@ document.getElementById('btnGenerarPDF').addEventListener('click', function() {
         const pdfBlob = doc.output('blob');
         const pdfUrl = URL.createObjectURL(pdfBlob);
         window.open(pdfUrl, '_blank');
-        
+
         Swal.close();
-        
+
         Swal.fire({
             icon: 'success',
             title: '¡PDF generado exitosamente!',

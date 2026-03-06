@@ -3,6 +3,27 @@ import axios from "axios";
 import DataTable from "vanilla-datatables";
 
 let cursosData = [];
+window.alertasCursosData = [];
+
+window.alertasVencimientoCursos = function () {
+    return {
+        alertas: [],
+        async initAlertas() {
+            try {
+                const res = await axios.get(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`);
+                if (res.data && res.data.success) {
+                    this.alertas = res.data.alertas;
+                    window.alertasCursosData = this.alertas.map(a => a.codigo_curso);
+                    if (cursoTable) {
+                        renderTablaCursos(cursosData);
+                    }
+                }
+            } catch (e) {
+                console.error("Error cargando alertas de vencimiento:", e);
+            }
+        }
+    }
+}
 
 const archivoInput = document.getElementById("archivoInput");
 const btnSeleccionar = document.getElementById("btnSeleccionar");
@@ -76,47 +97,49 @@ if (btnAnalizar) {
                 return;
             }
 
-            // construir HTML agradable
             let actividadesHtml = "";
-            for (const [tipo, cantidad] of Object.entries(data.activityStats)) {
-                actividadesHtml += `
-              <div class="flex justify-between border-b py-1">
-                  <span class="capitalize">${tipo}</span>
-                  <span class="font-semibold">${cantidad}</span>
-              </div>
-          `;
-            }
 
             resumenPlantilla.innerHTML = `
-          <div class="bg-white shadow rounded-lg p-4 space-y-4">
-              <h3 class="text-lg font-bold text-gray-700">📘 Resumen de la Plantilla</h3>
-
-              <div>
-                  <p><span class="font-semibold">Nombre del curso:</span> ${data.courseName}</p>
-                  <p><span class="font-semibold">Código corto:</span> ${data.courseShortname}</p>
-                  <p><span class="font-semibold">Versión Moodle:</span> ${data.moodleVersion}</p>
-                  <p><span class="font-semibold">Fecha backup:</span> ${new Date(data.backupDate * 1000).toLocaleString()}</p>
+          <div class="bg-white border border-gray-100 shadow-sm rounded-xl p-6 mt-6">
+              <div class="flex items-center gap-2 mb-4">
+                  <div class="w-5 h-6 bg-blue-500 rounded-sm"></div>
+                  <h3 class="text-lg font-bold text-slate-500">Resumen de la Plantilla</h3>
               </div>
 
-              <div class="grid grid-cols-2 gap-4 text-center">
-                  <div class="bg-blue-50 rounded p-3">
-                      <p class="text-2xl font-bold text-blue-700">${data.totalSections}</p>
-                      <p class="text-gray-600">Secciones</p>
+              <div class="text-sm text-slate-500 leading-relaxed mb-6">
+                  <p><span class="font-bold">Nombre del curso:</span> ${data.courseName}</p>
+                  <p><span class="font-bold">Código corto:</span> ${data.courseShortname}</p>
+                  <p><span class="font-bold">Versión Moodle:</span> ${data.moodleVersion}</p>
+                  <p><span class="font-bold">Fecha backup:</span> ${new Date(data.backupDate * 1000).toLocaleString()}</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-8 text-center mb-8">
+                  <div>
+                      <p class="text-3xl font-bold text-blue-600 mb-1">${data.totalSections}</p>
+                      <p class="text-sm text-slate-500">Secciones</p>
                   </div>
-                  <div class="bg-green-50 rounded p-3">
-                      <p class="text-2xl font-bold text-green-700">${data.totalActivities}</p>
-                      <p class="text-gray-600">Actividades</p>
+                  <div>
+                      <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalActivities}</p>
+                      <p class="text-sm text-slate-500">Actividades</p>
                   </div>
-                  <div class="bg-purple-50 rounded p-3 col-span-2">
-                      <p class="text-2xl font-bold text-purple-700">${data.totalQuestions}</p>
-                      <p class="text-gray-600">Preguntas</p>
+                  <div class="col-span-2 mt-4">
+                      <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalQuestions}</p>
+                      <p class="text-sm text-slate-500">Preguntas</p>
                   </div>
               </div>
 
               <div>
-                  <h4 class="text-md font-semibold text-gray-700 mb-2">📊 Actividades por tipo</h4>
-                  <div class="bg-gray-50 rounded p-2">
-                      ${actividadesHtml}
+                  <div class="flex items-center gap-2 mb-3">
+                      <i class="bx bx-bar-chart-alt-2 text-slate-500 text-lg"></i>
+                      <h4 class="text-sm font-bold text-slate-500">Actividades por tipo</h4>
+                  </div>
+                  <div class="space-y-2 text-sm text-slate-500 mt-2">
+                      ${Object.entries(data.activityStats).map(([tipo, cantidad]) => `
+                          <div class="flex justify-between border-b border-gray-100 py-2">
+                              <span class="capitalize">${tipo}</span>
+                              <span class="font-bold text-slate-700">${cantidad}</span>
+                          </div>
+                      `).join('')}
                   </div>
               </div>
           </div>
@@ -150,13 +173,13 @@ function actualizarLista() {
     if (archivoSeleccionado) {
         const item = document.createElement("li");
         item.className =
-            "flex items-center justify-between bg-gray-100 p-2 rounded";
+            "flex items-center justify-between py-3";
 
         item.innerHTML = `
-            <span class="text-sm text-gray-800">${archivoSeleccionado.name}</span>
+            <span class="text-sm font-medium text-gray-500">${archivoSeleccionado.name}</span>
             <div class="flex items-center gap-x-2">
-                <button type="button" class="text-red-500 hover:text-red-700 text-xs" id="btnQuitar">
-                    <i class="i-tabler-trash size-4 shrink-0" style="margin-bottom: -4px;"></i> Quitar
+                <button type="button" class="text-red-500 hover:text-red-600 text-sm flex items-center font-medium transition-colors" id="btnQuitar">
+                    <i class="bx bx-trash mr-1 text-base"></i> Quitar
                 </button>
             </div>
         `;
@@ -343,32 +366,42 @@ function renderTablaCursos(data) {
             const tr = document.createElement("tr");
             tr.style.backgroundColor = curso.habilitado == '1' ? "" : '#fff1f1';
 
+            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(curso.codigoCurso)
+                ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
+                : '';
+
             tr.innerHTML = `
         <td>${index + 1}</td>
-         <td>${curso.codigoCurso}</td>
-        <td>${curso.nombre}</td>
+        <td>${curso.codigoCurso}</td>
+        <td class="text-primary font-medium">
+            <div class="flex items-center">
+                ${curso.nombre}${alertIcon}
+            </div>
+        </td>
         <td>
-            <button type="button" @click="gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-            class="me-2 btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white" title="Editar curso">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
+                    <i class="bx bxs-edit text-base"></i>
+                </button>
 
-            <button type="button" @click="activarPanelProgramacion('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-            class="me-2 btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white" title="Ver programaciones">
-                <i class="bx bx-calendar-event"></i>
-            </button>
 
-            ${curso.habilitado == '1' ?
+                ${curso.habilitado == '1' ?
                     `<button type="button"  @click="gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white" title="Deshabilitar curso">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>`
+                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
+                        <i class="bx bx-trash text-base"></i>
+                    </button>`
                     :
                     `<button type="button"  @click="gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn rounded-full  bg-success/25 text-success hover:bg-success hover:text-white" title="Habilitar curso">
-                    <i class='bx bx-check' ></i>
-                </button>`
+                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
+                        <i class='bx bx-check text-base'></i>
+                    </button>
+                    <button type="button"  @click="gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
+                        <i class="bx bx-trash text-base"></i>
+                    </button>`
                 }
+            </div>
         </td>
         `;
             tbody.appendChild(tr);
@@ -437,10 +470,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
                 alpineData.area = curso.area ?? "";
+                alpineData.frecuencia = curso.frecuencia ?? "";
 
-                const p = curso.periodicidad ?? 0;
-                alpineData.periodicidad = p;
-                alpineData.activarPeriodicidad = (p > 0);
+
 
                 // Update PAC logic
                 const esPacCurso = curso.tipo_curso?.descripcion?.toUpperCase().includes('PAC') || false;
@@ -481,10 +513,11 @@ window.gestionCurso = async (op, cod, nombre = '') => {
             habilitado: op === 'DEL' ? 0 : 1
         };
 
-        const titulo = op === 'DEL' ? '¿Estás seguro?' : '¿Habilitar curso?';
-        const texto = op === 'DEL' ? `¿Quieres eliminar el curso "${nombre}"?` : `¿Quieres habilitar el curso "${nombre}"?`;
-        const icon = op === 'DEL' ? 'warning' : 'question';
-        const color = op === 'DEL' ? '#d33' : '#3085d6';
+        const titulo = op === 'DEL' ? '¿Estás seguro?' : (op === 'PERMA_DEL' ? '¿Eliminación Definitiva?' : '¿Habilitar curso?');
+        const texto = op === 'DEL' ? `¿Quieres inhabilitar el curso "${nombre}"?` : (op === 'PERMA_DEL' ? `¿Quieres ELIMINAR COMPLETAMENTE y sin retorno el curso "${nombre}" y todas sus programaciones de la Base de Datos?` : `¿Quieres habilitar el curso "${nombre}"?`);
+        const icon = op === 'DEL' || op === 'PERMA_DEL' ? 'warning' : 'question';
+        const color = op === 'DEL' || op === 'PERMA_DEL' ? '#d33' : '#3085d6';
+        const confirmText = op === 'DEL' ? 'Sí, inhabilitar' : (op === 'PERMA_DEL' ? 'Sí, destruir curso' : 'Sí, habilitar');
 
         Swal.fire({
             title: titulo,
@@ -493,23 +526,46 @@ window.gestionCurso = async (op, cod, nombre = '') => {
             showCancelButton: true,
             confirmButtonColor: color,
             cancelButtonColor: '#6c757d',
-            confirmButtonText: op === 'DEL' ? 'Sí, eliminar' : 'Sí, habilitar',
+            confirmButtonText: confirmText,
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.patch(`${VITE_URL_APP}/api/cursos/${cod}/habilitado`, data)
-                    .then(async (res) => {
-                        if (res.status === 200 && res.data.success) {
-                            Swal.fire('Éxito', res.data.message || (op === 'DEL' ? 'Curso Eliminado' : 'Curso Habilitado'), 'success')
-                            await listarCursos()
-                        } else {
-                            Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err)
-                        Swal.fire('Error', 'Ocurrió un problema al actualizar el curso', 'error')
-                    });
+                if (op === 'PERMA_DEL') {
+                    axios.delete(`${VITE_URL_APP}/api/cursos/${cod}`)
+                        .then(async (res) => {
+                            if (res.status === 200 && res.data.success) {
+                                Swal.fire('Éxito', res.data.message || 'Curso eliminado definitivamente', 'success')
+
+                                // Mantener el estado de la vista previa validando el switch local "Solo eliminados"
+                                const toggleEliminados = document.getElementById('chkEliminados');
+                                if (toggleEliminados && toggleEliminados.checked) {
+                                    await window.gestionListarCursos(0); // Forzar recarga de los deshabilitados
+                                } else {
+                                    await listarCursos();
+                                }
+                            } else {
+                                Swal.fire('Error', res.data.message || 'No se pudo eliminar el curso permanentemente', 'error')
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err)
+                            Swal.fire('Error', err.response?.data?.message || 'Ocurrió un problema al eliminar el curso', 'error')
+                        });
+                } else {
+                    axios.patch(`${VITE_URL_APP}/api/cursos/${cod}/habilitado`, data)
+                        .then(async (res) => {
+                            if (res.status === 200 && res.data.success) {
+                                Swal.fire('Éxito', res.data.message || (op === 'DEL' ? 'Curso Eliminado' : 'Curso Habilitado'), 'success')
+                                await listarCursos()
+                            } else {
+                                Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err)
+                            Swal.fire('Error', 'Ocurrió un problema al actualizar el curso', 'error')
+                        });
+                }
             }
         });
     }
@@ -527,13 +583,15 @@ window.gestionListarCursos = (op) => {
 window.editarFormGestionCurso = (e) => {
     if (e) e.preventDefault();
 
+    const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+    if (!formElement || !window.Alpine) return;
+    const alpineData = Alpine.$data(formElement);
+
     const data = {
         codigo: document.getElementById('codGestionEditar').value,
         nombre: document.getElementById('txtNombreCurso').value,
         tipo_curso: document.getElementById('slcTipoCurso').value,
         area: document.getElementById('slcArea').value,
-        periodicidad: document.getElementById('chkPeriodicidad').checked ? (document.getElementById('txtperiodicidad').value || 0) : 0,
-        // Removed: nombre_exa, descripcion
         tiempo: parseInt(document.getElementById('txtLimite').value) || 0,
         nota: parseInt(document.getElementById('txtNota').value) || 0,
         intentos: parseInt(document.getElementById('txtIntentos').value) || 0,
@@ -544,22 +602,19 @@ window.editarFormGestionCurso = (e) => {
     formData.append('nombre', data.nombre);
     formData.append('tipo_curso', data.tipo_curso);
     formData.append('area', data.area);
-    formData.append('periodicidad', data.periodicidad);
-    // Removed: nombre_exa, descripcion
     formData.append('tiempo', data.tiempo);
     formData.append('nota', data.nota);
     formData.append('intentos', data.intentos);
+    formData.append('frecuencia', alpineData.frecuencia);
+
+
     //formData.append('archivo', archivoSeleccionado);
 
     // Append Sucursales (PAC) - Read from Alpine
-    const formElement = document.querySelector('[x-data="formCursoGestion()"]');
-    if (formElement && window.Alpine) {
-        const alpineData = Alpine.$data(formElement);
-        if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
-            alpineData.sucursalesAsignadas.forEach(suc => {
-                formData.append('sucursales_asignadas[]', suc);
-            });
-        }
+    if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
+        alpineData.sucursalesAsignadas.forEach(suc => {
+            formData.append('sucursales_asignadas[]', suc);
+        });
     }
 
     if (archivoSeleccionado) {
@@ -611,6 +666,12 @@ window.restaurarFormCurso = () => {
     const btn = document.getElementById('btnGestion');
     const btnEdit = document.getElementById('btnGestionEditar');
     const title = document.getElementById('txtTitleFile');
+    const btnDownload = document.getElementById('btnDownloadPlantilla');
+
+    if (btnDownload) {
+        btnDownload.classList.add('hidden');
+        btnDownload.href = '#';
+    }
 
     mensaje.textContent = 'Nuevo';
     title.textContent = 'Actualizar plantilla';
@@ -641,12 +702,13 @@ window.formCursoGestion = function () {
         nombre: '',
         tipoCurso: '',
         area: '',
-        periodicidad: '',
-        activarPeriodicidad: false,
+        frecuencia: '',
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
         nota: '',
         intentos: '',
+        cantidadPreguntas: '',
+        preguntasBalotario: '',
         fechaActual: new Date().toISOString().split('T')[0],
 
         // Lógica PAC
@@ -693,11 +755,12 @@ window.formCursoGestion = function () {
             this.nombre = '';
             this.tipoCurso = '';
             this.area = '';
-            this.periodicidad = '0';
-            this.activarPeriodicidad = false;
+            this.frecuencia = '';
             this.limiteTiempo = '0';
             this.nota = '0';
             this.intentos = '0';
+            this.cantidadPreguntas = '0';
+            this.preguntasBalotario = '0';
             this.esPAC = false;
             this.sucursalesAsignadas = [];
             this.busquedaSucursal = '';
@@ -740,7 +803,10 @@ window.formCursoGestion = function () {
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
             formData.append('area', this.area);
-            formData.append('periodicidad', this.activarPeriodicidad ? this.periodicidad : 0);
+            formData.append('frecuencia', this.frecuencia);
+
+
+
             // Removed: nombre_exa, descripcion
             formData.append('tiempo', this.limiteTiempo);
             formData.append('nota', this.nota);
@@ -766,8 +832,7 @@ window.formCursoGestion = function () {
                             nombre: "",
                             tipoCurso: "",
                             area: "",
-                            periodicidad: 0,
-                            activarPeriodicidad: false,
+                            frecuencia: "",
                             limiteTiempo: 0,
                             nota: 0,
                             intentos: 0
@@ -809,14 +874,55 @@ window.formCursoGestion = function () {
     }
 }
 
+// Helper Generator Func
+window.generarFechasProyectadas = function (frecuencia, mesInicioStr, anios) {
+    if (!mesInicioStr || !frecuencia || frecuencia === 'PERSONALIZADO') return [];
+
+    let [year, month] = mesInicioStr.split('-');
+    let startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+
+    let multiplosMeses = 1;
+    if (frecuencia === 'BIMESTRAL') multiplosMeses = 2;
+    if (frecuencia === 'TRIMESTRAL') multiplosMeses = 3;
+    if (frecuencia === 'CUATRIMESTRAL') multiplosMeses = 4;
+    if (frecuencia === 'SEMESTRAL') multiplosMeses = 6;
+    if (frecuencia === 'ANUAL') multiplosMeses = 12;
+
+    let ciclosPorAnio = 12 / multiplosMeses;
+    let totalCiclos = Math.floor(ciclosPorAnio * parseInt(anios || 1));
+    let arrayFechas = [];
+
+    for (let i = 0; i < totalCiclos; i++) {
+        let currentDate = new Date(startDate.getTime());
+        currentDate.setMonth(currentDate.getMonth() + (i * multiplosMeses));
+
+        let targetYear = currentDate.getFullYear();
+        let targetMonth = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        let targetLastDay = new Date(targetYear, currentDate.getMonth() + 1, 0).getDate();
+
+        arrayFechas.push({
+            inicio: `${targetYear}-${targetMonth}-01`,
+            final: `${targetYear}-${targetMonth}-${targetLastDay}`,
+            periodo: `${targetYear}-${targetMonth}`
+        });
+    }
+    return arrayFechas;
+}
+
 
 // --- Lógica del Panel de Programación ---
 
-window.activarPanelProgramacion = function (codigoCurso, nombreCurso) {
+window.activarPanelProgramacion = function (codigoCurso, nombreCurso, frecuenciaStr) {
+    let mostrarBtn = true;
+    if (frecuenciaStr && frecuenciaStr !== 'PERSONALIZADO' && frecuenciaStr !== 'null' && frecuenciaStr !== 'undefined') {
+        mostrarBtn = false; // Bloquea si es generado estructurado
+    }
+
     window.dispatchEvent(new CustomEvent('cambiar-panel', {
         detail: {
             panel: 'programacion',
-            titulo: nombreCurso
+            titulo: nombreCurso,
+            mostrarBtn: mostrarBtn
         }
     }));
     // Wait a bit for Alpine transition or just setData
@@ -870,22 +976,34 @@ window.listarProgramaciones = async function (codigoCurso) {
                 const fInicio = formatDate(prog.fecha_inicio);
                 const fFin = formatDate(prog.fecha_final);
 
+                // Validar si la fecha ha pasado
+                let esPasada = false;
+                if (prog.fecha_final) {
+                    const fechaFinal = new Date(prog.fecha_final);
+                    const hoy = new Date();
+                    fechaFinal.setHours(23, 59, 59, 999);
+                    esPasada = fechaFinal < hoy;
+                }
+
+                const trClass = esPasada ? 'bg-gray-100/70' : '';
+                const textCol = esPasada ? 'text-gray-400' : '';
+                const badge = esPasada ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-200 text-gray-600">Finalizada</span>' : '';
+
                 html += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td>${prog.codigo}</td>
-                        <td class="text-sm font-medium">${fInicio} - ${fFin}</td>
+                    <tr class="${trClass}">
+                        <td class="${textCol}">${prog.codigo}</td>
+                        <td class="text-sm font-medium ${textCol}">${fInicio} - ${fFin} ${badge}</td>
                         <td>
-                            <div class="flex justify-center gap-2">
-                                <button class="btn btn-sm rounded-full bg-info/25 text-info hover:bg-info hover:text-white transition-colors duration-200" 
+                            <div class="flex justify-center gap-3">
+                                <button class="btn btn-sm rounded-full bg-info/25 text-info hover:bg-info hover:text-white transition-colors duration-200 shadow-sm" 
                                     onclick="editarProgramacion('${prog.codigo}', '${prog.tipo}', '${prog.periodo}', '${prog.fecha_inicio}', '${prog.fecha_final}')"
                                     title="Editar">
-                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <i class="bx bx-edit text-base"></i>
                                 </button>
-                                <button class="btn btn-sm rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white transition-colors duration-200" 
+                                <button class="btn btn-sm rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white transition-colors duration-200 shadow-sm" 
                                     onclick="eliminarProgramacion('${prog.codigo}', '${codigoCurso}')"
                                     title="Eliminar">
-                                    <i class="fa-solid fa-trash-can"></i>
+                                    <i class="bx bx-trash text-base"></i>
                                 </button>
                             </div>
                         </td>
@@ -893,7 +1011,7 @@ window.listarProgramaciones = async function (codigoCurso) {
                 `;
             });
         } else {
-            html = '<tr><td colspan="4" class="text-center text-gray-500">No hay programaciones registradas</td></tr>';
+            html = '<tr><td colspan="3" class="text-center text-gray-500 py-4">No hay programaciones registradas</td></tr>';
         }
         tableBody.innerHTML = html;
 

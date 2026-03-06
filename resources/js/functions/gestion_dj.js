@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import {TabulatorFull as Tabulator} from 'tabulator-tables';
+import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 
 import Tagify from '@yaireo/tagify';
@@ -15,11 +15,11 @@ document.addEventListener('DOMContentLoaded', function () {
     //Tabla de Personas
     const tblPersonas = new Tabulator("#tblPersonas", {
         height: "100%",
-        layout:"fitData",
-        responsiveLayout:"collapse",
+        layout: "fitData",
+        responsiveLayout: "collapse",
         pagination: true,
         paginationSize: 10,
-        rowHeader:{formatter:"responsiveCollapse", width:30, minWidth:30, hozAlign:"center", resizable:false, headerSort:false},
+        rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
         locale: "es",
         langs: {
             "es": {
@@ -46,32 +46,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         },
-        columns:[
-            {title:"N°", formatter:"rownum", hozAlign:"center", width:60},
+        columns: [
+            { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
 
             {
-                title:"Nombres",
-                field:"nombres",
-                hozAlign:"left",
-                widthGrow:3,
-                formatter: function(cell){
+                title: "Nombres",
+                field: "nombres",
+                hozAlign: "left",
+                widthGrow: 3,
+                formatter: function (cell) {
                     let data = cell.getData();
                     return `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''} `.trim();
                 }
             },
 
-            {title:"DNI", field:"dni", hozAlign:"center", widthGrow:2},
+            { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
 
             {
-                title:"Acciones",
-                field:"acciones",
-                hozAlign:"center",
-                headerSort:false,
-                widthGrow:1,
-                formatter: function(cell){
+                title: "Acciones",
+                field: "acciones",
+                hozAlign: "center",
+                headerSort: false,
+                widthGrow: 1,
+                formatter: function (cell) {
                     return `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">Formulario</button>`;
                 },
-                cellClick: function(e, cell) {
+                cellClick: function (e, cell) {
 
                     if (e.target.classList.contains('form-btn')) {
                         var registro = cell.getRow().getData();
@@ -81,26 +81,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
         ],
-        layout:"fitColumns",
+        layout: "fitColumns",
 
     });
 
     //Tabla de Coincidencias
     const tblPersonasCN = new Tabulator("#tblPersonasCN", {
         height: "100%",
-        layout:"fitDataFill",
+        layout: "fitDataFill",
         responsiveLayout: "collapse",
         columns: [
-            {title:"Código", field:"CODI_PERS", hozAlign:"center", width: '10%'},
-            {title:"Personal", field:"personal", hozAlign:"left", width: '30%'},
-            {title:"Nro Documento", field:"nroDoc", hozAlign:"center", width: '15%'},
-            {title:"Sucursal", field:"sucursal", hozAlign:"center", width: '18%'},
+            { title: "Código", field: "CODI_PERS", hozAlign: "center", width: '10%' },
+            { title: "Personal", field: "personal", hozAlign: "left", width: '30%' },
+            { title: "Nro Documento", field: "nroDoc", hozAlign: "center", width: '15%' },
+            { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '18%' },
         ],
     });
 
     document.getElementById("buscarPersonal").addEventListener("keyup", function () {
         let valor = this.value.toLowerCase().trim();
-        
+
         tblPersonas.setFilter([
             [
                 { field: "nombres", type: "like", value: valor },
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => resaltarTexto(valor), 10);
     });
 
-    document.getElementById('btnNuevaDJ').addEventListener('click', function() {
+    document.getElementById('btnNuevaDJ').addEventListener('click', function () {
         abrirFormulario();
     });
 
@@ -122,20 +122,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const contenedor = modal.querySelector('.bg-white');
 
         if (event.target.closest('#btnNuevaDJ')) return;
-        
-        if (!modal.classList.contains('hidden')) { 
+
+        if (!modal.classList.contains('hidden')) {
             if (!contenedor.contains(event.target) && !event.target.classList.contains('form-btn')) {
                 cerrarFormulario();
             }
         }
     });
 
-    document.getElementById('cerrarModal').addEventListener('click', function() {
+    document.getElementById('cerrarModal').addEventListener('click', function () {
         cerrarFormulario();
     });
 
     //Función para resaltar el texto del que se hace la búsqueda
-    function resaltarTexto(valor){
+    function resaltarTexto(valor) {
         tblPersonas.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 if (i === cells.length - 1) return; // excluir última columna
@@ -159,16 +159,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Función para obtener el listados de personas
-    function getPersonal(){
-        axios.get(`${ VITE_URL_APP }/api/get-postulantes`)
-        .then(response => {
-            const datosTabla = response.data;
-            tblPersonas.setData(datosTabla);
+    function getPersonal() {
+        axios.get(`${VITE_URL_APP}/api/get-postulantes`)
+            .then(response => {
+                const datosTabla = response.data;
+                tblPersonas.setData(datosTabla);
 
-        })
-        .catch(error => {
-            console.error("Hubo un error:", error);
-        });
+            })
+            .catch(error => {
+                console.error("Hubo un error:", error);
+            });
     }
 
     // Gestión del formulario de familiares
@@ -214,8 +214,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Agregar fila
     if (addBtn) {
         addBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        container.insertAdjacentHTML('beforeend', makeFamilyRow());
+            e.preventDefault();
+            container.insertAdjacentHTML('beforeend', makeFamilyRow());
         });
     }
 
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         limpiarFormulario();
 
-        if(data){
+        if (data) {
             document.getElementById("cod_postulante").value = data.id;
             document.getElementById("nombres_apellidos").value = data.nombres + ' ' + data.apellido1 + ' ' + data.apellido2;
             document.getElementById("dni").value = data.dni ?? '';
@@ -272,9 +272,12 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById("curso_sucamec").value = (data.sucamec && data.sucamec.toUpperCase() === "SI") ? "SI" : "NO";
 
             const inputLicencia = document.getElementById("licencia_arma");
-            const tagify = new Tagify(inputLicencia, {
-                maxTags: 2
-            });
+            let tagify = Tagify.getInstance(inputLicencia);
+            if (!tagify) {
+                tagify = new Tagify(inputLicencia, {
+                    maxTags: 2
+                });
+            }
 
             let licencias = data.licencia_arma;
 
@@ -283,17 +286,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (typeof licencias === "string") {
                 try {
                     licencias = JSON.parse(licencias);
-                } catch(e) {
-                    licencias = [licencias]; 
+                } catch (e) {
+                    licencias = [licencias];
                 }
             }
 
             if (licencias && Array.isArray(licencias)) {
                 tagify.addTags(licencias);
             }
-
-
-
         }
 
         inputFoto.value = '';
@@ -301,11 +301,18 @@ document.addEventListener('DOMContentLoaded', function () {
         preview.classList.add("hidden");
         container.innerHTML = '';
         container.insertAdjacentHTML('beforeend', makeFamilyRow());
+
+        // MODO VISTA: Ocultar listado y mostrar formulario
+        document.getElementById('divListado').classList.add('hidden');
+        document.getElementById('divCoincidencias').classList.add('hidden'); // Asegurar ocultar coincidencias
         document.getElementById('formModal').classList.remove('hidden');
     };
 
     window.cerrarFormulario = function () {
+        // MODO VISTA: Ocultar formulario y mostrar listado
         document.getElementById('formModal').classList.add('hidden');
+        document.getElementById('divListado').classList.remove('hidden');
+        // No mostramos Coincidencias por defecto, eso lo maneja la búsqueda si aplica
     };
 
 
@@ -335,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
         // distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
 
-        
+
         // previewFoto.src = '';
         // previewFoto.classList.add("hidden");
 
@@ -355,10 +362,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     cursoSucamec.addEventListener("change", () => {
         if (cursoSucamec.value === "SI") {
-        institucionContainer.classList.remove("hidden");
+            institucionContainer.classList.remove("hidden");
         } else {
-        institucionContainer.classList.add("hidden");
-        institucionInput.value = "";
+            institucionContainer.classList.add("hidden");
+            institucionInput.value = "";
         }
     });
 
@@ -374,10 +381,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-            preview.src = e.target.result;
-            preview.classList.remove("hidden");
-            placeholder.classList.add("hidden");
-            btnEliminar.classList.remove("hidden"); // Mostrar "Eliminar"
+                preview.src = e.target.result;
+                preview.classList.remove("hidden");
+                placeholder.classList.add("hidden");
+                btnEliminar.classList.remove("hidden"); // Mostrar "Eliminar"
             };
             reader.readAsDataURL(file);
         }
@@ -506,923 +513,713 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     async function generarDeclaracionJuradaPDF() {
-        const { jsPDF } = window.jspdf
-        const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true })
+        try {
+            const { jsPDF } = window.jspdf
+            const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true })
 
-        // ---------- Parámetros de estilo y layout ----------
-        const pageWidth = 210
-        const pageHeight = 297
-        const marginLeft = 10
-        const marginRight = 10
-        const marginTop = 10
-        const marginBottom = 12
-        const boxWidth = pageWidth - marginLeft - marginRight
-        const boxX = marginLeft
-        let y = marginTop
+            // ---------- Parámetros de estilo y layout (MAXIMIZADO) ----------
+            const pageWidth = 210
+            const pageHeight = 297
+            const marginLeft = 10     // Aumentado a 10mm
+            const marginRight = 10    // Aumentado a 10mm
+            const marginTop = 10      // Aumentado a 10mm
+            const marginBottom = 10   // Aumentado a 10mm
+            const boxWidth = pageWidth - marginLeft - marginRight
+            const boxX = marginLeft
+            let y = marginTop
 
-        const colors = {
-            headerText: [0, 0, 0],
-            sectionBg: [40, 40, 40],
-            sectionText: [255, 255, 255],
-            labelBg: [220, 220, 220],
-            labelText: [0, 0, 0],
-            inputText: [0, 0, 0],
-            borderColor: [80, 80, 80],
-        }
-
-        function checkPageBreak(heightNeeded) {
-            if (y + heightNeeded > pageHeight - marginBottom) {
-            pdf.addPage()
-            y = marginTop
-            return true
-            }
-            return false
-        }
-
-        function drawField(label, value, x, width, fieldY, inputHeight = 6, labelRatio = 0.35) {
-            const labelWidth = width * labelRatio
-            const valueWidth = width * (1 - labelRatio)
-            const labelPadding = 1
-
-            // Label box (gray background)
-            pdf.setFillColor(...colors.labelBg)
-            pdf.rect(x, fieldY, labelWidth, inputHeight, "F")
-
-            // Label border
-            pdf.setDrawColor(...colors.borderColor)
-            pdf.setLineWidth(0.2)
-            pdf.rect(x, fieldY, labelWidth, inputHeight)
-
-            // Label text - SIEMPRE EN UNA LÍNEA, sin maxWidth
-            pdf.setFontSize(6.5)
-            pdf.setTextColor(...colors.labelText)
-            pdf.setFont(undefined, "bold")
-            pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, {
-            align: "left",
-            })
-
-            // Value box (white background)
-            pdf.setFillColor(255, 255, 255)
-            pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight, "F")
-
-            // Value border
-            pdf.setDrawColor(...colors.borderColor)
-            pdf.setLineWidth(0.2)
-            pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight)
-
-            // Value text
-            pdf.setFontSize(6.5)
-            pdf.setTextColor(...colors.inputText)
-            pdf.setFont(undefined, "normal")
-            const textY = fieldY + inputHeight / 2 + 1
-            pdf.text(String(value).substring(0, 50), x + labelWidth + 1, textY, { 
-            maxWidth: valueWidth - 2 
-            })
-        }
-
-        function drawFieldsInRow(fields, startY, fieldHeight = 6) {
-            let currentX = boxX
-            fields.forEach((field) => {
-            const labelRatio = field.labelRatio || 0.35
-            drawField(field.label, field.value, currentX, field.width, startY, fieldHeight, labelRatio)
-            currentX += field.width
-            })
-        }
-
-        function drawSectionTitle(title, yPos) {
-            pdf.setFillColor(...colors.sectionBg)
-            pdf.rect(boxX, yPos, boxWidth, 6, "F")
-            
-            pdf.setDrawColor(...colors.borderColor)
-            pdf.setLineWidth(0.2)
-            pdf.rect(boxX, yPos, boxWidth, 6)
-
-            pdf.setFontSize(8)
-            pdf.setFont(undefined, "bold")
-            pdf.setTextColor(...colors.sectionText)
-            pdf.text(title, boxX + 2, yPos + 4)
-        }
-
-        function formatDateToDMY(fechaStr) {
-            if (!fechaStr) return "";
-            const partes = fechaStr.split("-");
-            return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : fechaStr;
-        }
-
-
-
-        // ========== ENCABEZADO CON TABLA DE 3 COLUMNAS ==========
-        const headerY = y
-        const headerHeight = 18
-        const logoWidth = boxWidth * 0.20   
-        const tituloWidth = boxWidth * 0.65  
-        const codigoWidth = boxWidth * 0.15 
-
-        const logoX = boxX
-        pdf.rect(logoX, headerY, logoWidth, headerHeight, "F")
-        pdf.setDrawColor(0, 0, 0)
-        pdf.setLineWidth(0.3)
-        pdf.rect(logoX, headerY, logoWidth, headerHeight)
-        await drawLogo();
-
-        // const logoX = boxX;
-        // //pdf.setFillColor(20, 30, 70); // Fondo azul oscuro para el logo
-        // pdf.rect(logoX, headerY, logoWidth, headerHeight, "F");
-        // pdf.setDrawColor(0, 0, 0);
-        // pdf.setLineWidth(0.3);
-        // pdf.rect(logoX, headerY, logoWidth, headerHeight);
-
-        // // Verificar que la variable global esté definida
-        // if (window.logoUrl) {
-        //     fetch(window.logoUrl)
-        //         .then(response => {
-
-        //             console.log("Cargando logo desde:", window.logoUrl);
-
-        //             if (!response.ok) throw new Error("No se pudo cargar la imagen");
-        //             return response.blob();
-        //         })
-        //         .then(blob => {
-        //             const reader = new FileReader();
-        //             reader.onload = (e) => {
-        //                 try {
-        //                     pdf.addImage(
-        //                         e.target.result,
-        //                         "PNG",
-        //                         logoX + 2,
-        //                         headerY + 2,
-        //                         logoWidth - 4,
-        //                         headerHeight - 4
-        //                     );
-        //                 } catch (err) {
-        //                     console.error("Error al agregar logo:", err);
-        //                     drawFallbackLogo();
-        //                 }
-        //             };
-        //             reader.readAsDataURL(blob);
-        //         })
-        //         .catch(err => {
-        //             console.error("Error al cargar el logo:", err);
-        //             drawFallbackLogo();
-        //         });
-        // } else {
-        //     drawFallbackLogo();
-        // }
-
-
-        function drawFallbackLogo() {
-            pdf.setFillColor(20, 30, 70);
-            pdf.rect(logoX, headerY, logoWidth, headerHeight, "F");
-            pdf.setFontSize(9);
-            pdf.setTextColor(255, 255, 255);
-            pdf.setFont(undefined, "bold");
-            pdf.text("SOLMAR", logoX + logoWidth / 2, headerY + headerHeight / 2, { align: "center" });
-        }
-
-        async function drawLogo() {
-            if (!window.logoUrl) {
-                drawFallbackLogo();
-                return;
+            const colors = {
+                headerText: [0, 0, 0],
+                sectionBg: [220, 220, 220],
+                sectionText: [0, 0, 0],
+                labelBg: [220, 220, 220],
+                labelText: [0, 0, 0],
+                inputText: [0, 0, 0],
+                borderColor: [0, 0, 0],
             }
 
-            try {
-                console.log("Cargando logo desde:", window.logoUrl);
-                const response = await fetch(window.logoUrl);
-                if (!response.ok) throw new Error("No se pudo cargar la imagen");
-                const blob = await response.blob();
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        pdf.addImage(
-                            e.target.result,
-                            "PNG",
-                            logoX + 2,
-                            headerY + 2,
-                            logoWidth - 4,
-                            headerHeight - 4
-                        );
-                    } catch (err) {
-                        console.error("Error al agregar logo:", err);
-                        drawFallbackLogo();
-                    }
-                };
-                reader.readAsDataURL(blob);
-            } catch (err) {
-                console.error("Error al cargar el logo:", err);
-                drawFallbackLogo();
-            }
-        }
-
-        // COLUMNA 2: TÍTULOS
-        const tituloX = logoX + logoWidth
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(tituloX, headerY, tituloWidth, headerHeight, "F")
-        pdf.rect(tituloX, headerY, tituloWidth, headerHeight)
-
-        pdf.setFontSize(9)
-        pdf.setTextColor(200, 0, 0)  // Rojo para el primer título
-        pdf.setFont(undefined, "bold")
-        pdf.text("SISTEMA INTEGRADO SOLMAR – SISOLMAR", tituloX + tituloWidth / 2, headerY + 7, { align: "center" })
-
-        pdf.setFontSize(10)
-        pdf.setTextColor(0, 0, 0)
-        pdf.text("DECLARACION JURADA DEL TRABAJADOR", tituloX + tituloWidth / 2, headerY + 13, { align: "center" })
-
-        // COLUMNA 3: CÓDIGO RH 01
-        const codigoX = tituloX + tituloWidth
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(codigoX, headerY, codigoWidth, headerHeight, "F")
-        pdf.rect(codigoX, headerY, codigoWidth, headerHeight)
-
-        pdf.setFontSize(14)
-        pdf.setTextColor(0, 0, 0)
-        pdf.setFont(undefined, "bold")
-        pdf.text("RH 01", codigoX + codigoWidth / 2, headerY + headerHeight / 2 + 2, { align: "center" })
-
-        y = headerY + headerHeight + 4
-
-        // ========== DECLARACIÓN INICIAL CON BORDE ==========
-        const declY = y
-        pdf.setFontSize(7)
-        pdf.setTextColor(...colors.inputText)
-        pdf.setFont(undefined, "normal")
-
-        const nombres = (document.getElementById("nombres_apellidos")?.value || "").toUpperCase()
-        const dni = document.getElementById("dni")?.value || ""
-
-        const declaracionText = `Yo, ${nombres}, identificado con DNI ${dni}, declaro bajo juramento que los datos personales, laborales y familiares que consigno, así como las declaraciones de aceptación que realizo en este documento, son correctos, por lo que asumo la responsabilidad por su veracidad, cumplimiento y actualización, estando conforme con esta declaración jurada.`
-
-        const lineasDeclaracion = pdf.splitTextToSize(declaracionText, boxWidth - 4)
-
-        // Calcular altura del texto
-        const declHeight = lineasDeclaracion.length * 3 + 2
-
-        // Dibujar recuadro alrededor de la declaración
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(boxX, declY, boxWidth, declHeight, "F")
-        pdf.setDrawColor(0, 0, 0)
-        pdf.setLineWidth(0.3)
-        pdf.rect(boxX, declY, boxWidth, declHeight)
-
-        // Texto de la declaración
-        let declTextY = declY + 3
-        lineasDeclaracion.forEach((linea) => {
-        pdf.text(linea, boxX + 2, declTextY)
-        declTextY += 3
-        })
-
-        y = declY + declHeight + 4
-
-
-        // ========== MIS DATOS PERSONALES ==========
-        checkPageBreak(100)
-        drawSectionTitle("MIS DATOS PERSONALES", y)
-        y += 7
-
-        let fieldY = y
-        const col1W = boxWidth * 0.88  // 88% para los campos
-        const col2W = boxWidth * 0.12  // 12% para la foto (mucho más delgada)
-
-        // Solo el campo "Nombres y Apellidos" en la primera fila
-        drawField("Nombres y Apellidos", nombres, boxX, col1W, fieldY, 6, 0.25)
-
-        // Recuadro de foto - SE EXTIENDE HASTA LA FILA DE SISTEMA PREVISIONAL
-        // La foto tiene 6 filas de altura (desde Nombres hasta Sistema Previsional inclusive)
-        const fotoHeight = 6 * 6 // 6 filas × 6mm cada una
-        pdf.setFillColor(245, 245, 245)
-        pdf.rect(boxX + col1W, fieldY, col2W, fotoHeight, "F")
-        pdf.setDrawColor(...colors.borderColor)
-        pdf.setLineWidth(0.2)
-        pdf.rect(boxX + col1W, fieldY, col2W, fotoHeight)
-
-        const fotoInput = document.getElementById("foto")
-        if (fotoInput && fotoInput.files && fotoInput.files[0]) {
-            const reader = new FileReader()
-            reader.onload = (e) => {
-            try {
-                pdf.addImage(e.target.result, "JPEG", boxX + col1W + 0.5, fieldY + 0.5, col2W - 1, fotoHeight - 1)
-            } catch (err) {
-                console.log("Error al agregar foto:", err)
-            }
-            }
-            reader.readAsDataURL(fotoInput.files[0])
-        } else {
-            pdf.setFontSize(8)
-            pdf.setTextColor(120)
-            pdf.setFont(undefined, "bold")
-            pdf.text("FOTO", boxX + col1W + col2W / 2, fieldY + fotoHeight / 2, { align: "center" })
-        }
-
-        y += 6
-
-        // FILA 2: DNI, Caduca, Estado Civil, Sexo
-        fieldY = y
-        const col1 = col1W * 0.25
-        const col2 = col1W * 0.25
-        const col3 = col1W * 0.25
-        const col4 = col1W * 0.25
-
-        drawFieldsInRow(
-            [
-            { label: "DNI", value: dni, width: col1, labelRatio: 0.25 },
-            { label: "Caduca", value: formatDateToDMY(document.getElementById("caduca")?.value), width: col2 },
-            { label: "Estado Civil", value: document.getElementById("estado_civil")?.value || "", width: col3, labelRatio: 0.45 },
-            { label: "Sexo", value: document.getElementById("sexo")?.value || "", width: col4 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 3: Fecha Nacimiento, Ciudad, Sabe nadar
-        fieldY = y
-        const col1_3 = col1W * 0.3375
-        const col2_3 = col1W * 0.275
-        const col3_3 = col1W * 0.3875
-
-        drawFieldsInRow(
-            [
-            { label: "Fecha Nacimiento", value: formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), width: col1_3, labelRatio: 0.50 },
-            { label: "Ciudad", value: document.getElementById("ciudad")?.value || "", width: col2_3 },
-            { label: "Sabe nadar", value: document.getElementById("sabe_nadar")?.value || "", width: col3_3, labelRatio: 0.58 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 4: Tipo Sangre, Peso, Talla, Celular
-        fieldY = y
-        drawFieldsInRow(
-            [
-            { label: "Tipo Sangre", value: document.getElementById("tipo_sangre")?.value || "", width: col1, labelRatio: 0.6750 },
-            { label: "Peso (Kg.)", value: document.getElementById("peso")?.value || "", width: col2 },
-            { label: "Talla (Mt.)", value: document.getElementById("talla")?.value || "", width: col3, labelRatio: 0.45 },
-            { label: "Celular", value: document.getElementById("celular")?.value || "", width: col4 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 5: Correo electrónico, WhatsApp
-        fieldY = y
-        const col1_2 = col1W * 0.75
-        const col2_2 = col1W * 0.25
-
-        drawFieldsInRow(
-            [
-            { label: "Correo electrónico", value: document.getElementById("correo")?.value || "", width: col1_2, labelRatio: 0.225 },
-            { label: "WhatsApp", value: document.getElementById("whatsapp")?.value || "", width: col2_2, labelRatio: 0.35 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 6: Sistema Previsional, ESSALUD, Vida, Pensionista (última fila con foto)
-        fieldY = y
-        drawFieldsInRow(
-            [
-            { label: "Sistema Previsional", value: document.getElementById("sistema_previsional")?.value || "", width: col1W * 0.50, labelRatio: 0.3375 },
-            { label: "ESSALUD Vida", value: document.getElementById("essalud")?.value || "", width: col1W * 0.25, labelRatio: 0.45 },
-            { label: "Pensionista", value: document.getElementById("pensionista")?.value || "", width: col1W * 0.25, labelRatio: 0.35 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // AHORA SÍ CONTINÚAN LAS FILAS COMPLETAS (sin foto al costado)
-        // FILA 7: Grado de instrucción, Institución, Carrera, Año de egreso
-        fieldY = y
-        const fullCol1 = boxWidth * 0.25
-        const fullCol2 = boxWidth * 0.25
-        const fullCol3 = boxWidth * 0.32
-        const fullCol4 = boxWidth * 0.18  // Ancho normal, no tan delgado
-
-        drawFieldsInRow(
-            [
-            { label: "Grado de instrucción", value: document.getElementById("grado_instruccion")?.value || "", width: fullCol1, labelRatio: 0.5950 },
-            { label: "Institución", value: document.getElementById("institucion")?.value || "", width: fullCol2, labelRatio: 0.42 },
-            { label: "Carrera", value: document.getElementById("carrera")?.value || "", width: fullCol3, labelRatio: 0.28 },
-            { label: "Año de egreso", value: document.getElementById("anio_egreso")?.value || "", width: fullCol4, labelRatio: 0.52 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 8: Embargos, Consumo de sustancias
-        fieldY = y
-        const fullCol1_2 = boxWidth * 0.5
-        const fullCol2_2 = boxWidth * 0.5
-
-        drawFieldsInRow(
-            [
-            {
-                label: "Embargos en instituciones financieras",
-                value: document.getElementById("embargos")?.value || "",
-                width: fullCol1_2,
-                labelRatio: 0.60,
-            },
-            {
-                label: "Consumo de sustancias ilícitas",
-                value: document.getElementById("consumo_sustancias")?.value || "",
-                width: fullCol2_2,
-                labelRatio: 0.58,
-            },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 9: Dirección Actual, Dirección DNI
-        fieldY = y
-        drawFieldsInRow(
-            [
-            { label: "Dirección Actual", value: document.getElementById("direccion_actual")?.value || "", width: fullCol1_2, labelRatio: 0.30 },
-            { label: "Dirección DNI", value: document.getElementById("direccion_dni")?.value || "", width: fullCol2_2, labelRatio: 0.30 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 10: En caso de Emergencia llamar a
-        fieldY = y
-
-        drawFieldsInRow(
-            [
-            {
-                label: "En caso de Emergencia llamar a",
-                value: document.getElementById("contacto_emergencia")?.value || "",
-                width: boxWidth,
-                labelRatio: 0.30,
-            },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        // FILA 11: Número de celular, Parentesco
-        fieldY = y
-
-        drawFieldsInRow(
-            [
-            { label: "Número de celular", value: document.getElementById("celular_emergencia")?.value || "", width: boxWidth / 2, labelRatio: 0.45 },
-            { label: "Parentesco", value: document.getElementById("parentesco_emergencia")?.value || "", width: boxWidth / 2, labelRatio: 0.45 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 8
-
-        // ========== MIS DATOS LABORALES ==========
-        checkPageBreak(50)
-        drawSectionTitle("MIS DATOS LABORALES", y)
-        y += 7
-
-        fieldY = y
-        const fullCol1_3 = boxWidth * 0.30
-        const fullCol2_3 = boxWidth * 0.40
-        const fullCol3_3 = boxWidth * 0.30
-
-        drawFieldsInRow(
-            [
-            { label: "Curso SUCAMEC", value: document.getElementById("curso_sucamec")?.value || "", width: fullCol1_3, labelRatio: 0.50 },
-            { label: "S.M.O.", value: document.getElementById("smo")?.value || "", width: fullCol2_3, labelRatio: 0.25 },
-            { label: "Institución", value: document.getElementById("institucion_laboral")?.value || "", width: fullCol3_3, labelRatio: 0.40 },
-            ],
-            fieldY,
-            6,
-        )
-
-        y += 6
-
-        fieldY = y
-
-        let licenciaArmaRaw = document.getElementById("licencia_arma")?.value || "";
-        let licenciaArma = "";
-
-        if (licenciaArmaRaw) {
-            try {
-                const parsed = JSON.parse(licenciaArmaRaw);
-                if (Array.isArray(parsed)) {
-                    licenciaArma = parsed.map(item => item.value).join(", ");
-                } else {
-                    licenciaArma = parsed.value || licenciaArmaRaw;
+            // Helper: fitText (Tamaño estandarizado a 8)
+            function fitText(text, maxWidth, initialFontSize = 8, minFontSize = 6) {
+                pdf.setFontSize(initialFontSize)
+                let textWidth = pdf.getTextWidth(text)
+                let currentSize = initialFontSize
+                while (textWidth > maxWidth && currentSize > minFontSize) {
+                    currentSize -= 0.3
+                    pdf.setFontSize(currentSize)
+                    textWidth = pdf.getTextWidth(text)
                 }
-            } catch (err) {
-                licenciaArma = licenciaArmaRaw;
+                return currentSize
             }
-        }
 
-        drawFieldsInRow(
-            [
-            { label: "Licencia de Arma", value: licenciaArma, width: fullCol1_3, labelRatio: 0.50 },
-            { label: "Tipo", value: document.getElementById("tipo_arma")?.value || "", width: fullCol2_3, labelRatio: 0.25 },
-            { label: "Arma Propia", value: document.getElementById("arma_propia")?.value || "", width: fullCol3_3, labelRatio: 0.40 },
-            ],
-            fieldY,
-            6,
-        )
+            // Helper: Obtener texto de select sin "SELECCIONAR" o "SELECCIONE"
+            function getCleanSelectText(id) {
+                const el = document.getElementById(id);
+                if (!el) return "";
+                const text = el.options[el.selectedIndex]?.text || "";
+                const cleanText = text.toUpperCase();
+                if (cleanText.includes("SELECCIONAR") || cleanText.includes("SELECCIONE")) {
+                    return "";
+                }
+                return text;
+            }
 
-        y += 6
+            function drawField(label, value, x, width, fieldY, inputHeight = 6, labelRatio = 0.35, alignValue = "left", omitTop = false, omitRight = false) {
+                const labelWidth = width * labelRatio
+                const valueWidth = width * (1 - labelRatio)
+                const labelPadding = 1
+                const valStr = String(value || "").toUpperCase()
 
-        fieldY = y
-        const fullCol1_4 = boxWidth * 0.30
-        const fullCol2_4 = boxWidth * 0.20
-        const fullCol3_4 = boxWidth * 0.20
-        const fullCol4_4 = boxWidth * 0.30
-        
-        drawFieldsInRow(
-            [
-            { label: "N° Brevete", value: document.getElementById("brevete")?.value || "", width: fullCol1_4, labelRatio: 0.50 },
-            { label: "Clase", value: document.getElementById("clase_brevete")?.value || "", width: fullCol2_4, labelRatio: 0.50 },
-            { label: "Tipo", value: document.getElementById("tipo_vehiculo")?.value || "", width: fullCol3_4, labelRatio: 0.28 },
-            { label: "Vehículo Propio", value: document.getElementById("vehiculo_propio")?.value || "", width: fullCol4_4, labelRatio: 0.40 },
-            ],
-            fieldY,
-            6,
-        )
+                // 1) Fill areas (sin borde)
+                pdf.setFillColor(...colors.labelBg)
+                pdf.rect(x, fieldY, labelWidth, inputHeight, "F")
+                pdf.setFillColor(255, 255, 255)
+                pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight, "F")
 
-        y += 6
+                // 2) UN solo borde exterior + divisor interno
+                pdf.setDrawColor(...colors.borderColor)
+                pdf.setLineWidth(0.20)
+                // Borde exterior: solo lados necesarios
+                // Borde superior solo si omitTop no está activo
+                if (!omitTop) {
+                    pdf.line(x, fieldY, x + width, fieldY); // arriba
+                }
+                pdf.line(x, fieldY, x, fieldY + inputHeight); // izquierda
+                // Borde derecho solo si omitRight no está activo
+                if (!omitRight) {
+                    pdf.line(x + width, fieldY, x + width, fieldY + inputHeight); // derecha
+                }
+                pdf.line(x, fieldY + inputHeight, x + width, fieldY + inputHeight); // abajo
 
-        fieldY = y
-        drawFieldsInRow(
-            [
-            { label: "Empresa Anterior", value: document.getElementById("empresa_anterior")?.value || "", width: fullCol1_3, labelRatio: 0.50 },
-            { label: "Cargo", value: document.getElementById("cargo_anterior")?.value || "", width: fullCol2_3, labelRatio: 0.25 },
-            { label: "Duración", value: document.getElementById("duracion_anterior")?.value || "", width: fullCol3_3, labelRatio: 0.40 },
-            ],
-            fieldY,
-            6,
-        )
+                // Línea divisoria fina entre etiqueta gris y campo blanco
+                pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight);
 
-        y += 6
+                // Label text
+                pdf.setFont("helvetica", "normal")
+                pdf.setTextColor(...colors.labelText)
+                pdf.setFontSize(8)
+                const maxLabelW = labelWidth - 2
+                const labelTextWidth = pdf.getTextWidth(label)
+                if (labelTextWidth <= maxLabelW) {
+                    pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" })
+                } else {
+                    const labelLines = pdf.splitTextToSize(label, maxLabelW)
+                    const lblLineH = 8 * 0.3527 * 1.15
+                    const lblBlockH = labelLines.length * lblLineH
+                    const lblY = fieldY + (inputHeight - lblBlockH) / 2 + lblLineH
+                    pdf.text(labelLines, x + labelPadding, lblY, { align: "left", lineHeightFactor: 1.15 })
+                }
 
-        fieldY = y
-        drawFieldsInRow(
-            [
-            {
-                label: "Profesión u Ocupación Alterna",
-                value: document.getElementById("profesion_alterna")?.value || "",
-                width: boxWidth,
-                labelRatio: 0.25,
-            },
-            ],
-            fieldY,
-            6,
-        )
+                // Value text
+                pdf.setFont("helvetica", "normal")
+                pdf.setTextColor(...colors.inputText)
+                const maxValW = valueWidth - (alignValue === "center" ? 1 : 2)
+                const valFontSize = fitText(valStr, maxValW, 8, 6)
+                pdf.setFontSize(valFontSize)
+                const textY = fieldY + inputHeight / 2 + 1
+                const valX = alignValue === "center" ? x + labelWidth + valueWidth / 2 : x + labelWidth + 1
+                pdf.text(valStr, valX, textY, { maxWidth: maxValW, align: alignValue })
+            }
 
-        y += 8
+            function drawSectionTitle(title, yPos) {
+                pdf.setFillColor(...colors.sectionBg)
+                pdf.rect(boxX, yPos, boxWidth, 5, "F") // 5mm altura header
+                pdf.setDrawColor(...colors.borderColor)
+                pdf.setLineWidth(0.20)
+                pdf.rect(boxX, yPos, boxWidth, 5)
 
-        // ========== MIS DATOS FAMILIARES ==========
-        checkPageBreak(50)
-        drawSectionTitle("MIS DATOS FAMILIARES", y)
-        y += 7
+                pdf.setFontSize(8)
+                pdf.setFont("helvetica", "bold")
+                pdf.setTextColor(...colors.sectionText)
+                pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" })
+            }
 
-        // Encabezados de tabla
-        pdf.setFillColor(...colors.labelBg)
-        const colParentesco = boxWidth * 0.25
-        const colNombres = boxWidth * 0.5
-        const colFecha = boxWidth * 0.25
+            function formatDateToDMY(fecha) {
+                if (!fecha) return "";
+                if (fecha instanceof Date) {
+                    const y = fecha.getFullYear();
+                    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const d = String(fecha.getDate()).padStart(2, '0');
+                    return `${d}/${m}/${y}`;
+                }
+                const fechaStr = String(fecha);
+                if (!fechaStr.includes("-")) return fechaStr;
+                const partes = fechaStr.split("-");
+                return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : fechaStr;
+            }
 
-        pdf.rect(boxX, y, colParentesco, 5, "F")
-        pdf.rect(boxX + colParentesco, y, colNombres, 5, "F")
-        pdf.rect(boxX + colParentesco + colNombres, y, colFecha, 5, "F")
+            function checkPageBreak(heightNeeded) {
+                if (y + heightNeeded > pageHeight - marginBottom - 1) { // 1mm tolerancia
+                    pdf.addPage()
+                    y = marginTop
+                    return true
+                }
+                return false
+            }
 
-        pdf.setDrawColor(...colors.borderColor)
-        pdf.setLineWidth(0.2)
-        pdf.rect(boxX, y, colParentesco, 5)
-        pdf.rect(boxX + colParentesco, y, colNombres, 5)
-        pdf.rect(boxX + colParentesco + colNombres, y, colFecha, 5)
+            // ========== ENCABEZADO ==========
+            const headerH = 19 // Ajustado a 19mm (Seguridad 1 pag)
+            const logoW = 30   // 30mm logo
+            const codeW = 20   // 20mm RH 02 code
+            const titleW = boxWidth - logoW - codeW
 
-        pdf.setFontSize(6.5)
-        pdf.setFont(undefined, "bold")
-        pdf.setTextColor(...colors.labelText)
-        pdf.text("Parentesco", boxX + 1, y + 3.2)
-        pdf.text("Apellidos y Nombres", boxX + colParentesco + 1, y + 3.2)
-        pdf.text("Fecha Nacimiento", boxX + colParentesco + colNombres + 1, y + 3.2)
+            // Logo
+            await drawLogo(boxX, y, logoW, headerH)
 
-        y += 5
+            // Title
+            const titleX = boxX + logoW
 
-        // SIEMPRE 7 FILAS FIJAS
-        const familiaresContainer = document.getElementById("familyContainer")
-        const familiares = []
-        
-        if (familiaresContainer) {
-            const filas = familiaresContainer.querySelectorAll("[data-familia-row]")
-            filas.forEach((fila) => {
-            familiares.push({
-                parentesco: fila.querySelector('[name="parentesco[]"]')?.value || "",
-                apellidosNombres: fila.querySelector('[name="apellidosNombres[]"]')?.value || "",
-                fechaNacimiento: formatDateToDMY(
-                    fila.querySelector('[name="fechaNacimiento[]"]')?.value || ""
-                ),
-            })
-            })
-        }
+            pdf.setFontSize(10)
+            pdf.setTextColor(200, 0, 0)
+            pdf.setFont("helvetica", "bold")
+            pdf.text("SISTEMA INTEGRADO SOLMAR – SISOLMAR", titleX + titleW / 2, y + 6, { align: "center" })
 
-        // Rellenar hasta 7 filas
-        for (let i = 0; i < 7; i++) {
-            checkPageBreak(5)
+            pdf.setFontSize(14) // Aumentado significativamente
+            pdf.setTextColor(0, 0, 0)
+            pdf.text("DECLARACION JURADA DEL TRABAJADOR", titleX + titleW / 2, y + 13, { align: "center" })
 
-            const familiar = familiares[i] || { parentesco: "", apellidosNombres: "", fechaNacimiento: "" }
-
-            pdf.setFontSize(6.5)
-            pdf.setTextColor(...colors.inputText)
-            pdf.setFont(undefined, "normal")
-            pdf.setDrawColor(...colors.borderColor)
-            pdf.setLineWidth(0.2)
-
-            pdf.rect(boxX, y, colParentesco, 5)
-            pdf.text(familiar.parentesco, boxX + 1, y + 3.2)
-
-            pdf.rect(boxX + colParentesco, y, colNombres, 5)
-            pdf.text(familiar.apellidosNombres, boxX + colParentesco + 1, y + 3.2)
-
-            pdf.rect(boxX + colParentesco + colNombres, y, colFecha, 5)
-            pdf.text(familiar.fechaNacimiento, boxX + colParentesco + colNombres + 1, y + 3.2)
-
-            y += 5
-        }
-
-        y += 5
-
-        // ========== MI ACEPTACION DE LOS PROCEDIMIENTOS ==========
-        // NO hacer checkPageBreak aquí para que continúe en la misma página si hay espacio
-        if (y + 15 > pageHeight - marginBottom) {
-            pdf.addPage()
-            y = marginTop
-        }
-        
-        drawSectionTitle("MI ACEPTACION DE LOS PROCEDIMIENTOS DE LA EMPRESA", y)
-        y += 7
-
-        const procedimientos = [
-            {
-            numero: "1.",
-            titulo: "MI SISTEMA DE INFORMACION PERSONAL - SIP",
-            items: [
-                "Utilizaré la plataforma virtual personal SIP que la empresa me proporciona con usuario y clave.",
-                "Visitaré el SIP, las veces que sea necesario para recibir información relacionada con mis funciones, obligaciones y derechos.",
-                "La información en el SIP es de propiedad de mi empleador por lo que cuidaré de la confidencialidad de su contenido.",
-            ],
-            },
-            {
-            numero: "2.",
-            titulo: "MIS DECLARACIONES Y BOLETAS DE REMUNERACIONES",
-            items: [
-                "Apruebo que mi correo electrónico personal, sea utilizado por la empresa para declarar mis remuneraciones en el T-Registro de SUNAT.",
-                "Utilizaré el Sistema de Información Personal - SIP que me proporciona mi empleador con Usuario y Clave para recibir mis Boletas de Remuneraciones y firmar el Cargo de Recepción correspondiente.",
-            ],
-            },
-            {
-            numero: "3.",
-            titulo: "MIS CANALES DE COMUNICACIONES",
-            items: [
-                "Autorizo de manera libre y voluntaria a mi empleador para enviarme documentos e información vinculada a mi relación laboral, a través de mi correo electrónico y/o WhatsApp personales, siendo éstos, los medios de comunicación oficiales entre ambas partes.",
-                "Atenderé las llamadas que la empresa realice a mi teléfono celular personal para coordinaciones relacionadas al servicio, estando obligado a contestar estas llamadas o devolverlas en todos los casos.",
-            ],
-            },
-            {
-            numero: "4.",
-            titulo: "MI FIRMA Y HUELLA REGISTRADAS",
-            items: [
-                "Autorizo que mi firma y huella registradas, sean utilizadas para los reportes de procesos internos que me involucren.",
-                "Conozco y acepto que mi firma física en un formato o mi firma digital en el sistema, se utilicen en reportes de la empresa empleando mi firma manuscrita escaneada.",
-            ],
-            },
-            {
-            numero: "5.",
-            titulo: "MIS CAPACITACIONES",
-            items: [
-                "Acepto la modalidad de capacitación que la empresa ha establecido para el mejor cumplimiento de mis funciones.",
-                "Asistiré a las capacitaciones presenciales y virtuales registrando mi firma de manera física y electrónica respectivamente.",
-                "Cuando firme asistencia empleando los sistemas de capacitación virtuales, acepto que se consigne mi firma digital en los reportes correspondientes.",
-            ],
-            },
-        ]
-
-        procedimientos.forEach((seccion) => {
-            checkPageBreak(25)
-
-            // Título con fondo oscuro (como los títulos de sección)
-            pdf.setFillColor(...colors.sectionBg)
-            pdf.rect(boxX, y, boxWidth, 5, "F")
-            pdf.setDrawColor(...colors.borderColor)
-            pdf.setLineWidth(0.2)
-            pdf.rect(boxX, y, boxWidth, 5)
-
-            pdf.setFontSize(7)
-            pdf.setFont(undefined, "bold")
-            pdf.setTextColor(...colors.sectionText)
-            pdf.text(`${seccion.numero} ${seccion.titulo}`, boxX + 2, y + 3.5)
-            y += 5
-
-            // Items con letras a, b, c en recuadros blancos
-            pdf.setFont(undefined, "normal")
-            pdf.setTextColor(...colors.inputText)
-            
-            seccion.items.forEach((item, idx) => {
-            const letra = String.fromCharCode(97 + idx) // a, b, c...
-            const textoCompleto = `${letra}. ${item}`
-            const lineas = pdf.splitTextToSize(textoCompleto, boxWidth - 6)
-            
-            // Calcular altura necesaria para este item
-            const itemHeight = lineas.length * 2.8 + 1
-            checkPageBreak(itemHeight)
-            
-            // Recuadro blanco para el item
+            // Code RH 02
+            const codeX = titleX + titleW
             pdf.setFillColor(255, 255, 255)
-            pdf.rect(boxX, y, boxWidth, itemHeight, "F")
-            pdf.setDrawColor(...colors.borderColor)
-            pdf.setLineWidth(0.2)
-            pdf.rect(boxX, y, boxWidth, itemHeight)
-            
-            // Texto del item
-            let itemY = y + 2.8
-            lineas.forEach((linea, lineIdx) => {
-                const indent = lineIdx === 0 ? 2 : 4
-                pdf.text(linea, boxX + indent, itemY)
-                itemY += 2.8
+            pdf.rect(codeX, y, codeW, headerH, "F")
+
+            // UN solo borde exterior + divisores internos del header
+            pdf.setDrawColor(0); pdf.setLineWidth(0.2);
+            pdf.rect(boxX, y, boxWidth, headerH)
+            pdf.line(boxX + logoW, y, boxX + logoW, y + headerH)
+            pdf.line(codeX, y, codeX, y + headerH)
+            pdf.setFontSize(18) // "Aumentado"
+            pdf.setFont(undefined, "bold")
+            pdf.setTextColor(0)
+            pdf.text("RH 02", codeX + codeW / 2, y + 11, { align: "center" }) // Centered vertically approx
+
+            y += headerH // Eliminar espacio extra
+
+            // Declaración Texto (Dinámica con ajuste)
+            const nombres = (document.getElementById("nombres_apellidos")?.value || "").toUpperCase().trim()
+            const dni = document.getElementById("dni")?.value || "".trim()
+
+            pdf.setFontSize(8)
+            const lineHeight = 3.5
+            const maxWidth = boxWidth - 4
+            let currentX = boxX + 2
+            let currentY = y + 3.5
+
+            // Segmentos de texto
+            const segments = [
+                { text: "Yo, ", font: "normal" },
+                { text: nombres, font: "bold" },
+                { text: ", identificado con DNI ", font: "normal" },
+                { text: dni, font: "bold" },
+                { text: ", declaro bajo juramento que los datos personales, laborales y familiares que consigno en este documento son correctos, por lo que asumo la responsabilidad por su veracidad, cumplimiento y actualización, estando conforme con esta declaración jurada.", font: "normal" }
+            ]
+
+            // Calculo previo de altura (Simulacion)
+            // Para dibujar la caja primero, necesitamos saber cuantos renglones ocupa
+            let simX = 0
+            let simLines = 1
+            segments.forEach(seg => {
+                pdf.setFont(undefined, seg.font)
+                const words = seg.text.split(" ")
+                words.forEach((word, i) => {
+                    const wWidth = pdf.getTextWidth(word + " ")
+                    if (simX + wWidth > maxWidth) {
+                        simLines++
+                        simX = wWidth // Nueva linea empieza con esta palabra
+                    } else {
+                        simX += wWidth
+                    }
+                })
             })
-            
-            y += itemHeight
+
+            const declBoxH = (simLines * lineHeight) + 3
+
+            // Dibujar caja
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, boxWidth, declBoxH)
+
+            // Renderizado Real
+            currentX = boxX + 2
+            currentY = y + 3 // Ajuste inicial Y dentro de caja
+
+            segments.forEach(seg => {
+                pdf.setFont(undefined, seg.font)
+                // Si es un bloque largo (el ultimo), lo procesamos palabra por palabra para wrapping
+                // Si son los cortos (Yo, nombre, DNI), intentamos mantenerlos juntos si caben, o wrap palabra por palabra igual
+
+                // Logica unificada: Palabra por palabra
+                // Preservar espacios? split(" ") elimina espacios. Agregamos " " al dibujar.
+                // Para el nombre completo, quiza queramos mantenerlo junto? No necesariamente.
+
+                const words = seg.text.split(/\s+/) // Split por cualquier espacio
+
+                words.forEach((word, i) => {
+                    // Reconstruir espacio excepto ultimo
+                    const wordWithSpace = word + ((i < words.length - 1) || seg.text.endsWith(" ") ? " " : "")
+                    const wWidth = pdf.getTextWidth(wordWithSpace)
+
+                    if (currentX + wWidth > boxX + maxWidth + 2) {
+                        currentX = boxX + 2
+                        currentY += lineHeight
+                    }
+
+                    pdf.text(word, currentX, currentY)
+                    // Subrayado para datos (bold)
+                    // Subrayado para datos (bold) - ELIMINADO
+                    /*if (seg.font === "bold") {
+                        pdf.setLineWidth(0.1)
+                        pdf.line(currentX, currentY + 0.5, currentX + pdf.getTextWidth(word), currentY + 0.5)
+                    }*/
+
+                    currentX += wWidth
+                })
+
+                // Añadir espacio visual entre segmentos si el segmento original tenia espacio al final
+                // Ojo: split consume espacios.
+                // Solucion simple: siempre añadir espacio tras cada palabra, pero manejar puntuacion pegada.
+                // Mejor: split manual preservando delimitadores? Complejo.
+                // Aceptable: Agregar espacio siempre, el PDF lo soporta bien.
+                if (!seg.text.endsWith(" ") && !seg.text.startsWith(" ") && segments.indexOf(seg) < segments.length - 1) {
+                    currentX += 1 // Small gap manual? O check logic arriba
+                }
             })
 
-            y += 1
-        })
+            y += declBoxH
+
+            // ========== DATOS PERSONALES ==========
+            drawSectionTitle("MIS DATOS PERSONALES", y)
+            y += 5 // Corregido overlap (4->5)
+
+            const colMain = boxWidth - 35 // Foto mas ancha (35mm)
+            const colFoto = 35
+            const rowH = 6.0 // 6.0mm para optimizar espacio y entrar todo en una hoja
+
+            // Fila 1: Nombres
+            drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.25)
+
+            // Foto
+            const fotoH = rowH * 6 // 6 filas (Incluye Afiliacion)
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+            pdf.rect(boxX + colMain, y, colFoto, fotoH)
+            pdf.setFontSize(8); pdf.setFont(undefined, "normal"); pdf.setTextColor(150);
+            pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" })
+            y += rowH
+
+            // Fila 2: DNI...
+            const w1 = colMain / 4
+            drawField("DNI", dni, boxX, w1, y, rowH, 0.3)
+            drawField("Caduca", document.getElementById("caduca")?.value || "", boxX + w1, boxWidth * 0.381 - w1, y, rowH, 0.461)
+            drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
+            drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
+            y += rowH
+
+            // Fila 3: Fecha...
+            const w2 = colMain / 2
+            drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, boxWidth * 0.381, y, rowH, 0.394)
+            drawField("Ciudad", getCleanSelectText("provincia_actual"), boxX + boxWidth * 0.381, colMain - boxWidth * 0.381, y, rowH, 0.334)
+            y += rowH
+
+            // Fila 4: Tipo Sangre...
+            const w3 = colMain / 4
+            drawField("Tipo Sangre", document.getElementById("tipo_sangre")?.value || "", boxX, w3, y, rowH, 0.735)
+            drawField("Peso (Kg.)", document.getElementById("peso")?.value || "", boxX + w3, boxWidth * 0.381 - w3, y, rowH, 0.461)
+            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
+            drawField("Celular", document.getElementById("celular")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
+            y += rowH
+
+            // Fila 5: Correo...
+            const wMail = w3 * 3
+            const wWsp = w3
+            drawField("Correo electrónico", document.getElementById("correo")?.value || "", boxX, boxWidth * 0.6279, y, rowH, 0.239)
+            drawField("WhatsApp", document.getElementById("whatsapp")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
+            y += rowH
+
+            // Fila 6: Afiliacion Texto (Ajustado a colMain para dejar espacio a Foto)
+            // Etiqueta debe terminar alineada con fin de etiqueta Talla (Mt.)
+            const row6W = colMain
+            const row6LabelW = boxWidth * 0.5264 // Alineado con inicio de Carrera
+            const row6InputW = row6W - row6LabelW
+
+            pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
+            pdf.setFillColor(255); pdf.rect(boxX + row6LabelW, y, row6InputW, rowH, "F");
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+            // Dibujar solo el borde inferior, izquierdo y derecho, sin doble trazo
+            pdf.line(boxX, y, boxX + row6W, y); // borde superior
+            pdf.line(boxX, y, boxX, y + rowH); // borde izquierdo
+            pdf.line(boxX + row6W, y, boxX + row6W, y + rowH); // borde derecho
+            pdf.line(boxX, y + rowH, boxX + row6W, y + rowH); // borde inferior
+            pdf.line(boxX + row6LabelW, y, boxX + row6LabelW, y + rowH); // divisoria interna
+            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
+            pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 4)
+            y += rowH
+
+            // Fila 7: AFP/ONP
+            const sysPrev = document.getElementById("sistema_previsional")?.value || ""
+            const isAFP = sysPrev.includes("AFP")
+            const isONP = sysPrev.includes("ONP")
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.5264, y, rowH, 0.3875, "center")
+            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.441, "center")
+            y += rowH
+
+            // Fila 8: Educacion
+            // Helper para auto-ajuste de texto (Centrado y escalado)
+            const drawAutoFitField = (label, value, x, w, y, h, labelPct) => {
+                const labelW = w * labelPct
+                const valW = w - labelW
+
+                // 1) Fill areas (sin borde)
+                pdf.setFillColor(220) // Gris
+                pdf.rect(x, y, labelW, h, "F")
+                pdf.setFillColor(255)
+                pdf.rect(x + labelW, y, valW, h, "F")
+
+                // 2) UN solo borde exterior + divisor interno
+                pdf.setDrawColor(0)
+                pdf.setLineWidth(0.20)
+                pdf.rect(x, y, w, h)
+                pdf.line(x + labelW, y, x + labelW, y + h)
+
+                // Label — tamaño estandarizado 8
+                pdf.setFont(undefined, "normal")
+                pdf.setTextColor(0)
+                const lblFontSize = fitText(label, labelW - 2, 8, 6)
+                pdf.setFontSize(lblFontSize)
+                const maxLabelW = labelW - 2
+                const labelLines = pdf.splitTextToSize(label, maxLabelW)
+                const lblLineH = lblFontSize * 0.3527 * 1.15
+                const lblBlockH = labelLines.length * lblLineH
+                const lblY = labelLines.length === 1
+                    ? y + h / 2 + 1
+                    : y + (h - lblBlockH) / 2 + lblLineH
+                pdf.text(labelLines, x + labelW / 2, lblY, { align: "center", lineHeightFactor: 1.15 })
+                pdf.setFont(undefined, "normal")
+
+                if (!value) return
+
+                // Auto-fit: tamaño estandarizado 8
+                let fontSize = 8
+                pdf.setFontSize(fontSize)
+                const maxValW = valW - 2 // padding
+
+                while (pdf.getTextWidth(value) > maxValW && fontSize > 6) {
+                    fontSize -= 0.3
+                    pdf.setFontSize(fontSize)
+                }
+
+                // Si no cabe en 1 linea → multilinea capped a 2 lineas max
+                const MAX_LINES = 2
+                let lines = [value]
+
+                if (pdf.getTextWidth(value) > maxValW) {
+                    fontSize = 6
+                    pdf.setFontSize(fontSize)
+                    const allLines = pdf.splitTextToSize(value, maxValW)
+
+                    if (allLines.length <= MAX_LINES) {
+                        lines = allLines
+                    } else {
+                        // Truncar en linea 2 con "..."
+                        lines = allLines.slice(0, MAX_LINES)
+                        let last = lines[MAX_LINES - 1]
+                        while (pdf.getTextWidth(last + "...") > maxValW && last.length > 1) {
+                            last = last.slice(0, -1)
+                        }
+                        lines[MAX_LINES - 1] = last + "..."
+                    }
+                }
+
+                // Posicion segura dentro del cuadro
+                const textX = x + labelW + valW / 2
+                const textY = lines.length === 1
+                    ? y + h / 2 + 1   // centrado vertical 1 linea
+                    : y + 2           // top-aligned multilinea (2 lineas caben en 6.5mm)
+
+                pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 })
+            }
+
+            // Fila 8: Educacion - 4 columnas - Alineación con fila inferior (Embargos/BCP)
+            // Institución inicia donde termina el label de "Embargos en inst. financieras" (embW*0.60 = 22.5%)
+            const col1 = boxWidth * 0.285  // Grado de Instrucción (28.5% - alineado con fin label Embargos)
+            const col2 = boxWidth * 0.2414  // Institución - termina alineado con fin label BCP
+            const col3 = (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441) - col1 - col2  // Carrera: hasta fin label ONP
+            const col4 = boxWidth - (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441)       // Año de egreso: alineado fin label ONP
+
+            drawAutoFitField("Grado de Instrucción", getCleanSelectText("grado_instruccion"), boxX, col1, y, rowH, 0.526)
+            drawAutoFitField("Institución", getCleanSelectText("institucion"), boxX + col1, col2, y, rowH, 0.398)
+            drawAutoFitField("Carrera", getCleanSelectText("carrera"), boxX + col1 + col2, col3, y, rowH, 0.486)
+            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
+            y += rowH
+
+            // Fila 9: Embargos
+            const embW = boxWidth * 0.381      // Embargos: 38.1% (alineado con fin label Institución)
+            const interbankStart = col1 + col2 + col3 * 0.486  // Inicio INTERBANK alineado con fin de etiqueta gris de Carrera
+            const bcpW = interbankStart - embW
+            const bcpLabelRatio = ((wMail - embW) * 0.63) / bcpW  // Preserva posición exacta del label gris de BCP
+            const interbankW = boxWidth - interbankStart
+
+            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.75)
+            drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, bcpLabelRatio)
+            drawField("Cuenta sueldo INTERBANK", "", boxX + interbankStart, interbankW, y, rowH, 0.644)
+            y += rowH
+
+            // Fila 10: Direccion Actual
+            drawField("Dirección Actual", document.getElementById("direccion_actual")?.value || "", boxX, boxWidth, y, rowH, 0.15)
+            y += rowH
+
+            // Fila 11: Direccion DNI
+            drawField("Dirección DNI", document.getElementById("direccion_dni")?.value || "", boxX, boxWidth, y, rowH, 0.15)
+            y += rowH
+
+            // Fila 12: Emergencia 1
+            drawField("En caso de Emergencia llamar a", document.getElementById("contacto_emergencia")?.value || "", boxX, boxWidth, y, rowH, 0.286)
+            y += rowH
+
+            // Fila 13: Emergencia 2 - 50/50
+            const wCelEmergencia = boxWidth * 0.5264
+            const wParEmergencia = boxWidth * 0.4736
+            drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, wCelEmergencia, y, rowH, 0.403)
+            drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.25)
+            y += rowH
+            // ========== DATOS LABORALES ==========
+            checkPageBreak(5 * rowH + 5 + 3)
+            drawSectionTitle("MIS DATOS LABORALES", y)
+            y += 5 // Corregido overlap (4->5)
+
+            // Fila 1
+            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.5264, y, rowH, 0.475)
+            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4)
+            y += rowH
+
+            // Fila 2
+            drawField("Familiar en la Empresa", "", boxX, boxWidth * 0.25, y, rowH, 0.816)
+            drawField("Nombre Completo", "", boxX + boxWidth * 0.25, boxWidth * 0.46584, y, rowH, 0.3)
+            drawField("Parentesco", "", boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4)
+            y += rowH
+
+            // Fila 3: SMO...
+            const wLab3 = boxWidth / 6
+            drawField("SMO", document.getElementById("smo")?.value || "", boxX, wLab3, y, rowH, 0.4)
+            drawField("Institución", document.getElementById("institucion_laboral")?.value || "", boxX + wLab3 * 0.75, wLab3 * 1.25, y, rowH, 0.379)
+            drawField("Nº Brevete", document.getElementById("brevete")?.value || "", boxX + wLab3 * 1.85, wLab3 * 1.15, y, rowH, 0.522)
+            drawField("Clase", document.getElementById("clase_brevete")?.value || "", boxX + wLab3 * 3, wLab3, y, rowH, 0.4)
+            drawField("Tipo", "", boxX + wLab3 * 4, wLab3, y, rowH, 0.289)
+            drawField("Vehículo Propio", document.getElementById("vehiculo_propio")?.value || "", boxX + boxWidth * 0.755, boxWidth * 0.245, y, rowH, 0.52)
+            y += rowH
+
+            // Fila 4 - Duración alineada con inicio de Interbank (62.5%)
+            drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.40)
+            // El campo blanco de Cargo se extiende hasta el inicio de Duración
+            const cargoStart = boxX + wLab3 * 1.85;
+            const duracionStart = boxX + boxWidth * 0.71584;
+            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", cargoStart, duracionStart - cargoStart, y, rowH, 0.25)
+            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", duracionStart, boxWidth - (duracionStart - boxX), y, rowH, 0.25)
+            y += rowH
+
+            // Fila 5
+            drawField("Profesión u Ocupación Alterna 1", "", boxX, boxWidth / 2, y, rowH, 0.45)
+            drawField("Profesión u Ocupación Alterna 2", "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.45)
+            y += rowH
+
+            // ========== DATOS FAMILIARES ==========
+            checkPageBreak(40)
+            drawSectionTitle("MIS DATOS FAMILIARES", y)
+            y += 5 // Corregido overlap (4->5)
+
+            // Headers - Fecha Nacimiento más estrecha con texto en 2 líneas
+            const fmC1 = boxWidth * 0.15
+            const fmC2 = boxWidth * 0.70
+            const fmC3 = boxWidth * 0.15
+            const fmHeaderH = rowH * 1.3 // Altura extra para 2 líneas en header
+
+            // Fill headers (sin borde)
+            pdf.setFillColor(...colors.labelBg)
+            pdf.rect(boxX, y, fmC1, fmHeaderH, "F")
+            pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F")
+            pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F")
+            // UN solo borde exterior + divisores internos
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, fmHeaderH)
+            pdf.line(boxX + fmC1, y, boxX + fmC1, y + fmHeaderH)
+            pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH)
+            // Textos
+            pdf.setFontSize(8)
+            pdf.setFont(undefined, "normal")
+            pdf.text("Parentesco", boxX + fmC1 / 2, y + fmHeaderH / 2 + 1, { align: "center" })
+            pdf.text("Apellidos y Nombres", boxX + fmC1 + fmC2 / 2, y + fmHeaderH / 2 + 1, { align: "center" })
+            // Fecha Nacimiento en 2 líneas
+            const fnLines = pdf.splitTextToSize("Fecha Nacimiento", fmC3 - 4)
+            pdf.text(fnLines, boxX + fmC1 + fmC2 + fmC3 / 2, y + fmHeaderH / 2 - (fnLines.length > 1 ? 1.5 : 0) + 1, { align: "center" })
+            y += fmHeaderH
+
+            // Filas datos
+            const parentescos = document.getElementsByName("parentesco[]")
+            const nombresFam = document.getElementsByName("apellidosNombres[]")
+            const fechasFam = document.getElementsByName("fechaNacimiento[]")
+            const rowCount = Math.max(parentescos.length, 5)
+
+            for (let i = 0; i < rowCount; i++) {
+                checkPageBreak(rowH)
+                const par = parentescos[i]?.value || ""
+                const nom = nombresFam[i]?.value || ""
+                const fec = formatDateToDMY(fechasFam[i]?.value || "")
+
+                // UN solo borde exterior + divisores internos
+                pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+                pdf.rect(boxX, y, boxWidth, rowH)
+                pdf.line(boxX + fmC1, y, boxX + fmC1, y + rowH)
+                pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + rowH)
+                pdf.setTextColor(0)
+                pdf.text(par.toUpperCase(), boxX + 2, y + 3)
+                pdf.text(nom.toUpperCase(), boxX + fmC1 + 2, y + 3)
+                pdf.text(fec, boxX + fmC1 + fmC2 + 2, y + 3)
+                y += rowH
+            }
+            // ========== CONFORMIDAD ==========
+            checkPageBreak(60)
+            drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y)
+            y += 5 // Corregido overlap (4->5)
+
+            pdf.setFontSize(8)
+            pdf.setFont(undefined, "normal")
+            const confText = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento."
+
+            const confLines = pdf.splitTextToSize(confText, boxWidth - 4)
+
+            // Calculate height based on new font size and desired line height (3.5)
+            const confBoxH = confLines.length * 3.5 + 5 // Adjusted line height from 4 to 3.5
+            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, boxWidth, confBoxH)
+            pdf.text(confLines, boxX + 2, y + 4) // Ajuste Y+4
+            y += confBoxH
+
+            // Firmas
+            // Calcular espacio restante para firmas antes del pie de pagina
+            // pageHeight - marginBottom - rowH (footer) - y actual
+            const espacioDisponible = pageHeight - marginBottom - rowH - y - 2
+            const firmaH = Math.max(60, espacioDisponible) // Usar todo el espacio, minimo 60mm
+            const firmaW = boxWidth * 0.6;
+            const huellaW = boxWidth * 0.4;
+
+            pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, firmaH);
+            pdf.line(boxX + firmaW, y, boxX + firmaW, y + firmaH);
+
+            pdf.setFont(undefined, "bold");
+            pdf.setFontSize(8);
+
+            const footerY = y + firmaH - 5;
+            pdf.text("Firma Registrada", boxX + firmaW / 2, footerY, { align: "center" });
+            pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2, footerY + 2.5, { align: "center" });
+
+            pdf.text("Huella Registrada", boxX + firmaW + huellaW / 2, footerY, { align: "center" });
+            pdf.text("INDICE DERECHO", boxX + firmaW + huellaW / 2, footerY + 2.5, { align: "center" });
+
+            y += firmaH;
+
+            // Fila final fija (Footer Row)
+            const footerRowH = rowH
+            const fechaW = boxWidth * 0.25 // 25% para etiqueta Fecha
+            const fechaValW = boxWidth * 0.15 // 15% para valor Fecha
+            const nombreLabelStart = boxX + fechaW + fechaValW
+            const nombreLabelEnd = boxX + firmaW // Alineado con límite de firma
+
+            // 1) Fill areas
+            pdf.setFillColor(...colors.labelBg)
+            pdf.rect(boxX, y, fechaW, footerRowH, "F")
+            pdf.setFillColor(255)
+            pdf.rect(boxX + fechaW, y, fechaValW, footerRowH, "F")
+            pdf.setFillColor(...colors.labelBg)
+            pdf.rect(nombreLabelStart, y, nombreLabelEnd - nombreLabelStart, footerRowH, "F")
+            pdf.setFillColor(255)
+            pdf.rect(nombreLabelEnd, y, boxWidth - (nombreLabelEnd - boxX), footerRowH, "F")
+
+            // 2) Borde exterior y divisores
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, footerRowH)
+            pdf.line(boxX + fechaW, y, boxX + fechaW, y + footerRowH)
+            pdf.line(nombreLabelStart, y, nombreLabelStart, y + footerRowH)
+            pdf.line(nombreLabelEnd, y, nombreLabelEnd, y + footerRowH)
+
+            // 3) Textos
+            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
+            pdf.text("Fecha de la declaración", boxX + 2, y + 4)
+            pdf.text(formatDateToDMY(new Date()), boxX + fechaW + 2, y + 4)
+            pdf.text("Nombre", nombreLabelStart + 2, y + 4)
+            pdf.text(document.getElementById("trabajador")?.value || "", nombreLabelEnd + 2, y + 4)
+
+            y += footerRowH
 
 
-        // ========== MI CONFORMIDAD CON LA DECLARACION JURADA ==========
-        checkPageBreak(35)
 
-        y += 5
+            async function drawLogo(x, y, w, h) {
+                if (!window.logoUrl) {
+                    // Fallback
+                    pdf.setFontSize(8); pdf.setTextColor(0);
+                    pdf.setFont(undefined, "normal");
+                    pdf.text("SOLMAR", x + w / 2, y + h / 2, { align: "center" });
+                    return;
+                }
+                try {
+                    const response = await fetch(window.logoUrl);
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    await new Promise(resolve => {
+                        reader.onload = (e) => {
+                            pdf.addImage(e.target.result, "PNG", x + 1, y + 1, w - 2, h - 2);
+                            resolve();
+                        };
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) {
+                    console.error("error logo", e);
+                    pdf.text("SOLMAR", x + w / 2, y + h / 2, { align: "center" });
+                }
+            }
 
-        drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y)
-
-        y += 7
-
-        // Layout tipo tabla: 3 columnas en una fila grande
-        const rowYStart = y
-        const colTextoWidth = boxWidth * 0.58   // Columna 1: Texto + Fecha/Nombre
-        const colFirmaWidth = boxWidth * 0.21   // Columna 2: Firma
-        const colHuellaWidth = boxWidth * 0.21  // Columna 3: Huella
-        const rowHeight = 30  // Altura total de la fila
-
-        // ===== COLUMNA 1: TEXTO + FECHA + NOMBRE =====
-        const textoX = boxX
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(textoX, rowYStart, colTextoWidth, rowHeight, "F")
-        pdf.setDrawColor(...colors.borderColor)
-        pdf.setLineWidth(0.2)
-        pdf.rect(textoX, rowYStart, colTextoWidth, rowHeight)
-
-        // Texto principal
-        pdf.setFontSize(6.5)
-        pdf.setFont(undefined, "normal")
-        pdf.setTextColor(...colors.inputText)
-
-        const conformidadText =
-        "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento."
-        const lineasConformidad = pdf.splitTextToSize(conformidadText, colTextoWidth - 4)
-
-        let textoY = rowYStart + 3
-        lineasConformidad.forEach((linea) => {
-        pdf.text(linea, textoX + 2, textoY)
-        textoY += 2.8
-        })
-
-        // Subceldas para Fecha y Nombre (con bordes internos)
-        const subCeldaY = rowYStart + 18
-        const subCeldaHeight = 6
-
-        // Subcelta "Fecha de la declaración:"
-        pdf.setFillColor(240, 240, 240)
-        pdf.rect(textoX, subCeldaY, colTextoWidth, subCeldaHeight, "F")
-        pdf.setDrawColor(...colors.borderColor)
-        pdf.setLineWidth(0.2)
-        pdf.rect(textoX, subCeldaY, colTextoWidth, subCeldaHeight)
-
-        pdf.setFontSize(6.5)
-        pdf.setFont(undefined, "normal")
-        pdf.text("Fecha de la declaración:", textoX + 2, subCeldaY + 4)
-
-        // Subcelda "Nombre"
-        pdf.setFillColor(240, 240, 240)
-        pdf.rect(textoX, subCeldaY + subCeldaHeight, colTextoWidth, subCeldaHeight, "F")
-        pdf.rect(textoX, subCeldaY + subCeldaHeight, colTextoWidth, subCeldaHeight)
-
-        pdf.text("Nombre:", textoX + 2, subCeldaY + subCeldaHeight + 4)
-
-        // ===== COLUMNA 2: FIRMA REGISTRADA =====
-        const firmaX = textoX + colTextoWidth
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(firmaX, rowYStart, colFirmaWidth, rowHeight, "F")
-        pdf.rect(firmaX, rowYStart, colFirmaWidth, rowHeight)
-
-        pdf.setFontSize(7)
-        pdf.setFont(undefined, "bold")
-        pdf.setTextColor(...colors.labelText)
-        pdf.text("Firma Registrada", firmaX + colFirmaWidth / 2, rowYStart + 28, { align: "center" })
-
-        // ===== COLUMNA 3: HUELLA REGISTRADA =====
-        const huellaX = firmaX + colFirmaWidth
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(huellaX, rowYStart, colHuellaWidth, rowHeight, "F")
-        pdf.rect(huellaX, rowYStart, colHuellaWidth, rowHeight)
-
-        pdf.setFontSize(7)
-        pdf.setFont(undefined, "bold")
-        pdf.text("Huella Registrada", huellaX + colHuellaWidth / 2, rowYStart + 25, { align: "center" })
-        pdf.setFontSize(6)
-        pdf.setFont(undefined, "normal")
-        pdf.text("Indice Derecho", huellaX + colHuellaWidth / 2, rowYStart + 28, { align: "center" })
-
-        y = rowYStart + rowHeight + 2
-
-        const pdfUrl = pdf.output('bloburl')
-        window.open(pdfUrl, '_blank')
+            window.open(pdf.output('bloburl'), '_blank');
+        } catch (error) {
+            console.error("Error al generar PDF:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de PDF',
+                text: 'Hubo un error al generar el documento: ' + error.message,
+            });
+        }
     }
 
+    const form = document.getElementById('formDatos');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnGuardar = document.getElementById('btnGuardar');
+            if (btnGuardar) btnGuardar.disabled = true;
 
-    //-------------- GUARDAR EN BD --------------//
-    
-    document.getElementById("formDatos")?.addEventListener("submit", async function (e) {
-        e.preventDefault();
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                const payload = {
+                    ...data,
+                    parentesco: formData.getAll('parentesco[]'),
+                    apellidosNombres: formData.getAll('apellidosNombres[]'),
+                    fechaNacimiento: formData.getAll('fechaNacimiento[]')
+                };
 
-        try {
-            const btnGuardar = document.getElementById("btnGuardar");
-            btnGuardar.disabled = true;
-            btnGuardar.textContent = "Guardando...";
+                const response = await axios.post(`${VITE_URL_APP}/api/save-declaracion-jurada`, payload);
 
-            const form = e.target;
-            const formData = new FormData(form);
-
-            // if (familiares && Array.isArray(familiares)) {
-            //     formData.append("familiares", JSON.stringify(familiares));
-            // }
-
-            // if (tagifyLicencias) {
-            //     const licencias = tagifyLicencias.value.map(tag => tag.value);
-            //     formData.append("licencia_arma", JSON.stringify(licencias));
-            // }
-
-            const response = await axios.post(`${VITE_URL_APP}/api/save-declaracion-jurada`, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-
-            if (response.data.success) {
-                Swal.fire({
-                    icon: "success",
-                    title: "Guardado correctamente",
-                    text: "La declaración jurada se ha registrado.",
-                });
-
-                limpiarFormulario();
-
-            } else {
-                Swal.fire({
-                    icon: "warning",
-                    title: "Ocurrió un problema",
-                    text: response.data.message || "No se pudo guardar los datos.",
-                });
+                if (response.status === 200 || response.status === 201) {
+                    Swal.fire({ icon: 'success', title: 'Éxito', text: 'La Declaración Jurada se guardó correctamente.' });
+                    getPersonal();
+                }
+            } catch (error) {
+                console.error("Error al guardar DJ:", error);
+                let msg = 'Hubo un error al guardar los datos.';
+                if (error.response && error.response.data && error.response.data.errors) {
+                    msg = Object.values(error.response.data.errors).flat().join('<br>');
+                }
+                Swal.fire({ icon: 'error', title: 'Error', html: msg });
+            } finally {
+                if (btnGuardar) btnGuardar.disabled = false;
             }
-
-        } catch (error) {
-            console.error("Error al guardar:", error);
-            Swal.fire({
-                icon: "error",
-                title: "Error al guardar",
-                text: error.response?.data?.message || "Error de conexión con el servidor.",
-            });
-        } finally {
-            const btnGuardar = e.target.querySelector('button[type="submit"]');
-            btnGuardar.disabled = false;
-            btnGuardar.textContent = "Guardar";
-        }
-    });
-
-
+        });
+    }
 
 });
-
-

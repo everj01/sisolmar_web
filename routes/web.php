@@ -50,6 +50,11 @@ Route::middleware(['auth'])->group(function () {
        
      Route::get('/reporte/folios-por-vencer-cliente', [ReporteController::class, 'foliosPorVencerXCliente']);
 
+    Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
+    
+    // Vistas de consulta de capacitación
+    Route::get('/capacitacion/consulta-matriculas', [CapacitacionController::class, 'vistaConsultaMatriculas'])->name('capacitacion.consulta-matriculas');
+
     Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
         
     Route::group(['prefix' => '/', 'where' => ['first' => '^(?!api|\.well-known).*']], function () {

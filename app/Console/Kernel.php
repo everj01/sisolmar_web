@@ -23,6 +23,16 @@ class Kernel extends ConsoleKernel
                  ->onFailure(function () {
                      \Log::error('Error al ejecutar el comando de envío de alertas de caducidad.');
                  });
+
+        $schedule->command('capacitacion:clonar-vencidos')
+                 ->dailyAt('00:00')
+                 ->withoutOverlapping()
+                 ->onSuccess(function () {
+                     \Log::info('Comando de clonación de cursos ejecutado exitosamente.');
+                 })
+                 ->onFailure(function () {
+                     \Log::error('Error al ejecutar el comando de clonación de cursos.');
+                 });
     }
 
     /**

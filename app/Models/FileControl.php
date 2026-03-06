@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
 
 class FileControl extends Model
 {
@@ -15,58 +14,6 @@ class FileControl extends Model
     {
         $sucursal = 0;
         return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL ?', [$sucursal]);
-    }
-
-    public static function getPersonalTotal(Request $request)
-    {
-        $page = $request->get('page', 1);
-        $size = $request->get('size', 50);
-        $search = $request->get('search', null);
-        $tipo_per = $request->get('tipo_per', null);
-        $vigencia = $request->get('vigencia', null);
-        $codSucursal = $request->get('codSucursal', '0');
-
-        // SP de datos
-        $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?', [
-            $codSucursal, $page, $size, $search, $tipo_per, $vigencia
-        ]);
-
-        // SP de total
-        $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia
-        ])[0]->total;
-
-        return response()->json([
-            'data' => $data,
-            'last_page' => ceil($total / $size),
-            'total' => (int) $total,
-        ]);
-    }
-
-    public static function getPersonalTotalPrueba(Request $request)
-    {
-        $page = $request->get('page', 1);
-        $size = $request->get('size', 50);
-        $search = $request->get('search', null);
-        $tipo_per = $request->get('tipo_per', null);
-        $vigencia = $request->get('vigencia', null);
-        $codSucursal = $request->get('codSucursal', '0');
-
-        // SP de datos
-        $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_PRUEBA ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia
-        ]);
-
-        // SP de total
-        $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia
-        ])[0]->total;
-
-        return response()->json([
-            'data' => $data,
-            'last_page' => ceil($total / $size),
-            'total' => (int) $total,
-        ]);
     }
 
     public static function getDocsXPersona($codPersonal = '1')
@@ -189,22 +136,38 @@ class FileControl extends Model
     }
     public static function disabledFolio($codigo)
     {
-        return DB::table('sw_folios')
+        $updated = DB::table('sw_folios')
             ->where('codigo', $codigo)
             ->update([
                 'habilitado' => 0,
                 'fecha_modificacion' => DB::raw('GETDATE()'),
             ]);
+
+        if ($updated) {
+            DB::table('sw_folio_encargado')
+                ->where('cod_folio', $codigo)
+                ->update(['habilitado' => 0]);
+        }
+
+        return $updated;
     }
 
     public static function activarFolio($codigo)
     {
-        return DB::table('sw_folios')
+        $updated = DB::table('sw_folios')
             ->where('codigo', $codigo)
             ->update([
                 'habilitado' => 1,
                 'fecha_modificacion' => DB::raw('GETDATE()'),
             ]);
+
+        if ($updated) {
+            DB::table('sw_folio_encargado')
+                ->where('cod_folio', $codigo)
+                ->update(['habilitado' => 1]);
+        }
+
+        return $updated;
     }
 
 
@@ -469,5 +432,10 @@ class FileControl extends Model
             ->where('habilitado', 1)
             ->get();
     }
-
+    public static function getRoles()
+    {
+        return DB::table('sw_roles')
+            ->where('habilitado', 1)
+            ->get();
+    }
 }

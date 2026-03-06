@@ -6,7 +6,7 @@
     @include('layouts.shared/head-css')
 </head>
 
-<body>
+<body class="bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
 
     <div class="wrapper">
 

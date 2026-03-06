@@ -87,6 +87,7 @@ Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::cl
 // Route::get('/get-cursos', [CapacitacionController::class, 'index']);
 // Route::get('/get-cursos/{op}', [CapacitacionController::class, 'index']);
 Route::get('/get-cursos/{op?}', [CapacitacionController::class, 'index']);
+Route::get('/cursos/alertas-vencimiento', [CapacitacionController::class, 'getAlertasVencimiento']);
 Route::get('/get-curso-id/{id}', [CapacitacionController::class, 'getCursoExamenXId']);
 Route::get('/get-programacion-id/{id}', [CapacitacionController::class, 'getProgramacionXId']);
 Route::get('/get-curso-programacion/{id}', [CapacitacionController::class, 'getCursoProgramacionXId']);
@@ -95,6 +96,7 @@ Route::post('/save-cursos', [CapacitacionController::class, 'saveCurso']);
 Route::post('/update-curso', [CapacitacionController::class, 'updateCurso']);
 
 Route::patch('/cursos/{codigo}/habilitado', [CapacitacionController::class, 'updateCursoHab']);
+Route::delete('/cursos/{codigo}', [CapacitacionController::class, 'destroyCurso']);
 
 Route::post('/save-programacion', [CapacitacionController::class, 'saveProgramacion']);
 Route::post('/update-programacion', [CapacitacionController::class, 'updateProgramacion']);
@@ -129,6 +131,15 @@ Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 
 
 // REPORTE FOLIOS PENDIENTES POR SUCURSAL
 Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
+
+// SUCURSALES POR CLIENTE
+Route::get('/sucursales-por-cliente', [ConsultaController::class, 'getSucursalesXCliente']);
+
+Route::get('/get-folios-vigentes', [ConsultaController::class, 'getFoliosVigentes']);
+Route::get('/get-folios-pendientes', [ConsultaController::class, 'getFoliosPendientes']);
+Route::get('/folios/proximos-vencer', [ConsultaController::class, 'getFoliosProximosVencer']);
+
+
 
 // REPORTE FOLIOS POR VENCER CON FILTROS
 Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);

@@ -9,7 +9,7 @@
 
 
 import 'dropzone/dist/dropzone-min'
-import './pages/nav-bar';
+
 import 'preline'
 import 'jquery'
 import 'simplebar'
@@ -17,9 +17,8 @@ import 'boxicons/css/boxicons.min.css'
 import Waves from 'node-waves'
 import Alpine from 'alpinejs'
 import DataTable from 'vanilla-datatables'
+import 'vanilla-datatables/dist/vanilla-dataTables.min.css'; // Import Styles
 import Swal from 'sweetalert2'
-import './functions/notifications'
-
 window.Alpine = Alpine
 Alpine.start()
 
@@ -147,11 +146,53 @@ class App {
         }
     }
 
+    // Dark Mode Toggle
+    initThemeToggle() {
+        const themeToggle = document.getElementById('theme-toggle');
+        const iconLight = document.getElementById('theme-icon-light');
+        const iconDark = document.getElementById('theme-icon-dark');
+
+        if (themeToggle && iconLight && iconDark) {
+            // Sincronizar iconos con el estado actual
+            const updateIcons = () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                    iconLight.classList.add('hidden');
+                    iconDark.classList.remove('hidden');
+                } else {
+                    iconLight.classList.remove('hidden');
+                    iconDark.classList.add('hidden');
+                }
+            };
+
+            // Inicializar iconos
+            updateIcons();
+
+            themeToggle.addEventListener('click', function () {
+                const html = document.documentElement;
+
+                if (html.classList.contains('dark')) {
+                    html.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    html.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+
+                updateIcons();
+            });
+        }
+    }
+
     init() {
         this.initComponents();
         this.initSidenav();
         this.initfullScreenListener();
+        this.initThemeToggle();
     }
 }
 
-new App().init();
+// Esperar a que el DOM esté listo antes de inicializar
+document.addEventListener('DOMContentLoaded', function () {
+    new App().init();
+});

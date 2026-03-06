@@ -5,15 +5,15 @@
 @layer components {
 
     .card {
-        @apply relative rounded-lg bg-white flex flex-col break-words bg-clip-border h-fit border border-default-200;
+        @apply relative rounded-lg bg-white dark:bg-slate-800 flex flex-col break-words bg-clip-border h-fit border border-default-200 dark:border-slate-700 transition-colors duration-300;
 
 
         .card-header {
-            @apply py-3 px-6 border-b border-default-200;
+            @apply py-3 px-6 border-b border-default-200 dark:border-slate-700;
         }
 
         .card-footer {
-            @apply py-3 px-6 border-t border-default-200;
+            @apply py-3 px-6 border-t border-default-200 dark:border-slate-700;
         }
 
         .card-body {
@@ -22,6 +22,6 @@
     }
 
     .card-title {
-        @apply text-base font-semibold text-default-800;
+        @apply text-base font-semibold text-default-800 dark:text-slate-100;
     }
 }
