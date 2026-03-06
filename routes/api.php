@@ -87,6 +87,7 @@ Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::cl
 // Route::get('/get-cursos', [CapacitacionController::class, 'index']);
 // Route::get('/get-cursos/{op}', [CapacitacionController::class, 'index']);
 Route::get('/get-cursos/{op?}', [CapacitacionController::class, 'index']);
+Route::get('/cursos/alertas-vencimiento', [CapacitacionController::class, 'getAlertasVencimiento']);
 Route::get('/get-curso-id/{id}', [CapacitacionController::class, 'getCursoExamenXId']);
 Route::get('/get-programacion-id/{id}', [CapacitacionController::class, 'getProgramacionXId']);
 Route::get('/get-curso-programacion/{id}', [CapacitacionController::class, 'getCursoProgramacionXId']);

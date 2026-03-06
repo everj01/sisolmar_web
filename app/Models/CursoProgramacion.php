@@ -22,6 +22,7 @@ class CursoProgramacion extends Model
         'fecha_final',
         'periodo',
         'tipo',
+        'estado_periodo',
         'creado_por',
         'fecha_creacion',
         'modificado_por',

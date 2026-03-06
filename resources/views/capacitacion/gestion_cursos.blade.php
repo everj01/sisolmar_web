@@ -4,6 +4,36 @@
 @section('content')
 @include("layouts.shared/page-title", ["subtitle" => "Capacitación", "title" => "Gestión de cursos"])
 
+<div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" style="display: none;" class="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm">
+    <div class="flex items-start">
+        <div class="flex-shrink-0 mt-0.5">
+            <i class="bx bxs-error-circle text-orange-500 text-xl"></i>
+        </div>
+        <div class="ml-3 w-full">
+            <h3 class="text-sm font-bold text-orange-800">
+                Atención: Renovación y Clonación de Cursos
+            </h3>
+            <div class="mt-2 text-sm text-orange-700">
+                <p>Ocurrirá una clonación y matriculación automática pronto para los siguientes cursos periódicos. Verifique el material docente si es necesario:</p>
+                <ul class="list-disc pl-5 mt-1 space-y-1">
+                    <template x-for="alerta in alertas" :key="alerta.codigo_curso">
+                        <li>
+                            <strong x-text="alerta.nombre"></strong> (Próxima ejecución en <span x-text="alerta.dias_restantes"></span> días el <span x-text="alerta.fecha_proxima_clonacion"></span>)
+                        </li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+        <div class="ml-auto pl-3">
+            <div class="-mx-1.5 -my-1.5">
+                <button type="button" @click="alertas = []" class="inline-flex rounded-md bg-orange-50 p-1.5 text-orange-500 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-600 focus:ring-offset-2 focus:ring-offset-orange-50">
+                    <span class="sr-only">Cerrar</span>
+                    <i class="bx bx-x text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full items-start">
     <div class="card">
@@ -22,7 +52,7 @@
                 x-init="$watch('tipos', val => console.log('⚡ Alpine: Types loaded:', val)); console.log('⚡ Alpine: Init types:', tipos)"
                 @tipo-curso-loaded.window="tipos = $event.detail; console.log('⚡ Alpine: Event caught, types updated')"
                 @update-filtro-area="filtroArea = $event.detail; console.log('⚡ Alpine: Area Updated:', $event.detail); listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso)"
-                class="flex flex-wrap items-end gap-6"
+                class="flex flex-wrap items-center justify-between gap-6"
             >
                 <div class="flex items-center">
                 <input 
@@ -37,26 +67,27 @@
                 </label>
                 </div>
 
-                <div class="flex flex-col flex-1 min-w-[200px]">
-                <label for="slcFiltroTipoCurso" class="text-sm font-medium text-gray-700 mb-1">
-                    Tipo de curso
-                </label>
-                <select 
-                    id="slcFiltroTipoCurso" 
-                    x-model="filtroTipoCurso"
-                    @change="filtroTipoCurso = $el.value; console.log('⚡ Alpine: Select Changed. New Value:', $el.value); listarCursos(soloEliminados ? 0 : 1, filtroArea, $el.value)"
-                    class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                >
-                    <option value="">-- Todos --</option>
-                    <template x-for="tipo in tipos" :key="tipo.codigo">
-                        <option :value="tipo.codigo" x-text="tipo.descripcion"></option>
-                    </template>
-                </select>
-                </div>
+                <div class="flex flex-wrap items-end gap-4 ml-auto flex-1 justify-end">
+                    <div class="flex flex-col min-w-[200px]">
+                    <label for="slcFiltroTipoCurso" class="text-sm font-medium text-gray-700 mb-1">
+                        Plan de Capacitación
+                    </label>
+                    <select 
+                        id="slcFiltroTipoCurso" 
+                        x-model="filtroTipoCurso"
+                        @change="filtroTipoCurso = $el.value; console.log('⚡ Alpine: Select Changed. New Value:', $el.value); listarCursos(soloEliminados ? 0 : 1, filtroArea, $el.value)"
+                        class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    >
+                        <option value="">-- Todos --</option>
+                        <template x-for="tipo in tipos" :key="tipo.codigo">
+                            <option :value="tipo.codigo" x-text="tipo.descripcion"></option>
+                        </template>
+                    </select>
+                    </div>
 
-                <div 
-                    class="flex flex-col flex-1 min-w-[200px] max-w-full"
-                    x-data="{
+                    <div 
+                        class="flex flex-col min-w-[200px]"
+                        x-data="{
                         open: false,
                         search: '',
                         selected: null,
@@ -83,7 +114,7 @@
                     @areas-loaded.window="options = $event.detail"
                 >
                     <label class="text-sm font-medium text-gray-700 mb-1">
-                        Plan de capacitación
+                        Área del conocimiento
                     </label>
                     
                     <div class="relative">
@@ -154,6 +185,7 @@
                                 No se encontraron resultados
                             </div>
                         </div>
+                        </div>
                     </div>
                 </div>
 
@@ -164,10 +196,10 @@
                 <table id="tblCursos" class="datatable responsive-table w-full">
                 <thead>
                     <tr>
-                    <th>#</th>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Acciones</th>
+                    <th class="text-primary font-semibold">#</th>
+                    <th class="text-primary font-semibold">CÓDIGO</th>
+                    <th class="text-primary font-semibold">NOMBRE</th>
+                    <th class="text-primary font-semibold">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -196,24 +228,29 @@
                 <input type="hidden" name="codGestionEditar" x-model="codigo" id="codGestionEditar">
                 <input type="hidden" id="slcArea" x-model="area">
                 <div class="w-full mt-4">
-                    <h3 class="text-lg font-semibold text-default-700 text-center mb-1">Datos del curso</h3>
+                    <h3 class="text-lg font-semibold text-primary text-center mb-1">Datos del curso</h3>
                     <hr>
                 </div>
-                <div class="w-full grid gap-6 mt-4 lg:grid-cols-1 pb-8">
+                
+                <div class="w-full grid gap-4 mt-4 grid-cols-1 pb-6">
+                    
+                    <!-- Nombre Completo de Curso -->
                     <div>
-                        <label for="txtNombreCurso" class="text-gray-800 text-base font-medium inline-block mb-2">
+                        <label for="txtNombreCurso" class="text-gray-800 text-sm font-medium inline-block mb-1">
                         Nombre del curso
                         </label>
                         <input type="text" id="txtNombreCurso"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm "
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                         x-model="nombre" />
                     </div>
+
+                    <!-- Plan de Capacitación -->
                     <div>
-                        <label for="slcTipoCurso" class="text-gray-800 text-base font-medium inline-block mb-2">
-                        Tipo de Curso
+                        <label for="slcTipoCurso" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                        Plan de Capacitación
                         </label>
                         <select id="slcTipoCurso"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm "
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                         x-model="tipoCurso"
                         x-data="{ tipos: window.opcionesTipoCurso || [] }"
                         @tipo-curso-loaded.window="tipos = $event.detail"
@@ -225,43 +262,16 @@
                         </select>
                     </div>
 
-                    <!-- SELECTOR SUCURSALES (SOLO PAC) -->
-                    <div x-show="esPAC" x-transition>
-                        <label class="text-gray-800 text-base font-medium inline-block mb-2">
-                            Sucursales Asignadas <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mb-2">
-                            <input type="text" x-model="busquedaSucursal" placeholder="Buscar sucursal..." 
-                                class="w-full border border-gray-300 rounded px-3 py-1 text-xs focus:ring-primary focus:border-primary"
-                                @keydown.enter.prevent>
-                        </div>
-                        <div class="border border-gray-300 rounded p-3 overflow-y-auto bg-white custom-scrollbar" style="max-height: 160px;">
-                            <template x-for="suc in sucursalesFiltradas" :key="suc">
-                                <label class="flex items-center space-x-2 mb-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                    <input type="checkbox" :value="suc" x-model="sucursalesAsignadas" 
-                                        class="rounded border-gray-300 text-primary shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50">
-                                    <span class="text-sm text-gray-700" x-text="suc"></span>
-                                </label>
-                            </template>
-                            <div x-show="sucursalesFiltradas.length === 0" class="text-gray-500 text-sm text-center py-2">
-                                No se encontraron sucursales.
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Seleccione las sucursales donde este curso estará disponible.</p>
-                    </div>
-
+                    <!-- Área de Conocimiento -->
                     <div>
-                        <label class="text-gray-800 text-base font-medium inline-block mb-2">
-                        Plan de capacitación
+                        <label class="text-gray-800 text-sm font-medium inline-block mb-1">
+                        Área del conocimiento
                         </label>
                         
                         <div x-data="{
                             open: false,
                             searchTerm: '',
                             options: window.opcionesArea || [],
-                            init() {
-                                // Watch helper if needed
-                            },
                             get filteredOptions() {
                                 if (this.searchTerm === '') return this.options;
                                 return this.options.filter(option => 
@@ -274,7 +284,6 @@
                                 this.open = false;
                             },
                             init() {
-                                // Fix race condition: check if data already exists
                                 if (window.opcionesArea && window.opcionesArea.length > 0) {
                                     this.options = window.opcionesArea;
                                 }
@@ -288,183 +297,172 @@
                         @update-area="area = $event.detail"
                         class="relative w-full">
                             
-                            <!-- Trigger Input (Readonly) -->
+                            <!-- Trigger Input -->
                             <div @click="open = !open" @click.outside="open = false" class="relative">
                                 <input type="text" 
                                     :value="currentDescription" 
                                     placeholder="-- Seleccione Plan --" 
                                     readonly 
-                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm cursor-pointer bg-white pr-8 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm cursor-pointer bg-white pr-8"
                                 />
-                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
 
                             <!-- Dropdown -->
-                            <div x-show="open" 
-                                 x-transition:enter="transition ease-out duration-100"
-                                 x-transition:enter-start="transform opacity-0 scale-95"
-                                 x-transition:enter-end="transform opacity-100 scale-100"
-                                 x-transition:leave="transition ease-in duration-75"
-                                 x-transition:leave-start="transform opacity-100 scale-100"
-                                 x-transition:leave-end="transform opacity-0 scale-95"
-                                 class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto flex flex-col"
-                                 style="display: none;">
+                            <div x-show="open" style="display: none;"
+                                 x-transition.opacity
+                                 class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-48 flex flex-col overflow-hidden">
                                 
-                                <!-- Search Input inside Dropdown -->
-                                <div class="p-2 border-b border-gray-100 bg-gray-50">
-                                    <input type="text" 
-                                        x-model="searchTerm" 
-                                        class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-indigo-500" 
-                                        placeholder="Buscar..." 
-                                        @click.stop
-                                    />
+                                <div class="p-2 border-b border-gray-100 bg-gray-50/50">
+                                    <input type="text" x-model="searchTerm" 
+                                        class="w-full border border-gray-200 rounded shadow-sm px-3 py-1.5 text-sm outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400" 
+                                        placeholder="Buscar..." @click.stop />
                                 </div>
 
-                                <!-- Options List -->
-                                <div class="overflow-y-auto max-h-48 custom-scrollbar">
+                                <div class="overflow-y-auto max-h-40 custom-scrollbar">
                                     <template x-for="option in filteredOptions" :key="option.codigo">
                                         <div @click="selectOption(option)" 
-                                             class="px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer transition-colors duration-150"
-                                             :class="{ 'bg-indigo-100 text-indigo-800 font-medium': area == option.codigo }">
+                                             class="px-4 py-2 text-sm text-gray-600 hover:bg-sky-50 hover:text-sky-700 cursor-pointer transition-colors"
+                                             :class="{ 'bg-sky-100/50 text-sky-800 font-semibold': area == option.codigo }">
                                             <span x-text="option.descripcion"></span>
                                         </div>
                                     </template>
-                                    <div x-show="filteredOptions.length === 0" class="px-4 py-3 text-sm text-gray-500 text-center">
-                                        No se encontraron resultados
+                                    <div x-show="filteredOptions.length === 0" class="px-4 py-3 text-sm text-gray-400 text-center">
+                                        <i class="bx bx-search mb-1 text-lg"></i><br>Sin resultados
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Frecuencia -->
                     <div>
-                        <div class="flex items-center gap-2 mb-2">
-                             <input type="checkbox" id="chkPeriodicidad"
-                                x-model="activarPeriodicidad"
-                                @change="if(!activarPeriodicidad) { frecuencia = ''; mesInicio = ''; proyeccionAnios = 1; periodicidad = 0; }"
-                                class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2">
-                            <label for="chkPeriodicidad" class="text-gray-800 text-base font-medium select-none cursor-pointer">
-                            Activar Periodicidad
-                            </label>
-                        </div>
-
-                        <!-- Bloque de configuración de Periodicidad -->
-                        <div x-show="activarPeriodicidad" x-transition class="mt-3 p-4 border border-gray-200 rounded-lg bg-gray-50 flex flex-col gap-4">
-                            
-                            <!-- Select Frecuencia -->
-                            <div class="w-full">
-                                <label for="slcFrecuencia" class="text-gray-800 text-sm font-medium mb-1 block">Frecuencia</label>
-                                <select id="slcFrecuencia" x-model="frecuencia" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                                    <option value="">-- Seleccione Frecuencia --</option>
-                                    <option value="MENSUAL">Mensual</option>
-                                    <option value="BIMESTRAL">Bimestral</option>
-                                    <option value="TRIMESTRAL">Trimestral</option>
-                                    <option value="CUATRIMESTRAL">Cuatrimestral</option>
-                                    <option value="SEMESTRAL">Semestral</option>
-                                    <option value="ANUAL">Anual</option>
-                                    <option value="PERSONALIZADO">Personalizado (Manual)</option>
-                                </select>
-                            </div>
-
-                            <!-- Campos dinámicos para frecuencias estructuradas -->
-                            <template x-if="frecuencia && frecuencia !== 'PERSONALIZADO'">
-                                <div class="grid gap-4 lg:grid-cols-2 mt-2">
-                                    <div>
-                                        <label for="mesInicio" class="text-gray-800 text-sm font-medium mb-1 block">Mes de Inicio</label>
-                                        <input type="month" id="mesInicio" x-model="mesInicio" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                                    </div>
-                                    <div>
-                                        <label for="proyeccionAnios" class="text-gray-800 text-sm font-medium mb-1 block">Proyectar por (Años)</label>
-                                        <input type="number" id="proyeccionAnios" x-model="proyeccionAnios" min="1" max="10" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                                    </div>
-                                    <div class="col-span-1 lg:col-span-2">
-                                        <p class="text-xs text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100 italic">
-                                            <i class="fa-solid fa-info-circle mr-1"></i> Las programaciones se generarán automáticamente al guardar el curso.
-                                        </p>
-                                    </div>
-                                </div>
-                            </template>
-                            
-                            <!-- Mensaje para personalizado -->
-                            <template x-if="frecuencia === 'PERSONALIZADO'">
-                                <div class="w-full mt-2">
-                                     <p class="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 italic">
-                                        <i class="fa-solid fa-hand-pointer mr-1"></i> Deberá agregar manualmente las programaciones desde el panel tras guardar el curso.
-                                    </p>
-                                </div>
-                            </template>
-                        </div>
+                        <label for="slcFrecuencia" class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia</label>
+                        <select id="slcFrecuencia" x-model="frecuencia" 
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+                            <option value="">-- Seleccione Frecuencia --</option>
+                            <option value="MENSUAL">Mensual</option>
+                            <option value="BIMESTRAL">Bimestral</option>
+                            <option value="TRIMESTRAL">Trimestral</option>
+                            <option value="CUATRIMESTRAL">Cuatrimestral</option>
+                            <option value="SEMESTRAL">Semestral</option>
+                            <option value="ANUAL">Anual</option>
+                        </select>
                     </div>
+
+                    <!-- SELECTOR SUCURSALES (SOLO PAC) -->
+                    <div x-show="esPAC" x-transition class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
+                        <label class="text-indigo-800 text-sm font-bold tracking-wide inline-block mb-2">
+                            <i class="bx bx-buildings mr-1"></i> Sucursales Asignadas <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mb-3">
+                            <input type="text" x-model="busquedaSucursal" placeholder="Buscar sucursal por nombre..." 
+                                class="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 outline-none shadow-sm"
+                                @keydown.enter.prevent>
+                        </div>
+                        <div class="border border-indigo-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner" style="max-height: 160px;">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <template x-for="suc in sucursalesFiltradas" :key="suc">
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
+                                        <input type="checkbox" :value="suc" x-model="sucursalesAsignadas" 
+                                            class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-xs font-medium text-gray-700" x-text="suc"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            <div x-show="sucursalesFiltradas.length === 0" class="text-gray-400 text-sm text-center py-4">
+                                No se encontraron sucursales asociadas.
+                            </div>
+                        </div>
+                        <p class="text-xs text-indigo-500 mt-2 font-medium">Seleccione explícitamente las sucursales donde este curso estará activo.</p>
+                    </div>
+
                 </div>
-                <div class="w-full mt-8">
-                    <h3 class="text-lg font-semibold text-default-700 text-center mb-1">Datos del Examen</h3>
+                <div class="w-full mt-4">
+                    <h3 class="text-lg font-semibold text-primary text-center mb-1">Datos del Examen</h3>
                     <hr>
                 </div>
                     <!-- Campos Eliminados: Nombre del Examen y Descripción -->
-                <div class="w-full grid gap-6 mt-4 lg:grid-cols-1 pb-8">
+                <div class="w-full grid gap-4 mt-4 grid-cols-1 pb-2">
                     <div>
-                        <label for="txtLimite" class="text-gray-800 text-base font-medium inline-block mb-2">
+                        <label for="txtLimite" class="text-gray-800 text-sm font-medium inline-block mb-1">
                         Límite de tiempo (minutos)
                         </label>
                         <input type="number" id="txtLimite"
                         class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                         x-model="limiteTiempo"
+                         x-model="limiteTiempo" placeholder=""
                         />
                     </div>
                     <div>
-                        <label for="txtNota" class="text-gray-800 text-base font-medium inline-block mb-2">
+                        <label for="txtNota" class="text-gray-800 text-sm font-medium inline-block mb-1">
                         Nota mínima
                         </label>
                         <input type="number" id="txtNota"
                         class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                         x-model="nota"
+                         x-model="nota" placeholder=""
                         />
                     </div>
                     <div>
-                        <label for="txtIntentos" class="text-gray-800 text-base font-medium inline-block mb-2">
+                        <label for="txtIntentos" class="text-gray-800 text-sm font-medium inline-block mb-1">
                         Número de intentos
                         </label>
                         <input type="number" id="txtIntentos"
                         class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                        x-model="intentos"
+                        x-model="intentos" placeholder=""
+                        />
+                    </div>
+                    <div>
+                        <label for="txtCantidadPreguntas" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                        Cantidad De Preguntas
+                        </label>
+                        <input type="number" id="txtCantidadPreguntas"
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        x-model="cantidadPreguntas" placeholder=""
+                        />
+                    </div>
+                    <div>
+                        <label for="txtPreguntasBalotario" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                        Preguntas en el balotario
+                        </label>
+                        <input type="number" id="txtPreguntasBalotario"
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        x-model="preguntasBalotario" placeholder=""
                         />
                     </div>
                 </div>
 
                 <div class="flex flex-col py-5">
-                    <div class="mt-5">
+                    <div class="mt-2">
 
-                        <div class="flex items-center justify-between mb-3">
-                            <label for="txtNota" class="text-gray-800 text-base font-medium inline-block mb-2" id="txtTitleFile">
+                        <div class="flex items-center justify-between mb-4">
+                            <label for="txtNota" class="text-gray-800 text-sm font-medium inline-block" id="txtTitleFile">
                                 Subir Plantilla
                             </label>
-                            <a class="btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white cursor-pointer hidden"
+                            <a class="btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white cursor-pointer hidden text-xs px-3 py-1"
                             id="btnDownloadPlantilla">
                                 <i class='bx bxs-cloud-download'></i>&nbsp;Descargar plantilla
                             </a>
                         </div>
 
 
-                        <div class="mt-4">
+                        <div class="mt-2">
                             <!-- Botón para seleccionar archivo -->
                             <div id="btnSeleccionar"
-                                class="cursor-pointer p-12 flex justify-center bg-white border border-dashed border-default-300 rounded-xl">
+                                class="cursor-pointer py-8 px-4 flex justify-center bg-white border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-lg transition-colors">
 
                                 <div class="text-center">
-                                    <span class="inline-flex justify-center items-center size-16 bg-default-100 text-default-800 rounded-full cursor-pointer">
-                                        <i class="i-tabler-upload size-6 shrink-0"></i>
+                                    <span class="mx-auto flex justify-center items-center w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full cursor-pointer mb-3">
+                                        <i class="i-tabler-upload size-5 shrink-0"></i>
                                     </span>
-                                    <div class="mt-4 flex flex-wrap justify-center text-sm leading-6 text-default-600">
-                                        <span class="pe-1 font-medium text-default-800">
-                                            Arrastra tu archivo <b class="font-bold">.mbz</b> aquí o
-                                        </span>
-                                        <span class="bg-white font-semibold text-primary hover:text-primary-700 rounded-lg decoration-2 hover:underline">
+                                    <div class="flex flex-wrap justify-center text-sm leading-6 text-gray-500">
+                                        Arrastra tu archivo .mbz aquí o&nbsp;
+                                        <span class="font-semibold text-indigo-600 hover:text-indigo-500 cursor-pointer">
                                             SELECCIONAR
                                         </span>
                                     </div>
-                                    <p class="mt-1 text-xs text-default-400">Peso menor a 1MB.</p>
+                                    <p class="mt-1 text-xs text-gray-400">Peso menor a 1MB.</p>
                                 </div>
                             </div>
 
@@ -477,9 +475,9 @@
                             </div>
 
                             <!-- Botón analizar -->
-                            <div class="mt-4">
+                            <div class="mt-4 flex">
                                 <button id="btnAnalizar" type="button"
-                                    class="px-4 py-2 bg-primary text-white rounded hover:bg-primary-700 disabled:opacity-50"
+                                    class="px-5 py-2 btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white disabled:opacity-50 transition-colors cursor-pointer font-medium"
                                     disabled>
                                     Analizar Plantilla
                                 </button>
@@ -503,124 +501,7 @@
             </div>
         </div>
 
-        <!-- Panel de Programación Integrado -->
-        <div x-show="panel === 'programacion'" x-transition style="display: none;">
-            <div class="card-header flex items-center justify-between">
-                <h4 class="card-title">
-                    Programaciones para <span x-text="tituloProgramacion" class="text-primary font-bold"></span>
-                </h4>
-                <button @click="panel = 'registro'" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full p-2">
-                    <i class="i-tabler-x text-lg"></i>
-                </button>
-            </div>
-            <div class="card-body">
-                <div class="flex items-center justify-center gap-2" x-show="mostrarBotonRegistrarListado">
-                    <button type="button"
-                    class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white"
-                    onclick="window.abrirModalRegistro()">
-                    <i class='bx bx-plus'></i>&nbsp;Registrar Programación
-                    </button>
-                </div>
-                <div x-show="!mostrarBotonRegistrarListado" class="w-full text-center mb-4">
-                    <p class="text-sm text-gray-500 italic bg-gray-50 py-2 px-4 rounded-lg border border-gray-200 inline-block">
-                        <i class="fa-solid fa-lock text-gray-400 mr-1"></i> Programaciones autogeneradas. Registro manual deshabilitado.
-                    </p>
-                </div>
-                <div class="mt-5 overflow-y overflow-x">
-                    <table id="tblProgramacion" class="datatable responsive-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Código</th>
-                                <th>Periodos</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="mt-6 flex justify-center">
-                    <button @click="panel = 'registro'" class="btn border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-full">
-                         Volver al registro de cursos
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-    <!-- Modal de Registro de Programación (Movido dentro de content para asegurar renderizado) -->
-    <div id="modal-registro"
-        class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none">
-        <div class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg sm:w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded">
-            <div class="flex flex-col border border-default-200 shadow-sm rounded-lg pointer-events-auto">
-                <div class="flex justify-between items-center py-3 px-4 border-b border-default-200">
-                    <h3 class="text-lg font-medium text-default-900">Programación de Curso</h3>
-                    <button type="button" class="text-default-600 cursor-pointer" id="btn-modal-docs-close"
-                        data-hs-overlay="#modal-registro">
-                        <i class="i-tabler-x text-lg"></i>
-                    </button>
-                </div>
-                
-                <div class="card-body p-4" x-data="formProgramacionGestion()">
-                    <input type="hidden" name="codGestionEditar" x-model="codigo" id="codGestionEditarProg">
-                    <div class="w-full grid gap-4 lg:grid-cols-1 pb-4">
-                        <input type="hidden" id="codigoCursoInput" name="codigoCursoInput" x-model="codigoCurso">
-                        <div>
-                            <label for="nombreCurso" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                                Curso Seleccionado
-                            </label>
-                            <input type="text" id="nombreCurso"
-                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100"
-                                x-model="nombreCurso" readonly />
-                        </div>
 
-                        <div>
-                            <label for="tipoProgramacion" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                                Tipo de Programación
-                            </label>
-                            <select id="tipoProgramacion" x-model="tipo"
-                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                                <option value="REGULAR">Regular (Mes completo)</option>
-                                <option value="EXTEMPORANEO">Extemporáneo (Recuperación / Fuera de fecha)</option>
-                            </select>
-                        </div>
-
-                        <!-- Input de Periodo (Mes) - Solo visible en REGULAR -->
-                        <div x-show="tipo === 'REGULAR'">
-                            <label for="periodoInput" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                                Mes del Periodo
-                            </label>
-                            <input type="month" id="periodoInput"
-                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                                x-model="periodo" />
-                        </div>
-
-                        <!-- Fechas Inicio y Fin - Solo visibles en EXTEMPORANEO -->
-                        <div class="grid grid-cols-2 gap-4" x-show="tipo === 'EXTEMPORANEO'" x-transition>
-                            <div>
-                                <label class="text-gray-800 text-sm font-medium inline-block mb-1">Fecha Inicio</label>
-                                <input type="date" 
-                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-primary focus:border-primary" 
-                                    x-model="fechaInicio" />
-                            </div>
-                            <div>
-                                <label class="text-gray-800 text-sm font-medium inline-block mb-1">Fecha Fin</label>
-                                <input type="date" 
-                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-primary focus:border-primary" 
-                                    x-model="fechaFinal" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-center w-full pt-4">
-                        <button type="button" @click="submit()" id="btnGestionProgramacion"
-                        class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white px-8 py-2 font-medium">
-                            <i class="fa-solid fa-floppy-disk me-2"></i>Guardar Programación
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
 </div>
 

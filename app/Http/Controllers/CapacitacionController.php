@@ -1383,4 +1383,69 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function getAlertasVencimiento()
+    {
+        try {
+            $hoy = \Carbon\Carbon::now()->startOfDay();
+            $limite = $hoy->copy()->addDays(15)->endOfDay();
+
+            // Usar JOIN explícito para garantizar compatibilidad con SQL Server al buscar cursos periódicos ($c->es_periodico = 1)
+            $programacionesVigentes = \DB::table('sw_cursos_programacion as cp')
+                ->join('sw_cursos as c', 'c.codigo', '=', 'cp.cod_cursos')
+                ->select('cp.*', 'c.codigo_curso', 'c.nombre as curso_nombre', 'c.frecuencia', 'c.es_periodico')
+                ->where('cp.habilitado', 1)
+                ->where('cp.estado_periodo', 'VIGENTE')
+                ->where('c.habilitado', 1)
+                ->where('c.es_periodico', 1)
+                ->get();
+
+            $alertas = [];
+
+            foreach ($programacionesVigentes as $programacion) {
+                if (empty($programacion->frecuencia)) {
+                    continue;
+                }
+
+                $fechaInicioProgramacion = \Carbon\Carbon::parse($programacion->fecha_inicio)->startOfDay();
+                $fechaProximaClonacion = $fechaInicioProgramacion->copy();
+
+                // Quitar espacios extra en la base de datos SQL Server e identificar tipo
+                $frecuencia = trim(strtoupper($programacion->frecuencia));
+                switch ($frecuencia) {
+                    case 'MENSUAL': $fechaProximaClonacion->addMonth(); break;
+                    case 'BIMESTRAL': $fechaProximaClonacion->addMonths(2); break;
+                    case 'TRIMESTRAL': $fechaProximaClonacion->addMonths(3); break;
+                    case 'CUATRIMESTRAL': $fechaProximaClonacion->addMonths(4); break;
+                    case 'SEMESTRAL': $fechaProximaClonacion->addMonths(6); break;
+                    case 'ANUAL': $fechaProximaClonacion->addYear(); break;
+                    default: continue 2; // Salta al siguiente iterador del loop
+                }
+
+                // Condición ESTRICTA: fecha_proxima_clonacion BETWEEN hoy AND (hoy + 15 días)
+                // Se utiliza greaterThanOrEqualTo (>= hoy) y lessThanOrEqualTo (<= limite de 15 días)
+                if ($fechaProximaClonacion->greaterThanOrEqualTo($hoy) && $fechaProximaClonacion->lessThanOrEqualTo($limite)) {
+                    $diasRestantes = $hoy->diffInDays($fechaProximaClonacion, false);
+                    $alertas[] = [
+                        'codigo_curso' => $programacion->codigo_curso,
+                        'nombre' => $programacion->curso_nombre,
+                        'fecha_inicio_actual' => $fechaInicioProgramacion->format('Y-m-d'),
+                        'fecha_proxima_clonacion' => $fechaProximaClonacion->format('Y-m-d'),
+                        'dias_restantes' => ceil($diasRestantes)
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'alertas' => $alertas,
+                'total' => count($alertas)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en getAlertasVencimiento: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Error al obtener alertas de cursos'], 500);
+        }
+    }
 }

@@ -860,10 +860,7 @@ function configurarEventos() {
     document.getElementById('btnExportarExcel').addEventListener('click', () => {
         if (tabulatorMatriculas && cursoSeleccionado) {
             tabulatorMatriculas.download("xlsx", `matriculas_${cursoSeleccionado.codigo_curso}.xlsx`, {
-                sheetName: "Matrículas",
-                documentProcessing: function (workbook) {
-                    // ... (lógica de exportación existente)
-                }
+                sheetName: "Matrículas"
             });
         }
     });

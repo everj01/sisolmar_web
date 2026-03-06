@@ -3,6 +3,27 @@ import axios from "axios";
 import DataTable from "vanilla-datatables";
 
 let cursosData = [];
+window.alertasCursosData = [];
+
+window.alertasVencimientoCursos = function () {
+    return {
+        alertas: [],
+        async initAlertas() {
+            try {
+                const res = await axios.get(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`);
+                if (res.data && res.data.success) {
+                    this.alertas = res.data.alertas;
+                    window.alertasCursosData = this.alertas.map(a => a.codigo_curso);
+                    if (cursoTable) {
+                        renderTablaCursos(cursosData);
+                    }
+                }
+            } catch (e) {
+                console.error("Error cargando alertas de vencimiento:", e);
+            }
+        }
+    }
+}
 
 const archivoInput = document.getElementById("archivoInput");
 const btnSeleccionar = document.getElementById("btnSeleccionar");
@@ -76,47 +97,49 @@ if (btnAnalizar) {
                 return;
             }
 
-            // construir HTML agradable
             let actividadesHtml = "";
-            for (const [tipo, cantidad] of Object.entries(data.activityStats)) {
-                actividadesHtml += `
-              <div class="flex justify-between border-b py-1">
-                  <span class="capitalize">${tipo}</span>
-                  <span class="font-semibold">${cantidad}</span>
-              </div>
-          `;
-            }
 
             resumenPlantilla.innerHTML = `
-          <div class="bg-white shadow rounded-lg p-4 space-y-4">
-              <h3 class="text-lg font-bold text-gray-700">📘 Resumen de la Plantilla</h3>
-
-              <div>
-                  <p><span class="font-semibold">Nombre del curso:</span> ${data.courseName}</p>
-                  <p><span class="font-semibold">Código corto:</span> ${data.courseShortname}</p>
-                  <p><span class="font-semibold">Versión Moodle:</span> ${data.moodleVersion}</p>
-                  <p><span class="font-semibold">Fecha backup:</span> ${new Date(data.backupDate * 1000).toLocaleString()}</p>
+          <div class="bg-white border border-gray-100 shadow-sm rounded-xl p-6 mt-6">
+              <div class="flex items-center gap-2 mb-4">
+                  <div class="w-5 h-6 bg-blue-500 rounded-sm"></div>
+                  <h3 class="text-lg font-bold text-slate-500">Resumen de la Plantilla</h3>
               </div>
 
-              <div class="grid grid-cols-2 gap-4 text-center">
-                  <div class="bg-blue-50 rounded p-3">
-                      <p class="text-2xl font-bold text-blue-700">${data.totalSections}</p>
-                      <p class="text-gray-600">Secciones</p>
+              <div class="text-sm text-slate-500 leading-relaxed mb-6">
+                  <p><span class="font-bold">Nombre del curso:</span> ${data.courseName}</p>
+                  <p><span class="font-bold">Código corto:</span> ${data.courseShortname}</p>
+                  <p><span class="font-bold">Versión Moodle:</span> ${data.moodleVersion}</p>
+                  <p><span class="font-bold">Fecha backup:</span> ${new Date(data.backupDate * 1000).toLocaleString()}</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-8 text-center mb-8">
+                  <div>
+                      <p class="text-3xl font-bold text-blue-600 mb-1">${data.totalSections}</p>
+                      <p class="text-sm text-slate-500">Secciones</p>
                   </div>
-                  <div class="bg-green-50 rounded p-3">
-                      <p class="text-2xl font-bold text-green-700">${data.totalActivities}</p>
-                      <p class="text-gray-600">Actividades</p>
+                  <div>
+                      <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalActivities}</p>
+                      <p class="text-sm text-slate-500">Actividades</p>
                   </div>
-                  <div class="bg-purple-50 rounded p-3 col-span-2">
-                      <p class="text-2xl font-bold text-purple-700">${data.totalQuestions}</p>
-                      <p class="text-gray-600">Preguntas</p>
+                  <div class="col-span-2 mt-4">
+                      <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalQuestions}</p>
+                      <p class="text-sm text-slate-500">Preguntas</p>
                   </div>
               </div>
 
               <div>
-                  <h4 class="text-md font-semibold text-gray-700 mb-2">📊 Actividades por tipo</h4>
-                  <div class="bg-gray-50 rounded p-2">
-                      ${actividadesHtml}
+                  <div class="flex items-center gap-2 mb-3">
+                      <i class="bx bx-bar-chart-alt-2 text-slate-500 text-lg"></i>
+                      <h4 class="text-sm font-bold text-slate-500">Actividades por tipo</h4>
+                  </div>
+                  <div class="space-y-2 text-sm text-slate-500 mt-2">
+                      ${Object.entries(data.activityStats).map(([tipo, cantidad]) => `
+                          <div class="flex justify-between border-b border-gray-100 py-2">
+                              <span class="capitalize">${tipo}</span>
+                              <span class="font-bold text-slate-700">${cantidad}</span>
+                          </div>
+                      `).join('')}
                   </div>
               </div>
           </div>
@@ -150,13 +173,13 @@ function actualizarLista() {
     if (archivoSeleccionado) {
         const item = document.createElement("li");
         item.className =
-            "flex items-center justify-between bg-gray-100 p-2 rounded";
+            "flex items-center justify-between py-3";
 
         item.innerHTML = `
-            <span class="text-sm text-gray-800">${archivoSeleccionado.name}</span>
+            <span class="text-sm font-medium text-gray-500">${archivoSeleccionado.name}</span>
             <div class="flex items-center gap-x-2">
-                <button type="button" class="text-red-500 hover:text-red-700 text-xs" id="btnQuitar">
-                    <i class="i-tabler-trash size-4 shrink-0" style="margin-bottom: -4px;"></i> Quitar
+                <button type="button" class="text-red-500 hover:text-red-600 text-sm flex items-center font-medium transition-colors" id="btnQuitar">
+                    <i class="bx bx-trash mr-1 text-base"></i> Quitar
                 </button>
             </div>
         `;
@@ -343,36 +366,42 @@ function renderTablaCursos(data) {
             const tr = document.createElement("tr");
             tr.style.backgroundColor = curso.habilitado == '1' ? "" : '#fff1f1';
 
+            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(curso.codigoCurso)
+                ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
+                : '';
+
             tr.innerHTML = `
         <td>${index + 1}</td>
-         <td>${curso.codigoCurso}</td>
-        <td>${curso.nombre}</td>
+        <td>${curso.codigoCurso}</td>
+        <td class="text-primary font-medium">
+            <div class="flex items-center">
+                ${curso.nombre}${alertIcon}
+            </div>
+        </td>
         <td>
-            <button type="button" @click="gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-            class="me-2 btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white" title="Editar curso">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
+                    <i class="bx bxs-edit text-base"></i>
+                </button>
 
-            <button type="button" @click="activarPanelProgramacion('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}', '${curso.frecuencia || ''}')"
-            class="me-2 btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white" title="Ver programaciones">
-                <i class="bx bx-calendar-event"></i>
-            </button>
 
-            ${curso.habilitado == '1' ?
+                ${curso.habilitado == '1' ?
                     `<button type="button"  @click="gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white" title="Deshabilitar curso">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>`
+                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
+                        <i class="bx bx-trash text-base"></i>
+                    </button>`
                     :
                     `<button type="button"  @click="gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="me-2 btn rounded-full  bg-success/25 text-success hover:bg-success hover:text-white" title="Habilitar curso">
-                    <i class='bx bx-check' ></i>
-                </button>
-                <button type="button"  @click="gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white" title="Eliminar definitivamente de BD">
-                    <i class="fa-solid fa-trash"></i>
-                </button>`
+                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
+                        <i class='bx bx-check text-base'></i>
+                    </button>
+                    <button type="button"  @click="gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
+                        <i class="bx bx-trash text-base"></i>
+                    </button>`
                 }
+            </div>
         </td>
         `;
             tbody.appendChild(tr);
@@ -441,12 +470,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
                 alpineData.area = curso.area ?? "";
+                alpineData.frecuencia = curso.frecuencia ?? "";
 
-                // Nuevos campos de periodicidad estructurada
-                alpineData.activarPeriodicidad = (curso.es_periodico == 1);
-                alpineData.frecuencia = curso.frecuencia ?? '';
-                alpineData.proyeccionAnios = curso.proyeccion_anios ?? 1;
-                alpineData.mesInicio = '';
+
 
                 // Update PAC logic
                 const esPacCurso = curso.tipo_curso?.descripcion?.toUpperCase().includes('PAC') || false;
@@ -579,19 +605,9 @@ window.editarFormGestionCurso = (e) => {
     formData.append('tiempo', data.tiempo);
     formData.append('nota', data.nota);
     formData.append('intentos', data.intentos);
+    formData.append('frecuencia', alpineData.frecuencia);
 
-    // Nuevos campos de periodicidad edit
-    formData.append('es_periodico', alpineData.activarPeriodicidad ? 1 : 0);
-    if (alpineData.activarPeriodicidad) {
-        formData.append('frecuencia', alpineData.frecuencia);
-        formData.append('proyeccion_anios', alpineData.proyeccionAnios);
 
-        // Si hay una nueva fecha inicio proyectamos de cero y re-generamos
-        if (alpineData.frecuencia && alpineData.frecuencia !== 'PERSONALIZADO' && alpineData.mesInicio) {
-            const fechas = window.generarFechasProyectadas(alpineData.frecuencia, alpineData.mesInicio, alpineData.proyeccionAnios);
-            formData.append('fechas_generadas', JSON.stringify(fechas));
-        }
-    }
     //formData.append('archivo', archivoSeleccionado);
 
     // Append Sucursales (PAC) - Read from Alpine
@@ -686,15 +702,13 @@ window.formCursoGestion = function () {
         nombre: '',
         tipoCurso: '',
         area: '',
-        // Nueva Periodicidad estructurada
-        activarPeriodicidad: false,
         frecuencia: '',
-        mesInicio: '',
-        proyeccionAnios: 1,
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
         nota: '',
         intentos: '',
+        cantidadPreguntas: '',
+        preguntasBalotario: '',
         fechaActual: new Date().toISOString().split('T')[0],
 
         // Lógica PAC
@@ -741,13 +755,12 @@ window.formCursoGestion = function () {
             this.nombre = '';
             this.tipoCurso = '';
             this.area = '';
-            this.activarPeriodicidad = false;
             this.frecuencia = '';
-            this.mesInicio = '';
-            this.proyeccionAnios = 1;
             this.limiteTiempo = '0';
             this.nota = '0';
             this.intentos = '0';
+            this.cantidadPreguntas = '0';
+            this.preguntasBalotario = '0';
             this.esPAC = false;
             this.sucursalesAsignadas = [];
             this.busquedaSucursal = '';
@@ -790,18 +803,9 @@ window.formCursoGestion = function () {
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
             formData.append('area', this.area);
+            formData.append('frecuencia', this.frecuencia);
 
-            formData.append('es_periodico', this.activarPeriodicidad ? 1 : 0);
-            if (this.activarPeriodicidad) {
-                formData.append('frecuencia', this.frecuencia);
-                formData.append('proyeccion_anios', this.proyeccionAnios);
 
-                // Generar fechas estructuradas
-                if (this.frecuencia && this.frecuencia !== 'PERSONALIZADO' && this.mesInicio) {
-                    const fechas = window.generarFechasProyectadas(this.frecuencia, this.mesInicio, this.proyeccionAnios);
-                    formData.append('fechas_generadas', JSON.stringify(fechas));
-                }
-            }
 
             // Removed: nombre_exa, descripcion
             formData.append('tiempo', this.limiteTiempo);
@@ -828,8 +832,7 @@ window.formCursoGestion = function () {
                             nombre: "",
                             tipoCurso: "",
                             area: "",
-                            periodicidad: 0,
-                            activarPeriodicidad: false,
+                            frecuencia: "",
                             limiteTiempo: 0,
                             nota: 0,
                             intentos: 0
@@ -988,20 +991,19 @@ window.listarProgramaciones = async function (codigoCurso) {
 
                 html += `
                     <tr class="${trClass}">
-                        <td class="${textCol}">${i + 1}</td>
                         <td class="${textCol}">${prog.codigo}</td>
                         <td class="text-sm font-medium ${textCol}">${fInicio} - ${fFin} ${badge}</td>
                         <td>
-                            <div class="flex justify-center gap-2">
-                                <button class="btn btn-sm rounded-full bg-info/25 text-info hover:bg-info hover:text-white transition-colors duration-200" 
+                            <div class="flex justify-center gap-3">
+                                <button class="btn btn-sm rounded-full bg-info/25 text-info hover:bg-info hover:text-white transition-colors duration-200 shadow-sm" 
                                     onclick="editarProgramacion('${prog.codigo}', '${prog.tipo}', '${prog.periodo}', '${prog.fecha_inicio}', '${prog.fecha_final}')"
                                     title="Editar">
-                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <i class="bx bx-edit text-base"></i>
                                 </button>
-                                <button class="btn btn-sm rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white transition-colors duration-200" 
+                                <button class="btn btn-sm rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white transition-colors duration-200 shadow-sm" 
                                     onclick="eliminarProgramacion('${prog.codigo}', '${codigoCurso}')"
                                     title="Eliminar">
-                                    <i class="fa-solid fa-trash-can"></i>
+                                    <i class="bx bx-trash text-base"></i>
                                 </button>
                             </div>
                         </td>
@@ -1009,7 +1011,7 @@ window.listarProgramaciones = async function (codigoCurso) {
                 `;
             });
         } else {
-            html = '<tr><td colspan="4" class="text-center text-gray-500">No hay programaciones registradas</td></tr>';
+            html = '<tr><td colspan="3" class="text-center text-gray-500 py-4">No hay programaciones registradas</td></tr>';
         }
         tableBody.innerHTML = html;
 
