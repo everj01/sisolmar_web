@@ -2,28 +2,10 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import DataTable from "vanilla-datatables";
 
-let cursosData = [];
+window.cursosData = [];
 window.alertasCursosData = [];
 
-window.alertasVencimientoCursos = function () {
-    return {
-        alertas: [],
-        async initAlertas() {
-            try {
-                const res = await axios.get(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`);
-                if (res.data && res.data.success) {
-                    this.alertas = res.data.alertas;
-                    window.alertasCursosData = this.alertas.map(a => a.codigo_curso);
-                    if (cursoTable) {
-                        renderTablaCursos(cursosData);
-                    }
-                }
-            } catch (e) {
-                console.error("Error cargando alertas de vencimiento:", e);
-            }
-        }
-    }
-}
+// window.alertasVencimientoCursos inyectado vía Blade para evitar race conditions con Vite
 
 const archivoInput = document.getElementById("archivoInput");
 const btnSeleccionar = document.getElementById("btnSeleccionar");
@@ -217,8 +199,8 @@ window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '')
             params: { filtro_area: area, filtro_tipo: tipoCurso }
         });
 
-        cursosData = res.data;
-        renderTablaCursos(cursosData);
+        window.cursosData = res.data;
+        window.renderTablaCursos(window.cursosData);
     } catch (err) {
         console.error("Error al obtener cursos", err);
         Swal.fire("Error", "No se pudieron cargar los cursos", "error");
@@ -305,8 +287,8 @@ async function listarAreas(selectId = null, esFiltro = false) {
 async function listarCursosFiltro() {
     try {
         const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
-        cursosData = res.data
-        renderTablaCursos(cursosData)
+        window.cursosData = res.data
+        window.renderTablaCursos(window.cursosData)
     } catch (err) {
         console.error("Error al obtener cursos", err)
         Swal.fire("Error", "No se pudieron cargar los cursos", "error")
@@ -325,13 +307,13 @@ async function obtenerCursoXId(id) {
 }
 
 // Global variable to store DataTable instance
-let cursoTable = null;
+window.cursoTable = null;
 
-function renderTablaCursos(data) {
+window.renderTablaCursos = function (data) {
     // Destroy existing DataTable instance
-    if (cursoTable) {
-        cursoTable.destroy();
-        cursoTable = null;
+    if (window.cursoTable) {
+        window.cursoTable.destroy();
+        window.cursoTable = null;
     }
 
     const tblCursos = document.getElementById('tblCursos');
@@ -366,7 +348,7 @@ function renderTablaCursos(data) {
             const tr = document.createElement("tr");
             tr.style.backgroundColor = curso.habilitado == '1' ? "" : '#fff1f1';
 
-            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(curso.codigoCurso)
+            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso))
                 ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
                 : '';
 
@@ -387,7 +369,14 @@ function renderTablaCursos(data) {
 
 
                 ${curso.habilitado == '1' ?
-                    `<button type="button"  @click="gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    `<button type="button" 
+                        ${curso.tiene_vigente
+                        ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
+                        : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" @click="$dispatch('open-apertura-modal', { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' })"`}>
+                        <i class="bx bx-calendar-star text-base"></i>
+                    </button>
+                    
+                    <button type="button"  @click="gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
                         <i class="bx bx-trash text-base"></i>
                     </button>`
@@ -419,7 +408,7 @@ function renderTablaCursos(data) {
     container.appendChild(newTable);
 
     // Initialize DataTables on the completely fresh table
-    cursoTable = new DataTable(newTable, {
+    window.cursoTable = new DataTable(newTable, {
         perPage: 10,
         perPageSelect: [10, 15, 20, 25],
         searchable: true,
@@ -469,8 +458,13 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 // Sincronizar campos principales con Alpine
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
-                alpineData.area = curso.area ?? "";
+                alpineData.areaConocimiento = curso.area_conocimiento ?? "";
+                alpineData.area = alpineData.areaConocimiento;
                 alpineData.frecuencia = curso.frecuencia ?? "";
+                
+                // Responsable (NUEVO)
+                alpineData.codResponsable = curso.cod_responsable ?? "";
+                alpineData.nombreResponsable = curso.nombre_responsable ?? "";
 
 
 
@@ -479,7 +473,17 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.esPAC = esPacCurso;
                 alpineData.sucursalesAsignadas = curso.sucursales || [];
 
+                if (alpineData.tipoCurso == '6') {
+                    alpineData.clientesAsignados = curso.sucursales || [];
+                } else if (alpineData.tipoCurso == '7') {
+                    alpineData.areasAsignadas = curso.sucursales || [];
+                }
+
                 // Datos de Examen (Sincronizar con Alpine)
+                alpineData.aplicaEvaluacion = curso.aplica_evaluacion == 1; // 👈 NUEVO: Estado de evaluación
+                alpineData.obligatorioAlta = curso.obligatorio_alta == 1;   // 👈 NUEVO: Obligatorio al alta
+                alpineData.targetGroup = curso.target_group || 'TODOS';    // 👈 NUEVO: Grupo Objetivo
+
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
                 alpineData.nota = curso.examen?.nota_minima ?? 0;
                 alpineData.intentos = curso.examen?.intentos ?? 0;
@@ -589,32 +593,42 @@ window.editarFormGestionCurso = (e) => {
 
     const data = {
         codigo: document.getElementById('codGestionEditar').value,
-        nombre: document.getElementById('txtNombreCurso').value,
-        tipo_curso: document.getElementById('slcTipoCurso').value,
-        area: document.getElementById('slcArea').value,
-        tiempo: parseInt(document.getElementById('txtLimite').value) || 0,
-        nota: parseInt(document.getElementById('txtNota').value) || 0,
-        intentos: parseInt(document.getElementById('txtIntentos').value) || 0,
+        nombre: alpineData.nombre,
+        tipo_curso: alpineData.tipoCurso,
+        area_conocimiento: alpineData.areaConocimiento,
+        tiempo: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtLimite').value) || 0) : 0,
+        nota: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtNota').value) || 0) : 0,
+        intentos: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtIntentos').value) || 0) : 0,
     }
 
     const formData = new FormData();
     formData.append('codigo', data.codigo);
     formData.append('nombre', data.nombre);
     formData.append('tipo_curso', data.tipo_curso);
-    formData.append('area', data.area);
+    formData.append('area_conocimiento', data.area_conocimiento);
     formData.append('tiempo', data.tiempo);
     formData.append('nota', data.nota);
     formData.append('intentos', data.intentos);
     formData.append('frecuencia', alpineData.frecuencia);
+    formData.append('es_periodico', alpineData.frecuencia ? 1 : 0);
+    // NUEVO: Enviar estados de los checks
+    formData.append('aplica_evaluacion', alpineData.aplicaEvaluacion ? 1 : 0);
+    formData.append('obligatorio_alta', alpineData.obligatorioAlta ? 1 : 0);
+    formData.append('target_group', alpineData.targetGroup || 'TODOS');
+    formData.append('cod_responsable', alpineData.codResponsable);
 
 
     //formData.append('archivo', archivoSeleccionado);
 
-    // Append Sucursales (PAC) - Read from Alpine
+    // Append Sucursales (PAC / PCU / PCI) - Read from Alpine
     if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
-        alpineData.sucursalesAsignadas.forEach(suc => {
-            formData.append('sucursales_asignadas[]', suc);
-        });
+        alpineData.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
+    }
+    if (alpineData.tipoCurso == '6' && alpineData.clientesAsignados.length > 0) {
+        alpineData.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
+    }
+    if (alpineData.tipoCurso == '7' && alpineData.areasAsignadas.length > 0) {
+        alpineData.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
     }
 
     if (archivoSeleccionado) {
@@ -701,7 +715,9 @@ window.formCursoGestion = function () {
         codigo: '-1',
         nombre: '',
         tipoCurso: '',
-        area: '',
+        areaConocimiento: '',
+        area: '', // 👈 NUEVO: Evitar error "area is not defined"
+        areasEncargadas: [],
         frecuencia: '',
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
@@ -709,7 +725,15 @@ window.formCursoGestion = function () {
         intentos: '',
         cantidadPreguntas: '',
         preguntasBalotario: '',
+        targetGroup: 'TODOS',
         fechaActual: new Date().toISOString().split('T')[0],
+
+        tipoResponsable: 'ADMINISTRATIVO_5',
+        codResponsable: '',
+        nombreResponsable: '',
+
+        aplicaEvaluacion: true,   // 👈 NUEVO: Control visual de examen
+        obligatorioAlta: false,   // 👈 NUEVO: Regla de negocio para inducción
 
         // Lógica PAC
         esPAC: false,
@@ -725,6 +749,41 @@ window.formCursoGestion = function () {
             );
         },
 
+        clientesDisponibles: [],
+        clientesAsignados: [],
+        empresasDisponibles: [], // Sin uso actualmente para PCI (migrado a áreas)
+        areasAsignadas: [],
+        busquedaCliente: '',
+        busquedaEmpresa: '',
+        busquedaAreaPCI: '',
+        
+        get areasPCIFiltradas() {
+            if (!this.busquedaAreaPCI) return this.areasEncargadas;
+            const search = this.busquedaAreaPCI.toLowerCase();
+            return this.areasEncargadas.filter(ar => 
+                (ar.descripcion || '').toLowerCase().includes(search) || 
+                (ar.codigo || '').toLowerCase().includes(search)
+            );
+        },
+
+        get clientesFiltrados() {
+            if (!this.busquedaCliente) return this.clientesDisponibles;
+            const search = this.busquedaCliente.toLowerCase();
+            return this.clientesDisponibles.filter(clie => 
+                (clie.descripcion || '').toLowerCase().includes(search) || 
+                (clie.codigo || '').toLowerCase().includes(search)
+            );
+        },
+
+        get empresasFiltradas() {
+            if (!this.busquedaEmpresa) return this.empresasDisponibles;
+            const search = this.busquedaEmpresa.toLowerCase();
+            return this.empresasDisponibles.filter(emp => 
+                (emp.descripcion || '').toLowerCase().includes(search) || 
+                (emp.codigo || '').toLowerCase().includes(search)
+            );
+        },
+
         init() {
             // Cargar sucursales dinámicamente al iniciar
             axios.get(`${VITE_URL_APP}/api/get-sucursales`)
@@ -737,16 +796,39 @@ window.formCursoGestion = function () {
                 .catch(err => {
                     console.error("Error al cargar sucursales para gestión", err);
                 });
+
+            // Cargar áreas encargadas (AV_AREA)
+            axios.get(`${VITE_URL_APP}/api/get-areas-encargadas`)
+                .then(res => {
+                    this.areasEncargadas = res.data;
+                    window.dispatchEvent(new CustomEvent('areas-encargadas-loaded', { detail: res.data }));
+                })
+                .catch(err => {
+                    console.error("Error al cargar áreas encargadas", err);
+                });
+
+            // Cargar Clientes para PCU
+            axios.get(`${VITE_URL_APP}/api/get-clientes-pac`)
+                .then(res => {
+                    this.clientesDisponibles = res.data || [];
+                });
+
+            // Cargar Empresas para PCI
+            axios.get(`${VITE_URL_APP}/api/get-empresas`)
+                .then(res => {
+                    this.empresasDisponibles = res.data || [];
+                });
         },
 
         checkEsPAC() {
-            const select = document.getElementById('slcTipoCurso');
-            if (select && select.selectedIndex >= 0) {
-                const text = select.options[select.selectedIndex].text;
-                this.esPAC = text.includes('PAC');
-                if (!this.esPAC) {
-                    this.sucursalesAsignadas = [];
-                }
+            // Depurado: Esto funcionaba con el select, pero ahora preferimos checkEsPACByText para radios
+        },
+
+        checkEsPACByText(text) {
+            if (!text) return;
+            this.esPAC = text.toUpperCase().includes('PAC');
+            if (!this.esPAC) {
+                this.sucursalesAsignadas = [];
             }
         },
 
@@ -754,7 +836,11 @@ window.formCursoGestion = function () {
             this.codigo = '-1';
             this.nombre = '';
             this.tipoCurso = '';
+            this.areaConocimiento = '';
             this.area = '';
+            this.tipoResponsable = 'ADMINISTRATIVO_5';
+            this.codResponsable = '';
+            this.nombreResponsable = '';
             this.frecuencia = '';
             this.limiteTiempo = '0';
             this.nota = '0';
@@ -764,6 +850,15 @@ window.formCursoGestion = function () {
             this.esPAC = false;
             this.sucursalesAsignadas = [];
             this.busquedaSucursal = '';
+            this.clientesAsignados = [];
+            this.areasAsignadas = [];
+            this.busquedaCliente = '';
+            this.busquedaAreaPCI = '';
+            this.busquedaEmpresa = '';
+
+            this.aplicaEvaluacion = true;
+            this.obligatorioAlta = false;
+            this.targetGroup = 'TODOS';
 
             // Forzar limpieza de inputs de archivos y estados visuales
             const archivoInput = document.getElementById('archivoInput');
@@ -777,21 +872,43 @@ window.formCursoGestion = function () {
         registrar(e) {
             e?.preventDefault();
 
-            // Validación PAC
+            // Validación PAC General
             if (this.esPAC && this.sucursalesAsignadas.length === 0) {
                 Swal.fire('Atención', 'Debe asignar al menos una sucursal para cursos PAC', 'warning');
                 return;
             }
 
-            const camposObligatorios = [
-                'nombre', 'limiteTiempo', 'nota', 'intentos'
-            ];
+            // Validaciones específicas PCU (6) y PCI (7)
+            if (this.tipoCurso == '6' && this.clientesAsignados.length === 0) {
+                Swal.fire('Atención', 'Debe asignar al menos un cliente para cursos PCU', 'warning');
+                return;
+            }
+            if (this.tipoCurso == '7' && this.areasAsignadas.length === 0) {
+                Swal.fire('Atención', 'Debe asignar al menos un área operativa para cursos PCI', 'warning');
+                return;
+            }
 
-            const vacio = camposObligatorios.some(campo => !this[campo]);
+            const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
+
+            const vacio = camposObligatorios.some(campo => {
+                const valor = this[campo];
+                return valor === null || valor === undefined || valor === '';
+            });
 
             if (vacio) {
-                Swal.fire('Atención', 'Completar los campos obligatorios', 'warning')
+                Swal.fire('Atención', 'Completar los campos obligatorios (*)', 'warning')
                 return
+            }
+
+            // Validación separada para campos del examen (deben ser > 0 cuando aplica evaluación)
+            if (this.aplicaEvaluacion) {
+                const tiempoOk  = parseInt(this.limiteTiempo) > 0;
+                const notaOk    = parseFloat(this.nota) > 0;
+                const intentosOk = parseInt(this.intentos) > 0;
+                if (!tiempoOk || !notaOk || !intentosOk) {
+                    Swal.fire('Atención', 'Debe completar los datos del examen (Tiempo, Nota mínima e Intentos deben ser mayores a 0)', 'warning');
+                    return;
+                }
             }
 
             if (!archivoSeleccionado) {
@@ -802,23 +919,33 @@ window.formCursoGestion = function () {
             const formData = new FormData();
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
+            formData.append('area_conocimiento', this.areaConocimiento);
             formData.append('area', this.area);
             formData.append('frecuencia', this.frecuencia);
+            formData.append('es_periodico', this.frecuencia ? 1 : 0);
+            formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
+            formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
+            formData.append('target_group', this.targetGroup || 'TODOS');
 
-
-
-            // Removed: nombre_exa, descripcion
-            formData.append('tiempo', this.limiteTiempo);
-            formData.append('nota', this.nota);
-            formData.append('intentos', this.intentos);
-            formData.append('archivo', archivoSeleccionado);
-
-            // Append Sucursales (PAC)
-            if (this.esPAC && this.sucursalesAsignadas.length > 0) {
-                this.sucursalesAsignadas.forEach(suc => {
-                    formData.append('sucursales_asignadas[]', suc);
-                });
+            // Campos del examen solo cuando aplica evaluación
+            if (this.aplicaEvaluacion) {
+                formData.append('tiempo', this.limiteTiempo);
+                formData.append('nota', this.nota);
+                formData.append('intentos', this.intentos);
             }
+            // Recolección PAC, PCU, PCI compartiendo el mismo campo en Backend
+            if (this.esPAC && this.sucursalesAsignadas.length > 0) {
+                this.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
+            }
+            if (this.tipoCurso == '6' && this.clientesAsignados.length > 0) {
+                this.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
+            }
+            if (this.tipoCurso == '7' && this.areasAsignadas.length > 0) {
+                this.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
+            }
+
+            formData.append('cod_responsable', this.codResponsable);
+            formData.append('archivo', archivoSeleccionado);
 
             axios.post(`${VITE_URL_APP}/api/save-cursos`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -1219,3 +1346,49 @@ window.abrirModalRegistro = function () {
         }
     }
 }
+
+window.searchablePersonnel = function() {
+    return {
+        open: false,
+        query: '',
+        results: [],
+        loading: false,
+        error: null,
+        toggle() {
+            this.open = !this.open;
+            if (this.open && (this.results.length === 0 || this.query.length > 0)) {
+                this.search();
+            }
+        },
+        search() {
+            this.loading = true;
+            this.error = null;
+            const params = { 
+                tipo_responsable: 'ADMINISTRATIVO_5'
+            };
+            if (this.query.length > 0) {
+                params.q = this.query;
+            }
+            
+            axios.get(`${VITE_URL_APP}/api/buscar-personal-capacitacion`, { params })
+            .then(res => {
+                this.results = res.data.personal || [];
+            })
+            .catch(err => {
+                console.error(err);
+                this.error = 'Error al cargar la lista. Verifique la consola.';
+            })
+            .finally(() => this.loading = false);
+        },
+        select(p) {
+            const formElement = document.querySelector('[x-data^="formCursoGestion"]');
+            if (formElement && window.Alpine) {
+                const alpineData = Alpine.$data(formElement);
+                alpineData.codResponsable = p.codigo;
+                alpineData.nombreResponsable = p.nombre_completo;
+            }
+            this.open = false;
+        }
+    }
+}
+

@@ -692,11 +692,13 @@ function poblarFiltroProgramaciones(matriculas) {
 function inicializarTabulator() {
     tabulatorMatriculas = new Tabulator("#tblMatriculas", {
         data: [],
-        layout: "fitColumns",
+        layout: "fitDataFill",
+        height: "550px", // Habilita Virtual DOM (Crítico para +1000 registros)
         placeholder: "No hay matrículas para mostrar",
         pagination: "local",
-        paginationSize: 15,
-        paginationSizeSelector: [10, 15, 25, 50],
+        paginationSize: 20,
+        paginationSizeSelector: [10, 20, 50, 100],
+        renderVertical: "virtual", // Forzar renderizado virtual
         columns: [
             {
                 title: "#",
@@ -714,6 +716,16 @@ function inicializarTabulator() {
                 title: "Nombre Completo",
                 field: "nombre_completo",
                 minWidth: 200
+            },
+            {
+                title: "Cliente / Empresa",
+                field: "cliente_empresa",
+                minWidth: 140,
+                formatter: function (cell) {
+                    const val = cell.getValue();
+                    if (!val || val === '-') return '<span class="text-gray-300 text-xs">—</span>';
+                    return `<span class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">${val}</span>`;
+                }
             },
             {
                 title: "Programación",

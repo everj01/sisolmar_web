@@ -4,6 +4,190 @@
 @section('content')
 @include("layouts.shared/page-title", ["subtitle" => "Capacitación", "title" => "Gestión de cursos"])
 
+<script>
+    // Inicialización síncrona para evitar Alpine/Vite race conditions
+    window.alertasVencimientoCursos = function () {
+        return {
+            alertas: [],
+            initAlertas() {
+                const appUrl = '{{ env("APP_URL", "") }}';
+                fetch(`${appUrl}/api/cursos/alertas-vencimiento`)
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log('⚡ Respuesta Alertas:', data);
+                        if (data && data.success) {
+                            this.alertas = data.alertas;
+                            window.alertasCursosData = this.alertas.map(a => String(a.codigo_curso));
+                            if (window.cursoTable && typeof window.renderTablaCursos === 'function') {
+                                window.renderTablaCursos(window.cursosData || []);
+                            }
+                        }
+                    })
+                    .catch(e => console.error("Error cargando alertas de vencimiento:", e));
+            }
+        };
+    };
+
+    window.modalApertura = function() {
+        return {
+            isOpen: false,
+            cargando: false,
+            codigoCurso: null,
+            cursoNombre: '',
+            tipoCursoId: '',
+            fechaInicio: '',
+            clientesAsignados: [],
+            empresasAsignadas: [],
+            areasAsignadas: [],
+            listaDNIPaste: '',
+            
+            init() {},
+            
+            openModal(data) {
+                this.codigoCurso = data.codigo;
+                this.cursoNombre = data.nombre;
+                this.tipoCursoId = data.tipo_curso || '';
+                
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                this.fechaInicio = `${yyyy}-${mm}`;
+                
+                window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                    detail: { panel: 'apertura_manual', titulo: this.cursoNombre }
+                }));
+                this.isOpen = true;
+                this.cargando = false;
+
+                // Intentar obtener clientes/empresas del formulario principal si el código coincide
+                const mainForm = document.querySelector('[x-data="formCursoGestion()"]');
+                if (mainForm && window.Alpine) {
+                    const mainData = Alpine.$data(mainForm);
+                    if (mainData.codigo == this.codigoCurso) {
+                        this.clientesAsignados = [...(mainData.clientesAsignados || [])];
+                        this.empresasAsignadas = [...(mainData.empresasAsignadas || [])];
+                        this.areasAsignadas = [...(mainData.areasAsignadas || [])];
+                    } else {
+                        this.clientesAsignados = [];
+                        this.empresasAsignadas = [];
+                        this.areasAsignadas = [];
+                    }
+                }
+            },
+            
+            closeModal() {
+                window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                    detail: { panel: 'registro' }
+                }));
+                this.isOpen = false;
+                this.codigoCurso = null;
+                this.cursoNombre = '';
+                this.tipoCursoId = '';
+                this.fechaInicio = '';
+            },
+            
+            async guardarApertura() {
+                if (!this.fechaInicio) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                        detail: { titulo: "Atención", mensaje: "Debe seleccionar un mes de campaña.", tipo: "warning" }
+                    }));
+                    return;
+                }
+                
+                const dnisLimpios = this.listaDNIPaste.trim() 
+                    ? this.listaDNIPaste.split(/\n|,|;/).map(d => d.trim()).filter(d => d.length > 0)
+                    : [];
+
+                if (this.tipoCursoId == '6' && this.clientesAsignados.length === 0 && dnisLimpios.length === 0) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                         detail: { titulo: "Atención", mensaje: "Debe seleccionar al menos un cliente o pegar una lista de DNIs.", tipo: "warning" }
+                    }));
+                    return;
+                }
+
+                if (this.tipoCursoId == '7' && this.areasAsignadas.length === 0 && dnisLimpios.length === 0) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                         detail: { titulo: "Atención", mensaje: "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.", tipo: "warning" }
+                    }));
+                    return;
+                }
+
+                this.cargando = true;
+                const appUrl = '{{ env("APP_URL", "") }}';
+                
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+
+                    const payload = {
+                        cod_cursos: this.codigoCurso,
+                        fecha_inicio: this.fechaInicio
+                    };
+
+                    if (this.tipoCursoId == '6') {
+                        payload.clientes = this.clientesAsignados;
+                    }
+                    if (this.tipoCursoId == '7') {
+                        payload.areas = this.areasAsignadas;
+                    }
+                    if (dnisLimpios.length > 0) {
+                        payload.dnis = dnisLimpios;
+                    }
+
+                    const response = await fetch(`${appUrl}/api/cursos/programacion-manual`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if(response.ok && result.success) {
+                        this.closeModal();
+                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                            detail: { titulo: "Apertura Exitosa", mensaje: result.message, tipo: "success", recargar: true }
+                        }));
+                    } else {
+                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                            detail: { titulo: "No se pudo aperturar", mensaje: result.message || "Error al procesar la solicitud.", tipo: "error" }
+                        }));
+                    }
+                } catch(error) {
+                    console.error("Error aperturando curso:", error);
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                        detail: { titulo: "Error de Servidor", mensaje: "Ocurrió un problema de conectividad con el servidor. Revisa los logs.", tipo: "error" }
+                    }));
+                } finally {
+                    this.cargando = false;
+                }
+            }
+        };
+    };
+
+    // Escuchador global en Vanilla JS para evadir el Proxy de AlpineJS
+    window.addEventListener('mostrar-alerta', function(e) {
+        if(typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: e.detail.titulo,
+                text: e.detail.mensaje,
+                icon: e.detail.tipo,
+                confirmButtonText: "Entendido",
+                confirmButtonColor: "#1d4ed8" 
+            }).then(() => {
+                if (e.detail.recargar) {
+                    window.location.reload();
+                }
+            });
+        } else {
+            alert(e.detail.titulo + ": " + e.detail.mensaje);
+            if (e.detail.recargar) window.location.reload();
+        }
+    });
+</script>
+
 <div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" style="display: none;" class="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm">
     <div class="flex items-start">
         <div class="flex-shrink-0 mt-0.5">
@@ -114,7 +298,7 @@
                     @areas-loaded.window="options = $event.detail"
                 >
                     <label class="text-sm font-medium text-gray-700 mb-1">
-                        Área del conocimiento
+                        Sistema de Gestión
                     </label>
                     
                     <div class="relative">
@@ -224,7 +408,8 @@
                     Crear curso
                 </button>
             </div>
-            <div class="card-body" x-data="formCursoGestion()" @submit.prevent>
+            <div class="card-body" x-data="formCursoGestion()" @submit.prevent x-init="$nextTick(() => { $watch('tipoCurso', value => { if(value != '5') targetGroup = 'TODOS'; }); })">
+                <input type="hidden" name="targetGroupHidden" x-model="targetGroup">
                 <input type="hidden" name="codGestionEditar" x-model="codigo" id="codGestionEditar">
                 <input type="hidden" id="slcArea" x-model="area">
                 <div class="w-full mt-4">
@@ -246,26 +431,89 @@
 
                     <!-- Plan de Capacitación -->
                     <div>
-                        <label for="slcTipoCurso" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Plan de Capacitación
+                        <label class="text-gray-800 text-sm font-medium inline-block mb-2 text-primary">
+                            Plan de Capacitación <span class="text-danger">*</span>
                         </label>
-                        <select id="slcTipoCurso"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                        x-model="tipoCurso"
-                        x-data="{ tipos: window.opcionesTipoCurso || [] }"
-                        @tipo-curso-loaded.window="tipos = $event.detail"
-                        @change="checkEsPAC()">
-                            <option value="">-- Seleccione --</option>
+                        <div class="flex flex-wrap gap-3" 
+                             x-data="{ tipos: window.opcionesTipoCurso || [] }"
+                             @tipo-curso-loaded.window="tipos = $event.detail">
                             <template x-for="tipo in tipos" :key="tipo.codigo">
-                                <option :value="tipo.codigo" x-text="tipo.descripcion"></option>
+                                <label class="flex items-center space-x-2 cursor-pointer bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-slate-50 transition-all shadow-sm"
+                                       :class="{ 'border-primary ring-1 ring-primary/30 bg-primary/5': tipoCurso == tipo.codigo }">
+                                    <input type="radio" :value="tipo.codigo" x-model="tipoCurso" 
+                                        @change="checkEsPACByText(tipo.descripcion)"
+                                        name="plan_capacitacion"
+                                        class="w-4 h-4 text-primary focus:ring-primary border-gray-300">
+                                    <span class="text-sm font-medium text-gray-700" x-text="tipo.descripcion"></span>
+                                </label>
                             </template>
-                        </select>
+                        </div>
+                        
+                        <!-- NUEVO: Selector PCU (Clientes) -->
+                        <div x-show="tipoCurso == '6'" x-transition class="mt-4 bg-blue-50/50 border border-blue-100 rounded-lg p-5">
+                            <label class="text-blue-800 text-sm font-bold tracking-wide inline-block mb-2">
+                                <i class="bx bx-buildings mr-1"></i> Seleccionar Clientes <span class="text-red-500">*</span>
+                            </label>
+                            <p class="text-xs text-blue-500 mb-3 font-medium">Se matriculará al personal asignado a estos clientes.</p>
+                            <div class="mb-3">
+                                <input type="text" x-model="busquedaCliente" placeholder="Buscar cliente..." 
+                                    class="w-full border border-blue-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none shadow-sm"
+                                    @keydown.enter.prevent>
+                            </div>
+                            <div class="border border-blue-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner" style="max-height: 160px;">
+                                <div class="grid grid-cols-1 gap-2">
+                                    <template x-for="clie in clientesFiltrados" :key="clie.codigo">
+                                        <label class="flex items-start space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
+                                            <input type="checkbox" :value="clie.codigo" x-model="clientesAsignados" 
+                                                class="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                            <span class="text-sm font-medium text-gray-700">
+                                                <span x-text="clie.codigo" class="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded mr-1"></span>
+                                                <span x-text="clie.descripcion"></span>
+                                            </span>
+                                        </label>
+                                    </template>
+                                </div>
+                                <div x-show="clientesFiltrados.length === 0" class="text-gray-400 text-sm text-center py-4">
+                                    No se encontraron clientes asociados.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- NUEVO: Selector PCI (Áreas Operativas) -->
+                        <div x-show="tipoCurso == '7'" x-transition class="mt-4 bg-teal-50/50 border border-teal-100 rounded-lg p-5">
+                            <label class="text-teal-800 text-sm font-bold tracking-wide inline-block mb-2">
+                                <i class="bx bx-category mr-1"></i> Seleccionar Áreas Operativas <span class="text-red-500">*</span>
+                            </label>
+                            <p class="text-xs text-teal-500 mb-3 font-medium">Se matriculará al personal perteneciente a estas áreas.</p>
+                            <div class="mb-3">
+                                <input type="text" x-model="busquedaAreaPCI" placeholder="Buscar área..." 
+                                    class="w-full border border-teal-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-teal-400 focus:border-teal-400 outline-none shadow-sm"
+                                    @keydown.enter.prevent>
+                            </div>
+                            <div class="border border-teal-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner" style="max-height: 160px;">
+                                <div class="grid grid-cols-1 gap-2">
+                                    <template x-for="ar in areasPCIFiltradas" :key="ar.codigo">
+                                        <label class="flex items-start space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
+                                            <input type="checkbox" :value="ar.codigo" x-model="areasAsignadas" 
+                                                class="mt-0.5 w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                                            <span class="text-sm font-medium text-gray-700">
+                                                <span x-text="ar.codigo" class="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded mr-1"></span>
+                                                <span x-text="ar.descripcion"></span>
+                                            </span>
+                                        </label>
+                                    </template>
+                                </div>
+                                <div x-show="areasPCIFiltradas.length === 0" class="text-gray-400 text-sm text-center py-4">
+                                    No se encontraron áreas asociadas.
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Área de Conocimiento -->
                     <div>
-                        <label class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Área del conocimiento
+                        <label class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
+                        Sistema de Gestión <span class="text-danger">*</span>
                         </label>
                         
                         <div x-data="{
@@ -279,7 +527,7 @@
                                 );
                             },
                             selectOption(option) {
-                                this.$dispatch('update-area', option ? option.codigo : '');
+                                this.$dispatch('update-area-conocimiento', option ? option.codigo : '');
                                 this.searchTerm = '';
                                 this.open = false;
                             },
@@ -289,53 +537,56 @@
                                 }
                             },
                             get currentDescription() {
-                               const found = this.options.find(opt => opt.codigo == this.area);
+                               const found = this.options.find(opt => opt.codigo == this.areaConocimiento);
                                return found ? found.descripcion : '';
                             }
                         }" 
                         @areas-loaded.window="options = $event.detail"
-                        @update-area="area = $event.detail"
+                        @update-area-conocimiento="areaConocimiento = $event.detail; area = $event.detail"
                         class="relative w-full">
                             
-                            <!-- Trigger Input -->
-                            <div @click="open = !open" @click.outside="open = false" class="relative">
-                                <input type="text" 
-                                    :value="currentDescription" 
-                                    placeholder="-- Seleccione Plan --" 
-                                    readonly 
-                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm cursor-pointer bg-white pr-8"
-                                />
-                                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
-                            </div>
+                            <!-- Botón que simula el select -->
+                            <button @click="open = !open" 
+                                    type="button"
+                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all">
+                                <span :class="areaConocimiento ? 'text-gray-800' : 'text-gray-400'"
+                                      x-text="currentDescription || 'Seleccione Sistema'"></span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
 
-                            <!-- Dropdown -->
-                            <div x-show="open" style="display: none;"
-                                 x-transition.opacity
-                                 class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-48 flex flex-col overflow-hidden">
+                            <!-- Dropdown con búsqueda -->
+                            <div x-show="open" 
+                                 @click.away="open = false"
+                                 class="absolute mt-1 w-full border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
+                                 style="display: none; background-color: white !important; opacity: 1 !important; z-index: 99999 !important;">
                                 
-                                <div class="p-2 border-b border-gray-100 bg-gray-50/50">
-                                    <input type="text" x-model="searchTerm" 
-                                        class="w-full border border-gray-200 rounded shadow-sm px-3 py-1.5 text-sm outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400" 
-                                        placeholder="Buscar..." @click.stop />
+                                <div class="p-2 border-b border-gray-100" style="background-color: white !important;">
+                                    <input type="text" 
+                                           x-model="searchTerm"
+                                           class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                                           placeholder="Buscar sistema...">
                                 </div>
 
-                                <div class="overflow-y-auto max-h-40 custom-scrollbar">
+                                <ul class="max-h-60 overflow-y-auto py-1" style="background-color: white !important;">
                                     <template x-for="option in filteredOptions" :key="option.codigo">
-                                        <div @click="selectOption(option)" 
-                                             class="px-4 py-2 text-sm text-gray-600 hover:bg-sky-50 hover:text-sky-700 cursor-pointer transition-colors"
-                                             :class="{ 'bg-sky-100/50 text-sky-800 font-semibold': area == option.codigo }">
+                                        <li @click="selectOption(option)"
+                                            class="px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors"
+                                            :class="{ 'bg-primary/5 text-primary font-medium': areaConocimiento == option.codigo }">
                                             <span x-text="option.descripcion"></span>
-                                        </div>
+                                        </li>
                                     </template>
-                                    <div x-show="filteredOptions.length === 0" class="px-4 py-3 text-sm text-gray-400 text-center">
-                                        <i class="bx bx-search mb-1 text-lg"></i><br>Sin resultados
-                                    </div>
-                                </div>
+                                    <template x-if="filteredOptions.length === 0">
+                                        <li class="px-3 py-2 text-sm text-gray-500 italic text-center">
+                                            No se encontraron sistemas
+                                        </li>
+                                    </template>
+                                </ul>
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Frecuencia -->
                     <div>
@@ -353,10 +604,31 @@
                     </div>
 
                     <!-- SELECTOR SUCURSALES (SOLO PAC) -->
-                    <div x-show="esPAC" x-transition class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
+                    <div x-show="esPAC || tipoCurso == '5'" x-transition class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
                         <label class="text-indigo-800 text-sm font-bold tracking-wide inline-block mb-2">
                             <i class="bx bx-buildings mr-1"></i> Sucursales Asignadas <span class="text-red-500">*</span>
                         </label>
+                        
+                        <!-- NUEVO: Grupo Objetivo (Dirigido a) -->
+                        <div x-show="tipoCurso == '5'" class="mb-4 bg-orange-50/50 border border-orange-100 rounded-lg p-3">
+                            <label class="text-orange-800 text-xs font-bold uppercase tracking-wider mb-2 block">
+                                <i class="bx bx-group mr-1"></i> Dirigido a (Segmentación PCE)
+                            </label>
+                            <div class="flex gap-3">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" value="TODOS" x-model="targetGroup" class="text-orange-600 focus:ring-orange-500 w-4 h-4">
+                                    <span class="text-sm font-medium text-gray-700">Todos</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" value="ADMINISTRATIVO" x-model="targetGroup" class="text-orange-600 focus:ring-orange-500 w-4 h-4">
+                                    <span class="text-sm font-medium text-gray-700">Administrativos</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" value="OPERATIVO" x-model="targetGroup" class="text-orange-600 focus:ring-orange-500 w-4 h-4">
+                                    <span class="text-sm font-medium text-gray-700">Operativos</span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <input type="text" x-model="busquedaSucursal" placeholder="Buscar sucursal por nombre..." 
                                 class="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 outline-none shadow-sm"
@@ -379,57 +651,161 @@
                         <p class="text-xs text-indigo-500 mt-2 font-medium">Seleccione explícitamente las sucursales donde este curso estará activo.</p>
                     </div>
 
+                    <!-- NUEVO: Obligatorio al Alta -->
+                    <div class="flex items-center -mt-1 mb-1">
+                        <input class="form-switch" type="checkbox" role="switch" id="chkObligatorioAlta" x-model="obligatorioAlta" class="cursor-pointer">
+                        <label for="chkObligatorioAlta" class="ml-2 text-gray-800 text-sm font-medium cursor-pointer">Obligatorio al Alta</label>
+                    </div>
+
+                    <!-- NUEVO: Responsable (Estilo Escritorio) -->
+                    <div class="mt-4 bg-gray-50/50 border border-gray-100 rounded-lg p-3 shadow-sm">
+                        <label class="text-indigo-800 text-[11px] font-bold uppercase tracking-wider mb-2 block">
+                            <i class="bx bx-user-check mr-1"></i> Responsable (Administrativo 5)
+                        </label>
+                        
+                        <div class="flex items-center gap-2">
+                            <!-- Input Código -->
+                            <div class="w-24">
+                                <input type="text" x-model="codResponsable" readonly
+                                    class="w-full bg-gray-100 border border-gray-300 rounded px-2 py-1.5 text-xs text-center font-mono text-gray-600 cursor-default"
+                                    placeholder="Código">
+                            </div>
+
+                            <!-- Botón Búsqueda (Modal) -->
+                            <div class="relative" x-data="searchablePersonnel()">
+                                <button type="button" @click="toggle()"
+                                    class="px-3 py-1.5 bg-white border border-gray-300 rounded text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm font-bold">
+                                    ...
+                                </button>
+
+                                <!-- Lista Desplegable (Layout Amplio) -->
+                                <div x-show="open" @click.away="open = false" x-transition
+                                    class="absolute z-[100] mt-1 left-0 w-[90vw] md:w-[650px] max-w-4xl bg-white border border-gray-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
+                                    style="display: none;">
+                                    
+                                    <div class="p-3 border-b bg-indigo-50/50 flex items-center gap-2">
+                                        <i class="bx bx-search text-indigo-500 text-lg"></i>
+                                        <input type="text" x-model="query" @input.debounce.300ms="search()"
+                                            class="w-full border-none bg-transparent p-1 text-sm focus:ring-0 outline-none text-gray-700 font-medium"
+                                            placeholder="Buscar por nombre o DNI en Administrativos 5...">
+                                    </div>
+
+                                    <!-- Cabecera de "Tabla" -->
+                                    <div class="bg-indigo-50 px-4 py-2 border-b flex gap-x-2 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
+                                        <div class="w-16 shrink-0">Código</div>
+                                        <div class="flex-1 px-2 border-l border-indigo-100">Nombre Completo</div>
+                                        <div class="w-24 shrink-0 text-center border-l border-indigo-100">DNI</div>
+                                        <div class="w-28 shrink-0 text-right border-l border-indigo-100 pl-2">Sucursal</div>
+                                    </div>
+
+                                    <div class="overflow-y-auto custom-scrollbar" style="max-height: 280px !important;">
+                                        <template x-for="p in results" :key="p.codigo">
+                                            <div @click="select(p)" 
+                                                class="px-4 py-1 text-[11px] hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors group flex items-center leading-tight h-8 gap-x-2">
+                                                <div class="w-16 shrink-0 font-mono text-gray-400 group-hover:text-indigo-500" x-text="p.codigo"></div>
+                                                <div class="flex-1 px-2 font-bold text-gray-800 group-hover:text-indigo-700 truncate" x-text="p.nombre_completo"></div>
+                                                <div class="w-24 shrink-0 text-center text-gray-500 border-l border-indigo-50" x-text="p.dni"></div>
+                                                <div class="w-28 shrink-0 text-right text-gray-400 italic truncate pl-2 border-l border-indigo-50" x-text="p.sucursal || 'N/A'"></div>
+                                            </div>
+                                        </template>
+                                        
+                                        <!-- Estados -->
+                                        <div x-show="loading" class="p-6 text-center text-xs text-gray-500">
+                                            <i class="bx bx-loader-alt bx-spin mr-2 text-indigo-500"></i> Cargando...
+                                        </div>
+                                        
+                                        <div x-show="error" class="p-4 text-center text-xs text-red-500 bg-red-50" x-text="error"></div>
+                                        
+                                        <div x-show="!loading && !error && results.length === 0" class="p-6 text-center text-xs text-gray-400">
+                                            No se encontraron resultados
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-indigo-600 p-2 text-[10px] text-center text-white font-medium flex justify-between px-4 items-center">
+                                        <span><i class="bx bx-user-circle mr-1"></i> Administrativos Activos</span>
+                                        <span x-text="results.length + ' registros encontrados'"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Input Nombre -->
+                            <div class="flex-1">
+                                <input type="text" x-model="nombreResponsable" readonly
+                                    class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-600 cursor-default"
+                                    placeholder="Nombre completo del responsable">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NUEVO: Observaciones -->
+                    <div>
+                        <label class="text-gray-800 text-sm font-medium inline-block mb-1">Observaciones</label>
+                        <textarea rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none" placeholder="Ingrese observaciones o detalles adicionales..."></textarea>
+                    </div>
+
                 </div>
-                <div class="w-full mt-4">
-                    <h3 class="text-lg font-semibold text-primary text-center mb-1">Datos del Examen</h3>
-                    <hr>
+                <div class="w-full mt-4 flex flex-col items-center">
+                    <div class="w-full flex items-center justify-between gap-4">
+                        <div class="flex-1 border-t border-gray-200"></div>
+                        <h3 class="text-lg font-semibold text-primary text-center">Datos del Examen</h3>
+                        <div class="flex-1 border-t border-gray-200"></div>
+                    </div>
+                    
+                    <!-- NUEVO: Aplica Evaluación -->
+                    <div class="flex items-center mt-3 mb-2 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-lg shadow-sm w-fit">
+                        <input class="form-switch" type="checkbox" role="switch" id="chkAplicaEvaluacion" x-model="aplicaEvaluacion" checked>
+                        <label for="chkAplicaEvaluacion" class="ml-2 text-sm font-semibold text-indigo-900 cursor-pointer">Aplica Evaluación</label>
+                    </div>
                 </div>
-                    <!-- Campos Eliminados: Nombre del Examen y Descripción -->
-                <div class="w-full grid gap-4 mt-4 grid-cols-1 pb-2">
-                    <div>
-                        <label for="txtLimite" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Límite de tiempo (minutos)
-                        </label>
-                        <input type="number" id="txtLimite"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                         x-model="limiteTiempo" placeholder=""
-                        />
-                    </div>
-                    <div>
-                        <label for="txtNota" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Nota mínima
-                        </label>
-                        <input type="number" id="txtNota"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                         x-model="nota" placeholder=""
-                        />
-                    </div>
-                    <div>
-                        <label for="txtIntentos" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Número de intentos
-                        </label>
-                        <input type="number" id="txtIntentos"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                        x-model="intentos" placeholder=""
-                        />
-                    </div>
-                    <div>
-                        <label for="txtCantidadPreguntas" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Cantidad De Preguntas
-                        </label>
-                        <input type="number" id="txtCantidadPreguntas"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                        x-model="cantidadPreguntas" placeholder=""
-                        />
-                    </div>
-                    <div>
-                        <label for="txtPreguntasBalotario" class="text-gray-800 text-sm font-medium inline-block mb-1">
-                        Preguntas en el balotario
-                        </label>
-                        <input type="number" id="txtPreguntasBalotario"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                        x-model="preguntasBalotario" placeholder=""
-                        />
+
+                <!-- Contenedor condicional para Examen -->
+                <div x-show="aplicaEvaluacion" x-transition.duration.300ms class="w-full border border-gray-100 bg-gray-50/30 p-4 rounded-xl shadow-inner mt-2">
+                    <div class="w-full grid gap-4 mt-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-2">
+                        <div>
+                            <label for="txtLimite" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                            Límite de tiempo (minutos)
+                            </label>
+                            <input type="number" id="txtLimite"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            x-model="limiteTiempo" placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <label for="txtNota" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                            Nota mínima
+                            </label>
+                            <input type="number" id="txtNota"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            x-model="nota" placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <label for="txtIntentos" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                            Número de intentos
+                            </label>
+                            <input type="number" id="txtIntentos"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            x-model="intentos" placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <label for="txtCantidadPreguntas" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                            Cantidad De Preguntas
+                            </label>
+                            <input type="number" id="txtCantidadPreguntas"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            x-model="cantidadPreguntas" placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <label for="txtPreguntasBalotario" class="text-gray-800 text-sm font-medium inline-block mb-1">
+                            Preguntas en el balotario
+                            </label>
+                            <input type="number" id="txtPreguntasBalotario"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            x-model="preguntasBalotario" placeholder=""
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -483,12 +859,37 @@
                                 </button>
                             </div>
 
-                            <!-- Resumen de análisis -->
                             <div id="resumenPlantilla" class="mt-4"></div>
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-center w-full py-8">
+
+                <!-- NUEVO: Auditoría / Metadatos -->
+                <div class="w-full mt-2 mb-4 bg-gray-50/70 border border-gray-200 rounded-lg p-5 opacity-60 pointer-events-none select-none">
+                    <h5 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Información de Sistema <span class="text-[10px] ml-2 lowercase font-normal italic">(Solo lectura - Próximamente)</span></h5>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
+                        <div class="flex flex-col">
+                            <span class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Código Interno</span>
+                            <span class="text-gray-400 font-bold bg-gray-100 border border-gray-200 px-3 py-1.5 rounded mt-1.5 w-fit min-w-[70px] text-center shadow-sm">-</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Registrado por</span>
+                            <div class="text-xs text-gray-400 mt-1.5 flex flex-col gap-0.5">
+                                <span class="font-medium text-gray-400"><i class="bx bx-user mr-1 text-gray-300"></i>(-) -</span>
+                                <span class="text-gray-400 ml-5">-</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Última modificación</span>
+                            <div class="text-xs text-gray-400 mt-1.5 flex flex-col gap-0.5">
+                                <span class="font-medium text-gray-400"><i class="bx bx-user-pin mr-1 text-gray-300"></i>(-) -</span>
+                                <span class="text-gray-400 ml-5">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center w-full py-2">
                     <button type="submit" id="btnGestion" @click="registrar"
                     class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white">
                         Registrar Curso&nbsp;<i class="fa-solid fa-floppy-disk"></i>
@@ -500,10 +901,78 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Panel Apertura de Ciclo (Primer Ciclo) -->
+        <div x-show="panel === 'apertura_manual'" x-transition style="display: none;" x-data="modalApertura()" @open-apertura-modal.window="openModal($event.detail)">
+            <div class="card-header">
+                <div class="flex items-center justify-between">
+                    <h4 class="card-title">Aperturar 1er Ciclo: <span x-text="cursoNombre" class="text-primary font-bold"></span></h4>
+                    <button type="button" @click="closeModal()" title="Cerrar y volver a Registro" class="btn btn-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
+                        <i class="bx bx-x text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="flex flex-col h-full min-h-[400px]">
+                    <div class="flex-grow flex flex-col items-center pt-8">
+                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mb-6">
+                            <i class="bx bx-calendar-star text-primary text-3xl"></i>
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-5 mb-8 w-full max-w-lg shadow-sm">
+                            <div class="flex">
+                                <div class="flex-shrink-0 mt-0.5">
+                                    <i class="bx bx-info-circle text-blue-500 text-xl"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-blue-800">Sobre la Programación Manual</h3>
+                                    <p class="text-sm text-blue-700 mt-2">
+                                        Selecciona el <strong>mes de la campaña</strong>. 
+                                        El curso se habilitará desde el primer hasta el último día de ese mes. 
+                                        Se matriculará masivamente a todo el personal activo asignado.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full max-w-sm mb-4">
+                            <label for="fecha_inicio_modal" class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Mes de la Campaña (Año y Mes)</label>
+                            <input type="month" x-model="fechaInicio" id="fecha_inicio_modal" class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-lg sm:leading-6">
+                        </div>
+
+                        <!-- NUEVO: Pegar DNIs -->
+                        <div class="w-full max-w-lg mt-6">
+                            <label class="block text-sm font-semibold leading-6 text-gray-700 mb-2">
+                                <i class="bx bx-list-ol mr-1"></i> (Opcional) Pegar lista de DNIs
+                            </label>
+                            <p class="text-[11px] text-gray-500 mb-2 italic">Si pega DNIs aquí, el sistema los matriculará directamente junto con la segmentación automática.</p>
+                            <textarea x-model="listaDNIPaste" rows="4" 
+                                class="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-sm placeholder:text-gray-400"
+                                placeholder="Pegue una columna de DNIs aquí (uno por línea)..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center w-full gap-4 py-8 mt-6 border-t border-gray-100">
+                    <button type="button" @click="guardarApertura()" :disabled="cargando" class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white transition-colors px-6 shadow-sm disabled:opacity-50">
+                        <span x-show="!cargando" class="flex items-center"><i class="bx bx-calendar-star text-base mr-2"></i> Aperturar Ciclo</span>
+                        <span x-show="cargando" class="flex items-center"><i class="bx bx-loader-alt bx-spin text-base mr-2"></i> Procesando...</span>
+                    </button>
+                    <button type="button" @click="closeModal()" :disabled="cargando" class="btn rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-6 disabled:opacity-50">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
 
 
 
 </div>
+
+
+
+
 
 @endsection
 

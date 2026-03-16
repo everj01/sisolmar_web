@@ -48,12 +48,13 @@ export default defineConfig({
                 'resources/js/functions/search_legajos.js',
                 'resources/js/functions/gestion_dj.js',
                 'resources/js/functions/notifications.js',
+                'resources/js/functions/consultas.js',
                 /* CAPACITACION */
                 'resources/js/functions/capacitacion/gestion_cursos.js',
                 // 'resources/js/functions/capacitacion/gestion_programacion.js', // Archivo no existe
                 // 'resources/js/functions/capacitacion/gestion_matricula.js', // Archivo no existe
                 'resources/js/functions/capacitacion/consulta_matriculas.js',
-                'resources/js/functions/capacitacion/historial_capacitaciones.js',
+                // 'resources/js/functions/capacitacion/historial_capacitaciones.js',
             ],
             refresh: true,
         }),

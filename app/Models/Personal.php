@@ -11,6 +11,8 @@ class Personal extends Model
 
     protected $table = 'sw_MIGRA_PERSONAL';
     protected $primaryKey = 'CODI_PERS';
+    public $incrementing = false;
+    protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = [

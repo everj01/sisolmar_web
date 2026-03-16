@@ -99,11 +99,13 @@ Route::patch('/cursos/{codigo}/habilitado', [CapacitacionController::class, 'upd
 Route::delete('/cursos/{codigo}', [CapacitacionController::class, 'destroyCurso']);
 
 Route::post('/save-programacion', [CapacitacionController::class, 'saveProgramacion']);
+Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
 Route::post('/update-programacion', [CapacitacionController::class, 'updateProgramacion']);
 Route::patch('/programaciones/{codigo}/habilitado', [CapacitacionController::class, 'updateProgramacionHab']);
 
 Route::get('/get-capacitacion-tipo-cursos', [CapacitacionController::class, 'getTipoCursos']);
 Route::get('/get-capacitacion-areas', [CapacitacionController::class, 'getAreas']);
+Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
 
 // Rutas de consulta de capacitación
 Route::get('/get-matriculas-curso/{cursoId}', [CapacitacionController::class, 'getMatriculasPorCurso']);
@@ -111,6 +113,9 @@ Route::get('/get-matriculas-migra-personal/{cursoId}', [CapacitacionController::
 Route::get('/get-historial-capacitaciones/{personalId}', [CapacitacionController::class, 'getHistorialCapacitaciones']);
 Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'buscarPersonalCapacitacion']);
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
+Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
+Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
+
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 
