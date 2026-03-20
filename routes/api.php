@@ -115,6 +115,7 @@ Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'bus
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
 Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
 Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
+Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
 
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);

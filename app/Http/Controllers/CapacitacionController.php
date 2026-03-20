@@ -960,23 +960,89 @@ class CapacitacionController extends Controller
             // a. Si hay DNIs manuales ($request->dnis), matricular esos específicamente.
             // b. Si no hay DNIs, aplicar la segmentación automática.
             
-            $personalQuery = DB::table('sw_MIGRA_PERSONAL')
-                ->where('ESTA_ACTI', 1); // Solo personal activo
+            // 3. Obtener Personal para Matricular (Lógica Combinada y Robusta)
+            $allPersonalIds = [];
 
-            if ($request->has('dnis') && !empty($request->dnis)) {
-                $personalQuery->whereIn('NRO_DOCU_IDEN', $request->dnis);
-            } else {
-                // Segmentación Automática (PCE)
-                // Clasificación: ADMINISTRATIVO ('05') / OPERATIVO ('03')
-                if ($curso->target_group === 'ADMINISTRATIVO') {
-                    $personalQuery->where('PERS_TIPOTRAB', '05');
-                } elseif ($curso->target_group === 'OPERATIVO') {
-                    $personalQuery->where('PERS_TIPOTRAB', '03');
+            // --- A. Criterios Automáticos según Tipo de Curso ---
+            $autoIds = [];
+            if ($request->input('incluir_automatico', true)) {
+                $qAuto = DB::table('sw_MIGRA_PERSONAL')->where('ESTA_ACTI', 1);
+                if ($curso->tipo_curso == 5) { // PCE (Plan Estándar)
+                    // Se matricula a TODOS los activos
+                } 
+                elseif ($curso->tipo_curso == 6) { // PCU (Plan del Usuario - Cliente)
+                    $sucursalesAsignadas = DB::table('sw_curso_sucursales')->where('curso_codigo', $curso->codigo)->pluck('sucursal')->toArray();
+                    if (!empty($sucursalesAsignadas)) {
+                        $legacyCodes = DB::table('sw_clientes')->whereIn('codigo', $sucursalesAsignadas)->pluck('cod_legacy')->filter()->toArray();
+                        if (!empty($legacyCodes)) {
+                            $allSucs = [];
+                            foreach ($legacyCodes as $lc) {
+                                $extSucs = DB::connection('sqlsrv_controlclientes')->select('EXEC USP_LISTAR_SUCURSALES_X_CLIENTE :cod_legacy', ['cod_legacy' => $lc]);
+                                foreach ($extSucs as $s) if (isset($s->codigo_sucursal)) $allSucs[] = trim($s->codigo_sucursal);
+                            }
+                            if (!empty($allSucs)) $qAuto->whereIn('SUCU_CODIGO', array_unique($allSucs));
+                            else $qAuto->where('CODI_PERS', '0');
+                        } else { $qAuto->where('CODI_PERS', '0'); }
+                    } else { $qAuto->where('CODI_PERS', '0'); }
                 }
-                // Si es TODOS, no filtramos por tipo de trabajador
+                elseif ($curso->tipo_curso == 7) { // PCI (Plan de Capacitación Interno - Áreas)
+                    $areasAsignadas = DB::table('sw_capacitacion_areas')->where('cod_cursos', $curso->codigo)->pluck('cod_area')->toArray();
+                    if (!empty($areasAsignadas)) $qAuto->whereIn('CODI_AREA', $areasAsignadas);
+                    else $qAuto->where('CODI_PERS', '0');
+                }
+                $autoIds = $qAuto->pluck('CODI_PERS')->toArray();
             }
 
-            $personalIds = $personalQuery->pluck('CODI_PERS')->toArray();
+            // --- B. Filtros Específicos de la UI (Sede, Cliente, Área) ---
+            $qFiltros = DB::table('sw_MIGRA_PERSONAL')->where('ESTA_ACTI', 1);
+            $usoFiltros = false;
+            
+            if ($request->filled('sucursal_codigo') && $request->sucursal_codigo != 'null') {
+                $qFiltros->where('SUCU_CODIGO', $request->sucursal_codigo);
+                $usoFiltros = true;
+            }
+            
+            if ($request->filled('area_codigo') && $request->area_codigo != 'null') {
+                $qFiltros->where('CODI_AREA', $request->area_codigo);
+                $usoFiltros = true;
+            }
+
+            if ($request->filled('cliente_id') && $request->cliente_id != 'null') {
+                $clie = DB::table('sw_clientes')->where('codigo', $request->cliente_id)->first();
+                if ($clie && $clie->cod_legacy) {
+                    $clieSucs = [];
+                    $extSucs = DB::connection('sqlsrv_controlclientes')->select('EXEC USP_LISTAR_SUCURSALES_X_CLIENTE :cod_legacy', ['cod_legacy' => $clie->cod_legacy]);
+                    foreach ($extSucs as $s) if (isset($s->codigo_sucursal)) $clieSucs[] = trim($s->codigo_sucursal);
+                    
+                    if (!empty($clieSucs)) {
+                        $qFiltros->whereIn('SUCU_CODIGO', $clieSucs);
+                        $usoFiltros = true;
+                    }
+                }
+            }
+            $filtroIds = $usoFiltros ? $qFiltros->pluck('CODI_PERS')->toArray() : [];
+
+            // --- C. IDs Manuales (Lista de DNIs) ---
+            $manualIds = [];
+            if ($request->has('dnis') && !empty($request->dnis)) {
+                 $manualIds = DB::table('sw_MIGRA_PERSONAL')
+                    ->whereIn('NRO_DOCU_IDEN', $request->dnis)
+                    ->pluck('CODI_PERS')
+                    ->toArray();
+            }
+
+            // --- D. Merge Final y Único ---
+            // Si es un curso PCE (global), los filtros y manuales son redundantes pero permitidos.
+            // Si es PCU/PCI, sumamos los automáticos + los filtros extra + los DNIs pegados.
+            $personalIds = array_unique(array_merge($autoIds, $filtroIds, $manualIds));
+
+            if (empty($personalIds)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró personal que cumpla con los criterios seleccionados para este ciclo.'
+                ], 404);
+            }
 
             if (empty($personalIds)) {
                 DB::rollBack();
@@ -990,7 +1056,7 @@ class CapacitacionController extends Controller
             $usuarioId = Auth::id();
             // Usamos el job existente para procesar la matriculación masiva.
             // Este job maneja la duplicidad y creación de registros en sw_matriculas.
-            \App\Jobs\DispatchMatriculaBatchJob::dispatch($curso->codigo, $programacion->codigo, $personalIds, $usuarioId);
+            \App\Jobs\DispatchMatriculaBatchJob::dispatch((int)$curso->codigo, (string)$programacion->codigo_programacion, $personalIds, (int)$usuarioId);
 
             DB::commit();
 
@@ -1493,28 +1559,43 @@ class CapacitacionController extends Controller
     }
 
     /**
-     * Obtener lista de sucursales
-     * GET /api/get-sucursales
+     * Obtener combos para el modal de apertura de ciclo (Sedes, Clientes, Áreas)
+     * GET /api/capacitacion/combos-apertura
      */
-    public function getSucursales()
+    public function getCombosApertura()
     {
         try {
-            // Consultar directamente la tabla sw_MIGRA_SISO_SUCURSAL usando Query Builder
             $sucursales = DB::table('sw_MIGRA_SISO_SUCURSAL')
-                ->select('SUCU_ABREVIATURA as sucursal')
+                ->select('SUCU_CODIGO as codigo', 'SUCU_ABREVIATURA as nombre')
                 ->whereNotNull('SUCU_ABREVIATURA')
                 ->distinct()
                 ->orderBy('SUCU_ABREVIATURA')
                 ->get();
-            
+
+            $clientes = DB::table('sw_clientes')
+                ->select('codigo', 'abreviatura as nombre')
+                ->where('habilitado', 1)
+                ->orderBy('abreviatura')
+                ->get();
+
+            $areas = DB::table('sw_MIGRA_REDO_AREA')
+                ->select('AREA_CODIGO as codigo', 'AREA_DESCRIPCION as nombre')
+                ->orderBy('AREA_DESCRIPCION')
+                ->get();
+
             return response()->json([
                 'success' => true,
-                'sucursales' => $sucursales
+                'sucursales' => $sucursales,
+                'clientes' => $clientes,
+                'areas' => $areas
             ]);
         } catch (\Exception $e) {
-            Log::error('Error al cargar sucursales: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Obtener lista de sucursales
                 'message' => 'Error al cargar sucursales',
                 'error' => $e->getMessage()
             ], 500);

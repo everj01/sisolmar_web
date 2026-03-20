@@ -30,6 +30,16 @@ Route::get('/preview-email-caducidad', function () {
     ]);
 });
 
+Route::get('/preview-email-legajo', function (\Illuminate\Http\Request $request) {
+    return new \App\Mail\LegajoConfirmacionMail([
+        'nombre_personal' => $request->query('personal', 'Colaborador Solmar'),
+        'nombre_empresa'  => $request->query('empresa', 'SISOLMAR'),
+        'nombre_legajo'   => $request->query('legajo', 'LEGAJO DE PRUEBA'),
+        'nombre_cargo'    => $request->query('cargo', 'CARGO DE PRUEBA'),
+        'nombre_folio'    => $request->query('folio', 'FOLIO DE PRUEBA')
+    ]);
+});
+
 Route::get('/test-email-caducidad', function () {
 
     Mail::to('webmaster@gruposolmar.com.pe')

@@ -115,6 +115,12 @@
                         <input type="text" id="txtNombre" class="form-input w-[550px]" disabled>
                     </div>
 
+                    <button type="button" id="btnPreview"
+                        onclick="previsualizarCorreo()" disabled
+                        class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white">
+                        <i class="fa-solid fa-eye me-1"></i> Previsualizar Correo
+                    </button>
+
                     <button type="button" id="btnRegistrar"
                         onclick="guardarLegajo()" disabled
                         class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white">

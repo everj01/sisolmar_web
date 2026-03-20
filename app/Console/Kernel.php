@@ -47,6 +47,13 @@ class Kernel extends ConsoleKernel
                  ->onSuccess(function () {
                      \Log::info('Comando de matrícula por aniversario PCE ejecutado exitosamente.');
                  });
+
+        $schedule->command('capacitacion:procesar-traslados-pcu')
+                 ->dailyAt('04:00')
+                 ->withoutOverlapping()
+                 ->onSuccess(function () {
+                     \Log::info('Comando de detección de traslados PCU ejecutado exitosamente.');
+                 });
     }
 
     /**

@@ -269,6 +269,7 @@ function manejarCambioSeleccion(event) {
             document.querySelector("#tblFolio").classList.remove("disabled-table");
             document.querySelector('#txtNombre').value = `${nombreCliente} - ${nombreCargo}`;
             document.getElementById("btnRegistrar").disabled = false;
+            document.getElementById("btnPreview").disabled = false;
         }
     }
 }
@@ -366,4 +367,39 @@ window.guardarLegajo = function () {
         }
     });
 
+}
+
+window.previsualizarCorreo = function () {
+    const nombreLegajo = document.getElementById('txtNombre').value;
+    const empresa = nombreCliente || "SISOLMAR"; 
+    const cargo = nombreCargo || "CARGO NO SELECCIONADO";
+    
+    // Obtener nombres de folios seleccionados
+    const dataFolios = tblFolio.getData();
+    const selecFoliosNames = dataFolios
+        .filter(row => row._selected == true && row.tiene == 0)
+        .map(row => row.nombre);
+
+    let nombreFolio = "NINGÚN FOLIO SELECCIONADO";
+    if (selecFoliosNames.length === 1) {
+        nombreFolio = selecFoliosNames[0];
+    } else if (selecFoliosNames.length > 1) {
+        nombreFolio = selecFoliosNames.join(", ");
+        // Si son muchos, podrías truncar:
+        if (nombreFolio.length > 100) {
+            nombreFolio = selecFoliosNames.length + " folios seleccionados";
+        }
+    }
+
+    if (!nombreLegajo) {
+        Swal.fire({
+            title: "Sin datos",
+            text: "Debe seleccionar un cliente y cargo primero",
+            icon: "warning"
+        });
+        return;
+    }
+
+    const url = `${ VITE_URL_APP }/preview-email-legajo?empresa=${encodeURIComponent(empresa)}&legajo=${encodeURIComponent(nombreLegajo)}&cargo=${encodeURIComponent(cargo)}&folio=${encodeURIComponent(nombreFolio)}`;
+    window.open(url, '_blank');
 }

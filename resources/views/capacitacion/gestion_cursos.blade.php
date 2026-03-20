@@ -40,13 +40,39 @@
             empresasAsignadas: [],
             areasAsignadas: [],
             listaDNIPaste: '',
+            incluirAutomatico: true,
+            selectedSucursal: '',
+            selectedCliente: '',
+            selectedArea: '',
+            combosApertura: { sucursales: [], clientes: [], areas: [] },
             
-            init() {},
+            async init() {
+                await this.fetchCombos();
+            },
+
+            async fetchCombos() {
+                const appUrl = '{{ env("APP_URL", "") }}';
+                try {
+                    const response = await fetch(`${appUrl}/api/capacitacion/combos-apertura`);
+                    const data = await response.json();
+                    if (data.success) {
+                        this.combosApertura = data;
+                    }
+                } catch (e) {
+                    console.error("Error cargando combos de apertura:", e);
+                }
+            },
             
             openModal(data) {
                 this.codigoCurso = data.codigo;
                 this.cursoNombre = data.nombre;
                 this.tipoCursoId = data.tipo_curso || '';
+                
+                // Reset filtros
+                this.selectedSucursal = '';
+                this.selectedCliente = '';
+                this.selectedArea = '';
+                this.listaDNIPaste = '';
                 
                 const today = new Date();
                 const yyyy = today.getFullYear();
@@ -58,21 +84,6 @@
                 }));
                 this.isOpen = true;
                 this.cargando = false;
-
-                // Intentar obtener clientes/empresas del formulario principal si el código coincide
-                const mainForm = document.querySelector('[x-data="formCursoGestion()"]');
-                if (mainForm && window.Alpine) {
-                    const mainData = Alpine.$data(mainForm);
-                    if (mainData.codigo == this.codigoCurso) {
-                        this.clientesAsignados = [...(mainData.clientesAsignados || [])];
-                        this.empresasAsignadas = [...(mainData.empresasAsignadas || [])];
-                        this.areasAsignadas = [...(mainData.areasAsignadas || [])];
-                    } else {
-                        this.clientesAsignados = [];
-                        this.empresasAsignadas = [];
-                        this.areasAsignadas = [];
-                    }
-                }
             },
             
             closeModal() {
@@ -84,6 +95,9 @@
                 this.cursoNombre = '';
                 this.tipoCursoId = '';
                 this.fechaInicio = '';
+                this.selectedSucursal = '';
+                this.selectedCliente = '';
+                this.selectedArea = '';
             },
             
             async guardarApertura() {
@@ -124,15 +138,13 @@
 
                     const payload = {
                         cod_cursos: this.codigoCurso,
-                        fecha_inicio: this.fechaInicio
+                        fecha_inicio: this.fechaInicio,
+                        incluir_automatico: this.incluirAutomatico,
+                        sucursal_codigo: this.selectedSucursal,
+                        cliente_id: this.selectedCliente,
+                        area_codigo: this.selectedArea
                     };
 
-                    if (this.tipoCursoId == '6') {
-                        payload.clientes = this.clientesAsignados;
-                    }
-                    if (this.tipoCursoId == '7') {
-                        payload.areas = this.areasAsignadas;
-                    }
                     if (dnisLimpios.length > 0) {
                         payload.dnis = dnisLimpios;
                     }
@@ -604,31 +616,10 @@
                     </div>
 
                     <!-- SELECTOR SUCURSALES (SOLO PAC) -->
-                    <div x-show="esPAC || tipoCurso == '5'" x-transition class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
+                    <div x-show="esPAC" x-transition class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
                         <label class="text-indigo-800 text-sm font-bold tracking-wide inline-block mb-2">
                             <i class="bx bx-buildings mr-1"></i> Sucursales Asignadas <span class="text-red-500">*</span>
                         </label>
-                        
-                        <!-- NUEVO: Grupo Objetivo (Dirigido a) -->
-                        <div x-show="tipoCurso == '5'" class="mb-4 bg-orange-50/50 border border-orange-100 rounded-lg p-3">
-                            <label class="text-orange-800 text-xs font-bold uppercase tracking-wider mb-2 block">
-                                <i class="bx bx-group mr-1"></i> Dirigido a (Segmentación PCE)
-                            </label>
-                            <div class="flex gap-3">
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" value="TODOS" x-model="targetGroup" class="text-orange-600 focus:ring-orange-500 w-4 h-4">
-                                    <span class="text-sm font-medium text-gray-700">Todos</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" value="ADMINISTRATIVO" x-model="targetGroup" class="text-orange-600 focus:ring-orange-500 w-4 h-4">
-                                    <span class="text-sm font-medium text-gray-700">Administrativos</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" value="OPERATIVO" x-model="targetGroup" class="text-orange-600 focus:ring-orange-500 w-4 h-4">
-                                    <span class="text-sm font-medium text-gray-700">Operativos</span>
-                                </label>
-                            </div>
-                        </div>
                         <div class="mb-3">
                             <input type="text" x-model="busquedaSucursal" placeholder="Buscar sucursal por nombre..." 
                                 class="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 outline-none shadow-sm"
@@ -941,7 +932,51 @@
                             <input type="month" x-model="fechaInicio" id="fecha_inicio_modal" class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-lg sm:leading-6">
                         </div>
 
-                        <!-- NUEVO: Pegar DNIs -->
+                        <!-- NUEVO: Filtros Grupales (Punto 11) -->
+                        <div class="w-full max-w-lg mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    <i class="bx bx-filter-alt mr-1"></i> Criterios de Selección
+                                </h4>
+                                <!-- Switch Matrícula Automática -->
+                                <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-gray-200">
+                                    <span class="text-[10px] font-bold text-gray-500 uppercase">Automático</span>
+                                    <input class="form-switch scale-75" type="checkbox" role="switch" x-model="incluirAutomatico" id="swIncluirAuto">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <!-- Cliente -->
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-600 mb-1">Cliente</label>
+                                    <select x-model="selectedCliente" class="w-full text-xs rounded border-gray-300 py-1.5 focus:ring-primary focus:border-primary">
+                                        <option value="">-- Todos --</option>
+                                        <template x-for="item in combosApertura.clientes" :key="item.codigo">
+                                            <option :value="item.codigo" x-text="item.nombre"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <!-- Sede -->
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-600 mb-1">Sede / Sucursal</label>
+                                    <select x-model="selectedSucursal" class="w-full text-xs rounded border-gray-300 py-1.5 focus:ring-primary focus:border-primary">
+                                        <option value="">-- Todas --</option>
+                                        <template x-for="item in combosApertura.sucursales" :key="item.codigo">
+                                            <option :value="item.codigo" x-text="item.nombre"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <!-- Área -->
+                                <div class="sm:col-span-2">
+                                    <label class="block text-[11px] font-semibold text-gray-600 mb-1">Área / Sistema de Gestión</label>
+                                    <select x-model="selectedArea" class="w-full text-xs rounded border-gray-300 py-1.5 focus:ring-primary focus:border-primary">
+                                        <option value="">-- Todas --</option>
+                                        <template x-for="item in combosApertura.areas" :key="item.codigo">
+                                            <option :value="item.codigo" x-text="item.nombre"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                         <div class="w-full max-w-lg mt-6">
                             <label class="block text-sm font-semibold leading-6 text-gray-700 mb-2">
                                 <i class="bx bx-list-ol mr-1"></i> (Opcional) Pegar lista de DNIs
