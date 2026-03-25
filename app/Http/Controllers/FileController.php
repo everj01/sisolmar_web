@@ -560,6 +560,8 @@ class FileController extends Controller{
         return response()->json($data);
     }
 
+   
+
     public function getLegajos(Request $request)
     {
         $cliente = $request->input('cliente');
@@ -597,6 +599,11 @@ class FileController extends Controller{
         }
         
         return response()->json($folios);
+    }
+
+    public function getListaDJ(){
+        $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]");
+        return response()->json($DJ);
     }
 
     public function ViewCargo()

@@ -1,4 +1,4 @@
-
+// gestion_dj.js
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
@@ -7,30 +7,86 @@ import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import Tagify from '@yaireo/tagify';
 import '@yaireo/tagify/dist/tagify.css';
 
-
 document.addEventListener('DOMContentLoaded', function () {
 
-    getPersonal();
+    // =========================
+    // REFERENCIAS DOM
+    // =========================
+      let registroSeleccionado = null;
 
-    //Tabla de Personas
+    const modalDjGestion = document.getElementById('modalDjGestion');
+    const form = document.getElementById('formDatos');
+
+    const buscarPersonalInput = document.getElementById("buscarPersonal");
+    const btnNuevaDJ = document.getElementById('btnNuevaDJ');
+    const cerrarModalBtn = document.getElementById('cerrarModal');
+    const btnPrevisualizar = document.getElementById("btnPrevisualizar");
+    const pageSizeSelect = document.getElementById("page-size");
+
+    const container = document.getElementById('familyContainer');
+    const addBtn = document.getElementById('addFamilyMember');
+
+    const inputFoto = document.getElementById("inputFoto");
+    const preview = document.getElementById("previewFoto");
+    const placeholder = document.getElementById("placeholderFoto");
+    const btnSubir = document.getElementById("btnSubirFoto");
+    const btnEliminar = document.getElementById("btnEliminarFoto");
+
+    const cursoSucamec = document.getElementById("curso_sucamec");
+    const institucionContainer = document.getElementById("institucion_container");
+    const institucionInput = document.getElementById("institucion_laboral");
+
+    const departamentoSelect = document.getElementById("departamento_actual");
+    const provinciaSelect = document.getElementById("provincia_actual");
+    const distritoSelect = document.getElementById("distrito_actual");
+
+    const departamentoSelectDni = document.getElementById("departamento_dni");
+    const provinciaSelectDni = document.getElementById("provincia_dni");
+    const distritoSelectDni = document.getElementById("distrito_dni");
+
+    const nombreDJtxt = document.getElementById("nombres_apellidos");
+    const dniDJtxt = document.getElementById("dni");
+    const dniCaducaDJtxt = document.getElementById("caduca");
+    const estadoCivilDJtxt = document.getElementById("estado_civil");
+    const sexoDJtxt = document.getElementById("sexo");
+    const fechaNacDJtxt = document.getElementById("fecha_nacimiento");
+    const sabeNadarDJtxt = document.getElementById("sabe_nadar");
+
+    const inputLicencia = document.getElementById("licencia_arma");
+    const tagifyLicencia = inputLicencia
+        ? new Tagify(inputLicencia, { maxTags: 2 })
+        : null;
+
+    const API_BASE = `${VITE_URL_APP}/api/ubicacion`;
+
+    // =========================
+    // TABLA DE PERSONAS
+    // =========================
     const tblPersonas = new Tabulator("#tblPersonas", {
         height: "100%",
-        layout: "fitData",
+        layout: "fitColumns",
         responsiveLayout: "collapse",
         pagination: true,
-        paginationSize: 10,
-        rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
+        paginationSize: 20,
+        rowHeader: {
+            formatter: "responsiveCollapse",
+            width: 30,
+            minWidth: 30,
+            hozAlign: "center",
+            resizable: false,
+            headerSort: false
+        },
         locale: "es",
         langs: {
             "es": {
                 "pagination": {
                     "first": "Primero",
                     "first_title": "Primera Página",
-                    "last": "Último",
+                    "last": "Final",
                     "last_title": "Última Página",
-                    "prev": "Anterior",
+                    "prev": "<",
                     "prev_title": "Página Anterior",
-                    "next": "Siguiente",
+                    "next": ">",
                     "next_title": "Página Siguiente",
                     "all": "Todo"
                 },
@@ -48,44 +104,123 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         columns: [
             { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
-
             {
                 title: "Nombres",
                 field: "nombres",
                 hozAlign: "left",
                 widthGrow: 3,
                 formatter: function (cell) {
-                    let data = cell.getData();
-                    return `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''} `.trim();
+                    const data = cell.getData();
+                    return `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''}`.trim();
                 }
             },
-
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
+            {
+                title: "Estado",
+                field: "estado",
+                hozAlign: "center",
+                widthGrow: 2,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    let colorEstado = 'border-yellow-300 bg-yellow-100 text-yellow-800';
+                    if(data.estado == 'listo'){
+                        colorEstado = 'border-info bg-info text-white';
+                    }
+                    return `<span class="inline-flex items-center rounded-full border ${ colorEstado } px-3 py-1 text-sm font-medium ">
+                    ${ capitalizeWords(data.estado ?? '') ?? '' }
+                    </span>`.trim();
+                }
+            },
+            {
+                title: "Ultimo Cambio",
+                field: "cambio",
+                hozAlign: "center",
+                widthGrow: 3,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    console.log(data.cambio);
+                    if(data.cambio != null ){
+                            return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700">
+                            <span class="flex items-center gap-1">
+                                 <i class='bx bx-calendar'></i> <span >${ formatearFechaHora(data.cambio).fecha }</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                 <i class='bx bx-time-five' ></i> <span >${ formatearFechaHora(data.cambio).hora }</span>
+                            </span>
+                            </div>`.trim();
+                    }else{
+                        return `${data.cambio ?? 'Sin cambios'}`.trim();
 
+                    }
+                    
+                }
+            },
             {
                 title: "Acciones",
                 field: "acciones",
                 hozAlign: "center",
                 headerSort: false,
-                widthGrow: 1,
+                widthGrow: 2,
                 formatter: function (cell) {
-                    return `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">Formulario</button>`;
+                    const data = cell.getData();
+                    if(data.estado == 'pendiente'){
+                        return `<button 
+                            type="button" 
+                            class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">
+                            DJ
+                        </button>`;
+                    }else{
+                        return `<button 
+                            type="button" 
+                            class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">
+                            DJ
+                        </button>
+                        <button 
+                            type="button" 
+                            class="btn rounded-full form-btn bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar">
+                            <i class='bx bxs-file-pdf'></i>
+                        </button>
+                        `;
+                    }         
                 },
                 cellClick: function (e, cell) {
+                     const btn = e.target.closest('.form-btn');
+                    if (!btn) return;
 
-                    if (e.target.classList.contains('form-btn')) {
-                        var registro = cell.getRow().getData();
-
-                        abrirFormulario(registro);
-                    }
+                    registroSeleccionado = cell.getRow().getData();
+                    btnNuevaDJ?.click();
                 }
             },
         ],
-        layout: "fitColumns",
-
     });
 
-    //Tabla de Coincidencias
+    function formatearFechaHora(fechaStr) {
+    const fecha = new Date(fechaStr);
+
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const anio = fecha.getFullYear();
+
+    const horas = String(fecha.getHours()).padStart(2, '0');
+    const minutos = String(fecha.getMinutes()).padStart(2, '0');
+
+    return {
+        fecha: `${dia}/${mes}/${anio}`,
+        hora: `${horas}:${minutos}`
+    };
+    }
+
+    function capitalizeWords(texto) {
+    return texto
+        .toLowerCase()
+        .split(" ")
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(" ");
+    }
+
+    // =========================
+    // TABLA DE COINCIDENCIAS
+    // =========================
     const tblPersonasCN = new Tabulator("#tblPersonasCN", {
         height: "100%",
         layout: "fitDataFill",
@@ -98,8 +233,260 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
 
-    document.getElementById("buscarPersonal").addEventListener("keyup", function () {
-        let valor = this.value.toLowerCase().trim();
+    // =========================
+    // HELPERS
+    // =========================
+    function setValue(id, value = '') {
+        const el = document.getElementById(id);
+        if (el) el.value = value ?? '';
+    }
+
+    function getValue(id) {
+        const el = document.getElementById(id);
+        return el ? (el.value || '') : '';
+    }
+
+    function limpiarPreviewFoto() {
+        if (inputFoto) inputFoto.value = "";
+        if (preview) {
+            preview.src = "";
+            preview.classList.add("hidden");
+        }
+        if (placeholder) placeholder.classList.remove("hidden");
+        if (btnEliminar) btnEliminar.classList.add("hidden");
+    }
+
+    function actualizarInstitucionVisibility() {
+        if (!cursoSucamec || !institucionContainer || !institucionInput) return;
+
+        if (cursoSucamec.value === "SI") {
+            institucionContainer.classList.remove("hidden");
+        } else {
+            institucionContainer.classList.add("hidden");
+            institucionInput.value = "";
+        }
+    }
+
+    function limpiarFormulario() {
+        if (form) form.reset();
+
+        if (tagifyLicencia) {
+            tagifyLicencia.removeAllTags();
+        }
+
+        limpiarPreviewFoto();
+
+        if (container) {
+            container.innerHTML = '';
+            container.insertAdjacentHTML('beforeend', makeFamilyRow());
+        }
+
+        if (institucionContainer) institucionContainer.classList.add("hidden");
+        if (institucionInput) institucionInput.value = "";
+
+        if (provinciaSelect) provinciaSelect.innerHTML = '<option value="">Seleccionar</option>';
+        if (distritoSelect) distritoSelect.innerHTML = '<option value="">Seleccionar</option>';
+
+        if (provinciaSelectDni) provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
+        if (distritoSelectDni) distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
+    }
+
+    function resaltarTexto(valor) {
+        tblPersonas.getRows().forEach(row => {
+            row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
+                if (i === cells.length - 1) return;
+
+                const text = cell.textContent || '';
+                if (valor && text.toLowerCase().includes(valor)) {
+                    const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(${escaped})`, "gi");
+                    cell.innerHTML = text.replace(regex, "<span class='bg-warning/25'>$1</span>");
+                } else {
+                    cell.innerHTML = text;
+                }
+            });
+        });
+    }
+
+    function makeFamilyRow() {
+        return `
+        <div class="family-row grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg relative" data-familia-row>
+            <div>
+                <label class="text-sm font-medium inline-block mb-2">Parentesco</label>
+                <select name="parentesco[]" class="form-select w-full">
+                    <option value="">Seleccionar</option>
+                    <option value="PADRE">Padre</option>
+                    <option value="MADRE">Madre</option>
+                    <option value="ESPOSO">Esposo</option>
+                    <option value="ESPOSA">Esposa</option>
+                    <option value="HIJO">Hijo</option>
+                    <option value="HIJA">Hija</option>
+                    <option value="HERMANO">Hermano</option>
+                    <option value="HERMANA">Hermana</option>
+                    <option value="ABUELO">Abuelo</option>
+                    <option value="ABUELA">Abuela</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm font-medium inline-block mb-2">Apellidos y Nombres</label>
+                <input type="text" name="apellidosNombres[]" class="form-input w-full" placeholder="Apellidos y nombres completos">
+            </div>
+            <div class="flex gap-2 items-end">
+                <div class="flex-1">
+                    <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
+                    <input type="date" name="fechaNacimiento[]" class="form-input w-full">
+                </div>
+                <button type="button" class="remove-family self-end px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+        `;
+    }
+
+    async function cargarProvincias(selectProv, selectDist, departamentoId, selectedProvincia = null, selectedDistrito = null) {
+        if (!selectProv || !selectDist) return;
+
+        selectProv.innerHTML = '<option value="">Seleccionar</option>';
+        selectDist.innerHTML = '<option value="">Seleccionar</option>';
+
+        if (!departamentoId) return;
+
+        try {
+            const response = await axios.get(`${API_BASE}/provincias/${departamentoId}`);
+            response.data.forEach(prov => {
+                const option = new Option(prov.provi_descripcion, prov.provi_codigo);
+                selectProv.add(option);
+            });
+
+            if (selectedProvincia) {
+                selectProv.value = selectedProvincia;
+                await cargarDistritos(selectDist, selectedProvincia, selectedDistrito);
+            }
+        } catch (error) {
+            console.error("Error cargando provincias:", error);
+        }
+    }
+
+    async function cargarDistritos(selectDist, provinciaId, selectedDistrito = null) {
+        if (!selectDist) return;
+
+        selectDist.innerHTML = '<option value="">Seleccionar</option>';
+
+        if (!provinciaId) return;
+
+        try {
+            const response = await axios.get(`${API_BASE}/distritos/${provinciaId}`);
+            response.data.forEach(dist => {
+                const option = new Option(dist.dist_descripcion, dist.dist_codigo);
+                selectDist.add(option);
+            });
+
+            if (selectedDistrito) {
+                selectDist.value = selectedDistrito;
+            }
+        } catch (error) {
+            console.error("Error cargando distritos:", error);
+        }
+    }
+
+    // =========================
+    // FUNCIONES GLOBALES
+    // =========================
+
+  
+
+    window.abrirFormulario = async function (data = null) {
+        registroSeleccionado = null;
+        try {
+            limpiarFormulario();
+
+            if (modalDjGestion) {
+                modalDjGestion.classList.remove('hidden');
+            }
+
+            if (data ) {
+                setValue("cod_postulante", data.id);
+                setValue("nombres_apellidos", `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''}`.trim());
+                setValue("dni", data.dni);
+                setValue("fecha_nacimiento", data.fecha_nacimiento);
+                setValue("celular", data.celular);
+                setValue("correo", data.correo);
+                setValue("grado_instruccion", data.grado_instruccion);
+
+                const sucamecValor = (data.sucamec && String(data.sucamec).toUpperCase() === "SI") ? "SI" : "NO";
+                setValue("curso_sucamec", sucamecValor);
+
+                actualizarInstitucionVisibility();
+
+                if (departamentoSelect && data.departamento) {
+                    departamentoSelect.value = data.departamento;
+                    await cargarProvincias(
+                        provinciaSelect,
+                        distritoSelect,
+                        data.departamento,
+                        data.provincia ?? null,
+                        data.distrito ?? null
+                    );
+                }
+
+                let licencias = data.licencia_arma;
+
+                if (typeof licencias === "string") {
+                    try {
+                        licencias = JSON.parse(licencias);
+                    } catch (e) {
+                        licencias = licencias ? [licencias] : [];
+                    }
+                }
+
+                if (tagifyLicencia) {
+                    tagifyLicencia.removeAllTags();
+                    if (Array.isArray(licencias) && licencias.length > 0) {
+                        tagifyLicencia.addTags(licencias);
+                    }
+                }
+            } else {
+                actualizarInstitucionVisibility();
+            }
+
+        } catch (error) {
+            console.error("Error al abrir formulario:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Hubo un problema al abrir el formulario.'
+            });
+        }
+    };
+
+    window.cerrarFormulario = function () {
+        registroSeleccionado = null;
+    };
+
+    // =========================
+    // DATOS INICIALES
+    // =========================
+    function getPersonal() {
+        axios.get(`${VITE_URL_APP}/api/get-personal-dj`)
+            .then(response => {
+                //console.log('ORIGINAL, ', response);
+                const datosTabla = response.data;
+                //console.log('DATOS DE PERSONAL, ', datosTabla);
+                tblPersonas.setData(datosTabla);
+            })
+            .catch(error => {
+                console.error("Hubo un error:", error);
+            });
+    }
+
+    getPersonal();
+
+    // =========================
+    // EVENTOS
+    // =========================
+    buscarPersonalInput?.addEventListener("keyup", function () {
+        const valor = this.value.toLowerCase().trim();
 
         tblPersonas.setFilter([
             [
@@ -109,424 +496,251 @@ document.addEventListener('DOMContentLoaded', function () {
         ]);
 
         tblPersonas._ultimoFiltro = valor;
-
         setTimeout(() => resaltarTexto(valor), 10);
     });
 
-    document.getElementById('btnNuevaDJ').addEventListener('click', function () {
-        abrirFormulario();
-    });
-
-    document.addEventListener('click', function (event) {
-        const modal = document.getElementById('formModal');
-        const contenedor = modal.querySelector('.bg-white');
-
-        if (event.target.closest('#btnNuevaDJ')) return;
-
-        if (!modal.classList.contains('hidden')) {
-            if (!contenedor.contains(event.target) && !event.target.classList.contains('form-btn')) {
-                cerrarFormulario();
-            }
-        }
-    });
-
-    document.getElementById('cerrarModal').addEventListener('click', function () {
-        cerrarFormulario();
-    });
-
-    //Función para resaltar el texto del que se hace la búsqueda
-    function resaltarTexto(valor) {
-        tblPersonas.getRows().forEach(row => {
-            row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
-                if (i === cells.length - 1) return; // excluir última columna
-
-                const text = cell.textContent;
-                if (valor && text.toLowerCase().includes(valor)) {
-                    const regex = new RegExp(`(${valor})`, "gi");
-                    cell.innerHTML = text.replace(regex, "<span class='bg-warning/25'>$1</span>");
-                } else {
-                    cell.innerHTML = text;
-                }
-            });
-        });
-    };
-
-    // Cada vez que se renderiza una página en la tabla de personal
     tblPersonas.on("renderComplete", function () {
         if (tblPersonas._ultimoFiltro) {
             resaltarTexto(tblPersonas._ultimoFiltro);
         }
     });
 
-    // Función para obtener el listados de personas
-    function getPersonal() {
-        axios.get(`${VITE_URL_APP}/api/get-postulantes`)
-            .then(response => {
-                const datosTabla = response.data;
-                tblPersonas.setData(datosTabla);
+    btnNuevaDJ?.addEventListener('click', function () {
+        abrirFormulario(registroSeleccionado);
+    });
 
-            })
-            .catch(error => {
-                console.error("Hubo un error:", error);
-            });
-    }
+    document.addEventListener('click', function (event) {
+        const modal = document.getElementById('modalDjGestion');
+        if (!modal) return;
 
-    // Gestión del formulario de familiares
-    const container = document.getElementById('familyContainer');
-    const addBtn = document.getElementById('addFamilyMember');
+        const contenedor = modal.querySelector('.bg-white');
+        if (!contenedor) return;
 
-    function makeFamilyRow() {
-        return `
-        <div class="family-row grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg relative" data-familia-row>
-            <div>
-            <label class="text-sm font-medium inline-block mb-2">Parentesco</label>
-            <select name="parentesco[]" class="form-select w-full">
-                <option value="">Seleccionar</option>
-                <option value="PADRE">Padre</option>
-                <option value="MADRE">Madre</option>
-                <option value="ESPOSO">Esposo</option>
-                <option value="ESPOSA">Esposa</option>
-                <option value="HIJO">Hijo</option>
-                <option value="HIJA">Hija</option>
-                <option value="HERMANO">Hermano</option>
-                <option value="HERMANA">Hermana</option>
-                <option value="ABUELO">Abuelo</option>
-                <option value="ABUELA">Abuela</option>
-            </select>
-            </div>
-            <div>
-            <label class="text-sm font-medium inline-block mb-2">Apellidos y Nombres</label>
-            <input type="text" name="apellidosNombres[]" class="form-input w-full" placeholder="Apellidos y nombres completos">
-            </div>
-            <div class="flex gap-2 items-end">
-            <div class="flex-1">
-                <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
-                <input type="date" name="fechaNacimiento[]" class="form-input w-full">
-            </div>
-            <button type="button" class="remove-family self-end px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">
-                Eliminar
-            </button>
-            </div>
-        </div>
-        `;
-    }
+        if (event.target.closest('#btnNuevaDJ')) return;
 
-    // Agregar fila
-    if (addBtn) {
-        addBtn.addEventListener('click', function (e) {
-            e.preventDefault();
+        // if (!modal.classList.contains('hidden')) {
+        //     const hizoClickEnBotonFormulario = event.target.closest('.form-btn');
+        //     if (!contenedor.contains(event.target) && !hizoClickEnBotonFormulario) {
+        //         cerrarFormulario();
+        //     }
+        // }
+    });
+
+    cerrarModalBtn?.addEventListener('click', function () {
+        cerrarFormulario();
+    });
+
+    addBtn?.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (container) {
             container.insertAdjacentHTML('beforeend', makeFamilyRow());
-        });
-    }
+        }
+    });
 
-    // Eliminar fila con delegación
-    container.addEventListener('click', function (e) {
+    container?.addEventListener('click', function (e) {
         const btn = e.target.closest('button.remove-family');
         if (!btn) return;
 
         e.preventDefault();
-        e.stopPropagation(); // evita cierre del modal
+        e.stopPropagation();
 
         const row = btn.closest('.family-row');
         if (row) row.remove();
     });
 
-    window.abrirFormulario = function (data = null) {
-
-        limpiarFormulario();
-
-        if (data) {
-            document.getElementById("cod_postulante").value = data.id;
-            document.getElementById("nombres_apellidos").value = data.nombres + ' ' + data.apellido1 + ' ' + data.apellido2;
-            document.getElementById("dni").value = data.dni ?? '';
-            document.getElementById("fecha_nacimiento").value = data.fecha_nacimiento ?? '';
-
-            //Seleccionar departamento
-            const departamentoSelect = document.getElementById("departamento_actual");
-            const provinciaSelect = document.getElementById("provincia_actual");
-            const distritoSelect = document.getElementById("distrito_actual");
-
-            if (data.departamento) {
-                departamentoSelect.value = data.departamento;
-
-                departamentoSelect.dispatchEvent(new Event("change"));
-
-                setTimeout(() => {
-                    if (data.provincia) {
-                        provinciaSelect.value = data.provincia;
-                        provinciaSelect.dispatchEvent(new Event("change"));
-
-                        setTimeout(() => {
-                            if (data.distrito) {
-                                distritoSelect.value = data.distrito;
-                            }
-                        }, 150);
-                    }
-                }, 150);
-            }
-
-            document.getElementById("celular").value = data.celular ?? '';
-            document.getElementById("correo").value = data.correo ?? '';
-            document.getElementById("grado_instruccion").value = data.grado_instruccion ?? '';
-
-            document.getElementById("curso_sucamec").value = (data.sucamec && data.sucamec.toUpperCase() === "SI") ? "SI" : "NO";
-
-            const inputLicencia = document.getElementById("licencia_arma");
-            let tagify = Tagify.getInstance(inputLicencia);
-            if (!tagify) {
-                tagify = new Tagify(inputLicencia, {
-                    maxTags: 2
-                });
-            }
-
-            let licencias = data.licencia_arma;
-
-            tagify.removeAllTags();
-
-            if (typeof licencias === "string") {
-                try {
-                    licencias = JSON.parse(licencias);
-                } catch (e) {
-                    licencias = [licencias];
-                }
-            }
-
-            if (licencias && Array.isArray(licencias)) {
-                tagify.addTags(licencias);
-            }
-        }
-
-        inputFoto.value = '';
-        preview.src = '';
-        preview.classList.add("hidden");
-        container.innerHTML = '';
-        container.insertAdjacentHTML('beforeend', makeFamilyRow());
-
-        // MODO VISTA: Ocultar listado y mostrar formulario
-        document.getElementById('divListado').classList.add('hidden');
-        document.getElementById('divCoincidencias').classList.add('hidden'); // Asegurar ocultar coincidencias
-        document.getElementById('formModal').classList.remove('hidden');
-    };
-
-    window.cerrarFormulario = function () {
-        // MODO VISTA: Ocultar formulario y mostrar listado
-        document.getElementById('formModal').classList.add('hidden');
-        document.getElementById('divListado').classList.remove('hidden');
-        // No mostramos Coincidencias por defecto, eso lo maneja la búsqueda si aplica
-    };
-
-
-    function limpiarFormulario() {
-
-        console.log("LIMPIAR FORMULARIO");
-
-        const form = document.getElementById('formDatos');
-        form.reset();
-
-        // const inputFoto = document.getElementById("inputFoto");
-        // const previewFoto = document.getElementById("previewFoto");
-
-        // const departamentoSelect = document.getElementById("departamento-actual");
-        // const provinciaSelect = document.getElementById("provincia-actual");
-        // const distritoSelect = document.getElementById("distrito-actual");
-
-        // const departamentoSelectDni = document.getElementById("departamento-dni");
-        // const provinciaSelectDni = document.getElementById("provincia-dni");
-        // const distritoSelectDni = document.getElementById("distrito-dni");
-
-        // departamentoSelect.innerHTML = '<option value="">Seleccionar</option>';
-        // provinciaSelect.innerHTML = '<option value="">Seleccionar</option>';
-        // distritoSelect.innerHTML = '<option value="">Seleccionar</option>';
-
-        // departamentoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-        // provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-        // distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-
-
-        // previewFoto.src = '';
-        // previewFoto.classList.add("hidden");
-
-
-    }
-
-
-    const inputFoto = document.getElementById("inputFoto");
-    const preview = document.getElementById("previewFoto");
-    const placeholder = document.getElementById("placeholderFoto");
-    const btnSubir = document.getElementById("btnSubirFoto");
-    const btnEliminar = document.getElementById("btnEliminarFoto");
-
-    const cursoSucamec = document.getElementById("curso_sucamec");
-    const institucionContainer = document.getElementById("institucion_container");
-    const institucionInput = document.getElementById("institucion_laboral");
-
-    cursoSucamec.addEventListener("change", () => {
-        if (cursoSucamec.value === "SI") {
-            institucionContainer.classList.remove("hidden");
-        } else {
-            institucionContainer.classList.add("hidden");
-            institucionInput.value = "";
-        }
+    cursoSucamec?.addEventListener("change", () => {
+        actualizarInstitucionVisibility();
     });
 
-
-    // Abrir selector al dar click en Subir
-    btnSubir.addEventListener("click", () => {
-        inputFoto.click();
+    btnSubir?.addEventListener("click", () => {
+        inputFoto?.click();
     });
 
-    // Cuando selecciona una foto
-    inputFoto.addEventListener("change", () => {
-        const file = inputFoto.files[0];
+    inputFoto?.addEventListener("change", () => {
+        const file = inputFoto.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                preview.src = e.target.result;
-                preview.classList.remove("hidden");
-                placeholder.classList.add("hidden");
-                btnEliminar.classList.remove("hidden"); // Mostrar "Eliminar"
+                if (preview) {
+                    preview.src = e.target.result;
+                    preview.classList.remove("hidden");
+                }
+                placeholder?.classList.add("hidden");
+                btnEliminar?.classList.remove("hidden");
             };
             reader.readAsDataURL(file);
         }
     });
 
-    // Eliminar foto y restaurar placeholder
-    btnEliminar.addEventListener("click", () => {
-        inputFoto.value = ""; // limpia input
-        preview.src = "";
-        preview.classList.add("hidden");
-        placeholder.classList.remove("hidden");
-        btnEliminar.classList.add("hidden"); // ocultar botón eliminar
+    btnEliminar?.addEventListener("click", () => {
+        limpiarPreviewFoto();
     });
 
-
-    const departamentoSelect = document.getElementById("departamento_actual");
-    const provinciaSelect = document.getElementById("provincia_actual");
-    const distritoSelect = document.getElementById("distrito_actual");
-
-    const departamentoSelectDni = document.getElementById("departamento_dni");
-    const provinciaSelectDni = document.getElementById("provincia_dni");
-    const distritoSelectDni = document.getElementById("distrito_dni");
-
-    const API_BASE = `${VITE_URL_APP}/api/ubicacion`;
-
-    // Cargar departamentos al inicio
-    axios.get(`${API_BASE}/departamentos`)
-        .then(response => {
-            response.data.forEach(dep => {
-                let option1 = new Option(dep.depa_descripcion, dep.depa_codigo);
-                let option2 = new Option(dep.depa_descripcion, dep.depa_codigo);
-                departamentoSelect.add(option1);
-                departamentoSelectDni.add(option2);
+    // =========================
+    // UBIGEOS
+    // =========================
+    if (departamentoSelect && departamentoSelectDni) {
+        axios.get(`${API_BASE}/departamentos`)
+            .then(response => {
+                response.data.forEach(dep => {
+                    const option1 = new Option(dep.depa_descripcion, dep.depa_codigo);
+                    const option2 = new Option(dep.depa_descripcion, dep.depa_codigo);
+                    departamentoSelect.add(option1);
+                    departamentoSelectDni.add(option2);
+                });
+            })
+            .catch(error => {
+                console.error("Error cargando departamentos:", error);
             });
-        })
-        .catch(error => {
-            console.error("Error cargando departamentos:", error);
+    }
+
+    departamentoSelect?.addEventListener("change", async function () {
+        await cargarProvincias(provinciaSelect, distritoSelect, this.value);
+    });
+
+    provinciaSelect?.addEventListener("change", async function () {
+        await cargarDistritos(distritoSelect, this.value);
+    });
+
+    departamentoSelectDni?.addEventListener("change", async function () {
+        await cargarProvincias(provinciaSelectDni, distritoSelectDni, this.value);
+    });
+
+    provinciaSelectDni?.addEventListener("change", async function () {
+        await cargarDistritos(distritoSelectDni, this.value);
+    });
+
+    // =========================
+    // PREVISUALIZAR PDF
+    // =========================
+    btnPrevisualizar?.addEventListener("click", function (e) {
+        e.preventDefault();
+    
+        const camposObligatorios = [
+            { input: nombreDJtxt, nombre: 'Nombre' },
+            { input: dniDJtxt, nombre: 'DNI' },
+            { input: dniCaducaDJtxt, nombre: 'Caducidad de DNI' },
+            { input: estadoCivilDJtxt, nombre: 'Estado civil' },
+            { input: sexoDJtxt, nombre: 'Sexo' },
+            { input: fechaNacDJtxt, nombre: 'Fecha de nacimiento' },
+            { input: sabeNadarDJtxt, nombre: 'Sabe nadar' }
+        ];
+
+        const campoFaltante = camposObligatorios.find(campo => {
+            return !campo.input || !String(campo.input.value ?? '').trim();
         });
 
-    departamentoSelect.addEventListener("change", function () {
-        const departamentoId = this.value;
-        provinciaSelect.innerHTML = '<option value="">Seleccionar</option>';
-        distritoSelect.innerHTML = '<option value="">Seleccionar</option>';
+        if (campoFaltante) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campos obligatorios',
+                text: `Falta completar: ${campoFaltante.nombre}`
+            });
 
-        if (departamentoId) {
-            axios.get(`${API_BASE}/provincias/${departamentoId}`)
-                .then(response => {
-                    response.data.forEach(prov => {
-                        let option = new Option(prov.provi_descripcion, prov.provi_codigo);
-                        provinciaSelect.add(option);
-                    });
-                })
-                .catch(error => {
-                    console.error("Error cargando provincias:", error);
-                });
+            campoFaltante.input?.focus();
+            return;
         }
-    });
 
-    provinciaSelect.addEventListener("change", function () {
-        const provinciaId = this.value;
-        distritoSelect.innerHTML = '<option value="">Seleccionar</option>';
+        if (!inputFoto.files || inputFoto.files.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campo obligatorio',
+                text: 'Debe selecionar una foto'
+            });
 
-        if (provinciaId) {
-            axios.get(`${API_BASE}/distritos/${provinciaId}`)
-                .then(response => {
-                    response.data.forEach(dist => {
-                        let option = new Option(dist.dist_descripcion, dist.dist_codigo);
-                        distritoSelect.add(option);
-                    });
-                })
-                .catch(error => {
-                    console.error("Error cargando distritos:", error);
-                });
+            return;
         }
-    });
 
-    departamentoSelectDni.addEventListener("change", function () {
-        const departamentoId = this.value;
-        provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-        distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-
-        if (departamentoId) {
-            axios.get(`${API_BASE}/provincias/${departamentoId}`)
-                .then(response => {
-                    response.data.forEach(prov => {
-                        let option = new Option(prov.provi_descripcion, prov.provi_codigo);
-                        provinciaSelectDni.add(option);
-                    });
-                })
-                .catch(error => {
-                    console.error("Error cargando provincias:", error);
-                });
-        }
-    });
-
-    provinciaSelectDni.addEventListener("change", function () {
-        const provinciaId = this.value;
-        distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-
-        if (provinciaId) {
-            axios.get(`${API_BASE}/distritos/${provinciaId}`)
-                .then(response => {
-                    response.data.forEach(dist => {
-                        let option = new Option(dist.dist_descripcion, dist.dist_codigo);
-                        distritoSelectDni.add(option);
-                    });
-                })
-                .catch(error => {
-                    console.error("Error cargando distritos:", error);
-                });
-        }
-    });
-
-
-    //document.getElementById("btnPrevisualizar")?.addEventListener("click", generarDeclaracionJuradaPDF)
-
-    document.getElementById("btnPrevisualizar")?.addEventListener("click", function (e) {
-        e.preventDefault();
         generarDeclaracionJuradaPDF();
     });
 
-    document.getElementById("page-size").addEventListener("change", function () {
+    pageSizeSelect?.addEventListener("change", function () {
         const size = parseInt(this.value);
         tblPersonas.setPageSize(size);
     });
 
+    async function drawFotoEnPDF(pdf, x, y, w, h) {
+    try {
+        let imageSrc = "";
+
+        if (preview && preview.src && !preview.classList.contains("hidden")) {
+            imageSrc = preview.src;
+        }
+
+        if (!imageSrc && inputFoto?.files?.[0]) {
+            imageSrc = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(inputFoto.files[0]);
+            });
+        }
+
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.20);
+        pdf.rect(x, y, w, h);
+
+        if (!imageSrc) {
+            pdf.setFontSize(8);
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(150);
+            pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
+            return;
+        }
+
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(x, y, w, h, "F");
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.20);
+        pdf.rect(x, y, w, h);
+
+        const props = pdf.getImageProperties(imageSrc);
+        const imgW = props.width;
+        const imgH = props.height;
+
+        const ratio = Math.min(w / imgW, h / imgH);
+        const finalW = imgW * ratio;
+        const finalH = imgH * ratio;
+
+        const offsetX = x + (w - finalW) / 2;
+        const offsetY = y + (h - finalH) / 2;
+
+        let format = "JPEG";
+        if (imageSrc.startsWith("data:image/png")) {
+            format = "PNG";
+        } else if (imageSrc.startsWith("data:image/webp")) {
+            format = "WEBP";
+        }
+
+        pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
+    } catch (error) {
+        console.error("Error dibujando foto en PDF:", error);
+
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.20);
+        pdf.rect(x, y, w, h);
+
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(150);
+        pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
+    }
+}
 
     async function generarDeclaracionJuradaPDF() {
         try {
-            const { jsPDF } = window.jspdf
-            const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true })
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
 
-            // ---------- Parámetros de estilo y layout (MAXIMIZADO) ----------
-            const pageWidth = 210
-            const pageHeight = 297
-            const marginLeft = 10     // Aumentado a 10mm
-            const marginRight = 10    // Aumentado a 10mm
-            const marginTop = 10      // Aumentado a 10mm
-            const marginBottom = 10   // Aumentado a 10mm
-            const boxWidth = pageWidth - marginLeft - marginRight
-            const boxX = marginLeft
-            let y = marginTop
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const marginLeft = 10;
+            const marginRight = 10;
+            const marginTop = 10;
+            const marginBottom = 10;
+            const boxWidth = pageWidth - marginLeft - marginRight;
+            const boxX = marginLeft;
+            let y = marginTop;
 
             const colors = {
                 headerText: [0, 0, 0],
@@ -536,22 +750,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 labelText: [0, 0, 0],
                 inputText: [0, 0, 0],
                 borderColor: [0, 0, 0],
-            }
+            };
 
-            // Helper: fitText (Tamaño estandarizado a 8)
             function fitText(text, maxWidth, initialFontSize = 8, minFontSize = 6) {
-                pdf.setFontSize(initialFontSize)
-                let textWidth = pdf.getTextWidth(text)
-                let currentSize = initialFontSize
+                pdf.setFontSize(initialFontSize);
+                let textWidth = pdf.getTextWidth(text);
+                let currentSize = initialFontSize;
                 while (textWidth > maxWidth && currentSize > minFontSize) {
-                    currentSize -= 0.3
-                    pdf.setFontSize(currentSize)
-                    textWidth = pdf.getTextWidth(text)
+                    currentSize -= 0.3;
+                    pdf.setFontSize(currentSize);
+                    textWidth = pdf.getTextWidth(text);
                 }
-                return currentSize
+                return currentSize;
             }
 
-            // Helper: Obtener texto de select sin "SELECCIONAR" o "SELECCIONE"
+            
+
             function getCleanSelectText(id) {
                 const el = document.getElementById(id);
                 if (!el) return "";
@@ -564,73 +778,64 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             function drawField(label, value, x, width, fieldY, inputHeight = 6, labelRatio = 0.35, alignValue = "left", omitTop = false, omitRight = false) {
-                const labelWidth = width * labelRatio
-                const valueWidth = width * (1 - labelRatio)
-                const labelPadding = 1
-                const valStr = String(value || "").toUpperCase()
+                const labelWidth = width * labelRatio;
+                const valueWidth = width * (1 - labelRatio);
+                const labelPadding = 1;
+                const valStr = String(value || "").toUpperCase();
 
-                // 1) Fill areas (sin borde)
-                pdf.setFillColor(...colors.labelBg)
-                pdf.rect(x, fieldY, labelWidth, inputHeight, "F")
-                pdf.setFillColor(255, 255, 255)
-                pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight, "F")
+                pdf.setFillColor(...colors.labelBg);
+                pdf.rect(x, fieldY, labelWidth, inputHeight, "F");
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(x + labelWidth, fieldY, valueWidth, inputHeight, "F");
 
-                // 2) UN solo borde exterior + divisor interno
-                pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.20)
-                // Borde exterior: solo lados necesarios
-                // Borde superior solo si omitTop no está activo
+                pdf.setDrawColor(...colors.borderColor);
+                pdf.setLineWidth(0.20);
                 if (!omitTop) {
-                    pdf.line(x, fieldY, x + width, fieldY); // arriba
+                    pdf.line(x, fieldY, x + width, fieldY);
                 }
-                pdf.line(x, fieldY, x, fieldY + inputHeight); // izquierda
-                // Borde derecho solo si omitRight no está activo
+                pdf.line(x, fieldY, x, fieldY + inputHeight);
                 if (!omitRight) {
-                    pdf.line(x + width, fieldY, x + width, fieldY + inputHeight); // derecha
+                    pdf.line(x + width, fieldY, x + width, fieldY + inputHeight);
                 }
-                pdf.line(x, fieldY + inputHeight, x + width, fieldY + inputHeight); // abajo
-
-                // Línea divisoria fina entre etiqueta gris y campo blanco
+                pdf.line(x, fieldY + inputHeight, x + width, fieldY + inputHeight);
                 pdf.line(x + labelWidth, fieldY, x + labelWidth, fieldY + inputHeight);
 
-                // Label text
-                pdf.setFont("helvetica", "normal")
-                pdf.setTextColor(...colors.labelText)
-                pdf.setFontSize(8)
-                const maxLabelW = labelWidth - 2
-                const labelTextWidth = pdf.getTextWidth(label)
+                pdf.setFont("helvetica", "normal");
+                pdf.setTextColor(...colors.labelText);
+                pdf.setFontSize(8);
+                const maxLabelW = labelWidth - 2;
+                const labelTextWidth = pdf.getTextWidth(label);
                 if (labelTextWidth <= maxLabelW) {
-                    pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" })
+                    pdf.text(label, x + labelPadding, fieldY + inputHeight / 2 + 1, { align: "left" });
                 } else {
-                    const labelLines = pdf.splitTextToSize(label, maxLabelW)
-                    const lblLineH = 8 * 0.3527 * 1.15
-                    const lblBlockH = labelLines.length * lblLineH
-                    const lblY = fieldY + (inputHeight - lblBlockH) / 2 + lblLineH
-                    pdf.text(labelLines, x + labelPadding, lblY, { align: "left", lineHeightFactor: 1.15 })
+                    const labelLines = pdf.splitTextToSize(label, maxLabelW);
+                    const lblLineH = 8 * 0.3527 * 1.15;
+                    const lblBlockH = labelLines.length * lblLineH;
+                    const lblY = fieldY + (inputHeight - lblBlockH) / 2 + lblLineH;
+                    pdf.text(labelLines, x + labelPadding, lblY, { align: "left", lineHeightFactor: 1.15 });
                 }
 
-                // Value text
-                pdf.setFont("helvetica", "normal")
-                pdf.setTextColor(...colors.inputText)
-                const maxValW = valueWidth - (alignValue === "center" ? 1 : 2)
-                const valFontSize = fitText(valStr, maxValW, 8, 6)
-                pdf.setFontSize(valFontSize)
-                const textY = fieldY + inputHeight / 2 + 1
-                const valX = alignValue === "center" ? x + labelWidth + valueWidth / 2 : x + labelWidth + 1
-                pdf.text(valStr, valX, textY, { maxWidth: maxValW, align: alignValue })
+                pdf.setFont("helvetica", "normal");
+                pdf.setTextColor(...colors.inputText);
+                const maxValW = valueWidth - (alignValue === "center" ? 1 : 2);
+                const valFontSize = fitText(valStr, maxValW, 8, 6);
+                pdf.setFontSize(valFontSize);
+                const textY = fieldY + inputHeight / 2 + 1;
+                const valX = alignValue === "center" ? x + labelWidth + valueWidth / 2 : x + labelWidth + 1;
+                pdf.text(valStr, valX, textY, { maxWidth: maxValW, align: alignValue });
             }
 
             function drawSectionTitle(title, yPos) {
-                pdf.setFillColor(...colors.sectionBg)
-                pdf.rect(boxX, yPos, boxWidth, 5, "F") // 5mm altura header
-                pdf.setDrawColor(...colors.borderColor)
-                pdf.setLineWidth(0.20)
-                pdf.rect(boxX, yPos, boxWidth, 5)
+                pdf.setFillColor(...colors.sectionBg);
+                pdf.rect(boxX, yPos, boxWidth, 5, "F");
+                pdf.setDrawColor(...colors.borderColor);
+                pdf.setLineWidth(0.20);
+                pdf.rect(boxX, yPos, boxWidth, 5);
 
-                pdf.setFontSize(8)
-                pdf.setFont("helvetica", "bold")
-                pdf.setTextColor(...colors.sectionText)
-                pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" })
+                pdf.setFontSize(8);
+                pdf.setFont("helvetica", "bold");
+                pdf.setTextColor(...colors.sectionText);
+                pdf.text(title, boxX + boxWidth / 2, yPos + 3, { align: "center" });
             }
 
             function formatDateToDMY(fecha) {
@@ -648,454 +853,393 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             function checkPageBreak(heightNeeded) {
-                if (y + heightNeeded > pageHeight - marginBottom - 1) { // 1mm tolerancia
-                    pdf.addPage()
-                    y = marginTop
-                    return true
+                if (y + heightNeeded > pageHeight - marginBottom - 1) {
+                    pdf.addPage();
+                    y = marginTop;
+                    return true;
                 }
-                return false
+                return false;
             }
 
-            // ========== ENCABEZADO ==========
-            const headerH = 19 // Ajustado a 19mm (Seguridad 1 pag)
-            const logoW = 30   // 30mm logo
-            const codeW = 20   // 20mm RH 02 code
-            const titleW = boxWidth - logoW - codeW
+            const headerH = 19;
+            const logoW = 30;
+            const codeW = 20;
+            const titleW = boxWidth - logoW - codeW;
 
-            // Logo
-            await drawLogo(boxX, y, logoW, headerH)
+            await drawLogo(boxX, y, logoW, headerH);
 
-            // Title
-            const titleX = boxX + logoW
+            const titleX = boxX + logoW;
 
-            pdf.setFontSize(10)
-            pdf.setTextColor(200, 0, 0)
-            pdf.setFont("helvetica", "bold")
-            pdf.text("SISTEMA INTEGRADO SOLMAR – SISOLMAR", titleX + titleW / 2, y + 6, { align: "center" })
+            pdf.setFontSize(10);
+            pdf.setTextColor(200, 0, 0);
+            pdf.setFont("helvetica", "bold");
+            pdf.text("SISTEMA INTEGRADO SOLMAR – SISOLMAR", titleX + titleW / 2, y + 6, { align: "center" });
 
-            pdf.setFontSize(14) // Aumentado significativamente
-            pdf.setTextColor(0, 0, 0)
-            pdf.text("DECLARACION JURADA DEL TRABAJADOR", titleX + titleW / 2, y + 13, { align: "center" })
+            pdf.setFontSize(14);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text("DECLARACION JURADA DEL TRABAJADOR", titleX + titleW / 2, y + 13, { align: "center" });
 
-            // Code RH 02
-            const codeX = titleX + titleW
-            pdf.setFillColor(255, 255, 255)
-            pdf.rect(codeX, y, codeW, headerH, "F")
+            const codeX = titleX + titleW;
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(codeX, y, codeW, headerH, "F");
 
-            // UN solo borde exterior + divisores internos del header
-            pdf.setDrawColor(0); pdf.setLineWidth(0.2);
-            pdf.rect(boxX, y, boxWidth, headerH)
-            pdf.line(boxX + logoW, y, boxX + logoW, y + headerH)
-            pdf.line(codeX, y, codeX, y + headerH)
-            pdf.setFontSize(18) // "Aumentado"
-            pdf.setFont(undefined, "bold")
-            pdf.setTextColor(0)
-            pdf.text("RH 02", codeX + codeW / 2, y + 11, { align: "center" }) // Centered vertically approx
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.2);
+            pdf.rect(boxX, y, boxWidth, headerH);
+            pdf.line(boxX + logoW, y, boxX + logoW, y + headerH);
+            pdf.line(codeX, y, codeX, y + headerH);
+            pdf.setFontSize(18);
+            pdf.setFont(undefined, "bold");
+            pdf.setTextColor(0);
+            pdf.text("RH 02", codeX + codeW / 2, y + 11, { align: "center" });
 
-            y += headerH // Eliminar espacio extra
+            y += headerH;
 
-            // Declaración Texto (Dinámica con ajuste)
-            const nombres = (document.getElementById("nombres_apellidos")?.value || "").toUpperCase().trim()
-            const dni = document.getElementById("dni")?.value || "".trim()
+            const nombres = getValue("nombres_apellidos").toUpperCase().trim();
+            const dni = getValue("dni").trim();
 
-            pdf.setFontSize(8)
-            const lineHeight = 3.5
-            const maxWidth = boxWidth - 4
-            let currentX = boxX + 2
-            let currentY = y + 3.5
+            pdf.setFontSize(8);
+            const lineHeight = 3.5;
+            const maxWidth = boxWidth - 4;
+            let currentX = boxX + 2;
+            let currentY = y + 3.5;
 
-            // Segmentos de texto
             const segments = [
                 { text: "Yo, ", font: "normal" },
                 { text: nombres, font: "bold" },
                 { text: ", identificado con DNI ", font: "normal" },
                 { text: dni, font: "bold" },
                 { text: ", declaro bajo juramento que los datos personales, laborales y familiares que consigno en este documento son correctos, por lo que asumo la responsabilidad por su veracidad, cumplimiento y actualización, estando conforme con esta declaración jurada.", font: "normal" }
-            ]
+            ];
 
-            // Calculo previo de altura (Simulacion)
-            // Para dibujar la caja primero, necesitamos saber cuantos renglones ocupa
-            let simX = 0
-            let simLines = 1
+            let simX = 0;
+            let simLines = 1;
             segments.forEach(seg => {
-                pdf.setFont(undefined, seg.font)
-                const words = seg.text.split(" ")
-                words.forEach((word, i) => {
-                    const wWidth = pdf.getTextWidth(word + " ")
+                pdf.setFont(undefined, seg.font);
+                const words = seg.text.split(" ");
+                words.forEach((word) => {
+                    const wWidth = pdf.getTextWidth(word + " ");
                     if (simX + wWidth > maxWidth) {
-                        simLines++
-                        simX = wWidth // Nueva linea empieza con esta palabra
+                        simLines++;
+                        simX = wWidth;
                     } else {
-                        simX += wWidth
+                        simX += wWidth;
                     }
-                })
-            })
+                });
+            });
 
-            const declBoxH = (simLines * lineHeight) + 3
+            const declBoxH = (simLines * lineHeight) + 3;
 
-            // Dibujar caja
-            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
-            pdf.rect(boxX, y, boxWidth, declBoxH)
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, boxWidth, declBoxH);
 
-            // Renderizado Real
-            currentX = boxX + 2
-            currentY = y + 3 // Ajuste inicial Y dentro de caja
+            currentX = boxX + 2;
+            currentY = y + 3;
 
             segments.forEach(seg => {
-                pdf.setFont(undefined, seg.font)
-                // Si es un bloque largo (el ultimo), lo procesamos palabra por palabra para wrapping
-                // Si son los cortos (Yo, nombre, DNI), intentamos mantenerlos juntos si caben, o wrap palabra por palabra igual
-
-                // Logica unificada: Palabra por palabra
-                // Preservar espacios? split(" ") elimina espacios. Agregamos " " al dibujar.
-                // Para el nombre completo, quiza queramos mantenerlo junto? No necesariamente.
-
-                const words = seg.text.split(/\s+/) // Split por cualquier espacio
+                pdf.setFont(undefined, seg.font);
+                const words = seg.text.split(/\s+/);
 
                 words.forEach((word, i) => {
-                    // Reconstruir espacio excepto ultimo
-                    const wordWithSpace = word + ((i < words.length - 1) || seg.text.endsWith(" ") ? " " : "")
-                    const wWidth = pdf.getTextWidth(wordWithSpace)
+                    const wordWithSpace = word + ((i < words.length - 1) || seg.text.endsWith(" ") ? " " : "");
+                    const wWidth = pdf.getTextWidth(wordWithSpace);
 
                     if (currentX + wWidth > boxX + maxWidth + 2) {
-                        currentX = boxX + 2
-                        currentY += lineHeight
+                        currentX = boxX + 2;
+                        currentY += lineHeight;
                     }
 
-                    pdf.text(word, currentX, currentY)
-                    // Subrayado para datos (bold)
-                    // Subrayado para datos (bold) - ELIMINADO
-                    /*if (seg.font === "bold") {
-                        pdf.setLineWidth(0.1)
-                        pdf.line(currentX, currentY + 0.5, currentX + pdf.getTextWidth(word), currentY + 0.5)
-                    }*/
+                    pdf.text(word, currentX, currentY);
+                    currentX += wWidth;
+                });
 
-                    currentX += wWidth
-                })
-
-                // Añadir espacio visual entre segmentos si el segmento original tenia espacio al final
-                // Ojo: split consume espacios.
-                // Solucion simple: siempre añadir espacio tras cada palabra, pero manejar puntuacion pegada.
-                // Mejor: split manual preservando delimitadores? Complejo.
-                // Aceptable: Agregar espacio siempre, el PDF lo soporta bien.
                 if (!seg.text.endsWith(" ") && !seg.text.startsWith(" ") && segments.indexOf(seg) < segments.length - 1) {
-                    currentX += 1 // Small gap manual? O check logic arriba
+                    currentX += 1;
                 }
-            })
+            });
 
-            y += declBoxH
+            y += declBoxH;
 
-            // ========== DATOS PERSONALES ==========
-            drawSectionTitle("MIS DATOS PERSONALES", y)
-            y += 5 // Corregido overlap (4->5)
+            drawSectionTitle("MIS DATOS PERSONALES", y);
+            y += 5;
 
-            const colMain = boxWidth - 35 // Foto mas ancha (35mm)
-            const colFoto = 35
-            const rowH = 6.0 // 6.0mm para optimizar espacio y entrar todo en una hoja
+            const colMain = boxWidth - 35;
+            const colFoto = 35;
+            const rowH = 6.0;
 
-            // Fila 1: Nombres
-            drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.25)
+            drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.25);
 
-            // Foto
-            const fotoH = rowH * 6 // 6 filas (Incluye Afiliacion)
-            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-            pdf.rect(boxX + colMain, y, colFoto, fotoH)
-            pdf.setFontSize(8); pdf.setFont(undefined, "normal"); pdf.setTextColor(150);
-            pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" })
-            y += rowH
+            // const fotoH = rowH * 6;
+            // pdf.setDrawColor(0);
+            // pdf.setLineWidth(0.20);
+            // pdf.rect(boxX + colMain, y, colFoto, fotoH);
+            // pdf.setFontSize(8);
+            // pdf.setFont(undefined, "normal");
+            // pdf.setTextColor(150);
+            // pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" });
+            // y += rowH;
 
-            // Fila 2: DNI...
-            const w1 = colMain / 4
-            drawField("DNI", dni, boxX, w1, y, rowH, 0.3)
-            drawField("Caduca", document.getElementById("caduca")?.value || "", boxX + w1, boxWidth * 0.381 - w1, y, rowH, 0.461)
-            drawField("Estado Civil", document.getElementById("estado_civil")?.value || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
-            drawField("Sexo", document.getElementById("sexo")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
-            y += rowH
+            const fotoH = rowH * 6;
+            await drawFotoEnPDF(pdf, boxX + colMain, y, colFoto, fotoH);
+            y += rowH;
 
-            // Fila 3: Fecha...
-            const w2 = colMain / 2
-            drawField("Fecha Nacimiento", formatDateToDMY(document.getElementById("fecha_nacimiento")?.value), boxX, boxWidth * 0.381, y, rowH, 0.394)
-            drawField("Ciudad", getCleanSelectText("provincia_actual"), boxX + boxWidth * 0.381, colMain - boxWidth * 0.381, y, rowH, 0.334)
-            y += rowH
+            const w1 = colMain / 4;
+            drawField("DNI", dni, boxX, w1, y, rowH, 0.3);
+            drawField("Caduca", getValue("caduca"), boxX + w1, boxWidth * 0.381 - w1, y, rowH, 0.461);
+            drawField("Estado Civil", getValue("estado_civil"), boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589);
+            drawField("Sexo", getValue("sexo"), boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55);
+            y += rowH;
 
-            // Fila 4: Tipo Sangre...
-            const w3 = colMain / 4
-            drawField("Tipo Sangre", document.getElementById("tipo_sangre")?.value || "", boxX, w3, y, rowH, 0.735)
-            drawField("Peso (Kg.)", document.getElementById("peso")?.value || "", boxX + w3, boxWidth * 0.381 - w3, y, rowH, 0.461)
-            drawField("Talla (Mt.)", document.getElementById("talla")?.value || "", boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589)
-            drawField("Celular", document.getElementById("celular")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
-            y += rowH
+            drawField("Fecha Nacimiento", formatDateToDMY(getValue("fecha_nacimiento")), boxX, boxWidth * 0.381, y, rowH, 0.394);
+            drawField("Ciudad", getCleanSelectText("provincia_actual"), boxX + boxWidth * 0.381, colMain - boxWidth * 0.381, y, rowH, 0.334);
+            y += rowH;
 
-            // Fila 5: Correo...
-            const wMail = w3 * 3
-            const wWsp = w3
-            drawField("Correo electrónico", document.getElementById("correo")?.value || "", boxX, boxWidth * 0.6279, y, rowH, 0.239)
-            drawField("WhatsApp", document.getElementById("whatsapp")?.value || "", boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55)
-            y += rowH
+            const w3 = colMain / 4;
+            drawField("Tipo Sangre", getValue("tipo_sangre"), boxX, w3, y, rowH, 0.735);
+            drawField("Peso (Kg.)", getValue("peso"), boxX + w3, boxWidth * 0.381 - w3, y, rowH, 0.461);
+            drawField("Talla (Mt.)", getValue("talla"), boxX + boxWidth * 0.381, boxWidth * 0.6279 - boxWidth * 0.381, y, rowH, 0.589);
+            drawField("Celular", getValue("celular"), boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55);
+            y += rowH;
 
-            // Fila 6: Afiliacion Texto (Ajustado a colMain para dejar espacio a Foto)
-            // Etiqueta debe terminar alineada con fin de etiqueta Talla (Mt.)
-            const row6W = colMain
-            const row6LabelW = boxWidth * 0.5264 // Alineado con inicio de Carrera
-            const row6InputW = row6W - row6LabelW
+            const wMail = w3 * 3;
+            drawField("Correo electrónico", getValue("correo"), boxX, boxWidth * 0.6279, y, rowH, 0.239);
+            drawField("WhatsApp", getValue("whatsapp"), boxX + boxWidth * 0.6279, colMain - boxWidth * 0.6279, y, rowH, 0.55);
+            y += rowH;
 
-            pdf.setFillColor(220); pdf.rect(boxX, y, row6LabelW, rowH, "F");
-            pdf.setFillColor(255); pdf.rect(boxX + row6LabelW, y, row6InputW, rowH, "F");
-            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-            // Dibujar solo el borde inferior, izquierdo y derecho, sin doble trazo
-            pdf.line(boxX, y, boxX + row6W, y); // borde superior
-            pdf.line(boxX, y, boxX, y + rowH); // borde izquierdo
-            pdf.line(boxX + row6W, y, boxX + row6W, y + rowH); // borde derecho
-            pdf.line(boxX, y + rowH, boxX + row6W, y + rowH); // borde inferior
-            pdf.line(boxX + row6LabelW, y, boxX + row6LabelW, y + rowH); // divisoria interna
-            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
-            pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 4)
-            y += rowH
+            const row6W = colMain;
+            const row6LabelW = boxWidth * 0.5264;
+            const row6InputW = row6W - row6LabelW;
 
-            // Fila 7: AFP/ONP
-            const sysPrev = document.getElementById("sistema_previsional")?.value || ""
-            const isAFP = sysPrev.includes("AFP")
-            const isONP = sysPrev.includes("ONP")
-            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.5264, y, rowH, 0.3875, "center")
-            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.441, "center")
-            y += rowH
+            pdf.setFillColor(220);
+            pdf.rect(boxX, y, row6LabelW, rowH, "F");
+            pdf.setFillColor(255);
+            pdf.rect(boxX + row6LabelW, y, row6InputW, rowH, "F");
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.20);
+            pdf.line(boxX, y, boxX + row6W, y);
+            pdf.line(boxX, y, boxX, y + rowH);
+            pdf.line(boxX + row6W, y, boxX + row6W, y + rowH);
+            pdf.line(boxX, y + rowH, boxX + row6W, y + rowH);
+            pdf.line(boxX + row6LabelW, y, boxX + row6LabelW, y + rowH);
+            pdf.setTextColor(0);
+            pdf.setFont(undefined, "normal");
+            pdf.setFontSize(8);
+            pdf.text("No estoy afiliado a ninguna AFP o ONP y deseo afiliarme a:", boxX + 2, y + 4);
+            y += rowH;
 
-            // Fila 8: Educacion
-            // Helper para auto-ajuste de texto (Centrado y escalado)
+            const sysPrev = getValue("sistema_previsional");
+            const isAFP = sysPrev.includes("AFP");
+            const isONP = sysPrev.includes("ONP");
+            drawField("Estoy afiliado a la AFP", isAFP ? "X" : "", boxX, boxWidth * 0.5264, y, rowH, 0.3875, "center");
+            drawField("Estoy afiliado a la ONP", isONP ? "X" : "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.441, "center");
+            y += rowH;
+
             const drawAutoFitField = (label, value, x, w, y, h, labelPct) => {
-                const labelW = w * labelPct
-                const valW = w - labelW
+                const labelW = w * labelPct;
+                const valW = w - labelW;
 
-                // 1) Fill areas (sin borde)
-                pdf.setFillColor(220) // Gris
-                pdf.rect(x, y, labelW, h, "F")
-                pdf.setFillColor(255)
-                pdf.rect(x + labelW, y, valW, h, "F")
+                pdf.setFillColor(220);
+                pdf.rect(x, y, labelW, h, "F");
+                pdf.setFillColor(255);
+                pdf.rect(x + labelW, y, valW, h, "F");
 
-                // 2) UN solo borde exterior + divisor interno
-                pdf.setDrawColor(0)
-                pdf.setLineWidth(0.20)
-                pdf.rect(x, y, w, h)
-                pdf.line(x + labelW, y, x + labelW, y + h)
+                pdf.setDrawColor(0);
+                pdf.setLineWidth(0.20);
+                pdf.rect(x, y, w, h);
+                pdf.line(x + labelW, y, x + labelW, y + h);
 
-                // Label — tamaño estandarizado 8
-                pdf.setFont(undefined, "normal")
-                pdf.setTextColor(0)
-                const lblFontSize = fitText(label, labelW - 2, 8, 6)
-                pdf.setFontSize(lblFontSize)
-                const maxLabelW = labelW - 2
-                const labelLines = pdf.splitTextToSize(label, maxLabelW)
-                const lblLineH = lblFontSize * 0.3527 * 1.15
-                const lblBlockH = labelLines.length * lblLineH
+                pdf.setFont(undefined, "normal");
+                pdf.setTextColor(0);
+                const lblFontSize = fitText(label, labelW - 2, 8, 6);
+                pdf.setFontSize(lblFontSize);
+                const maxLabelW = labelW - 2;
+                const labelLines = pdf.splitTextToSize(label, maxLabelW);
+                const lblLineH = lblFontSize * 0.3527 * 1.15;
+                const lblBlockH = labelLines.length * lblLineH;
                 const lblY = labelLines.length === 1
                     ? y + h / 2 + 1
-                    : y + (h - lblBlockH) / 2 + lblLineH
-                pdf.text(labelLines, x + labelW / 2, lblY, { align: "center", lineHeightFactor: 1.15 })
-                pdf.setFont(undefined, "normal")
+                    : y + (h - lblBlockH) / 2 + lblLineH;
+                pdf.text(labelLines, x + labelW / 2, lblY, { align: "center", lineHeightFactor: 1.15 });
+                pdf.setFont(undefined, "normal");
 
-                if (!value) return
+                if (!value) return;
 
-                // Auto-fit: tamaño estandarizado 8
-                let fontSize = 8
-                pdf.setFontSize(fontSize)
-                const maxValW = valW - 2 // padding
+                let fontSize = 8;
+                pdf.setFontSize(fontSize);
+                const maxValW = valW - 2;
 
                 while (pdf.getTextWidth(value) > maxValW && fontSize > 6) {
-                    fontSize -= 0.3
-                    pdf.setFontSize(fontSize)
+                    fontSize -= 0.3;
+                    pdf.setFontSize(fontSize);
                 }
 
-                // Si no cabe en 1 linea → multilinea capped a 2 lineas max
-                const MAX_LINES = 2
-                let lines = [value]
+                const MAX_LINES = 2;
+                let lines = [value];
 
                 if (pdf.getTextWidth(value) > maxValW) {
-                    fontSize = 6
-                    pdf.setFontSize(fontSize)
-                    const allLines = pdf.splitTextToSize(value, maxValW)
+                    fontSize = 6;
+                    pdf.setFontSize(fontSize);
+                    const allLines = pdf.splitTextToSize(value, maxValW);
 
                     if (allLines.length <= MAX_LINES) {
-                        lines = allLines
+                        lines = allLines;
                     } else {
-                        // Truncar en linea 2 con "..."
-                        lines = allLines.slice(0, MAX_LINES)
-                        let last = lines[MAX_LINES - 1]
+                        lines = allLines.slice(0, MAX_LINES);
+                        let last = lines[MAX_LINES - 1];
                         while (pdf.getTextWidth(last + "...") > maxValW && last.length > 1) {
-                            last = last.slice(0, -1)
+                            last = last.slice(0, -1);
                         }
-                        lines[MAX_LINES - 1] = last + "..."
+                        lines[MAX_LINES - 1] = last + "...";
                     }
                 }
 
-                // Posicion segura dentro del cuadro
-                const textX = x + labelW + valW / 2
-                const textY = lines.length === 1
-                    ? y + h / 2 + 1   // centrado vertical 1 linea
-                    : y + 2           // top-aligned multilinea (2 lineas caben en 6.5mm)
+                const textX = x + labelW + valW / 2;
+                const textY = lines.length === 1 ? y + h / 2 + 1 : y + 2;
+                pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 });
+            };
 
-                pdf.text(lines, textX, textY, { align: "center", lineHeightFactor: 1.1 })
-            }
+            const col1 = boxWidth * 0.285;
+            const col2 = boxWidth * 0.2414;
+            const col3 = (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441) - col1 - col2;
+            const col4 = boxWidth - (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441);
 
-            // Fila 8: Educacion - 4 columnas - Alineación con fila inferior (Embargos/BCP)
-            // Institución inicia donde termina el label de "Embargos en inst. financieras" (embW*0.60 = 22.5%)
-            const col1 = boxWidth * 0.285  // Grado de Instrucción (28.5% - alineado con fin label Embargos)
-            const col2 = boxWidth * 0.2414  // Institución - termina alineado con fin label BCP
-            const col3 = (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441) - col1 - col2  // Carrera: hasta fin label ONP
-            const col4 = boxWidth - (boxWidth * 0.5264 + boxWidth * 0.4736 * 0.441)       // Año de egreso: alineado fin label ONP
+            drawAutoFitField("Grado de Instrucción", getCleanSelectText("grado_instruccion"), boxX, col1, y, rowH, 0.526);
+            drawAutoFitField("Institución", getCleanSelectText("institucion"), boxX + col1, col2, y, rowH, 0.398);
+            drawAutoFitField("Carrera", getCleanSelectText("carrera"), boxX + col1 + col2, col3, y, rowH, 0.486);
+            drawField("Año de egreso", getValue("anio_egreso"), boxX + col1 + col2 + col3, col4, y, rowH, 0.50);
+            y += rowH;
 
-            drawAutoFitField("Grado de Instrucción", getCleanSelectText("grado_instruccion"), boxX, col1, y, rowH, 0.526)
-            drawAutoFitField("Institución", getCleanSelectText("institucion"), boxX + col1, col2, y, rowH, 0.398)
-            drawAutoFitField("Carrera", getCleanSelectText("carrera"), boxX + col1 + col2, col3, y, rowH, 0.486)
-            drawField("Año de egreso", document.getElementById("anio_egreso")?.value || "", boxX + col1 + col2 + col3, col4, y, rowH, 0.50)
-            y += rowH
+            const embW = boxWidth * 0.381;
+            const interbankStart = col1 + col2 + col3 * 0.486;
+            const bcpW = interbankStart - embW;
+            const bcpLabelRatio = ((wMail - embW) * 0.63) / bcpW;
+            const interbankW = boxWidth - interbankStart;
 
-            // Fila 9: Embargos
-            const embW = boxWidth * 0.381      // Embargos: 38.1% (alineado con fin label Institución)
-            const interbankStart = col1 + col2 + col3 * 0.486  // Inicio INTERBANK alineado con fin de etiqueta gris de Carrera
-            const bcpW = interbankStart - embW
-            const bcpLabelRatio = ((wMail - embW) * 0.63) / bcpW  // Preserva posición exacta del label gris de BCP
-            const interbankW = boxWidth - interbankStart
+            drawField("Embargos en instituciones financieras", getValue("embargos"), boxX, embW, y, rowH, 0.75);
+            drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, bcpLabelRatio);
+            drawField("Cuenta sueldo INTERBANK", "", boxX + interbankStart, interbankW, y, rowH, 0.644);
+            y += rowH;
 
-            drawField("Embargos en instituciones financieras", document.getElementById("embargos")?.value || "", boxX, embW, y, rowH, 0.75)
-            drawField("Cuenta sueldo BCP", "", boxX + embW, bcpW, y, rowH, bcpLabelRatio)
-            drawField("Cuenta sueldo INTERBANK", "", boxX + interbankStart, interbankW, y, rowH, 0.644)
-            y += rowH
+            drawField("Dirección Actual", getValue("direccion_actual"), boxX, boxWidth, y, rowH, 0.15);
+            y += rowH;
 
-            // Fila 10: Direccion Actual
-            drawField("Dirección Actual", document.getElementById("direccion_actual")?.value || "", boxX, boxWidth, y, rowH, 0.15)
-            y += rowH
+            drawField("Dirección DNI", getValue("direccion_dni"), boxX, boxWidth, y, rowH, 0.15);
+            y += rowH;
 
-            // Fila 11: Direccion DNI
-            drawField("Dirección DNI", document.getElementById("direccion_dni")?.value || "", boxX, boxWidth, y, rowH, 0.15)
-            y += rowH
+            drawField("En caso de Emergencia llamar a", getValue("contacto_emergencia"), boxX, boxWidth, y, rowH, 0.286);
+            y += rowH;
 
-            // Fila 12: Emergencia 1
-            drawField("En caso de Emergencia llamar a", document.getElementById("contacto_emergencia")?.value || "", boxX, boxWidth, y, rowH, 0.286)
-            y += rowH
+            const wCelEmergencia = boxWidth * 0.5264;
+            const wParEmergencia = boxWidth * 0.4736;
+            drawField("Número de celular", getValue("celular_emergencia"), boxX, wCelEmergencia, y, rowH, 0.403);
+            drawField("Parentesco", getValue("parentesco_emergencia"), boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.25);
+            y += rowH;
 
-            // Fila 13: Emergencia 2 - 50/50
-            const wCelEmergencia = boxWidth * 0.5264
-            const wParEmergencia = boxWidth * 0.4736
-            drawField("Número de celular", document.getElementById("celular_emergencia")?.value || "", boxX, wCelEmergencia, y, rowH, 0.403)
-            drawField("Parentesco", document.getElementById("parentesco_emergencia")?.value || "", boxX + wCelEmergencia, wParEmergencia, y, rowH, 0.25)
-            y += rowH
-            // ========== DATOS LABORALES ==========
-            checkPageBreak(5 * rowH + 5 + 3)
-            drawSectionTitle("MIS DATOS LABORALES", y)
-            y += 5 // Corregido overlap (4->5)
+            checkPageBreak(5 * rowH + 5 + 3);
+            drawSectionTitle("MIS DATOS LABORALES", y);
+            y += 5;
 
-            // Fila 1
-            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.5264, y, rowH, 0.475)
-            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4)
-            y += rowH
+            drawField("Profesión u Ocupación Principal", "", boxX, boxWidth * 0.5264, y, rowH, 0.475);
+            drawField("Tiempo Experiencia", "", boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4);
+            y += rowH;
 
-            // Fila 2
-            drawField("Familiar en la Empresa", "", boxX, boxWidth * 0.25, y, rowH, 0.816)
-            drawField("Nombre Completo", "", boxX + boxWidth * 0.25, boxWidth * 0.46584, y, rowH, 0.3)
-            drawField("Parentesco", "", boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4)
-            y += rowH
+            drawField("Familiar en la Empresa", "", boxX, boxWidth * 0.25, y, rowH, 0.816);
+            drawField("Nombre Completo", "", boxX + boxWidth * 0.25, boxWidth * 0.46584, y, rowH, 0.3);
+            drawField("Parentesco", "", boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4);
+            y += rowH;
 
-            // Fila 3: SMO...
-            const wLab3 = boxWidth / 6
-            drawField("SMO", document.getElementById("smo")?.value || "", boxX, wLab3, y, rowH, 0.4)
-            drawField("Institución", document.getElementById("institucion_laboral")?.value || "", boxX + wLab3 * 0.75, wLab3 * 1.25, y, rowH, 0.379)
-            drawField("Nº Brevete", document.getElementById("brevete")?.value || "", boxX + wLab3 * 1.85, wLab3 * 1.15, y, rowH, 0.522)
-            drawField("Clase", document.getElementById("clase_brevete")?.value || "", boxX + wLab3 * 3, wLab3, y, rowH, 0.4)
-            drawField("Tipo", "", boxX + wLab3 * 4, wLab3, y, rowH, 0.289)
-            drawField("Vehículo Propio", document.getElementById("vehiculo_propio")?.value || "", boxX + boxWidth * 0.755, boxWidth * 0.245, y, rowH, 0.52)
-            y += rowH
+            const wLab3 = boxWidth / 6;
+            drawField("SMO", getValue("smo"), boxX, wLab3, y, rowH, 0.4);
+            drawField("Institución", getValue("institucion_laboral"), boxX + wLab3 * 0.75, wLab3 * 1.25, y, rowH, 0.379);
+            drawField("Nº Brevete", getValue("brevete"), boxX + wLab3 * 1.85, wLab3 * 1.15, y, rowH, 0.522);
+            drawField("Clase", getValue("clase_brevete"), boxX + wLab3 * 3, wLab3, y, rowH, 0.4);
+            drawField("Tipo", "", boxX + wLab3 * 4, wLab3, y, rowH, 0.289);
+            drawField("Vehículo Propio", getValue("vehiculo_propio"), boxX + boxWidth * 0.755, boxWidth * 0.245, y, rowH, 0.52);
+            y += rowH;
 
-            // Fila 4 - Duración alineada con inicio de Interbank (62.5%)
-            drawField("Empresa Anterior", document.getElementById("empresa_anterior")?.value || "", boxX, boxWidth * 0.375, y, rowH, 0.40)
-            // El campo blanco de Cargo se extiende hasta el inicio de Duración
+            drawField("Empresa Anterior", getValue("empresa_anterior"), boxX, boxWidth * 0.375, y, rowH, 0.40);
             const cargoStart = boxX + wLab3 * 1.85;
             const duracionStart = boxX + boxWidth * 0.71584;
-            drawField("Cargo", document.getElementById("cargo_anterior")?.value || "", cargoStart, duracionStart - cargoStart, y, rowH, 0.25)
-            drawField("Duración", document.getElementById("tiempo_servicio_anterior")?.value || "", duracionStart, boxWidth - (duracionStart - boxX), y, rowH, 0.25)
-            y += rowH
+            drawField("Cargo", getValue("cargo_anterior"), cargoStart, duracionStart - cargoStart, y, rowH, 0.25);
+            drawField("Duración", getValue("tiempo_servicio_anterior"), duracionStart, boxWidth - (duracionStart - boxX), y, rowH, 0.25);
+            y += rowH;
 
-            // Fila 5
-            drawField("Profesión u Ocupación Alterna 1", "", boxX, boxWidth / 2, y, rowH, 0.45)
-            drawField("Profesión u Ocupación Alterna 2", "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.45)
-            y += rowH
+            drawField("Profesión u Ocupación Alterna 1", "", boxX, boxWidth / 2, y, rowH, 0.45);
+            drawField("Profesión u Ocupación Alterna 2", "", boxX + boxWidth / 2, boxWidth / 2, y, rowH, 0.45);
+            y += rowH;
 
-            // ========== DATOS FAMILIARES ==========
-            checkPageBreak(40)
-            drawSectionTitle("MIS DATOS FAMILIARES", y)
-            y += 5 // Corregido overlap (4->5)
+            checkPageBreak(40);
+            drawSectionTitle("MIS DATOS FAMILIARES", y);
+            y += 5;
 
-            // Headers - Fecha Nacimiento más estrecha con texto en 2 líneas
-            const fmC1 = boxWidth * 0.15
-            const fmC2 = boxWidth * 0.70
-            const fmC3 = boxWidth * 0.15
-            const fmHeaderH = rowH * 1.3 // Altura extra para 2 líneas en header
+            const fmC1 = boxWidth * 0.15;
+            const fmC2 = boxWidth * 0.70;
+            const fmC3 = boxWidth * 0.15;
+            const fmHeaderH = rowH * 1.3;
 
-            // Fill headers (sin borde)
-            pdf.setFillColor(...colors.labelBg)
-            pdf.rect(boxX, y, fmC1, fmHeaderH, "F")
-            pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F")
-            pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F")
-            // UN solo borde exterior + divisores internos
-            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-            pdf.rect(boxX, y, boxWidth, fmHeaderH)
-            pdf.line(boxX + fmC1, y, boxX + fmC1, y + fmHeaderH)
-            pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH)
-            // Textos
-            pdf.setFontSize(8)
-            pdf.setFont(undefined, "normal")
-            pdf.text("Parentesco", boxX + fmC1 / 2, y + fmHeaderH / 2 + 1, { align: "center" })
-            pdf.text("Apellidos y Nombres", boxX + fmC1 + fmC2 / 2, y + fmHeaderH / 2 + 1, { align: "center" })
-            // Fecha Nacimiento en 2 líneas
-            const fnLines = pdf.splitTextToSize("Fecha Nacimiento", fmC3 - 4)
-            pdf.text(fnLines, boxX + fmC1 + fmC2 + fmC3 / 2, y + fmHeaderH / 2 - (fnLines.length > 1 ? 1.5 : 0) + 1, { align: "center" })
-            y += fmHeaderH
+            pdf.setFillColor(...colors.labelBg);
+            pdf.rect(boxX, y, fmC1, fmHeaderH, "F");
+            pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F");
+            pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F");
 
-            // Filas datos
-            const parentescos = document.getElementsByName("parentesco[]")
-            const nombresFam = document.getElementsByName("apellidosNombres[]")
-            const fechasFam = document.getElementsByName("fechaNacimiento[]")
-            const rowCount = Math.max(parentescos.length, 5)
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, fmHeaderH);
+            pdf.line(boxX + fmC1, y, boxX + fmC1, y + fmHeaderH);
+            pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH);
+
+            pdf.setFontSize(8);
+            pdf.setFont(undefined, "normal");
+            pdf.text("Parentesco", boxX + fmC1 / 2, y + fmHeaderH / 2 + 1, { align: "center" });
+            pdf.text("Apellidos y Nombres", boxX + fmC1 + fmC2 / 2, y + fmHeaderH / 2 + 1, { align: "center" });
+
+            const fnLines = pdf.splitTextToSize("Fecha Nacimiento", fmC3 - 4);
+            pdf.text(fnLines, boxX + fmC1 + fmC2 + fmC3 / 2, y + fmHeaderH / 2 - (fnLines.length > 1 ? 1.5 : 0) + 1, { align: "center" });
+            y += fmHeaderH;
+
+            const parentescos = document.getElementsByName("parentesco[]");
+            const nombresFam = document.getElementsByName("apellidosNombres[]");
+            const fechasFam = document.getElementsByName("fechaNacimiento[]");
+            const rowCount = Math.max(parentescos.length, 5);
 
             for (let i = 0; i < rowCount; i++) {
-                checkPageBreak(rowH)
-                const par = parentescos[i]?.value || ""
-                const nom = nombresFam[i]?.value || ""
-                const fec = formatDateToDMY(fechasFam[i]?.value || "")
+                checkPageBreak(rowH);
+                const par = parentescos[i]?.value || "";
+                const nom = nombresFam[i]?.value || "";
+                const fec = formatDateToDMY(fechasFam[i]?.value || "");
 
-                // UN solo borde exterior + divisores internos
-                pdf.setDrawColor(0); pdf.setLineWidth(0.15);
-                pdf.rect(boxX, y, boxWidth, rowH)
-                pdf.line(boxX + fmC1, y, boxX + fmC1, y + rowH)
-                pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + rowH)
-                pdf.setTextColor(0)
-                pdf.text(par.toUpperCase(), boxX + 2, y + 3)
-                pdf.text(nom.toUpperCase(), boxX + fmC1 + 2, y + 3)
-                pdf.text(fec, boxX + fmC1 + fmC2 + 2, y + 3)
-                y += rowH
+                pdf.setDrawColor(0);
+                pdf.setLineWidth(0.15);
+                pdf.rect(boxX, y, boxWidth, rowH);
+                pdf.line(boxX + fmC1, y, boxX + fmC1, y + rowH);
+                pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + rowH);
+                pdf.setTextColor(0);
+                pdf.text(par.toUpperCase(), boxX + 2, y + 3);
+                pdf.text(nom.toUpperCase(), boxX + fmC1 + 2, y + 3);
+                pdf.text(fec, boxX + fmC1 + fmC2 + 2, y + 3);
+                y += rowH;
             }
-            // ========== CONFORMIDAD ==========
-            checkPageBreak(60)
-            drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y)
-            y += 5 // Corregido overlap (4->5)
 
-            pdf.setFontSize(8)
-            pdf.setFont(undefined, "normal")
-            const confText = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento."
+            checkPageBreak(60);
+            drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y);
+            y += 5;
 
-            const confLines = pdf.splitTextToSize(confText, boxWidth - 4)
+            pdf.setFontSize(8);
+            pdf.setFont(undefined, "normal");
+            const confText = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento.";
 
-            // Calculate height based on new font size and desired line height (3.5)
-            const confBoxH = confLines.length * 3.5 + 5 // Adjusted line height from 4 to 3.5
-            pdf.setDrawColor(0); pdf.setLineWidth(0.15);
-            pdf.rect(boxX, y, boxWidth, confBoxH)
-            pdf.text(confLines, boxX + 2, y + 4) // Ajuste Y+4
-            y += confBoxH
+            const confLines = pdf.splitTextToSize(confText, boxWidth - 4);
+            const confBoxH = confLines.length * 3.5 + 5;
 
-            // Firmas
-            // Calcular espacio restante para firmas antes del pie de pagina
-            // pageHeight - marginBottom - rowH (footer) - y actual
-            const espacioDisponible = pageHeight - marginBottom - rowH - y - 2
-            const firmaH = Math.max(60, espacioDisponible) // Usar todo el espacio, minimo 60mm
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.15);
+            pdf.rect(boxX, y, boxWidth, confBoxH);
+            pdf.text(confLines, boxX + 2, y + 4);
+            y += confBoxH;
+
+            const espacioDisponible = pageHeight - marginBottom - rowH - y - 2;
+            const firmaH = Math.max(60, espacioDisponible);
             const firmaW = boxWidth * 0.6;
             const huellaW = boxWidth * 0.4;
 
@@ -1115,45 +1259,40 @@ document.addEventListener('DOMContentLoaded', function () {
 
             y += firmaH;
 
-            // Fila final fija (Footer Row)
-            const footerRowH = rowH
-            const fechaW = boxWidth * 0.25 // 25% para etiqueta Fecha
-            const fechaValW = boxWidth * 0.15 // 15% para valor Fecha
-            const nombreLabelStart = boxX + fechaW + fechaValW
-            const nombreLabelEnd = boxX + firmaW // Alineado con límite de firma
+            const footerRowH = rowH;
+            const fechaW = boxWidth * 0.25;
+            const fechaValW = boxWidth * 0.15;
+            const nombreLabelStart = boxX + fechaW + fechaValW;
+            const nombreLabelEnd = boxX + firmaW;
 
-            // 1) Fill areas
-            pdf.setFillColor(...colors.labelBg)
-            pdf.rect(boxX, y, fechaW, footerRowH, "F")
-            pdf.setFillColor(255)
-            pdf.rect(boxX + fechaW, y, fechaValW, footerRowH, "F")
-            pdf.setFillColor(...colors.labelBg)
-            pdf.rect(nombreLabelStart, y, nombreLabelEnd - nombreLabelStart, footerRowH, "F")
-            pdf.setFillColor(255)
-            pdf.rect(nombreLabelEnd, y, boxWidth - (nombreLabelEnd - boxX), footerRowH, "F")
+            pdf.setFillColor(...colors.labelBg);
+            pdf.rect(boxX, y, fechaW, footerRowH, "F");
+            pdf.setFillColor(255);
+            pdf.rect(boxX + fechaW, y, fechaValW, footerRowH, "F");
+            pdf.setFillColor(...colors.labelBg);
+            pdf.rect(nombreLabelStart, y, nombreLabelEnd - nombreLabelStart, footerRowH, "F");
+            pdf.setFillColor(255);
+            pdf.rect(nombreLabelEnd, y, boxWidth - (nombreLabelEnd - boxX), footerRowH, "F");
 
-            // 2) Borde exterior y divisores
-            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-            pdf.rect(boxX, y, boxWidth, footerRowH)
-            pdf.line(boxX + fechaW, y, boxX + fechaW, y + footerRowH)
-            pdf.line(nombreLabelStart, y, nombreLabelStart, y + footerRowH)
-            pdf.line(nombreLabelEnd, y, nombreLabelEnd, y + footerRowH)
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, footerRowH);
+            pdf.line(boxX + fechaW, y, boxX + fechaW, y + footerRowH);
+            pdf.line(nombreLabelStart, y, nombreLabelStart, y + footerRowH);
+            pdf.line(nombreLabelEnd, y, nombreLabelEnd, y + footerRowH);
 
-            // 3) Textos
-            pdf.setTextColor(0); pdf.setFont(undefined, "normal"); pdf.setFontSize(8);
-            pdf.text("Fecha de la declaración", boxX + 2, y + 4)
-            pdf.text(formatDateToDMY(new Date()), boxX + fechaW + 2, y + 4)
-            pdf.text("Nombre", nombreLabelStart + 2, y + 4)
-            pdf.text(document.getElementById("trabajador")?.value || "", nombreLabelEnd + 2, y + 4)
-
-            y += footerRowH
-
-
+            pdf.setTextColor(0);
+            pdf.setFont(undefined, "normal");
+            pdf.setFontSize(8);
+            pdf.text("Fecha de la declaración", boxX + 2, y + 4);
+            pdf.text(formatDateToDMY(new Date()), boxX + fechaW + 2, y + 4);
+            pdf.text("Nombre", nombreLabelStart + 2, y + 4);
+            pdf.text(getValue("trabajador"), nombreLabelEnd + 2, y + 4);
 
             async function drawLogo(x, y, w, h) {
                 if (!window.logoUrl) {
-                    // Fallback
-                    pdf.setFontSize(8); pdf.setTextColor(0);
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(0);
                     pdf.setFont(undefined, "normal");
                     pdf.text("SOLMAR", x + w / 2, y + h / 2, { align: "center" });
                     return;
@@ -1174,8 +1313,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     pdf.text("SOLMAR", x + w / 2, y + h / 2, { align: "center" });
                 }
             }
+            const f = new Date();
+            const fechaHora =
+            f.getFullYear() +
+            String(f.getMonth() + 1).padStart(2, '0') +
+            String(f.getDate()).padStart(2, '0') +
+            '_' +
+            String(f.getHours()).padStart(2, '0') +
+            String(f.getMinutes()).padStart(2, '0');
+            //window.open(pdf.output('bloburl'), '_blank');
+            const nombreArchivo = `DJ_${dni}_${nombres.replace(/ /g, "-")}_${fechaHora}.pdf`;
+            pdf.save(nombreArchivo);
 
-            window.open(pdf.output('bloburl'), '_blank');
         } catch (error) {
             console.error("Error al generar PDF:", error);
             Swal.fire({
@@ -1186,7 +1335,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    const form = document.getElementById('formDatos');
+    // =========================
+    // GUARDAR FORMULARIO
+    // =========================
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1196,6 +1347,7 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData.entries());
+
                 const payload = {
                     ...data,
                     parentesco: formData.getAll('parentesco[]'),
@@ -1206,7 +1358,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 const response = await axios.post(`${VITE_URL_APP}/api/save-declaracion-jurada`, payload);
 
                 if (response.status === 200 || response.status === 201) {
-                    Swal.fire({ icon: 'success', title: 'Éxito', text: 'La Declaración Jurada se guardó correctamente.' });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: 'La Declaración Jurada se guardó correctamente.'
+                    });
                     getPersonal();
                 }
             } catch (error) {
