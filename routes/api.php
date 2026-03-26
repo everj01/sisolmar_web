@@ -122,6 +122,7 @@ Route::get('/ubicacion/distritos/{provincia_id}', [UbicacionController::class, '
 
 Route::get('/get-postulantes', [FileController::class, 'getPostulantes']);
 Route::get('/get-personal-dj', [FileController::class, 'getListaDJ']);
+Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigracion']);
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
 
@@ -140,6 +141,21 @@ Route::get('/get-folios-vigentes', [ConsultaController::class, 'getFoliosVigente
 Route::get('/get-folios-pendientes', [ConsultaController::class, 'getFoliosPendientes']);
 Route::get('/folios/proximos-vencer', [ConsultaController::class, 'getFoliosProximosVencer']);
 
+// Route::prefix('dj')->group(function () {
+//     Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
+//     Route::get('/get-catalogs', [DjController::class, 'getCatalogs']);
+//     Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
+//     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
+// });
+
+Route::prefix('dj')->group(function () {
+    Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
+    Route::get('/get-catalogs', [DjController::class, 'getCatalogs']);
+    Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
+    
+    // ✅ ASEGÚRATE QUE ESTA RUTA EXISTA
+    Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
+});
 
 
 // REPORTE FOLIOS POR VENCER CON FILTROS

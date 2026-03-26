@@ -424,6 +424,15 @@ class FileControl extends Model
             ->get();
     }
 
+    public static function getGradosInstruccionDJ()
+    {
+        return DB::select(
+                "SELECT NIED_CODIGO AS id, NIED_DESCRIPCION AS text 
+                FROM si_solm.dbo.SUNAT_NIVEL_EDUCATIVO 
+                ORDER BY NIED_DESCRIPCION"
+            );
+    }
+
     public static function getCarreras()
     {
         return DB::table('sw_edu_carrera')
@@ -431,11 +440,29 @@ class FileControl extends Model
             ->get();
     }
 
+     public static function getCarrerasDJ()
+    {
+        return DB::select(
+                "SELECT CARR_CODIGO AS id, CARR_DESCRIPCION AS text, IEDU_CODIGO 
+                FROM si_solm.dbo.SUNAT_CARRERAS 
+                ORDER BY CARR_DESCRIPCION"
+            );
+    }
+
     public static function getInstituciones()
     {
         return DB::table('sw_edu_institucion')
             ->where('habilitado', 1)
             ->get();
+    }
+
+       public static function getInstitucionesDJ()
+    {
+        return DB::select(
+                "SELECT IEDU_CODIGO AS id, IEDU_DESCRIPCION AS text 
+                FROM si_solm.dbo.SUNAT_IEDUCATIVA 
+                ORDER BY IEDU_DESCRIPCION"
+            );
     }
     public static function getRoles()
     {

@@ -32,9 +32,9 @@ class FileController extends Controller{
 
     public function indexGestionDj()
     {
-        $grados = FileControl::getGradosInstruccion();
-        $carreras = FileControl::getCarreras();
-        $instituciones = FileControl::getInstituciones();
+        $grados = FileControl::getGradosInstruccionDJ();
+        $carreras = FileControl::getCarrerasDJ();
+        $instituciones = FileControl::getInstitucionesDJ();
 
         return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones'));
     }
@@ -603,6 +603,11 @@ class FileController extends Controller{
 
     public function getListaDJ(){
         $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]");
+        return response()->json($DJ);
+    }
+
+    public function getListaDJMigracion(){
+        $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_MIGRACION]");
         return response()->json($DJ);
     }
 

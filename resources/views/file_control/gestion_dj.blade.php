@@ -19,12 +19,36 @@
                 <h4 class="card-title">Listado de Personal</h4>
             </div>
 
-            <div class="w-full px-5 py-2 mt-3 flex justify-between items-center">
+            {{-- PESTAÑAS --}}
+            <div class="px-5 pt-4">
+                <div class="flex gap-1 border-b border-gray-200 justify-center items-center">
+                    <button
+                        id="tabBtnPendiente"
+                        type="button"
+                        class="tab-btn px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
+                               bg-white text-primary border-gray-200"
+                        data-tab="pendiente">
+                        Pendientes / Listos
+                    </button>
+                    <button
+                        id="tabBtnMigrado"
+                        type="button"
+                        class="tab-btn px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
+                               bg-gray-50 text-gray-500 border-transparent hover:text-gray-700"
+                        data-tab="migrado">
+                        Migración
+                    </button>
+                </div>
+            </div>
+
+            {{-- CONTROLES COMUNES --}}
+            <div class="w-full px-5 py-2 mt-2 flex justify-between items-center">
                 <input
                     type="text"
                     id="buscarPersonal"
                     placeholder="Buscar por nombre o DNI..."
                     class="w-48 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm uppercase"
+                    style="width: 50%;  max-width: 450px; min-width: 200px;"
                     autocomplete="off"
                 />
 
@@ -37,7 +61,8 @@
                 </button>
             </div>
 
-            <div class="w-full px-5 py-2 mt-3">
+            {{-- TABLA PESTAÑA 1: sin columna Migrado --}}
+            <div id="panelPendiente" class="w-full px-5 py-2 mt-1">
                 <div id="tblPersonas" class="w-full mt-5"></div>
                 <div class="flex items-center gap-2 mt-3">
                     <label for="page-size" class="text-sm text-gray-600">Mostrar</label>
@@ -52,6 +77,24 @@
                     <span class="text-sm text-gray-600">registros</span>
                 </div>
             </div>
+
+            {{-- TABLA PESTAÑA 2: sin columna Estado, con columna Migrado --}}
+            <div id="panelMigrado" class="w-full px-5 py-2 mt-1 hidden">
+                <div id="tblPersonasMigrado" class="w-full mt-5"></div>
+                <div class="flex items-center gap-2 mt-3">
+                    <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
+                    <select id="page-size-migrado"
+                        class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="text-sm text-gray-600">registros</span>
+                </div>
+            </div>
+
         </div>
     </div>
 

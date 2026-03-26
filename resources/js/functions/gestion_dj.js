@@ -6,13 +6,13 @@ import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 
 import Tagify from '@yaireo/tagify';
 import '@yaireo/tagify/dist/tagify.css';
-
+const API_URL = `${VITE_URL_APP}/api`;
 document.addEventListener('DOMContentLoaded', function () {
 
     // =========================
     // REFERENCIAS DOM
     // =========================
-      let registroSeleccionado = null;
+    let registroSeleccionado = null;
 
     const modalDjGestion = document.getElementById('modalDjGestion');
     const form = document.getElementById('formDatos');
@@ -22,6 +22,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const cerrarModalBtn = document.getElementById('cerrarModal');
     const btnPrevisualizar = document.getElementById("btnPrevisualizar");
     const pageSizeSelect = document.getElementById("page-size");
+    const pageSizeMigradoSelect = document.getElementById("page-size-migrado");
+
+    // Pestañas
+    const tabBtnPendiente = document.getElementById('tabBtnPendiente');
+    const tabBtnMigrado = document.getElementById('tabBtnMigrado');
+    const panelPendiente = document.getElementById('panelPendiente');
+    const panelMigrado = document.getElementById('panelMigrado');
 
     const container = document.getElementById('familyContainer');
     const addBtn = document.getElementById('addFamilyMember');
@@ -60,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const API_BASE = `${VITE_URL_APP}/api/ubicacion`;
 
     // =========================
-    // TABLA DE PERSONAS
+    // TABLA 1: Pestaña Pendientes/Listos — SIN columna Migrado
     // =========================
     const tblPersonas = new Tabulator("#tblPersonas", {
         height: "100%",
@@ -150,9 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>`.trim();
                     }else{
                         return `${data.cambio ?? 'Sin cambios'}`.trim();
-
                     }
-                    
                 }
             },
             {
@@ -194,28 +199,170 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
 
+    // =========================
+    // TABLA 2: Pestaña Migración — SIN columna Estado, CON columna Migrado
+    // =========================
+    const tblPersonasMigrado = new Tabulator("#tblPersonasMigrado", {
+        height: "100%",
+        layout: "fitColumns",
+        responsiveLayout: "collapse",
+        pagination: true,
+        paginationSize: 20,
+        rowHeader: {
+            formatter: "responsiveCollapse",
+            width: 30,
+            minWidth: 30,
+            hozAlign: "center",
+            resizable: false,
+            headerSort: false
+        },
+        locale: "es",
+        langs: {
+            "es": {
+                "pagination": {
+                    "first": "Primero",
+                    "first_title": "Primera Página",
+                    "last": "Final",
+                    "last_title": "Última Página",
+                    "prev": "<",
+                    "prev_title": "Página Anterior",
+                    "next": ">",
+                    "next_title": "Página Siguiente",
+                    "all": "Todo"
+                },
+                "headerFilters": {
+                    "default": "Filtrar...",
+                },
+                "ajax": {
+                    "loading": "Cargando datos...",
+                    "error": "Error al cargar datos"
+                },
+                "data": {
+                    "empty": "No hay datos disponibles"
+                }
+            }
+        },
+        columns: [
+            { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
+            {
+                title: "Nombres",
+                field: "nombres",
+                hozAlign: "left",
+                widthGrow: 3,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    return `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''}`.trim();
+                }
+            },
+            { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
+            {
+                title: "Migrado",
+                field: "migrado",
+                hozAlign: "center",
+                widthGrow: 2,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    let colorEstado = 'border-dark-100 bg-dark-100 text-yellow-800';
+                    if(data.migrado == 'Migrado'){
+                        colorEstado = 'border-success bg-success text-white';
+                    }
+                    return `<span class="inline-flex items-center rounded-full border ${ colorEstado } px-3 py-1 text-sm font-medium ">
+                    ${ capitalizeWords(data.migrado ?? '') ?? '' }
+                    </span>`.trim();
+                }
+            },
+            {
+                title: "Ultimo Cambio",
+                field: "cambio",
+                hozAlign: "center",
+                widthGrow: 3,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    if(data.cambio != null ){
+                            return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700">
+                            <span class="flex items-center gap-1">
+                                 <i class='bx bx-calendar'></i> <span >${ formatearFechaHora(data.cambio).fecha }</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                 <i class='bx bx-time-five' ></i> <span >${ formatearFechaHora(data.cambio).hora }</span>
+                            </span>
+                            </div>`.trim();
+                    }else{
+                        return `${data.cambio ?? 'Sin cambios'}`.trim();
+                    }
+                }
+            },
+            {
+                title: "Acciones",
+                field: "acciones",
+                hozAlign: "center",
+                headerSort: false,
+                widthGrow: 2,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    if(data.estado == 'pendiente'){
+                        return `<button 
+                            type="button" 
+                            class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white"
+                             data-hs-overlay="#modalDjGestion">
+                            DJ
+                        </button>`;
+                    }else{
+                        return `<button 
+                            type="button" 
+                            class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white"
+                             data-hs-overlay="#modalDjGestion">
+                            DJ
+                        </button>
+                        <button 
+                            type="button" 
+                            class="btn rounded-full form-btn-migrado bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar"
+                             data-hs-overlay="#modalDjGestion">
+                            <i class='bx bxs-file-pdf'></i>
+                        </button>
+                        `;
+                    }         
+                },
+                cellClick: function (e, cell) {
+                    const btn = e.target.closest('.form-btn-migrado');
+                    if (!btn) return;
+
+                    btnNuevaDJ?.click();
+
+                    // ✅ OBTENER DATOS DIRECTAMENTE DE TABULATOR
+                    const rowData = cell.getRow().getData();
+                    
+                    // ✅ ENVIAR EL CODI_PERS
+                    const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+                    
+                    console.log('CODI_PERS:', codiPers);
+                    console.log('Datos completos:', rowData);
+
+                    abrirFormularioDJ(codiPers);
+                }
+            },
+        ],
+    });
+
     function formatearFechaHora(fechaStr) {
-    const fecha = new Date(fechaStr);
-
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const anio = fecha.getFullYear();
-
-    const horas = String(fecha.getHours()).padStart(2, '0');
-    const minutos = String(fecha.getMinutes()).padStart(2, '0');
-
-    return {
-        fecha: `${dia}/${mes}/${anio}`,
-        hora: `${horas}:${minutos}`
-    };
+        const fecha = new Date(fechaStr);
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const anio = fecha.getFullYear();
+        const horas = String(fecha.getHours()).padStart(2, '0');
+        const minutos = String(fecha.getMinutes()).padStart(2, '0');
+        return {
+            fecha: `${dia}/${mes}/${anio}`,
+            hora: `${horas}:${minutos}`
+        };
     }
 
     function capitalizeWords(texto) {
-    return texto
-        .toLowerCase()
-        .split(" ")
-        .map(p => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(" ");
+        return texto
+            .toLowerCase()
+            .split(" ")
+            .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+            .join(" ");
     }
 
     // =========================
@@ -291,8 +438,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (distritoSelectDni) distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
     }
 
-    function resaltarTexto(valor) {
-        tblPersonas.getRows().forEach(row => {
+    function resaltarTexto(tabla, valor) {
+        tabla.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 if (i === cells.length - 1) return;
 
@@ -393,9 +540,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================
     // FUNCIONES GLOBALES
     // =========================
-
-  
-
     window.abrirFormulario = async function (data = null) {
         registroSeleccionado = null;
         try {
@@ -405,7 +549,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 modalDjGestion.classList.remove('hidden');
             }
 
-            if (data ) {
+             console.log('HOLAAAA AQUI ESTA LA DATA ', data);
+
+            if (data) {
+               
                 setValue("cod_postulante", data.id);
                 setValue("nombres_apellidos", `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''}`.trim());
                 setValue("dni", data.dni);
@@ -469,45 +616,113 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================
     function getPersonal() {
         axios.get(`${VITE_URL_APP}/api/get-personal-dj`)
-            .then(response => {
-                //console.log('ORIGINAL, ', response);
-                const datosTabla = response.data;
-                //console.log('DATOS DE PERSONAL, ', datosTabla);
-                tblPersonas.setData(datosTabla);
-            })
-            .catch(error => {
-                console.error("Hubo un error:", error);
-            });
+        .then(response => {
+            const datosTabla = response.data;
+            tblPersonas.setData(datosTabla);
+   
+        })
+        .catch(error => {
+            console.error("Hubo un error:", error);
+        });
     }
 
+    function getPersonalMigracion() {
+        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
+        .then(response => {
+            const datosTabla = response.data;
+
+            tblPersonasMigrado.setData(datosTabla);
+        })
+        .catch(error => {
+            console.error("Hubo un error:", error);
+        });
+    }
+
+    getPersonalMigracion();
     getPersonal();
+
+    // =========================
+    // LÓGICA DE PESTAÑAS
+    // =========================
+    let tabActiva = 'pendiente';
+
+    function activarTab(tab) {
+        tabActiva = tab;
+
+        if (tab === 'pendiente') {
+            panelPendiente.classList.remove('hidden');
+            panelMigrado.classList.add('hidden');
+
+            tabBtnPendiente.classList.add('bg-white', 'text-primary', 'border-gray-200');
+            tabBtnPendiente.classList.remove('bg-gray-50', 'text-gray-500', 'border-transparent');
+
+            tabBtnMigrado.classList.add('bg-gray-50', 'text-gray-500', 'border-transparent');
+            tabBtnMigrado.classList.remove('bg-white', 'text-primary', 'border-gray-200');
+        } else {
+            panelPendiente.classList.add('hidden');
+            panelMigrado.classList.remove('hidden');
+
+            tabBtnMigrado.classList.add('bg-white', 'text-primary', 'border-gray-200');
+            tabBtnMigrado.classList.remove('bg-gray-50', 'text-gray-500', 'border-transparent');
+
+            tabBtnPendiente.classList.add('bg-gray-50', 'text-gray-500', 'border-transparent');
+            tabBtnPendiente.classList.remove('bg-white', 'text-primary', 'border-gray-200');
+
+            // Forzar re-render porque Tabulator se inicializó oculto
+            tblPersonasMigrado.redraw(true);
+        }
+    }
+
+    tabBtnPendiente?.addEventListener('click', () => activarTab('pendiente'));
+    tabBtnMigrado?.addEventListener('click', () => activarTab('migrado'));
 
     // =========================
     // EVENTOS
     // =========================
     buscarPersonalInput?.addEventListener("keyup", function () {
         const valor = this.value.toLowerCase().trim();
-
-        tblPersonas.setFilter([
+        const filtro = [
             [
                 { field: "nombres", type: "like", value: valor },
                 { field: "dni", type: "like", value: valor },
             ]
-        ]);
+        ];
 
-        tblPersonas._ultimoFiltro = valor;
-        setTimeout(() => resaltarTexto(valor), 10);
+        if (tabActiva === 'pendiente') {
+            tblPersonas.setFilter(filtro);
+            tblPersonas._ultimoFiltro = valor;
+            setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
+        } else {
+            tblPersonasMigrado.setFilter(filtro);
+            tblPersonasMigrado._ultimoFiltro = valor;
+            setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
+        }
     });
 
     tblPersonas.on("renderComplete", function () {
         if (tblPersonas._ultimoFiltro) {
-            resaltarTexto(tblPersonas._ultimoFiltro);
+            resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro);
+        }
+    });
+
+    tblPersonasMigrado.on("renderComplete", function () {
+        if (tblPersonasMigrado._ultimoFiltro) {
+            resaltarTexto(tblPersonasMigrado, tblPersonasMigrado._ultimoFiltro);
         }
     });
 
     btnNuevaDJ?.addEventListener('click', function () {
-        abrirFormulario(registroSeleccionado);
-    });
+    if (registroSeleccionado && registroSeleccionado.codPersonal) {
+        // Si hay un registro seleccionado de la tabla, usar su código
+        abrirFormularioDJ(registroSeleccionado.codPersonal);
+    } else {
+        // Si no hay registro seleccionado, solo abrir modal vacío
+        const modal = document.getElementById('modalDjGestion');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+});
 
     document.addEventListener('click', function (event) {
         const modal = document.getElementById('modalDjGestion');
@@ -517,13 +732,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!contenedor) return;
 
         if (event.target.closest('#btnNuevaDJ')) return;
-
-        // if (!modal.classList.contains('hidden')) {
-        //     const hizoClickEnBotonFormulario = event.target.closest('.form-btn');
-        //     if (!contenedor.contains(event.target) && !hizoClickEnBotonFormulario) {
-        //         cerrarFormulario();
-        //     }
-        // }
     });
 
     cerrarModalBtn?.addEventListener('click', function () {
@@ -611,6 +819,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // =========================
+    // PAGE SIZE
+    // =========================
+    pageSizeSelect?.addEventListener("change", function () {
+        const size = parseInt(this.value);
+        tblPersonas.setPageSize(size);
+    });
+
+    pageSizeMigradoSelect?.addEventListener("change", function () {
+        const size = parseInt(this.value);
+        tblPersonasMigrado.setPageSize(size);
+    });
+
+    // =========================
     // PREVISUALIZAR PDF
     // =========================
     btnPrevisualizar?.addEventListener("click", function (e) {
@@ -660,72 +881,72 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     async function drawFotoEnPDF(pdf, x, y, w, h) {
-    try {
-        let imageSrc = "";
+        try {
+            let imageSrc = "";
 
-        if (preview && preview.src && !preview.classList.contains("hidden")) {
-            imageSrc = preview.src;
-        }
+            if (preview && preview.src && !preview.classList.contains("hidden")) {
+                imageSrc = preview.src;
+            }
 
-        if (!imageSrc && inputFoto?.files?.[0]) {
-            imageSrc = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(inputFoto.files[0]);
-            });
-        }
+            if (!imageSrc && inputFoto?.files?.[0]) {
+                imageSrc = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(inputFoto.files[0]);
+                });
+            }
 
-        pdf.setDrawColor(0);
-        pdf.setLineWidth(0.20);
-        pdf.rect(x, y, w, h);
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.20);
+            pdf.rect(x, y, w, h);
 
-        if (!imageSrc) {
+            if (!imageSrc) {
+                pdf.setFontSize(8);
+                pdf.setFont("helvetica", "normal");
+                pdf.setTextColor(150);
+                pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
+                return;
+            }
+
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(x, y, w, h, "F");
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.20);
+            pdf.rect(x, y, w, h);
+
+            const props = pdf.getImageProperties(imageSrc);
+            const imgW = props.width;
+            const imgH = props.height;
+
+            const ratio = Math.min(w / imgW, h / imgH);
+            const finalW = imgW * ratio;
+            const finalH = imgH * ratio;
+
+            const offsetX = x + (w - finalW) / 2;
+            const offsetY = y + (h - finalH) / 2;
+
+            let format = "JPEG";
+            if (imageSrc.startsWith("data:image/png")) {
+                format = "PNG";
+            } else if (imageSrc.startsWith("data:image/webp")) {
+                format = "WEBP";
+            }
+
+            pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
+        } catch (error) {
+            console.error("Error dibujando foto en PDF:", error);
+
+            pdf.setDrawColor(0);
+            pdf.setLineWidth(0.20);
+            pdf.rect(x, y, w, h);
+
             pdf.setFontSize(8);
             pdf.setFont("helvetica", "normal");
             pdf.setTextColor(150);
             pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
-            return;
         }
-
-        pdf.setFillColor(255, 255, 255);
-        pdf.rect(x, y, w, h, "F");
-        pdf.setDrawColor(0);
-        pdf.setLineWidth(0.20);
-        pdf.rect(x, y, w, h);
-
-        const props = pdf.getImageProperties(imageSrc);
-        const imgW = props.width;
-        const imgH = props.height;
-
-        const ratio = Math.min(w / imgW, h / imgH);
-        const finalW = imgW * ratio;
-        const finalH = imgH * ratio;
-
-        const offsetX = x + (w - finalW) / 2;
-        const offsetY = y + (h - finalH) / 2;
-
-        let format = "JPEG";
-        if (imageSrc.startsWith("data:image/png")) {
-            format = "PNG";
-        } else if (imageSrc.startsWith("data:image/webp")) {
-            format = "WEBP";
-        }
-
-        pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
-    } catch (error) {
-        console.error("Error dibujando foto en PDF:", error);
-
-        pdf.setDrawColor(0);
-        pdf.setLineWidth(0.20);
-        pdf.rect(x, y, w, h);
-
-        pdf.setFontSize(8);
-        pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(150);
-        pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
     }
-}
 
     async function generarDeclaracionJuradaPDF() {
         try {
@@ -763,8 +984,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 return currentSize;
             }
-
-            
 
             function getCleanSelectText(id) {
                 const el = document.getElementById(id);
@@ -969,16 +1188,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const rowH = 6.0;
 
             drawField("Nombres y Apellidos", nombres, boxX, colMain, y, rowH, 0.25);
-
-            // const fotoH = rowH * 6;
-            // pdf.setDrawColor(0);
-            // pdf.setLineWidth(0.20);
-            // pdf.rect(boxX + colMain, y, colFoto, fotoH);
-            // pdf.setFontSize(8);
-            // pdf.setFont(undefined, "normal");
-            // pdf.setTextColor(150);
-            // pdf.text("FOTO", boxX + colMain + colFoto / 2, y + fotoH / 2, { align: "center" });
-            // y += rowH;
 
             const fotoH = rowH * 6;
             await drawFotoEnPDF(pdf, boxX + colMain, y, colFoto, fotoH);
@@ -1313,15 +1522,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     pdf.text("SOLMAR", x + w / 2, y + h / 2, { align: "center" });
                 }
             }
+
             const f = new Date();
             const fechaHora =
-            f.getFullYear() +
-            String(f.getMonth() + 1).padStart(2, '0') +
-            String(f.getDate()).padStart(2, '0') +
-            '_' +
-            String(f.getHours()).padStart(2, '0') +
-            String(f.getMinutes()).padStart(2, '0');
-            //window.open(pdf.output('bloburl'), '_blank');
+                f.getFullYear() +
+                String(f.getMonth() + 1).padStart(2, '0') +
+                String(f.getDate()).padStart(2, '0') +
+                '_' +
+                String(f.getHours()).padStart(2, '0') +
+                String(f.getMinutes()).padStart(2, '0');
+
             const nombreArchivo = `DJ_${dni}_${nombres.replace(/ /g, "-")}_${fechaHora}.pdf`;
             pdf.save(nombreArchivo);
 
@@ -1346,36 +1556,580 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 const formData = new FormData(form);
+                
+                // ✅ Convertir a objeto plano
                 const data = Object.fromEntries(formData.entries());
 
+                // ✅ AGREGAR ARRAYS DE FAMILIARES CON LOS NOMBRES QUE ESPERA EL BACKEND
                 const payload = {
                     ...data,
-                    parentesco: formData.getAll('parentesco[]'),
-                    apellidosNombres: formData.getAll('apellidosNombres[]'),
-                    fechaNacimiento: formData.getAll('fechaNacimiento[]')
+                    // ✅ Nombres correctos para el backend
+                    FAM_PARENTESCO: formData.getAll('parentesco[]'),
+                    FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
+                    FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
+                    
+                    // ✅ Ocupaciones alternas
+                    dj2026_descripcion: formData.getAll('ocupacion_alterna[]')
                 };
 
-                const response = await axios.post(`${VITE_URL_APP}/api/save-declaracion-jurada`, payload);
+                console.log('📤 Payload a enviar:', payload);
+
+                // ✅ ENDPOINT CORRECTO
+                const response = await axios.post(`${VITE_URL_APP}/api/dj/save-dj-completo`, payload);
 
                 if (response.status === 200 || response.status === 201) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Éxito',
+                        title: '¡Éxito!',
                         text: 'La Declaración Jurada se guardó correctamente.'
                     });
+                    
+                    // ✅ Cerrar modal
+                    const modal = document.getElementById('modalDjGestion');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                    
+                    // ✅ Recargar tabla
                     getPersonal();
+                    getPersonalMigracion();
                 }
             } catch (error) {
-                console.error("Error al guardar DJ:", error);
+                console.error("❌ Error al guardar DJ:", error);
+                console.error("❌ Response:", error.response);
+                
                 let msg = 'Hubo un error al guardar los datos.';
-                if (error.response && error.response.data && error.response.data.errors) {
+                
+                if (error.response?.data?.message) {
+                    msg = error.response.data.message;
+                } else if (error.response?.data?.errors) {
                     msg = Object.values(error.response.data.errors).flat().join('<br>');
                 }
-                Swal.fire({ icon: 'error', title: 'Error', html: msg });
+                
+                Swal.fire({ 
+                    icon: 'error', 
+                    title: 'Error', 
+                    html: msg 
+                });
             } finally {
                 if (btnGuardar) btnGuardar.disabled = false;
             }
         });
     }
 
+
+     
+
 });
+
+
+// async function abrirFormularioDJ(codiPers) {
+//     try {
+
+        
+//         Swal.fire({
+//             title: 'Cargando...',
+//             allowOutsideClick: false,
+//             didOpen: () => Swal.showLoading()
+//         });
+
+//         // 1. Cargar catálogos
+//         await cargarCatalogos();
+
+//         // 2. Cargar datos personales
+//         await cargarDatosPersonales(codiPers);
+
+//         Swal.close();
+
+//         // 3. Abrir modal
+//         const modal = document.getElementById('modalDjGestion');
+//         if (modal) {
+//             modal.classList.remove('hidden');
+//         }
+
+//     } catch (error) {
+//         console.error('Error al abrir formulario DJ:', error);
+//         Swal.fire({
+//             icon: 'error',
+//             title: 'Error',
+//             text: 'No se pudo cargar el formulario'
+//         });
+//     }
+// }
+
+async function abrirFormularioDJ(codiPers) {
+    console.log('🚀 1. Iniciando abrirFormularioDJ con código:', codiPers);
+    
+    try {
+        Swal.fire({
+            title: 'Cargando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        console.log('🚀 2. Cargando catálogos...');
+        await cargarCatalogos();
+        console.log('✅ Catálogos cargados');
+
+        console.log('🚀 3. Cargando datos personales...');
+        await cargarDatosPersonales(codiPers);
+        console.log('✅ Datos personales cargados');
+
+        console.log('🚀 4. Cerrando Swal...');
+        Swal.close();
+
+        console.log('🚀 5. Abriendo modal...');
+        const modal = document.getElementById('modalDjGestion');
+        console.log('📦 Modal encontrado:', modal);
+        
+        if (modal) {
+            modal.classList.remove('hidden');
+            console.log('✅ MODAL ABIERTO CORRECTAMENTE');
+        } else {
+            console.error('❌ NO SE ENCONTRÓ EL MODAL #modalDjGestion');
+        }
+
+    } catch (error) {
+        console.error('❌ ERROR GENERAL:', error);
+        console.error('❌ Stack:', error.stack);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo cargar el formulario: ' + error.message
+        });
+    }
+}
+
+async function cargarCatalogos() {
+    try {
+        const response = await axios.get(`${API_URL}/dj/get-catalogs`);
+        const { grados, carreras, instituciones, sangre, estados_civiles, tipos_arma } = response.data;
+
+        populateSelect('#selGrado', grados);
+        populateSelect('#selCarrera', carreras);
+        populateSelect('#selInstitucion', instituciones);
+        populateSelect('#PERS_GRUP_SANGRE', sangre);
+        populateSelect('#PERS_ESTADO_CIVIL', estados_civiles);
+        populateSelect('#LAB_TIPO_ARMA', tipos_arma);
+
+        // Guardar carreras globalmente para filtrado
+        window.allCarreras = carreras;
+
+    } catch (error) {
+        console.error('Error cargando catálogos:', error);
+        throw error;
+    }
+}
+
+async function cargarDatosPersonales(codiPers) {
+    console.log('CODIGO PERSONAL:', codiPers);
+    try {
+        const response = await axios.get(`${API_URL}/dj/get-personal-data`, {
+            params: { codi_pers: codiPers }
+        });
+
+        const { data, familiares, ocupaciones_alternas, is_migrado } = response.data;
+
+        // Marcar si ya está migrado (opcional: deshabilitar edición)
+        if (is_migrado) {
+            console.log('✅ Este registro YA FUE MIGRADO a DJ2026_PERSONAL');
+        }
+
+        // Llenar campos del formulario
+        llenarFormulario(data);
+
+        // Llenar familiares
+        renderFamiliares(familiares);
+
+        // Llenar ocupaciones
+        renderOcupaciones(ocupaciones_alternas);
+
+    } catch (error) {
+        console.error('Error cargando datos personales:', error);
+        throw error;
+    }
+}
+
+function llenarFormulario(data) {
+    console.log('Datos personales recibidos:', data);
+    // Identidad
+    setValue('cod_postulante', data.CODI_PERS);
+    setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
+    setValue('#dni', data.NRO_DOCU_IDEN);
+    setValue('#caduca', data.PERS_FECHCADUCADNI); // ✅ FORMATEAR
+    setValue('#estado_civil', data.ESCI_CODIGO);
+    setValue('#sexo', data.PERS_SEXO || data.SEXO);
+    setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI)); // ✅ FORMATEAR
+    setValue('#sabe_nadar', data.PERS_SNADAR);
+    setValue('#dj2026_ciudad_naci', data.dj2026_ciudad_naci);
+
+    // Contacto
+    setValue('#celular', data.PERS_TELEFONO);
+    setValue('#correo', data.PERS_EMAIL);
+    setValue('#whatsapp', data.PERS_WHATSAPP);
+
+    // Médica
+    setValue('#tipo_sangre', data.tipo_sangr);
+    setValue('#peso', data.peso_kilo);
+    setValue('#talla', data.tall_metr);
+
+    // Previsional
+    setValue('#sistema_previsional', data.CODI_SIST_PENS);
+    setValue('#essalud', data.ESSALUD);
+    setValue('#pensionista', data.PERS_PENSIONISTA);
+
+    // Educación
+    setValue('#grado_instruccion', data.PERS_GRADO_INSTRUCCION);
+    setValue('#institucion', data.IEDU_CODIGO);
+    setValue('#carrera', data.CARR_CODIGO);
+    setValue('#anio_egreso', data.EGRESO_EDUCATIVO);
+
+    // Adicional
+    setValue('#embargos', data.PERS_EMBARGO);
+    setValue('#consumo_sustancias', data.PERS_CONSMO);
+    setValue('#cuenta_banco', data.dj2026_banco);
+
+    // Direcciones
+    setValue('#direccion_actual', data.DIRECCION);
+    setValue('#direccion_dni', data.PERS_DIREC_DNI);
+
+    // ============================================
+// DIRECCIONES Y UBICACIONES
+// ============================================
+console.log('🔄 Llenando DIRECCIONES Y UBICACIONES...');
+setValue('direccion_actual', data.DIRECCION);
+setValue('direccion_dni', data.PERS_DIREC_DNI);
+
+// ✅ DEBUGGING UBICACIONES
+console.log('═══════════════════════════════════════');
+console.log('🗺️ UBICACIONES DESDE EL BACKEND:');
+console.log('📍 Dirección Actual:');
+console.log('   PERS_DEPT_ACT:', data.PERS_DEPT_ACT);
+console.log('   PERS_PROV_ACT:', data.PERS_PROV_ACT);
+console.log('   PERS_DIST_ACT:', data.PERS_DIST_ACT);
+console.log('📍 Dirección DNI:');
+console.log('   PERS_DPTO_DIRDNI:', data.PERS_DPTO_DIRDNI);
+console.log('   PERS_PROV_DIRDNI:', data.PERS_PROV_DIRDNI);
+console.log('   PERS_DIST_DIRDNI:', data.PERS_DIST_DIRDNI);
+console.log('═══════════════════════════════════════');
+
+// Cargar ubicaciones
+console.log('🔄 Cargando ubicaciones cascada...');
+cargarUbicaciones('actual', data.PERS_DEPT_ACT, data.PERS_PROV_ACT, data.PERS_DIST_ACT);
+cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS_DIST_DIRDNI);
+
+    // cargarUbicaciones('actual', data.PERS_DEPT_ACT, data.PERS_PROV_ACT, data.PERS_DIST_ACT);
+    // cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS_DIST_DIRDNI);
+
+    // Laboral
+    setValue('#ocupacion_principal', data.dj2026_ocupacion_principal);
+    const experiencia = data.dj2026_experiencia_anios;
+    const experienciaLimpia = experiencia ? String(experiencia).replace(/[^0-9]/g, '') : '';
+    setValue('#experiencia_anios', experienciaLimpia);
+    
+    setValue('#familiar_empresa', data.dj2026_familiar_empresa);
+    setValue('#familiar_nombre', data.dj2026_familiar_nombre);
+    setValue('#familiar_parentesco', data.dj2026_familiar_parentesco);
+
+    setValue('#curso_sucamec', data.PERS_CONDISCAMEC);
+    setValue('#sucamec_obs', data.PERS_NRODISCAMEC);
+    setValue('#smo', data.PERS_SMO);
+
+    setValue('#licencia_arma', data.PERS_CONLICARMAS);
+    setValue('#tipo_arma', data.PERS_TIPOARMA);
+    setValue('#arma_propia', data.PERS_CONARMAS);
+
+    setValue('#brevete', data.PERS_BREVETE);
+    setValue('#clase_brevete', data.CLASE_BREVETE);
+    setValue('#tipo_vehiculo', data.PERS_TIPO_VEHICULO);
+    setValue('#vehiculo_propio', data.PERS_VEHICULO_PROPIO);
+
+    setValue('#empresa_anterior', data.PERS_CTRABANT);
+    setValue('#cargo_anterior', data.PERS_CARGOTRABANT);
+    setValue('#duracion_anterior', data.PERS_DURACIONANT);
+
+    // Emergencia
+    setValue('#contacto_emergencia', data.PERS_NOMCONTACTO);
+    setValue('#celular_emergencia', data.PERS_NROEMERGENCIA);
+    setValue('#parentesco_emergencia', data.PERS_CONYUGE);
+
+    // Foto
+    if (data.FOTO_PATH) {
+        const img = document.getElementById('previewFoto');
+        if (img) {
+            img.src = data.FOTO_PATH;
+            img.classList.remove('hidden');
+        }
+    }
+}
+
+function renderFamiliares(familiares) {
+    console.log('═══════════════════════════════════════');
+    console.log('👨‍👩‍👧‍👦 INICIANDO renderFamiliares');
+    console.log('📦 Familiares recibidos:', familiares);
+    
+    const container = document.getElementById('familyContainer');
+    console.log('📦 Container encontrado:', container);
+    
+    if (!container) {
+        console.error('❌ NO SE ENCONTRÓ #familyContainer - SALTANDO renderFamiliares');
+        console.log('═══════════════════════════════════════');
+        return;
+    }
+
+    // Limpiar container
+    container.innerHTML = '';
+    console.log('🧹 Container limpiado');
+
+    // Unir todos los familiares
+    const allFam = [
+        ...(familiares.padres || []),
+        ...(familiares.madre || []),
+        ...(familiares.hijos || []),
+        ...(familiares.conyugue || [])
+    ];
+
+    console.log('📊 Total de familiares:', allFam.length);
+    console.log('   - Padres:', familiares.padres?.length || 0);
+    console.log('   - Madre:', familiares.madre?.length || 0);
+    console.log('   - Hijos:', familiares.hijos?.length || 0);
+    console.log('   - Cónyuge:', familiares.conyugue?.length || 0);
+
+    if (allFam.length === 0) {
+        console.warn('⚠️ No hay familiares - agregando fila vacía');
+        addFamiliarRow({}, container);
+    } else {
+        allFam.forEach((f, index) => {
+            console.log(`🔄 Agregando familiar ${index + 1}:`, f);
+            addFamiliarRow(f, container);
+        });
+        console.log(`✅ ${allFam.length} familiares agregados`);
+    }
+    
+    console.log('═══════════════════════════════════════');
+}
+
+function renderOcupaciones(ocupaciones) {
+    const tbody = document.getElementById('bodyOcupAlterna');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    ocupaciones.forEach(o => {
+        addOcupacionRow(o.dj2026_descripcion);
+    });
+}
+
+function addFamiliarRow(data = {}, container = null) {
+    console.log('   📝 addFamiliarRow con data:', data);
+    console.log('   🔍 FECH_NACI:', data.FECH_NACI);
+    console.log('   🔍 TIPO:', typeof data.FECH_NACI);
+    
+    // Si no se pasa container, buscarlo
+    if (!container) {
+        container = document.getElementById('familyContainer');
+    }
+    
+    if (!container) {
+        console.error('❌ Container no encontrado para agregar familiar');
+        return;
+    }
+
+    // ✅ FORMATEAR FECHA ANTES DE USARLA
+    const fechaFormateada = formatDateForInput(data.FECH_NACI);
+    console.log('   ✅ Fecha formateada para input:', fechaFormateada);
+
+    const row = document.createElement('div');
+    row.className = 'family-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:end;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;';
+    
+    row.innerHTML = `
+        <div>
+            <label class="dj-label">Parentesco</label>
+            <select name="parentesco[]" class="dj-select">
+                <option value="">—</option>
+                <option value="PADRE" ${data.TIPO_RELA === 'PADRE' ? 'selected' : ''}>Padre</option>
+                <option value="MADRE" ${data.TIPO_RELA === 'MADRE' ? 'selected' : ''}>Madre</option>
+                <option value="ESPOSO" ${data.TIPO_RELA === 'ESPOSO' ? 'selected' : ''}>Esposo</option>
+                <option value="ESPOSA" ${data.TIPO_RELA === 'ESPOSA' ? 'selected' : ''}>Esposa</option>
+                <option value="CONYUGE" ${data.TIPO_RELA === 'CONYUGE' ? 'selected' : ''}>Cónyuge</option>
+                <option value="HIJO" ${data.TIPO_RELA === 'HIJO' ? 'selected' : ''}>Hijo</option>
+                <option value="HIJA" ${data.TIPO_RELA === 'HIJA' ? 'selected' : ''}>Hija</option>
+                <option value="HERMANO" ${data.TIPO_RELA === 'HERMANO' ? 'selected' : ''}>Hermano</option>
+                <option value="HERMANA" ${data.TIPO_RELA === 'HERMANA' ? 'selected' : ''}>Hermana</option>
+                <option value="ABUELO" ${data.TIPO_RELA === 'ABUELO' ? 'selected' : ''}>Abuelo</option>
+                <option value="ABUELA" ${data.TIPO_RELA === 'ABUELA' ? 'selected' : ''}>Abuela</option>
+            </select>
+        </div>
+        <div>
+            <label class="dj-label">Apellidos y Nombres</label>
+            <input type="text" name="apellidosNombres[]" class="dj-input" 
+                   value="${data.Nombres || ''}" 
+                   placeholder="Apellidos y nombres completos">
+        </div>
+        <div>
+            <label class="dj-label">Fecha de Nacimiento</label>
+            <input type="date" name="fechaNacimiento[]" class="dj-input" 
+                   value="${fechaFormateada}">
+        </div>
+        <div>
+            <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">
+                Eliminar
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(row);
+    console.log('   ✅ Fila agregada al container');
+    
+    // Agregar evento de eliminar
+    const btnEliminar = row.querySelector('.remove-family');
+    btnEliminar?.addEventListener('click', function() {
+        row.remove();
+        console.log('   🗑️ Familiar eliminado');
+    });
+}
+
+function addOcupacionRow(descripcion = '') {
+    const tbody = document.getElementById('bodyOcupAlterna');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input type="text" name="dj2026_descripcion[]" value="${descripcion}" class="dj-input"></td>
+        <td><button type="button" class="btn-remove-ocup btn-sm">Eliminar</button></td>
+    `;
+    tbody.appendChild(row);
+}
+
+async function cargarUbicaciones(tipo, dept, prov, dist) {
+    const prefix = tipo === 'actual' ? '_actual' : '_dni';
+    
+    if (dept) {
+        const depts = await axios.get(`${API_URL}/dj/get-ubicacion?type=dept`);
+        populateSelect(`#departamento${prefix}`, depts.data);
+        setValue(`#departamento${prefix}`, dept);
+
+        if (prov) {
+            const provs = await axios.get(`${API_URL}/dj/get-ubicacion?type=prov&dept=${dept}`);
+            populateSelect(`#provincia${prefix}`, provs.data);
+            setValue(`#provincia${prefix}`, prov);
+
+            if (dist) {
+                const dists = await axios.get(`${API_URL}/dj/get-ubicacion?type=dist&prov=${prov}`);
+                populateSelect(`#distrito${prefix}`, dists.data);
+                setValue(`#distrito${prefix}`, dist);
+            }
+        }
+    }
+}
+
+function populateSelect(selector, data) {
+    const sel = document.querySelector(selector);
+    if (!sel) return;
+
+    sel.innerHTML = '<option value="">Seleccionar...</option>';
+    data.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.text;
+        sel.appendChild(opt);
+    });
+}
+
+function setValue(selector, value) {
+    const id = selector.startsWith('#') ? selector : `#${selector}`;
+    const el = document.querySelector(id);
+    
+    if (el) {
+        el.value = value || '';
+        
+        // ✅ Si es un SELECT y el value no existe, loguear advertencia
+        if (el.tagName === 'SELECT' && value && !el.querySelector(`option[value="${value}"]`)) {
+            console.warn(`⚠️ SELECT "${selector}": valor "${value}" NO existe en las opciones`);
+        } else {
+            console.log(`✅ Campo "${selector}" = "${value}"`);
+        }
+    } else {
+        console.error(`❌ Campo "${selector}" NO ENCONTRADO`);
+    }
+}
+
+// Guardar DJ
+document.getElementById('formDatos')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    try {
+        Swal.fire({
+            title: 'Guardando y migrando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const formData = new FormData(this);
+
+        const response = await axios.post(`${API_URL}/dj/save-dj-completo`, formData);
+
+        Swal.fire({
+            icon: 'success',
+            title: '¡Éxito!',
+            text: response.data.message
+        });
+
+        // Cerrar modal
+        document.getElementById('modalDjGestion')?.classList.add('hidden');
+
+        // Recargar tabla
+        if (window.getPersonal) window.getPersonal();
+
+    } catch (error) {
+        console.error('Error guardando DJ:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.response?.data?.message || 'No se pudo guardar'
+        });
+    }
+});
+
+function formatDateForInput(dateValue) {
+    console.log('📅 Formateando fecha:', dateValue, '(tipo:', typeof dateValue, ')');
+    
+    if (!dateValue) {
+        console.log('   ⚠️ Fecha vacía/null');
+        return '';
+    }
+    
+    // Si ya viene en formato YYYY-MM-DD
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        console.log('   ✅ Fecha ya está en formato correcto:', dateValue);
+        return dateValue;
+    }
+    
+    // Si viene con hora (2029-08-18 00:00:00.000)
+    if (typeof dateValue === 'string' && dateValue.includes(' ')) {
+        const fecha = dateValue.split(' ')[0];
+        console.log('   ✅ Fecha extraída (con hora):', fecha);
+        return fecha;
+    }
+    
+    // ✅ NUEVO: Si viene en formato DD/MM/YYYY o DD-MM-YYYY
+    if (typeof dateValue === 'string' && /^\d{2}[-/]\d{2}[-/]\d{4}$/.test(dateValue)) {
+        const partes = dateValue.split(/[-/]/);
+        const [dia, mes, anio] = partes;
+        const fechaFormateada = `${anio}-${mes}-${dia}`;
+        console.log('   ✅ Fecha convertida de DD/MM/YYYY a YYYY-MM-DD:', fechaFormateada);
+        return fechaFormateada;
+    }
+    
+    // Si es un objeto Date
+    if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        const formatted = `${year}-${month}-${day}`;
+        console.log('   ✅ Fecha formateada desde Date:', formatted);
+        return formatted;
+    }
+    
+    console.warn('   ⚠️ Formato de fecha no reconocido:', dateValue);
+    return '';
+}
