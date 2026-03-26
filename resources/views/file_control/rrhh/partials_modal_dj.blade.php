@@ -103,8 +103,27 @@
                             <div class="dj-section-body">
                                 <div style="display:flex;gap:14px;align-items:flex-start;">
                                     <div style="flex:1;">
-                                        <label class="dj-label">Nombres y Apellidos</label>
-                                        <input type="text" id="nombres_apellidos" name="nombres_apellidos" class="dj-input" placeholder="Ingrese nombres y apellidos completos">
+                                              <input type="hidden" id="nombres_apellidos" name="nombres_apellidos" class="dj-input" placeholder="Ingrese nombres y apellidos completos">
+
+                                        {{-- ✅ CAMPOS SEPARADOS: NOMBRES Y APELLIDOS --}}
+                                        <div class="dj-grid-2" style="margin-bottom:10px;">
+                                            <div>
+                                                <label class="dj-label">Primer Nombre</label>
+                                                <input type="text" id="nombre1" name="nombre1" class="dj-input" placeholder="Primer nombre" style="text-transform:uppercase;">
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Segundo Nombre</label>
+                                                <input type="text" id="nombre2" name="nombre2" class="dj-input" placeholder="Segundo nombre (opcional)" style="text-transform:uppercase;">
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Apellido Paterno</label>
+                                                <input type="text" id="apellido_paterno" name="apellido_paterno" class="dj-input" placeholder="Apellido paterno" style="text-transform:uppercase;">
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Apellido Materno</label>
+                                                <input type="text" id="apellido_materno" name="apellido_materno" class="dj-input" placeholder="Apellido materno" style="text-transform:uppercase;">
+                                            </div>
+                                        </div>
                                         <a href="https://eldni.com/pe/buscar-datos-por-dni" target="_blank"
                                             style="display:inline-block;margin-top:6px;font-size:11px;color:var(--color-primary,#6366f1);border:1px solid var(--color-primary,#6366f1);padding:3px 10px;border-radius:5px;text-decoration:none;">
                                             Consultar DNI
@@ -232,7 +251,7 @@
                         {{-- CARD: Educación --}}
                         <div class="dj-section">
                             <div class="dj-section-header">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zM12 14v7m0 0l-3-2m3 2l3-2"/></svg>
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9"/></svg>
                                 Educación
                             </div>
                             <div class="dj-section-body">
@@ -554,7 +573,7 @@
                     style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:#64748b;color:#fff;cursor:pointer;border:none;">
                     Previsualizar PDF
                 </button>
-                <button id="btnGuardar" type="submit" form="formDatos"
+                <button id="btnGuardar" type="submit" form="formDatos"  data-hs-overlay="#modalDjGestion"
                     style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:var(--color-primary,#6366f1);color:#fff;cursor:pointer;border:none;">
                     Guardar
                 </button>

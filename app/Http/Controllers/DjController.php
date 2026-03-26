@@ -106,7 +106,7 @@ class DjController extends Controller
             $data = $this->formatDatesForInput($data);
 
             // 7. Agregar foto path
-            $data['FOTO_PATH'] = asset("biblioteca/fotos/{$codiPers}.jpg");
+            $data['FOTO_PATH'] = "http://190.116.178.163//Biblioteca_Grafica//Fotos//{$codiPers}.jpg";
 
             return response()->json([
                 'success' => true,
@@ -390,6 +390,9 @@ private function completarCamposNull($data, $codiPers)
 
         // ✅ 2. INSERTAR/ACTUALIZAR DIRECTAMENTE en DJ2026_PERSONAL
         $this->insertOrUpdateDJ2026Personal($codiPers, $data);
+
+        // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
+        $this->syncDJ2026ToPersonal($codiPers);
 
         // ✅ 3. GUARDAR FAMILIARES en tablas temporales
         $this->saveFamiliaresTemp($codiPers, $data);
@@ -1031,6 +1034,208 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
         throw $e;
     }
 }
+
+    /**
+     * Sincronizar datos de DJ2026_PERSONAL hacia si_solm.dbo.PERSONAL
+     * Solo actualiza columnas donde DJ2026_PERSONAL tenga valor NO NULL.
+     * Si DJ2026_PERSONAL tiene NULL en una columna, NO borra lo que ya existe en PERSONAL.
+     */
+    private function syncDJ2026ToPersonal($codiPers)
+    {
+        // 1. Obtener el registro recién guardado en DJ2026_PERSONAL
+        $djData = DB::select(
+            "SELECT * FROM si_solm.dbo.DJ2026_PERSONAL WHERE CODI_PERS = ?",
+            [$codiPers]
+        );
+
+        if (empty($djData)) {
+            Log::warning('syncDJ2026ToPersonal: No se encontró registro en DJ2026_PERSONAL', ['CODI_PERS' => $codiPers]);
+            return;
+        }
+
+        // 2. Obtener registro actual de PERSONAL
+        $personalData = DB::select(
+            "SELECT * FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?",
+            [$codiPers]
+        );
+
+        if (empty($personalData)) {
+            Log::info('syncDJ2026ToPersonal: No existe registro en PERSONAL, no se sincroniza', ['CODI_PERS' => $codiPers]);
+            return;
+        }
+
+        $djRecord = (array) $djData[0];
+        $personalRecord = (array) $personalData[0];
+
+        // 3. Campos datetime que necesitan sanitización de formato
+        $datetimeFields = [
+            'FECH_INGRE_PLANILLA', 'FECH_INGRE', 'FECH_NACI', 'FECH_CESE',
+            'PERS_FECHEMISIONDNI', 'PERS_FECHCADUCADNI', 'VCMTO', 'FECH_INIC_AFIL',
+            'PERS_FECHAREG', 'USUA_FECHA_REG', 'USUA_FECHA_MOD', 'PERS_FECHARETIRO',
+            'Pers_fech_venc_lic_arm', 'PERS_VERIF_FECHA', 'FEC_MOD_PLAN',
+            'FECH_EXP_BREVETE', 'FECH_REVAL_BREVETE',
+        ];
+
+        // 4. Columnas que se deben sincronizar (comunes entre DJ2026_PERSONAL y PERSONAL)
+        // Excluimos CODI_PERS (es la PK) y campos exclusivos de DJ2026 que no existen en PERSONAL
+        $columnsToSync = [
+            'NRO_DOCU_IDEN', 'CODI_TIPO_DOCU',
+            'APEL_1', 'APEL_2', 'NOMB_1', 'NOMB_2',
+            'CODI_SIST_PENS', 'SIST_PENS_TIPOCOMI',
+            'CODI_CARG', 'CODI_AREA', 'CODI_MONE_BASI',
+            'SUEL_BASI', 'FECH_INGRE_PLANILLA', 'FECH_INGRE',
+            'ESSALUD', 'CARN_ESSALUD', 'ESTA_CIVI',
+            'FECH_NACI', 'ASIG_FAMI', 'ESTA_ACTI',
+            'SCRT', 'COMI_PESC', 'NRO_CUPSS', 'AFIL_SIND',
+            'NRO_FICHA', 'TIPO_CONT', 'CODI_MONE',
+            'SUEL_NETO', 'CARG_FAMI', 'SEXO', 'NACIONALIDAD',
+            'DIRECCION', 'PERS_EMAIL', 'TIPO_SITU_LABO',
+            'SEGU_VIDA_LEY', 'PERS_CONBREVETE', 'PERS_BREVETE',
+            'FECH_CESE', 'CLAVE', 'JUBILADO', 'FORM_PAGO',
+            'CODI_ANTI', 'MONT_PAGO_COME', 'HORA_LABO',
+            'CODI_UNID_OPER', 'PERS_FECHEMISIONDNI', 'PERS_FECHCADUCADNI',
+            'CODI_RELA', 'MOTI_CESE', 'PROVINCIA', 'DISTRITO',
+            'VCMTO', 'DEPARTAMENTO', 'OBSERVACIONES',
+            'CODI_TIPO_RIES', 'UBIGEO', 'FOTO_SI_NO',
+            'FECH_INIC_AFIL', 'DIST_NACI', 'PROV_NACI',
+            'UTIL03', 'CODI_AREA_GRUP', 'CODI_SUB_AREA_GRUP',
+            'HORA_AUTO', 'GRAT', 'VACA', 'codi_luga_trab',
+            'AFECTO_LEY', 'fotocheck', 'horario',
+            'CODI_CATE_TRAB', 'ESCI_CODIGO',
+            'DEPA_CODIGO_NACI', 'PROVI_CODIGO_NACI',
+            'DEPA_CODIGO_DOMI', 'PROVI_CODIGO_DOMI',
+            'apor_essa', 'apor_sena', 'apor_senc', 'apor_cona',
+            'tipo_sangr', 'peso_kilo', 'tall_metr',
+            'PERS_LUEXPDNI', 'PERS_NRORUC', 'PERS_NROLIBM',
+            'PERS_CONYUGE', 'PERS_CONHIJOS', 'PERS_PROFESION',
+            'PERS_NROANTPOL', 'PERS_NORANTPEN',
+            'PERS_CTRABANT', 'PERS_CARGOTRABANT', 'PERS_DURACIONANT',
+            'PERS_SNADAR', 'PERS_CONSMO', 'PERS_LUGARSMO',
+            'PERS_CONDISCAMEC', 'PERS_NRODISCAMEC',
+            'PERS_CONLICARMAS', 'PERS_NROLICENCIA',
+            'PERS_CONARMAS', 'PERS_SERIEARMA', 'PERS_TIPOARMA',
+            'PERS_ACEPTADTA', 'PERS_NROEMERGENCIA', 'PERS_NOMCONTACTO',
+            'PERS_FECHAREG', 'PERS_VIGENCIA', 'USUA_CODIGO',
+            'PERS_TELEFONO', 'PERS_MARCA', 'PERS_CALIBRE', 'PERS_MODELO',
+            'PERS_TIPOTRAB', 'PERS_CONTRATADO',
+            'EMPR_CODIGO', 'SUCU_CODIGO',
+            'USUA_CODIGO_REG', 'USUA_FECHA_REG',
+            'USUA_CODIGO_MOD', 'USUA_FECHA_MOD',
+            'PERS_FECHARETIRO', 'PERS_FLAG',
+            'cala_codigo', 'Pers_fech_venc_lic_arm',
+            'PERS_OBSERVACIONES', 'PERS_RESERVA',
+            'EMPRESA_ASOCIADA_5TA', 'MOCE_CODIGO', 'PERS_ACTUALIZAR',
+            'PERS_SEXO', 'PERS_GRADO_INSTRUCCION', 'PERS_DIREC_DNI',
+            'CONTROL_MIGRADO',
+            'PERS_PARA_FOTOCHECK', 'PERS_CON_FOTOCHECK',
+            'PERS_VERIF_RENIEC', 'PERS_VERIF_USUARIO', 'PERS_VERIF_FECHA',
+            'PERS_DPTO_DIRDNI', 'PERS_PROV_DIRDNI', 'PERS_DIST_DIRDNI',
+            'GRADO_INSTRUC_OBS', 'OBS_CESE',
+            'CONTROL_MIGRADO2', 'PERS_PENSIONISTA', 'PERS_OMISO_ONPE',
+            'USUA_MOD_PLAN', 'FEC_MOD_PLAN',
+            'CONTROL_MIGRADO_COPE', 'CONTROL_MIGRADO_AUSTRAL',
+            'CONTROL_MIGRADO_CONSORCIO', 'CONTROL_MIGRADO_CODRALUX',
+            'CONTROL_VERIF_TRANS', 'TIZO_CODIGO',
+            'PERS_ZONA_DIRDNI', 'PERS_KM_MZ_DIRDNI',
+            'PERS_LOTE_DIRDNI', 'PERS_NRO_DIRDNI',
+            'PERS_KM_DIRDNI', 'PERS_MZ_DIRDNI',
+            'IEDU_CODIGO', 'CARR_CODIGO', 'EGRESO_EDUCATIVO',
+            'PERS_TRABAJO_ANTERIOR', 'CODI_TIPO_DOCU_ANT',
+            'CLASE_BREVETE', 'CATEGORIA_BREVETE',
+            'FECH_EXP_BREVETE', 'FECH_REVAL_BREVETE', 'RESTRICCION_BREVETE',
+            'PERS_DEPT_ACT', 'PERS_PROV_ACT', 'PERS_DIST_ACT',
+            'PERS_EMBARGO', 'PERS_WHATSAPP', 'PERS_SMO', 'dj2026_familiar_empresa','dj2026_banco',
+            'dj2026_cantprofesion', 'dj2026_ciudad_naci', 'dj2026_ocupacion_principal', 'dj2026_experiencia_anios',
+            'dj2026_familiar_nombre', 'dj2026_familiar_parentesco', 'SIP_fechaModifcacion'
+        ];
+
+        // 5. Construir UPDATE dinámico: solo columnas donde DJ2026 NO es NULL
+        $updateFields = [];
+        $params = [];
+
+        foreach ($columnsToSync as $col) {
+            // Solo actualizar si DJ2026_PERSONAL tiene valor (no importa si PERSONAL ya tiene dato)
+            if (array_key_exists($col, $djRecord) && !is_null($djRecord[$col])) {
+                $value = $djRecord[$col];
+
+                // Sanitizar campos datetime para SQL Server
+                if (in_array($col, $datetimeFields, true)) {
+                    $value = $this->sanitizeDatetimeForPersonal($value);
+                    if (is_null($value)) {
+                        continue; // Fecha inválida, no actualizar esta columna
+                    }
+                }
+
+                $updateFields[] = "[$col] = ?";
+                $params[] = $value;
+            }
+        }
+
+        if (empty($updateFields)) {
+            Log::info('syncDJ2026ToPersonal: No hay columnas con valor para sincronizar', ['CODI_PERS' => $codiPers]);
+            return;
+        }
+
+        // 6. Ejecutar UPDATE en PERSONAL
+        $params[] = $codiPers;
+        $sql = "UPDATE si_solm.dbo.PERSONAL SET " . implode(', ', $updateFields) . " WHERE CODI_PERS = ?";
+
+        try {
+            DB::update($sql, $params);
+            Log::info('syncDJ2026ToPersonal: PERSONAL actualizado correctamente', [
+                'CODI_PERS' => $codiPers,
+                'columnas_actualizadas' => count($updateFields)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('syncDJ2026ToPersonal: Error al actualizar PERSONAL', [
+                'CODI_PERS' => $codiPers,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Sanitizar valor datetime para que SQL Server lo acepte.
+     * Usa formato YYYYMMDD HH:MM:SS.mmm (sin guiones en fecha) que es
+     * SIEMPRE seguro en SQL Server independientemente del DATEFORMAT/LANGUAGE.
+     */
+    private function sanitizeDatetimeForPersonal($value)
+    {
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+
+        // Si es un objeto DateTime, formatear directamente al formato seguro
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Ymd H:i:s.v');
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            // Descartar valores inválidos
+            if ($value === '' || $value === '0000-00-00' || $value === '0000-00-00 00:00:00') {
+                return null;
+            }
+
+            // Reemplazar T por espacio
+            $value = str_replace('T', ' ', $value);
+
+            // Intentar parsear con DateTime para cualquier formato de entrada
+            try {
+                $dt = new \DateTime($value);
+                // Formato YYYYMMDD HH:MM:SS.mmm - seguro para SQL Server con cualquier DATEFORMAT
+                return $dt->format('Ymd H:i:s.v');
+            } catch (\Exception $e) {
+                Log::warning('sanitizeDatetimeForPersonal: Fecha no parseable', ['value' => $value]);
+                return null;
+            }
+        }
+
+        return null;
+    }
+
     // ============================================
     // MÉTODOS PRIVADOS AUXILIARES
     // ============================================

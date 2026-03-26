@@ -300,8 +300,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 widthGrow: 2,
                 formatter: function (cell) {
                     const data = cell.getData();
-                    if(data.estado == 'pendiente'){
-                        return `<button 
+                    if(data.migrado == 'Migrado'){
+                        return `<button  disabled
                             type="button" 
                             class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white"
                              data-hs-overlay="#modalDjGestion">
@@ -314,12 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
                              data-hs-overlay="#modalDjGestion">
                             DJ
                         </button>
-                        <button 
-                            type="button" 
-                            class="btn rounded-full form-btn-migrado bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar"
-                             data-hs-overlay="#modalDjGestion">
-                            <i class='bx bxs-file-pdf'></i>
-                        </button>
+                        
                         `;
                     }         
                 },
@@ -438,22 +433,28 @@ document.addEventListener('DOMContentLoaded', function () {
         if (distritoSelectDni) distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
     }
 
-    function resaltarTexto(tabla, valor) {
-        tabla.getRows().forEach(row => {
-            row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
-                if (i === cells.length - 1) return;
+   function resaltarTexto(tabla, valor) {
+    tabla.getRows().forEach(row => {
+        row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
+            // ✅ Obtener el campo de la celda
+            const field = cell.getAttribute('tabulator-field');
+            
+            // ✅ Si es la columna de acciones o migrado, no resaltar
+            if (i === cells.length - 1 || field === 'migrado' || field === 'estado') {
+                return;
+            }
 
-                const text = cell.textContent || '';
-                if (valor && text.toLowerCase().includes(valor)) {
-                    const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(${escaped})`, "gi");
-                    cell.innerHTML = text.replace(regex, "<span class='bg-warning/25'>$1</span>");
-                } else {
-                    cell.innerHTML = text;
-                }
-            });
+            const text = cell.textContent || '';
+            if (valor && text.toLowerCase().includes(valor)) {
+                const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${escaped})`, "gi");
+                cell.innerHTML = text.replace(regex, "<span class='bg-warning/25'>$1</span>");
+            } else {
+                cell.innerHTML = text;
+            }
         });
-    }
+    });
+}
 
     function makeFamilyRow() {
         return `
@@ -555,6 +556,7 @@ document.addEventListener('DOMContentLoaded', function () {
                
                 setValue("cod_postulante", data.id);
                 setValue("nombres_apellidos", `${data.nombres ?? ''} ${data.apellido1 ?? ''} ${data.apellido2 ?? ''}`.trim());
+                
                 setValue("dni", data.dni);
                 setValue("fecha_nacimiento", data.fecha_nacimiento);
                 setValue("celular", data.celular);
@@ -1584,10 +1586,17 @@ document.addEventListener('DOMContentLoaded', function () {
                         text: 'La Declaración Jurada se guardó correctamente.'
                     });
                     
-                    // ✅ Cerrar modal
+                    // ✅ Cerrar modal correctamente (limpiar backdrop de Preline)
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
+                        if (window.HSOverlay) {
+                            try { HSOverlay.close(modal); } catch(e) {}
+                        }
                         modal.classList.add('hidden');
+                        modal.classList.remove('hs-overlay-open');
+                        document.querySelectorAll('.hs-overlay-backdrop').forEach(el => el.remove());
+                        document.body.classList.remove('overflow-hidden');
+                        document.body.style.overflow = '';
                     }
                     
                     // ✅ Recargar tabla
@@ -1683,7 +1692,11 @@ async function abrirFormularioDJ(codiPers) {
         console.log('📦 Modal encontrado:', modal);
         
         if (modal) {
-            modal.classList.remove('hidden');
+            if (window.HSOverlay) {
+                HSOverlay.open(modal);
+            } else {
+                modal.classList.remove('hidden');
+            }
             console.log('✅ MODAL ABIERTO CORRECTAMENTE');
         } else {
             console.error('❌ NO SE ENCONTRÓ EL MODAL #modalDjGestion');
@@ -1755,6 +1768,10 @@ function llenarFormulario(data) {
     // Identidad
     setValue('cod_postulante', data.CODI_PERS);
     setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
+    setValue('#nombre1', data.NOMB_1 || '');
+    setValue('#nombre2', data.NOMB_2 || '');
+    setValue('#apellido_paterno', data.APEL_1 || '');
+    setValue('#apellido_materno', data.APEL_2 || '');
     setValue('#dni', data.NRO_DOCU_IDEN);
     setValue('#caduca', data.PERS_FECHCADUCADNI); // ✅ FORMATEAR
     setValue('#estado_civil', data.ESCI_CODIGO);
@@ -2074,8 +2091,17 @@ document.getElementById('formDatos')?.addEventListener('submit', async function(
             text: response.data.message
         });
 
-        // Cerrar modal
-        document.getElementById('modalDjGestion')?.classList.add('hidden');
+        // Cerrar modal correctamente via Preline
+        const modalEl = document.getElementById('modalDjGestion');
+        if (modalEl) {
+            if (window.HSOverlay) {
+                HSOverlay.close(modalEl);
+            } else {
+                modalEl.classList.add('hidden');
+                document.querySelector('.hs-overlay-backdrop')?.remove();
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
 
         // Recargar tabla
         if (window.getPersonal) window.getPersonal();
