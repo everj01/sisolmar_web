@@ -80,6 +80,25 @@
 
             {{-- TABLA PESTAÑA 2: sin columna Estado, con columna Migrado --}}
             <div id="panelMigrado" class="w-full px-5 py-2 mt-1 hidden">
+                {{-- FILTROS ADICIONALES --}}
+                <div class="flex gap-3 mb-3 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-gray-600">Sucursal:</label>
+                        <select id="filtroSucursal"
+                            class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-gray-600">Tipo Personal:</label>
+                        <select id="filtroTipoPer"
+                            class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                            <option value="">Todos</option>
+                            <option value="OPERATIVO">Operativo</option>
+                            <option value="ADMINISTRATIVO">Administrativo</option>
+                        </select>
+                    </div>
+                </div>
                 <div id="tblPersonasMigrado" class="w-full mt-5"></div>
                 <div class="flex items-center gap-2 mt-3">
                     <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>

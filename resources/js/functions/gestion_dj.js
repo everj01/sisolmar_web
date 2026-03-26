@@ -255,6 +255,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
+            { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
+            { 
+                title: "Tipo", 
+                field: "tipoPer", 
+                hozAlign: "center", 
+                widthGrow: 2,
+                formatter: function(cell) {
+                    const val = cell.getValue() ?? '';
+                    const color = val === 'OPERATIVO' 
+                        ? 'border-blue-300 bg-blue-100 text-blue-800' 
+                        : 'border-purple-300 bg-purple-100 text-purple-800';
+                    return val 
+                        ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium">${capitalizeWords(val)}</span>`
+                        : '';
+                }
+            },
             {
                 title: "Migrado",
                 field: "migrado",
@@ -632,13 +648,57 @@ document.addEventListener('DOMContentLoaded', function () {
         axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
         .then(response => {
             const datosTabla = response.data;
-
             tblPersonasMigrado.setData(datosTabla);
+
+            // ✅ Poblar select de sucursales dinámicamente
+            const sucursales = [...new Map(
+                datosTabla
+                    .filter(d => d.sucursal)
+                    .map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])
+            ).values()];
+
+            const filtroSucursal = document.getElementById('filtroSucursal');
+            if (filtroSucursal) {
+                filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                sucursales
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .forEach(s => {
+                        const opt = new Option(s.nombre, s.cod);
+                        filtroSucursal.add(opt);
+                    });
+            }
         })
-        .catch(error => {
-            console.error("Hubo un error:", error);
-        });
+        .catch(error => console.error("Hubo un error:", error));
     }
+
+    function aplicarFiltrosMigracion() {
+        const sucursal = document.getElementById('filtroSucursal')?.value ?? '';
+        const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '';
+
+        const filtros = [];
+
+        if (sucursal) {
+            filtros.push({ field: "codSucursal", type: "=", value: sucursal });
+        }
+        if (tipoPer) {
+            filtros.push({ field: "tipoPer", type: "=", value: tipoPer });
+        }
+
+        // También aplicar búsqueda de texto si hay algo en el input
+        const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
+        if (texto) {
+            filtros.push([
+                { field: "nombres", type: "like", value: texto },
+                { field: "dni",     type: "like", value: texto },
+            ]);
+        }
+
+        tblPersonasMigrado.setFilter(filtros);
+    }
+
+    document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
+    document.getElementById('filtroTipoPer')?.addEventListener('change', aplicarFiltrosMigracion);
+
 
     getPersonalMigracion();
     getPersonal();
@@ -682,24 +742,23 @@ document.addEventListener('DOMContentLoaded', function () {
     // EVENTOS
     // =========================
     buscarPersonalInput?.addEventListener("keyup", function () {
-        const valor = this.value.toLowerCase().trim();
-        const filtro = [
-            [
-                { field: "nombres", type: "like", value: valor },
-                { field: "dni", type: "like", value: valor },
-            ]
-        ];
+    const valor = this.value.toLowerCase().trim();
 
-        if (tabActiva === 'pendiente') {
-            tblPersonas.setFilter(filtro);
-            tblPersonas._ultimoFiltro = valor;
-            setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
-        } else {
-            tblPersonasMigrado.setFilter(filtro);
-            tblPersonasMigrado._ultimoFiltro = valor;
-            setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
-        }
-    });
+    if (tabActiva === 'pendiente') {
+        const filtro = [[
+            { field: "nombres", type: "like", value: valor },
+            { field: "dni",     type: "like", value: valor },
+        ]];
+        tblPersonas.setFilter(filtro);
+        tblPersonas._ultimoFiltro = valor;
+        setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
+    } else {
+        // ✅ Usar función unificada que combina texto + filtros de select
+        tblPersonasMigrado._ultimoFiltro = valor;
+        aplicarFiltrosMigracion();
+        setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
+    }
+});
 
     tblPersonas.on("renderComplete", function () {
         if (tblPersonas._ultimoFiltro) {
@@ -1839,6 +1898,7 @@ cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS
     // cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS_DIST_DIRDNI);
 
     // Laboral
+    
     setValue('#ocupacion_principal', data.dj2026_ocupacion_principal);
     const experiencia = data.dj2026_experiencia_anios;
     const experienciaLimpia = experiencia ? String(experiencia).replace(/[^0-9]/g, '') : '';

@@ -53,7 +53,9 @@ export default defineConfig({
                 // 'resources/js/functions/capacitacion/gestion_programacion.js', // Archivo no existe
                 // 'resources/js/functions/capacitacion/gestion_matricula.js', // Archivo no existe
                 'resources/js/functions/capacitacion/consulta_matriculas.js',
-                'resources/js/functions/capacitacion/historial_capacitaciones.js',
+                // 'resources/js/functions/capacitacion/historial_capacitaciones.js',
+                //'resources/js/functions/capacitacion_old/historial_capacitaciones.js',
+                'resources/js/functions/gestion_dj.js',
             ],
             refresh: true,
         }),
