@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MigraPersonal extends Model
 {
+    protected $connection = 'sqlsrv';
     protected $table = 'sw_MIGRA_PERSONAL';
     protected $primaryKey = 'CODI_PERS';
     public $incrementing = false;

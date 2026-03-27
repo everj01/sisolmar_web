@@ -159,17 +159,8 @@
                     
                     if(response.ok && result.success) {
                         this.closeModal();
-                        // El mensaje viene del controlador indicando si fue masiva o solo apertura de ciclo
-                        const mensajeFinal = result.message || "Operación exitosa";
-                        const esBajoDemanda = result.message.includes('bajo demanda');
-
                         window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                            detail: { 
-                                titulo: esBajoDemanda ? "Ciclo Abierto" : "Proceso Iniciado", 
-                                mensaje: mensajeFinal, 
-                                tipo: "success", 
-                                recargar: true 
-                            }
+                            detail: { titulo: "Apertura Exitosa", mensaje: result.message, tipo: "success", recargar: true }
                         }));
                     } else {
                         window.dispatchEvent(new CustomEvent('mostrar-alerta', {
@@ -610,7 +601,7 @@
 
 
                     <!-- Frecuencia -->
-                    <div x-show="!esDemanda" x-transition>
+                    <div>
                         <label for="slcFrecuencia" class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia</label>
                         <select id="slcFrecuencia" x-model="frecuencia" 
                             class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
@@ -652,15 +643,9 @@
                     </div>
 
                     <!-- NUEVO: Obligatorio al Alta -->
-                    <div class="flex items-center gap-6 -mt-1 mb-1">
-                        <div class="flex items-center">
-                            <input class="form-switch" type="checkbox" role="switch" id="chkObligatorioAlta" x-model="obligatorioAlta" class="cursor-pointer">
-                            <label for="chkObligatorioAlta" class="ml-2 text-gray-800 text-sm font-medium cursor-pointer">Obligatorio al Alta</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input class="form-switch" type="checkbox" role="switch" id="chkEsDemanda" x-model="esDemanda" class="cursor-pointer">
-                            <label for="chkEsDemanda" class="ml-2 text-gray-800 text-sm font-medium cursor-pointer">Es por Demanda</label>
-                        </div>
+                    <div class="flex items-center -mt-1 mb-1">
+                        <input class="form-switch" type="checkbox" role="switch" id="chkObligatorioAlta" x-model="obligatorioAlta" class="cursor-pointer">
+                        <label for="chkObligatorioAlta" class="ml-2 text-gray-800 text-sm font-medium cursor-pointer">Obligatorio al Alta</label>
                     </div>
 
                     <!-- NUEVO: Responsable (Estilo Escritorio) -->
@@ -948,7 +933,7 @@
                         </div>
 
                         <!-- NUEVO: Filtros Grupales (Punto 11) -->
-                        <div x-show="!incluirAutomatico" x-transition class="w-full max-w-lg mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div class="w-full max-w-lg mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
                             <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
                                 <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">
                                     <i class="bx bx-filter-alt mr-1"></i> Criterios de Selección
@@ -992,7 +977,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div x-show="!incluirAutomatico" x-transition class="w-full max-w-lg mt-6">
+                        <div class="w-full max-w-lg mt-6">
                             <label class="block text-sm font-semibold leading-6 text-gray-700 mb-2">
                                 <i class="bx bx-list-ol mr-1"></i> (Opcional) Pegar lista de DNIs
                             </label>

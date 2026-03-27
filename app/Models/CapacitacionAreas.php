@@ -9,6 +9,7 @@ class CapacitacionAreas extends Model
 {
     use HasFactory;
 
+    protected $connection = 'sqlsrv';
     protected $table = 'sw_capacitacion_areas';
 
     protected $primaryKey = 'codigo';

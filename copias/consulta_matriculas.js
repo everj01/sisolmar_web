@@ -224,63 +224,99 @@ async function cargarHistorial(personalId, nombrePersonal) {
 }
 
 /**
- * Mostrar Modal con Historial - VERSIÓN OBRA MAESTRA (Timeline)
+ * Mostrar Modal con Historial
  */
 function mostrarModalHistorial(nombre, solicitudes) {
-    const avatarContainer = document.getElementById('avatarPersonal');
-    const nameEl = document.getElementById('nombrePersonal');
-    
-    // Initials for avatar
-    const initials = nombre.split(' ').map(n => n[0]).join('').substring(0, 2);
-    if (avatarContainer) avatarContainer.textContent = initials;
-    if (nameEl) nameEl.textContent = nombre;
-
-    const container = document.getElementById('historialContainer');
-    const emptyMsg = document.getElementById('noDataMessage');
+    let tablaHtml = '';
 
     if (solicitudes.length === 0) {
-        container.innerHTML = '';
-        emptyMsg.classList.remove('hidden');
+        tablaHtml = `
+            <div class="text-center py-6 text-gray-500">
+                <i class="i-tabler-school text-4xl mb-2 text-gray-300"></i>
+                <p>No está matriculado o no tiene cursos.</p>
+            </div>`;
     } else {
-        emptyMsg.classList.add('hidden');
-        
-        container.innerHTML = solicitudes.map(s => {
-            const statusFull = s.estado || 'MATRICULADO';
-            const colors = {
-                'APROBADO': { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'i-tabler-check', border: 'border-emerald-200' },
-                'COMPLETADO': { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'i-tabler-check', border: 'border-emerald-200' },
-                'REPROBADO': { bg: 'bg-rose-100', text: 'text-rose-700', icon: 'i-tabler-x', border: 'border-rose-200' },
-                'EN_PROGRESO': { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'i-tabler-hourglass', border: 'border-amber-200' },
-                'MATRICULADO': { bg: 'bg-blue-100', text: 'text-blue-700', icon: 'i-tabler-user', border: 'border-blue-200' }
+        const filas = solicitudes.map(s => {
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const part = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+                const [y, m, d] = part.split('-');
+                return (y && m && d) ? `${d}/${m}/${y}` : dateStr;
             };
 
-            const c = colors[statusFull] || colors['MATRICULADO'];
-            const fecha = s.fecha_matricula ? new Date(s.fecha_matricula).toLocaleDateString() : 'N/A';
+            let fechaStr = '-';
+            if (s.fecha_inicio && s.fecha_final) {
+                fechaStr = `${formatDate(s.fecha_inicio)}<br><small class="text-gray-400">al</small><br>${formatDate(s.fecha_final)}`;
+            } else if (s.fecha_matricula) {
+                fechaStr = formatDate(s.fecha_matricula);
+            }
+
+            const estadoClass = obtenerClaseEstadoHistorial(s.estado, true);
 
             return `
-                <div class="relative pl-10">
-                    <div class="absolute -left-3.5 flex items-center justify-center w-7 h-7 ${c.bg} ${c.text} rounded-full ring-8 ring-white shadow-sm border ${c.border}">
-                        <i class="${c.icon} text-sm"></i>
-                    </div>
-                    <div class="flex flex-col p-4 bg-white border border-gray-100 rounded-2xl shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${fecha}</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c.bg} ${c.text}">${statusFull}</span>
-                        </div>
-                        <h5 class="text-sm font-bold text-gray-800">${s.nombre_curso}</h5>
-                        <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                            <i class="i-tabler-calendar-event opacity-50"></i>
-                            Programación: ${s.prog_fecha_inicio ? new Date(s.prog_fecha_inicio).toLocaleDateString() : 'N/A'} - ${s.prog_fecha_final ? new Date(s.prog_fecha_final).toLocaleDateString() : 'N/A'}
-                        </p>
-                    </div>
-                </div>
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="p-3 text-left font-medium text-gray-700">${s.nombre_curso || ''}</td>
+                    <td class="p-3 text-xs text-center text-gray-600">${fechaStr}</td>
+                    <td class="p-3 text-xs text-center">${estadoClass}</td>
+                </tr>
             `;
         }).join('');
+
+        tablaHtml = `
+            <div class="border border-default-200 rounded-lg overflow-hidden mt-3 mb-1">
+                <table id="tblHistorialPersonal" class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left">Curso</th>
+                            <th class="p-3 text-center">Programación</th>
+                            <th class="p-3 text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filas}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
-    // @ts-ignore
-    const modal = new HSOverlay(document.getElementById('modal-historial'));
-    modal.open();
+    const escapeHtml = (text) => {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    Swal.fire({
+        title: `<div class="text-lg pb-1">Historial de <br><small class="text-primary font-bold">${escapeHtml(nombre)}</small></div>`,
+        html: tablaHtml,
+        width: '750px',
+        showCloseButton: true,
+        showConfirmButton: false,
+        customClass: {
+            container: 'z-[100]'
+        },
+        didOpen: () => {
+            if (solicitudes.length > 0) {
+                const tableEl = document.getElementById('tblHistorialPersonal');
+                if (tableEl && typeof DataTable !== 'undefined') {
+                    new DataTable(tableEl, {
+                        perPage: 6,
+                        perPageSelect: [6, 12, 20],
+                        searchable: false,
+                        sortable: false,
+                        fixedHeight: false,
+                        labels: {
+                            placeholder: "Buscar...",
+                            perPage: "{select} por página",
+                            noRows: "No hay cursos asignados",
+                            info: "Mostrando {start} a {end} de {rows}"
+                        }
+                    });
+                }
+            }
+        }
+    });
 }
 
 function obtenerClaseEstadoHistorial(estado, isBadge = false) {
@@ -596,30 +632,8 @@ function actualizarEstadisticas(matriculas) {
     document.getElementById('countAprobados').textContent = estados.aprobados;
     document.getElementById('countReprobados').textContent = estados.reprobados;
 
-    // Poblar filtros
+    // Poblar filtro de programaciones
     poblarFiltroProgramaciones(matriculas);
-    poblarFiltroSede(matriculas);
-}
-
-/**
- * Poblar el select de filtro de Sedes
- */
-function poblarFiltroSede(matriculas) {
-    const select = document.getElementById('slcFiltroSede');
-    if (!select) return;
-
-    const currentVal = select.value;
-    select.innerHTML = '<option value="">🏢 Todas las Sedes</option>';
-
-    const sedes = [...new Set(matriculas.map(m => m.sucursal).filter(s => s))].sort();
-    
-    sedes.forEach(sede => {
-        const option = document.createElement('option');
-        option.value = sede;
-        option.textContent = sede;
-        if (sede === currentVal) option.selected = true;
-        select.appendChild(option);
-    });
 }
 
 /**
@@ -678,51 +692,39 @@ function poblarFiltroProgramaciones(matriculas) {
 function inicializarTabulator() {
     tabulatorMatriculas = new Tabulator("#tblMatriculas", {
         data: [],
-        layout: "fitColumns",
-        height: "550px", 
+        layout: "fitDataFill",
+        height: "550px", // Habilita Virtual DOM (Crítico para +1000 registros)
         placeholder: "No hay matrículas para mostrar",
         pagination: "local",
         paginationSize: 20,
         paginationSizeSelector: [10, 20, 50, 100],
+        renderVertical: "virtual", // Forzar renderizado virtual
         columns: [
             {
                 title: "#",
                 formatter: "rownum",
-                width: 40,
+                width: 50,
                 hozAlign: "center",
                 headerSort: false
             },
             {
                 title: "DNI",
                 field: "dni",
-                width: 100,
-                cellClick: function (e, cell) {
-                    const data = cell.getRow().getData();
-                    seleccionarPersonal({
-                        codigo: data.cod_personal,
-                        nombre_completo: data.nombre_completo,
-                        dni: data.dni
-                    });
-                },
-                formatter: function (cell) {
-                    return `<span class="text-primary font-bold hover:underline cursor-pointer">${cell.getValue()}</span>`;
-                }
+                width: 100
             },
             {
                 title: "Nombre Completo",
                 field: "nombre_completo",
-                minWidth: 200,
-                formatter: function (cell) {
-                    return `<span class="font-bold text-gray-700 uppercase text-[11px]">${cell.getValue()}</span>`;
-                }
+                minWidth: 200
             },
             {
-                title: "Sede / Sucursal",
-                field: "sucursal",
-                minWidth: 150,
+                title: "Cliente / Empresa",
+                field: "cliente_empresa",
+                minWidth: 140,
                 formatter: function (cell) {
                     const val = cell.getValue();
-                    return `<div class="flex items-center gap-1.5"><i class="i-tabler-map-pin text-gray-300"></i> <span class="text-[10px] font-medium text-gray-500">${val || '-'}</span></div>`;
+                    if (!val || val === '-') return '<span class="text-gray-300 text-xs">—</span>';
+                    return `<span class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">${val}</span>`;
                 }
             },
             {
@@ -732,31 +734,60 @@ function inicializarTabulator() {
                 formatter: function (cell) {
                     const data = cell.getRow().getData();
                     if (!data.prog_fecha_inicio || !data.prog_fecha_final) {
-                        return '<span class="text-gray-400 italic text-xs">Sin fecha</span>';
+                        return '<span class="text-gray-400 italic font-mono text-xs">Sin fecha</span>';
                     }
                     const fi = new Date(data.prog_fecha_inicio).toLocaleDateString();
                     const ff = new Date(data.prog_fecha_final).toLocaleDateString();
-                    return `<span class="font-bold text-[10px] text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200">${fi} - ${ff}</span>`;
+                    return `<span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded border border-gray-200">${fi} - ${ff}</span>`;
+                }
+            },
+            // {
+            //     title: "Correo",
+            //     field: "correo",
+            //     minWidth: 180
+            // },
+            // {
+            //     title: "Cargo",
+            //     field: "cargo",
+            //     minWidth: 150
+            // },
+            {
+                title: "Fecha Matrícula",
+                field: "fecha_matricula",
+                width: 140,
+                formatter: function (cell) {
+                    const fecha = cell.getValue();
+                    if (!fecha) return '-';
+                    return new Date(fecha).toLocaleDateString('es-PE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
                 }
             },
             {
                 title: "Estado",
                 field: "estado",
-                width: 130,
+                width: 120,
                 hozAlign: "center",
                 formatter: function (cell) {
                     const estado = cell.getValue() || 'MATRICULADO';
                     const colores = {
-                        'MATRICULADO': 'bg-blue-500 shadow-blue-100',
-                        'EN_PROGRESO': 'bg-amber-400 shadow-amber-100',
-                        'COMPLETADO': 'bg-emerald-500 shadow-emerald-100',
-                        'APROBADO': 'bg-emerald-500 shadow-emerald-100',
-                        'REPROBADO': 'bg-rose-500 shadow-rose-100',
-                        'CANCELADO': 'bg-gray-400 shadow-gray-100'
+                        'MATRICULADO': 'bg-blue-100 text-blue-700',
+                        'EN_PROGRESO': 'bg-yellow-100 text-yellow-700',
+                        'COMPLETADO': 'bg-green-100 text-green-700',
+                        'APROBADO': 'bg-green-100 text-green-700',
+                        'REPROBADO': 'bg-red-100 text-red-700',
+                        'CANCELADO': 'bg-gray-100 text-gray-700'
                     };
-                    const color = colores[estado] || 'bg-gray-400';
-                    return `<span class="px-2.5 py-1 rounded-full text-[10px] font-black text-white shadow-sm ${color} uppercase tracking-wider">${estado}</span>`;
+                    const clase = colores[estado] || 'bg-gray-100 text-gray-700';
+                    return `<span class="px-2 py-1 rounded-full text-xs font-medium ${clase}">${estado}</span>`;
                 }
+            },
+            {
+                title: "Sucursal",
+                field: "sucursal",
+                minWidth: 120
             }
         ]
     });
@@ -785,12 +816,6 @@ function configurarEventos() {
     const selectProg = document.getElementById('slcFiltroProgramacion');
     if (selectProg) {
         selectProg.addEventListener('change', aplicarFiltrosCombine);
-    }
-
-    // 2.1 Filtro Sede (Matrículas Tab 2)
-    const selectSede = document.getElementById('slcFiltroSede');
-    if (selectSede) {
-        selectSede.addEventListener('change', aplicarFiltrosCombine);
     }
 
     // 3. Búsqueda y Filtros de Personal (Historial Tab 1)
@@ -955,8 +980,6 @@ window.filtroEstadoActivo = null;
  */
 function aplicarFiltrosCombine() {
     let filtrados = [...matriculasData];
-    const tagsContainer = document.getElementById('activeFiltersContainer');
-    let activeTags = [];
 
     // 1. Filtro Texto
     const termino = document.getElementById('buscarMatricula')?.value.toLowerCase().trim() || '';
@@ -964,9 +987,10 @@ function aplicarFiltrosCombine() {
         filtrados = filtrados.filter(m =>
             (m.nombre_completo && m.nombre_completo.toLowerCase().includes(termino)) ||
             (m.dni && m.dni.toLowerCase().includes(termino)) ||
-            (m.sucursal && m.sucursal.toLowerCase().includes(termino))
+            (m.correo && m.correo.toLowerCase().includes(termino)) ||
+            (m.sucursal && m.sucursal.toLowerCase().includes(termino)) ||
+            (m.cargo && m.cargo.toLowerCase().includes(termino))
         );
-        activeTags.push(`<span class="px-2 py-0.5 bg-gray-100 rounded text-[10px] border border-gray-200">🔍 "${termino}"</span>`);
     }
 
     // 2. Filtro Programacion
@@ -976,35 +1000,20 @@ function aplicarFiltrosCombine() {
         filtrados = filtrados.filter(m =>
             m.prog_fecha_inicio === inicioWanted && m.prog_fecha_final === finalWanted
         );
-        const text = document.getElementById('slcFiltroProgramacion').selectedOptions[0].text;
-        activeTags.push(`<span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100">📅 ${text}</span>`);
     }
 
-    // 3. Filtro Sede
-    const sedeVal = document.getElementById('slcFiltroSede')?.value || '';
-    if (sedeVal) {
-        filtrados = filtrados.filter(m => m.sucursal === sedeVal);
-        activeTags.push(`<span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] border border-indigo-100">🏢 ${sedeVal}</span>`);
-    }
-
-    // 4. Filtro Estado (desde las cards)
+    // 3. Filtro Estado (desde las cards)
     if (window.filtroEstadoActivo) {
-        let label = '';
         filtrados = filtrados.filter(m => {
             const st = m.estado || 'MATRICULADO';
             switch (window.filtroEstadoActivo) {
-                case 'countMatriculados': label = 'MATRICULADOS'; return true; 
-                case 'countEnProgreso': label = 'EN PROGRESO'; return st === 'EN_PROGRESO';
-                case 'countAprobados': label = 'APROBADOS'; return st === 'APROBADO' || st === 'COMPLETADO';
-                case 'countReprobados': label = 'REPROBADOS'; return st === 'REPROBADO';
+                case 'countMatriculados': return st === 'MATRICULADO';
+                case 'countEnProgreso': return st === 'EN_PROGRESO';
+                case 'countAprobados': return st === 'APROBADO' || st === 'COMPLETADO';
+                case 'countReprobados': return st === 'REPROBADO';
                 default: return true;
             }
         });
-        if (label) activeTags.push(`<span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] border border-emerald-100 font-bold">⭐ ${label}</span>`);
-    }
-
-    if (tagsContainer) {
-        tagsContainer.innerHTML = activeTags.length > 0 ? activeTags.join('') : '<span class="text-[10px] text-gray-400 italic">Ninguno aplicado</span>';
     }
 
     actualizarTabulator(filtrados);

@@ -8,27 +8,26 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use App\Models\Matricula;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use App\Models\NotificacionMatricula;
 
 class DispatchMatriculaBatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $cursoCodigo;
-    protected $programacionCodigo;
-    protected $personalIds;
+    protected $cursoId;
+    protected $progId;
+    protected $personales;
     protected $usuarioId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($cursoCodigo, $programacionCodigo, array $personalIds, $usuarioId)
+    public function __construct($cursoId, $progId, $personales, $usuarioId)
     {
-        $this->cursoCodigo = $cursoCodigo;
-        $this->programacionCodigo = $programacionCodigo;
-        $this->personalIds = $personalIds;
+        $this->cursoId = $cursoId;
+        $this->progId = $progId;
+        $this->personales = $personales;
         $this->usuarioId = $usuarioId;
     }
 
@@ -37,40 +36,69 @@ class DispatchMatriculaBatchJob implements ShouldQueue
      */
     public function handle()
     {
-        Log::info("Iniciando matrícula masiva para Curso: {$this->cursoCodigo}, Programación: {$this->programacionCodigo}. Total: " . count($this->personalIds));
+        Log::info("Iniciando Job de Matrícula Masiva para Curso ID: {$this->cursoId}");
 
-        $timestamp = Carbon::now()->format('Y-m-d\TH:i:s.000');
-        $lotes = array_chunk($this->personalIds, 100);
+        $curso = DB::connection('sqlsrv')->table('sw_cursos')->where('codigo', $this->cursoId)->first();
+        if (!$curso) {
+            Log::error("Job Fallido: Curso {$this->cursoId} no encontrado.");
+            return;
+        }
 
-        foreach ($lotes as $lote) {
-            $data = [];
-            foreach ($lote as $personalId) {
-                // El orden debe coincidir exactamente con la tabla sw_matriculas para evitar errores en SQL Server (posicional)
-                // Columnas: cod_curso, cod_personal, usuario_id, fecha_matricula, estado, tipo_matricula, origen_matricula, created_at, updated_at, cod_programacion
-                $data[] = [
-                    'cod_curso'        => (int)$this->cursoCodigo,
-                    'cod_personal'     => (string)$personalId,
-                    'usuario_id'       => (int)$this->usuarioId,
-                    'fecha_matricula'  => $timestamp,
-                    'estado'           => 'MATRICULADO',
-                    'tipo_matricula'   => 'MANUAL',
-                    'origen_matricula' => 'MANUAL_MASIVA',
-                    'created_at'       => $timestamp,
-                    'updated_at'       => $timestamp,
-                    'cod_programacion' => (string)$this->programacionCodigo,
-                ];
-            }
+        $enviados = 0;
+        $fallidos = 0;
 
-            if (!empty($data)) {
-                try {
-                    DB::table('sw_matriculas')->insert($data);
-                } catch (\Exception $e) {
-                    Log::error("Error en insert masivo sw_matriculas: " . $e->getMessage());
-                    throw $e;
+        foreach ($this->personales as $codPers) {
+            try {
+                // Verificar si ya existe matrícula activa en este curso/programación
+                $existe = DB::connection('sqlsrv')->table('sw_matriculas')
+                    ->where('cod_curso', $this->cursoId)
+                    ->where('cod_programacion', $this->progId)
+                    ->where('cod_personal', trim($codPers))
+                    ->exists();
+
+                if ($existe) {
+                    $enviados++; // Contamos como procesado
+                    continue;
                 }
+
+                // Insertar matrícula (Pauta DB: Query Builder + GETDATE)
+                DB::connection('sqlsrv')->table('sw_matriculas')->insert([
+                    'cod_programacion' => $this->progId,
+                    'cod_curso'        => $this->cursoId,
+                    'cod_personal'     => trim($codPers),
+                    'fecha_matricula'  => DB::raw('GETDATE()'),
+                    'estado'           => 'MATRICULADO',
+                    'usuario_id'       => $this->usuarioId,
+                    'origen_matricula' => 'WEB_BATCH',
+                    'fecha_creacion'   => DB::raw('GETDATE()')
+                ]);
+
+                $enviados++;
+            } catch (\Exception $e) {
+                $fallidos++;
+                Log::error("Error en Matrícula Batch (CP:{$codPers}, C:{$this->cursoId}): " . $e->getMessage());
             }
         }
 
-        Log::info("Matrícula masiva completada para Curso: {$this->cursoCodigo}");
+        // Crear notificación final para el usuario
+        if ($fallidos == 0) {
+            NotificacionMatricula::crearNotificacionExitosa(
+                $this->usuarioId, 
+                $this->cursoId, 
+                $curso->nombre, 
+                count($this->personales)
+            );
+        } else {
+            NotificacionMatricula::crearNotificacionMultiplesFallos(
+                $this->usuarioId, 
+                $this->cursoId, 
+                $curso->nombre, 
+                count($this->personales), 
+                $enviados, 
+                $fallidos
+            );
+        }
+
+        Log::info("Job de Matrícula Masiva finalizado: {$enviados} exitosos, {$fallidos} fallidos.");
     }
 }

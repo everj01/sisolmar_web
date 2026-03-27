@@ -9,7 +9,6 @@ class CursoProgramacion extends Model
 {
     use HasFactory;
 
-    protected $connection = 'sqlsrv';
     protected $table = 'sw_cursos_programacion';
 
     protected $primaryKey = 'codigo';
@@ -36,27 +35,5 @@ class CursoProgramacion extends Model
     public function curso()
     {
         return $this->belongsTo(Cursos::class, 'cod_cursos', 'codigo');
-    }
-
-    public function matriculas()
-    {
-        return $this->hasMany(Matricula::class, 'cod_programacion', 'codigo_programacion');
-    }
-
-    // --- Scopes ---
-
-    public function scopeVigentes($query)
-    {
-        return $query->where('estado_periodo', 'VIGENTE');
-    }
-
-    public function scopeDelCurso($query, $cursoId)
-    {
-        return $query->where('cod_cursos', $cursoId);
-    }
-
-    public function scopeHabilitados($query)
-    {
-        return $query->where('habilitado', 1);
     }
 }

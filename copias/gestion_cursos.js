@@ -461,7 +461,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.areaConocimiento = curso.area_conocimiento ?? "";
                 alpineData.area = alpineData.areaConocimiento;
                 alpineData.frecuencia = curso.frecuencia ?? "";
-
+                
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
@@ -480,10 +480,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 }
 
                 // Datos de Examen (Sincronizar con Alpine)
-                alpineData.aplicaEvaluacion = curso.aplica_evaluacion == 1;
-                alpineData.obligatorioAlta = curso.obligatorio_alta == 1;
-                alpineData.esDemanda = curso.es_demanda == 1; // 👈 NUEVO
-                alpineData.targetGroup = curso.target_group || 'TODOS';
+                alpineData.aplicaEvaluacion = curso.aplica_evaluacion == 1; // 👈 NUEVO: Estado de evaluación
+                alpineData.obligatorioAlta = curso.obligatorio_alta == 1;   // 👈 NUEVO: Obligatorio al alta
+                alpineData.targetGroup = curso.target_group || 'TODOS';    // 👈 NUEVO: Grupo Objetivo
 
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
                 alpineData.nota = curso.examen?.nota_minima ?? 0;
@@ -615,7 +614,6 @@ window.editarFormGestionCurso = (e) => {
     // NUEVO: Enviar estados de los checks
     formData.append('aplica_evaluacion', alpineData.aplicaEvaluacion ? 1 : 0);
     formData.append('obligatorio_alta', alpineData.obligatorioAlta ? 1 : 0);
-    formData.append('es_demanda', alpineData.esDemanda ? 1 : 0);
     formData.append('target_group', alpineData.targetGroup || 'TODOS');
     formData.append('cod_responsable', alpineData.codResponsable);
 
@@ -734,9 +732,8 @@ window.formCursoGestion = function () {
         codResponsable: '',
         nombreResponsable: '',
 
-        aplicaEvaluacion: true,
-        obligatorioAlta: false,
-        esDemanda: false,         // 👈 NUEVO
+        aplicaEvaluacion: true,   // 👈 NUEVO: Control visual de examen
+        obligatorioAlta: false,   // 👈 NUEVO: Regla de negocio para inducción
 
         // Lógica PAC
         esPAC: false,
@@ -759,12 +756,12 @@ window.formCursoGestion = function () {
         busquedaCliente: '',
         busquedaEmpresa: '',
         busquedaAreaPCI: '',
-
+        
         get areasPCIFiltradas() {
             if (!this.busquedaAreaPCI) return this.areasEncargadas;
             const search = this.busquedaAreaPCI.toLowerCase();
-            return this.areasEncargadas.filter(ar =>
-                (ar.descripcion || '').toLowerCase().includes(search) ||
+            return this.areasEncargadas.filter(ar => 
+                (ar.descripcion || '').toLowerCase().includes(search) || 
                 (ar.codigo || '').toLowerCase().includes(search)
             );
         },
@@ -772,8 +769,8 @@ window.formCursoGestion = function () {
         get clientesFiltrados() {
             if (!this.busquedaCliente) return this.clientesDisponibles;
             const search = this.busquedaCliente.toLowerCase();
-            return this.clientesDisponibles.filter(clie =>
-                (clie.descripcion || '').toLowerCase().includes(search) ||
+            return this.clientesDisponibles.filter(clie => 
+                (clie.descripcion || '').toLowerCase().includes(search) || 
                 (clie.codigo || '').toLowerCase().includes(search)
             );
         },
@@ -781,8 +778,8 @@ window.formCursoGestion = function () {
         get empresasFiltradas() {
             if (!this.busquedaEmpresa) return this.empresasDisponibles;
             const search = this.busquedaEmpresa.toLowerCase();
-            return this.empresasDisponibles.filter(emp =>
-                (emp.descripcion || '').toLowerCase().includes(search) ||
+            return this.empresasDisponibles.filter(emp => 
+                (emp.descripcion || '').toLowerCase().includes(search) || 
                 (emp.codigo || '').toLowerCase().includes(search)
             );
         },
@@ -821,15 +818,6 @@ window.formCursoGestion = function () {
                 .then(res => {
                     this.empresasDisponibles = res.data || [];
                 });
-
-            // Sincronizar Frecuencia y Es por Demanda (Pauta 7)
-            this.$watch('esDemanda', (val) => {
-                if (val) this.frecuencia = ''; // Si es por demanda, no hay frecuencia
-            });
-
-            this.$watch('frecuencia', (val) => {
-                if (val) this.esDemanda = false; // Si hay frecuencia, no puede ser por demanda
-            });
         },
 
         checkEsPAC() {
@@ -870,7 +858,6 @@ window.formCursoGestion = function () {
 
             this.aplicaEvaluacion = true;
             this.obligatorioAlta = false;
-            this.esDemanda = false; // 👈 NUEVO
             this.targetGroup = 'TODOS';
 
             // Forzar limpieza de inputs de archivos y estados visuales
@@ -915,8 +902,8 @@ window.formCursoGestion = function () {
 
             // Validación separada para campos del examen (deben ser > 0 cuando aplica evaluación)
             if (this.aplicaEvaluacion) {
-                const tiempoOk = parseInt(this.limiteTiempo) > 0;
-                const notaOk = parseFloat(this.nota) > 0;
+                const tiempoOk  = parseInt(this.limiteTiempo) > 0;
+                const notaOk    = parseFloat(this.nota) > 0;
                 const intentosOk = parseInt(this.intentos) > 0;
                 if (!tiempoOk || !notaOk || !intentosOk) {
                     Swal.fire('Atención', 'Debe completar los datos del examen (Tiempo, Nota mínima e Intentos deben ser mayores a 0)', 'warning');
@@ -938,7 +925,6 @@ window.formCursoGestion = function () {
             formData.append('es_periodico', this.frecuencia ? 1 : 0);
             formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
             formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
-            formData.append('es_demanda', this.esDemanda ? 1 : 0); // 👈 NUEVO
             formData.append('target_group', this.targetGroup || 'TODOS');
 
             // Campos del examen solo cuando aplica evaluación
@@ -1361,7 +1347,7 @@ window.abrirModalRegistro = function () {
     }
 }
 
-window.searchablePersonnel = function () {
+window.searchablePersonnel = function() {
     return {
         open: false,
         query: '',
@@ -1377,22 +1363,22 @@ window.searchablePersonnel = function () {
         search() {
             this.loading = true;
             this.error = null;
-            const params = {
+            const params = { 
                 tipo_responsable: 'ADMINISTRATIVO_5'
             };
             if (this.query.length > 0) {
                 params.q = this.query;
             }
-
+            
             axios.get(`${VITE_URL_APP}/api/buscar-personal-capacitacion`, { params })
-                .then(res => {
-                    this.results = res.data.personal || [];
-                })
-                .catch(err => {
-                    console.error(err);
-                    this.error = 'Error al cargar la lista. Verifique la consola.';
-                })
-                .finally(() => this.loading = false);
+            .then(res => {
+                this.results = res.data.personal || [];
+            })
+            .catch(err => {
+                console.error(err);
+                this.error = 'Error al cargar la lista. Verifique la consola.';
+            })
+            .finally(() => this.loading = false);
         },
         select(p) {
             const formElement = document.querySelector('[x-data^="formCursoGestion"]');

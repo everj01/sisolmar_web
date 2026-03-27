@@ -10,6 +10,7 @@ class NotificacionMatricula extends Model
 {
     use HasFactory;
 
+    protected $connection = 'sqlsrv';
     protected $table = 'sw_notificaciones_matriculas';
     protected $primaryKey = 'codigo';
     

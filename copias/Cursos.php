@@ -9,7 +9,6 @@ class Cursos extends Model
 {
     use HasFactory;
 
-    protected $connection = 'sqlsrv';
     protected $table = 'sw_cursos';
 
     protected $primaryKey = 'codigo'; // 👈 clave primaria
@@ -32,12 +31,9 @@ class Cursos extends Model
         'obligatorio_alta',
         'cod_responsable',
         'target_group',
-        'es_demanda', // 👈 Pauta 7
     ];
 
     public $timestamps = false;
-
-    // --- Relaciones ---
 
     public function examen()
     {
@@ -49,17 +45,6 @@ class Cursos extends Model
         return $this->hasMany(CursoProgramacion::class, 'cod_cursos', 'codigo');
     }
 
-    public function programacionVigente()
-    {
-        return $this->hasOne(CursoProgramacion::class, 'cod_cursos', 'codigo')
-            ->where('estado_periodo', 'VIGENTE');
-    }
-
-    public function matriculas()
-    {
-        return $this->hasMany(Matricula::class, 'cod_curso', 'codigo');
-    }
-
     public function tipoCurso()
     {
         return $this->belongsTo(CapacitacionTipoCurso::class, 'tipo_curso', 'codigo');
@@ -68,32 +53,5 @@ class Cursos extends Model
     public function areaConocimiento()
     {
         return $this->belongsTo(CapacitacionAreas::class, 'area_conocimiento', 'codigo');
-    }
-
-    // --- Scopes ---
-
-    public function scopeHabilitados($query)
-    {
-        return $query->where('habilitado', 1);
-    }
-
-    public function scopePorPlan($query, $tipoCursoId)
-    {
-        return $query->where('tipo_curso', $tipoCursoId);
-    }
-
-    public function scopeObligatoriosAlta($query)
-    {
-        return $query->where('obligatorio_alta', 1);
-    }
-
-    public function scopePeriodicos($query)
-    {
-        return $query->where('es_periodico', 1)->where('es_demanda', 0);
-    }
-
-    public function scopePorDemanda($query)
-    {
-        return $query->where('es_demanda', 1);
     }
 }

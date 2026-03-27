@@ -32,98 +32,102 @@ class ProcesarMatriculaAniversarioPCE extends Command
      */
     public function handle()
     {
-        $this->info('Iniciando proceso de cumplimiento del Punto #6 (Aniversario PCE)...');
-        Log::info('ProcesarMatriculaAniversarioPCE: Inicio');
+        $this->info('Iniciando proceso Punto #6 (Aniversario PCE)...');
 
-        $mesActual = Carbon::now()->month;
-        $anioActual = Carbon::now()->year;
-        $periodoActual = Carbon::now()->format('Y-m');
+        $now = Carbon::now();
+        $mes = $now->month;
+        $anio = $now->year;
+        $periodo = $now->format('Y-m');
 
-        // 1. Filtrar cursos del Plan de Capacitación Estándar (PCE = Tipo 5)
-        // Solo cursos que sean periódicos (es_periodico = 1) para que se repitan anualmente
-        $cursosPCE = Cursos::where('tipo_curso', 5)
+        // 1. PCE Periódicos
+        $cursos = DB::connection('sqlsrv')->table('sw_cursos')
+            ->where('tipo_curso', 5)
             ->where('habilitado', 1)
             ->where('es_periodico', 1)
             ->get();
 
-        if ($cursosPCE->isEmpty()) {
-            $this->warn('No hay cursos PCE periódicos habilitados para procesar.');
+        if ($cursos->isEmpty()) {
+            $this->warn('No hay cursos PCE periódicos.');
             return;
         }
 
-        // 2. Identificar personal ACTIVO cuyo mes de ingreso (FECH_INGRE) coincida con el mes actual
-        // Esto cumple con "en los meses correspondientes que ingresó el personal"
-        $personalAniversario = Personal::where('ESTA_ACTI', 1)
-            ->whereRaw('MONTH(FECH_INGRE) = ?', [$mesActual])
+        // 2. Personal en mes de aniversario (Fuente oficial si_solm)
+        $personal = DB::connection('sqlsrv')->table('si_solm.dbo.PERSONAL')
+            ->where('ESTA_ACTI', 1)
+            ->whereRaw('MONTH(FECH_INGRE) = ?', [$mes])
             ->get();
 
-        if ($personalAniversario->isEmpty()) {
-            $this->info("No hay personal en aniversario para el mes {$mesActual}.");
+        if ($personal->isEmpty()) {
+            $this->info("No hay personal en aniversario para el mes {$mes}.");
             return;
         }
 
-        $this->info("Detectados " . $personalAniversario->count() . " trabajadores que deben re-capacitarse por aniversario.");
-
-        foreach ($cursosPCE as $curso) {
-            // 3. Garantizar que exista una programación vigente para el mes de aniversario
-            // Si el curso es trimestral pero alguien cumple años en febrero, creamos el "hueco" para que no espere hasta abril
-            $programacion = CursoProgramacion::where('cod_cursos', $curso->codigo)
-                ->where('periodo', $periodoActual)
-                ->where('estado_periodo', 'VIGENTE')
-                ->where('habilitado', 1)
-                ->first();
-
-            if (!$programacion) {
-                $this->info("Creando ciclo de aniversario para curso: {$curso->nombre}");
-                $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
-                $newCode = $lastProg ? str_pad(intval($lastProg->codigo_programacion) + 1, 4, '0', STR_PAD_LEFT) : '1001';
-
-                $programacion = CursoProgramacion::create([
-                    'codigo_programacion' => $newCode,
-                    'cod_cursos'    => $curso->codigo,
-                    'periodo'       => $periodoActual,
-                    'tipo'          => 'REGULAR',
-                    'estado_periodo'=> 'VIGENTE',
-                    'fecha_inicio'  => Carbon::now()->startOfMonth()->format('Y-m-d\TH:i:s.000'),
-                    'fecha_final'   => Carbon::now()->endOfMonth()->format('Y-m-d\TH:i:s.000'),
-                    'fecha_creacion'=> now(),
-                    'habilitado'    => 1,
-                ]);
-            }
-
-            $matriculasRealizadas = 0;
-
-            foreach ($personalAniversario as $trabajador) {
-                // 4. Verificación de seguridad: No matricular dos veces el mismo año calendario
-                $yaMatriculado = Matricula::where('cod_personal', $trabajador->CODI_PERS)
+        foreach ($cursos as $curso) {
+            $prog = $this->obtenerOCrearProgramacion($curso, $periodo);
+            
+            foreach ($personal as $trabajador) {
+                // No matricular dos veces el mismo año
+                $ya = DB::connection('sqlsrv')->table('sw_matriculas')
+                    ->where('cod_personal', trim($trabajador->CODI_PERS))
                     ->where('cod_curso', $curso->codigo)
-                    ->whereYear('fecha_matricula', $anioActual)
+                    ->whereYear('fecha_matricula', $anio)
                     ->exists();
 
-                if ($yaMatriculado) continue;
+                if ($ya) continue;
 
                 try {
-                    Matricula::create([
-                        'cod_programacion' => $programacion->codigo_programacion,
+                    DB::connection('sqlsrv')->table('sw_matriculas')->insert([
+                        'cod_programacion' => $prog->codigo_programacion,
                         'cod_curso'        => $curso->codigo,
-                        'cod_personal'     => $trabajador->CODI_PERS,
-                        'fecha_matricula'  => Carbon::now()->format('Y-m-d\TH:i:s.000'),
+                        'cod_personal'     => trim($trabajador->CODI_PERS),
+                        'fecha_matricula'  => DB::raw('GETDATE()'),
                         'estado'           => 'MATRICULADO',
-                        'usuario_id'       => 0, // Automático
-                        'tipo_matricula'   => 'AUTOMATICA',
+                        'usuario_id'       => 0,
                         'origen_matricula' => 'AUTO_ANIVERSARIO',
-                        'habilitado'       => 1
+                        'habilitado'       => 1,
+                        'fecha_creacion'   => DB::raw('GETDATE()')
                     ]);
-                    $matriculasRealizadas++;
                 } catch (\Exception $e) {
-                    Log::error("Error en Matrícula Aniversario Punto 6: " . $e->getMessage());
+                    Log::error("Error Aniversario (CP:{$trabajador->CODI_PERS}, C:{$curso->codigo}): " . $e->getMessage());
                 }
             }
-            
-            $this->info("Curso '{$curso->nombre}': {$matriculasRealizadas} personas matriculadas automáticamente.");
         }
 
-        $this->info('Inducción por aniversario completada.');
-        Log::info('ProcesarMatriculaAniversarioPCE: Fin');
+        $this->info('Proceso aniversario completado.');
+    }
+
+    private function obtenerOCrearProgramacion($curso, $periodo)
+    {
+        $prog = DB::connection('sqlsrv')->table('sw_cursos_programacion')
+            ->where('cod_cursos', $curso->codigo)
+            ->where('periodo', $periodo)
+            ->where('estado_periodo', 'VIGENTE')
+            ->where('habilitado', 1)
+            ->first();
+
+        if ($prog) return $prog;
+
+        // Crear nueva programación para el periodo
+        $last = DB::connection('sqlsrv')->table('sw_cursos_programacion')
+            ->orderBy('codigo_programacion', 'desc')
+            ->first();
+        
+        $nextCode = $last ? str_pad(intval($last->codigo_programacion) + 1, 4, '0', STR_PAD_LEFT) : '1001';
+
+        DB::connection('sqlsrv')->table('sw_cursos_programacion')->insert([
+            'codigo_programacion' => $nextCode,
+            'cod_cursos'    => $curso->codigo,
+            'periodo'       => $periodo,
+            'tipo'          => 'REGULAR',
+            'estado_periodo'=> 'VIGENTE',
+            'fecha_inicio'  => Carbon::now()->startOfMonth()->format('Y-m-d H:i:s'),
+            'fecha_final'   => Carbon::now()->endOfMonth()->format('Y-m-d H:i:s'),
+            'fecha_creacion'=> DB::raw('GETDATE()'),
+            'habilitado'    => 1,
+        ]);
+
+        return DB::connection('sqlsrv')->table('sw_cursos_programacion')
+            ->where('codigo_programacion', $nextCode)
+            ->first();
     }
 }

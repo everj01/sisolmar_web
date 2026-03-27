@@ -16,7 +16,6 @@ class Matricula extends Model
 {
     use HasFactory;
 
-    protected $connection = 'sqlsrv';
     protected $table = 'sw_matriculas';
     protected $primaryKey = 'codigo';
     public $incrementing = true;
@@ -67,27 +66,5 @@ class Matricula extends Model
     public function personal()
     {
         return $this->belongsTo(Personal::class, 'cod_personal', 'CODI_PERS');
-    }
-
-    // --- Scopes ---
-
-    public function scopeDeOrigen($query, $origen)
-    {
-        return $query->where('origen_matricula', $origen);
-    }
-
-    public function scopeDelPeriodo($query, $periodoId)
-    {
-        return $query->where('cod_programacion', $periodoId);
-    }
-
-    public function scopeActivas($query)
-    {
-        return $query->where('habilitado', 1);
-    }
-
-    public function scopeHabilitados($query)
-    {
-        return $query->where('habilitado', 1);
     }
 }
