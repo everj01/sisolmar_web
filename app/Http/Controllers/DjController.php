@@ -383,7 +383,7 @@ private function completarCamposNull($data, $codiPers)
         // ✅ 1. SOLO MARCAR COMO MIGRADO en sw_MIGRA_PERSONAL (NO actualizar otros campos)
         DB::update(
             "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL 
-            SET SIP_migrado = 1 
+            SET SIP_migrado = 1, SIP_fechaModifcacion = GETDATE()
             WHERE CODI_PERS = ?",
             [$codiPers]
         );
@@ -1146,7 +1146,7 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
             'PERS_DEPT_ACT', 'PERS_PROV_ACT', 'PERS_DIST_ACT',
             'PERS_EMBARGO', 'PERS_WHATSAPP', 'PERS_SMO', 'dj2026_familiar_empresa','dj2026_banco',
             'dj2026_cantprofesion', 'dj2026_ciudad_naci', 'dj2026_ocupacion_principal', 'dj2026_experiencia_anios',
-            'dj2026_familiar_nombre', 'dj2026_familiar_parentesco', 'SIP_fechaModifcacion'
+            'dj2026_familiar_nombre', 'dj2026_familiar_parentesco'
         ];
 
         // 5. Construir UPDATE dinámico: solo columnas donde DJ2026 NO es NULL
@@ -1589,4 +1589,29 @@ private function extraerApellido($nombreCompleto, $index)
 
         return $grouped;
     }
+
+    public function reportePersonalSinMigracion(Request $request)
+{
+    try {
+        $codSucursal = $request->get('codSucursal', '00');
+        $codTipoPer  = $request->get('codTipoPer', '00');
+
+        $data = DB::select(
+            "EXEC sisolm_web.dbo.SW_REPORTE_LISTAR_PERSONAL_SIN_MIGRACION ?, ?",
+            [$codSucursal, $codTipoPer]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error en reportePersonalSinMigracion: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
 }

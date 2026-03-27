@@ -644,60 +644,96 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function getPersonalMigracion() {
-        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
-        .then(response => {
-            const datosTabla = response.data;
-            tblPersonasMigrado.setData(datosTabla);
+   function getPersonalMigracion() {
+    axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
+    .then(response => {
+        const datosTabla = response.data;
+        tblPersonasMigrado.setData(datosTabla);
 
-            // ✅ Poblar select de sucursales dinámicamente
-            const sucursales = [...new Map(
-                datosTabla
-                    .filter(d => d.sucursal)
-                    .map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])
-            ).values()];
+        const sucursales = [...new Map(
+            datosTabla.filter(d => d.sucursal)
+                .map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])
+        ).values()];
 
-            const filtroSucursal = document.getElementById('filtroSucursal');
-            if (filtroSucursal) {
-                filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                sucursales
-                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
-                    .forEach(s => {
-                        const opt = new Option(s.nombre, s.cod);
-                        filtroSucursal.add(opt);
-                    });
-            }
-        })
-        .catch(error => console.error("Hubo un error:", error));
+        const filtroSucursal = document.getElementById('filtroSucursal');
+        if (filtroSucursal) {
+            filtroSucursal.innerHTML = '<option value="">Todas</option>';
+            sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre))
+                .forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+        }
+
+        // // ── Card: filtrados / total ──
+        // animarContador(document.getElementById('contadorFiltrado'), 0, datosTabla.length);
+        // animarContador(document.getElementById('contadorTotal'),    0, datosTabla.length);
+        actualizarCardDesdeSP();
+    })
+    .catch(error => console.error("Hubo un error:", error));
+}
+
+function actualizarCardDesdeSP() {
+    const sucursal = document.getElementById('filtroSucursal')?.value || '00';
+    const tipoPer  = document.getElementById('filtroTipoPer')?.value  || '00';
+    const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    const codSucursal = sucursal || '00';
+
+    axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`, {
+        params: { codSucursal, codTipoPer }
+    }).then(response => {
+        if (!response.data.success) return;
+
+        const datos    = response.data.data;
+        const listos   = datos.filter(d => d.SIP_CAMBIO === 'Listo').length;
+        const total    = datos.length;
+
+        const elFilt = document.getElementById('contadorFiltrado');
+        const elTot  = document.getElementById('contadorTotal');
+        const desdeF = parseInt(elFilt?.textContent.replace(/,/g, '')) || 0;
+        const desdeT = parseInt(elTot?.textContent.replace(/,/g, ''))  || 0;
+
+        animarContador(elFilt, desdeF, listos);
+        animarContador(elTot,  desdeT, total);
+    }).catch(err => console.error('Error card SP:', err));
+}
+
+
+function aplicarFiltrosMigracion() {
+    const sucursal = document.getElementById('filtroSucursal')?.value ?? '';
+    const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '';
+
+    const filtros = [];
+    if (sucursal) filtros.push({ field: "codSucursal", type: "=", value: sucursal });
+    if (tipoPer)  filtros.push({ field: "tipoPer",     type: "=", value: tipoPer });
+
+    const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
+    if (texto) {
+        filtros.push([
+            { field: "nombres", type: "like", value: texto },
+            { field: "dni",     type: "like", value: texto },
+        ]);
     }
 
-    function aplicarFiltrosMigracion() {
-        const sucursal = document.getElementById('filtroSucursal')?.value ?? '';
-        const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '';
+    tblPersonasMigrado.setFilter(filtros);
 
-        const filtros = [];
+    setTimeout(() => {
+        const totalGeneral   = tblPersonasMigrado.getDataCount();        // todos
+        const filasFiltradas = tblPersonasMigrado.getDataCount('active'); // visibles
 
-        if (sucursal) {
-            filtros.push({ field: "codSucursal", type: "=", value: sucursal });
-        }
-        if (tipoPer) {
-            filtros.push({ field: "tipoPer", type: "=", value: tipoPer });
-        }
+        const elFilt = document.getElementById('contadorFiltrado');
+        const elTot  = document.getElementById('contadorTotal');
 
-        // También aplicar búsqueda de texto si hay algo en el input
-        const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
-        if (texto) {
-            filtros.push([
-                { field: "nombres", type: "like", value: texto },
-                { field: "dni",     type: "like", value: texto },
-            ]);
-        }
+        const desdeF = parseInt(elFilt?.textContent.replace(/,/g, '')) || 0;
+        const desdeT = parseInt(elTot?.textContent.replace(/,/g, ''))  || 0;
 
-        tblPersonasMigrado.setFilter(filtros);
-    }
-
+        animarContador(elFilt, desdeF, filasFiltradas);
+        animarContador(elTot,  desdeT, totalGeneral);
+    }, 50);
+    actualizarCardDesdeSP();
+}
     document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
     document.getElementById('filtroTipoPer')?.addEventListener('change', aplicarFiltrosMigracion);
+
+//     document.getElementById('contadorFiltrado').textContent = filasFiltradas.length.toLocaleString();
+// document.getElementById('contadorTotal').textContent = totalRegistros.toLocaleString();
 
 
     getPersonalMigracion();
@@ -2218,4 +2254,211 @@ function formatDateForInput(dateValue) {
     
     console.warn('   ⚠️ Formato de fecha no reconocido:', dateValue);
     return '';
+}
+
+document.getElementById('btnReporteFaltantes')?.addEventListener('click', async function () {
+    const sucursal = document.getElementById('filtroSucursal')?.value ?? '00';
+    const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '00';
+
+    // Mapear tipoPer al código que espera el SP
+    const codTipoPer = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    const codSucursal = sucursal || '00';
+
+    Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`, {
+            params: { codSucursal, codTipoPer }
+        });
+
+        if (!response.data.success || !response.data.data.length) {
+            Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros con los filtros seleccionados.' });
+            return;
+        }
+
+        Swal.close();
+        generarReporteFaltantesPDF(response.data.data);
+
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos del reporte.' });
+    }
+});
+
+async function generarReporteFaltantesPDF(data) {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape', compress: true });
+
+    const pageW = 297;
+    const pageH = 210;
+    const mL = 10, mR = 10, mT = 10, mB = 10;
+    const usableW = pageW - mL - mR;
+    let y = mT;
+
+    // ── LOGO + CABECERA ──
+    try {
+        const res = await fetch(window.logoUrl);
+        const blob = await res.blob();
+        const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = e => r(e.target.result); rd.readAsDataURL(blob); });
+        pdf.addImage(b64, 'PNG', mL, y, 28, 14);
+    } catch (_) {}
+
+    pdf.setFontSize(10); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(180, 0, 0);
+    pdf.text('SISTEMA INTEGRADO SOLMAR – SISOLMAR', pageW / 2, y + 6, { align: 'center' });
+
+    pdf.setFontSize(13); pdf.setTextColor(0);
+    pdf.text('REPORTE DE PERSONAL SIN MIGRACIÓN DJ 2026', pageW / 2, y + 12, { align: 'center' });
+
+    const now = new Date();
+    const fechaStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}  ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    pdf.setFontSize(7); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(100);
+    pdf.text(`Generado: ${fechaStr}`, pageW - mR, y + 5, { align: 'right' });
+    pdf.text(`Total registros: ${data.length}`, pageW - mR, y + 9, { align: 'right' });
+
+    y += 18;
+
+    // ── RESUMEN ──
+    const totalFalta   = data.filter(d => d.SIP_CAMBIO === 'Falta').length;
+    const totalListo   = data.filter(d => d.SIP_CAMBIO === 'Listo').length;
+    const totalMigrado = data.filter(d => d.MIGRADO_CAMBIO === 'Migrado').length;
+    const totalSinMig  = data.filter(d => d.MIGRADO_CAMBIO === 'Sin migrar').length;
+
+    const cards = [
+        { label: 'Total',       val: data.length,   r: 50,  g: 50,  b: 50  },
+        { label: 'Falta DJ',    val: totalFalta,     r: 180, g: 0,   b: 0   },
+        { label: 'Con DJ',      val: totalListo,     r: 0,   g: 100, b: 60  },
+        { label: 'Migrado',     val: totalMigrado,   r: 0,   g: 80,  b: 160 },
+        { label: 'Sin migrar',  val: totalSinMig,    r: 160, g: 100, b: 0   },
+    ];
+
+    const cardW = 36, cardH = 13, cardGap = 5;
+    let cx = mL;
+    cards.forEach(c => {
+        pdf.setFillColor(c.r, c.g, c.b);
+        pdf.roundedRect(cx, y, cardW, cardH, 2, 2, 'F');
+        pdf.setFontSize(16); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(255);
+        pdf.text(String(c.val), cx + cardW / 2, y + 8, { align: 'center' });
+        pdf.setFontSize(7); pdf.setFont('helvetica', 'normal');
+        pdf.text(c.label, cx + cardW / 2, y + 11.5, { align: 'center' });
+        cx += cardW + cardGap;
+    });
+
+    y += cardH + 5;
+
+    // ── TABLA ──
+    const cols = [
+        { header: 'Estado SIP',       key: 'SIP_CAMBIO',      w: 18 },
+        { header: 'Migración',    key: 'MIGRADO_CAMBIO',  w: 22 },
+        { header: 'Nombre Completo', key: 'NOMBRE',       w: 72 },
+        { header: 'DNI',          key: 'NRO_DOCU_IDEN',   w: 22 },
+        { header: 'Sucursal',     key: 'SUCURSAl',        w: 28 },
+        { header: 'Tipo',         key: 'TIPO_PER',        w: 26 },
+        { header: 'Registro SIP',     key: 'SIP_CREACION',    w: 32 },
+        { header: 'Migración.',   key: 'MIGRADO_FECHA',   w: 32 },
+    ];
+
+    const rowH = 5.5;
+    const headerH = 7;
+
+    function drawTableHeader() {
+        pdf.setFillColor(40, 40, 40);
+        pdf.rect(mL, y, usableW, headerH, 'F');
+        pdf.setFontSize(7); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(255);
+        let hx = mL + 1;
+        cols.forEach(c => {
+            pdf.text(c.header, hx, y + 4.5);
+            hx += c.w;
+        });
+        y += headerH;
+    }
+
+    drawTableHeader();
+
+    data.forEach((row, idx) => {
+        if (y + rowH > pageH - mB - 5) {
+            pdf.addPage();
+            y = mT;
+            drawTableHeader();
+        }
+
+        // Fondo alternado
+        if (idx % 2 === 0) {
+            pdf.setFillColor(248, 248, 248);
+            pdf.rect(mL, y, usableW, rowH, 'F');
+        }
+
+        // Color por estado
+        const esFalta   = row.SIP_CAMBIO === 'Falta';
+        const esMigrado = row.MIGRADO_CAMBIO === 'Migrado';
+
+        pdf.setFontSize(6.5); pdf.setFont('helvetica', 'normal');
+
+        let rx = mL + 1;
+        cols.forEach(c => {
+            let val = String(row[c.key] ?? '');
+            const maxW = c.w - 2;
+
+            // Color dinámico por columna
+            if (c.key === 'SIP_CAMBIO') {
+                pdf.setTextColor(esFalta ? 180 : 0, esFalta ? 0 : 120, 0);
+            } else if (c.key === 'MIGRADO_CAMBIO') {
+                pdf.setTextColor(esMigrado ? 0 : 150, esMigrado ? 100 : 70, esMigrado ? 160 : 0);
+            } else {
+                pdf.setTextColor(30, 30, 30);
+            }
+
+            // Truncar si es muy largo
+            pdf.setFontSize(6.5);
+            while (pdf.getTextWidth(val) > maxW && val.length > 1) val = val.slice(0, -1);
+
+            pdf.text(val, rx, y + rowH - 1.5);
+            rx += c.w;
+        });
+
+        // Línea separadora
+        pdf.setDrawColor(220); pdf.setLineWidth(0.1);
+        pdf.line(mL, y + rowH, mL + usableW, y + rowH);
+
+        y += rowH;
+    });
+
+    // ── FOOTER ──
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(7); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(130);
+        pdf.text(`Página ${i} de ${totalPages}`, pageW / 2, pageH - 4, { align: 'center' });
+        pdf.text('SISOLMAR – Recursos Humanos', mL, pageH - 4);
+        pdf.text(fechaStr, pageW - mR, pageH - 4, { align: 'right' });
+    }
+
+    const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+    pdf.save(`Reporte_Faltantes_DJ_${ts}.pdf`);
+}
+
+// ── ACTUALIZAR CARD CONTADOR ──
+function actualizarContador(filasFiltradas, totalGeneral) {
+    const elFilt = document.getElementById('contadorFiltrado');
+    const elTot  = document.getElementById('contadorTotal');
+    if (!elFilt || !elTot) return;
+
+    const desde = parseInt(elFilt.textContent.replace(/,/g, '')) || 0;
+    const hasta = filasFiltradas;
+
+    animarContador(elFilt, desde, hasta);
+    elTot.textContent = totalGeneral.toLocaleString();
+}
+
+function animarContador(el, desde, hasta, duracion = 400) {
+    const inicio = performance.now();
+    const diff = hasta - desde;
+
+    function tick(ahora) {
+        const t = Math.min((ahora - inicio) / duracion, 1);
+        // Easing suave: ease-out cubic
+        const progreso = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(desde + diff * progreso).toLocaleString();
+        if (t < 1) requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
 }
