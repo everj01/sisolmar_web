@@ -670,31 +670,29 @@ document.addEventListener('DOMContentLoaded', function () {
     .catch(error => console.error("Hubo un error:", error));
 }
 
-function actualizarCardDesdeSP() {
-    const sucursal = document.getElementById('filtroSucursal')?.value || '00';
-    const tipoPer  = document.getElementById('filtroTipoPer')?.value  || '00';
-    const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+
+function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
     const codSucursal = sucursal || '00';
+    const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' 
+                      : tipoPer === 'ADMINISTRATIVO' ? '05' 
+                      : '00';
 
     axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`, {
         params: { codSucursal, codTipoPer }
     }).then(response => {
         if (!response.data.success) return;
 
-        const datos    = response.data.data;
-        const listos   = datos.filter(d => d.SIP_CAMBIO === 'Listo').length;
-        const total    = datos.length;
+        const datos  = response.data.data;
+        const listos = datos.filter(d => d.SIP_CAMBIO === 'Listo').length;
+        const total  = datos.length;
 
         const elFilt = document.getElementById('contadorFiltrado');
         const elTot  = document.getElementById('contadorTotal');
-        const desdeF = parseInt(elFilt?.textContent.replace(/,/g, '')) || 0;
-        const desdeT = parseInt(elTot?.textContent.replace(/,/g, ''))  || 0;
 
-        animarContador(elFilt, desdeF, listos);
-        animarContador(elTot,  desdeT, total);
+        animarContador(elFilt, parseInt(elFilt?.textContent.replace(/,/g,'')) || 0, listos);
+        animarContador(elTot,  parseInt(elTot?.textContent.replace(/,/g,''))  || 0, total);
     }).catch(err => console.error('Error card SP:', err));
 }
-
 
 function aplicarFiltrosMigracion() {
     const sucursal = document.getElementById('filtroSucursal')?.value ?? '';
@@ -714,20 +712,8 @@ function aplicarFiltrosMigracion() {
 
     tblPersonasMigrado.setFilter(filtros);
 
-    setTimeout(() => {
-        const totalGeneral   = tblPersonasMigrado.getDataCount();        // todos
-        const filasFiltradas = tblPersonasMigrado.getDataCount('active'); // visibles
-
-        const elFilt = document.getElementById('contadorFiltrado');
-        const elTot  = document.getElementById('contadorTotal');
-
-        const desdeF = parseInt(elFilt?.textContent.replace(/,/g, '')) || 0;
-        const desdeT = parseInt(elTot?.textContent.replace(/,/g, ''))  || 0;
-
-        animarContador(elFilt, desdeF, filasFiltradas);
-        animarContador(elTot,  desdeT, totalGeneral);
-    }, 50);
-    actualizarCardDesdeSP();
+    // ── Card siempre desde SP con filtros actuales ──
+    actualizarCardDesdeSP(sucursal, tipoPer);
 }
     document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
     document.getElementById('filtroTipoPer')?.addEventListener('change', aplicarFiltrosMigracion);
