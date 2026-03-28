@@ -683,7 +683,7 @@ function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
         if (!response.data.success) return;
 
         const datos  = response.data.data;
-        const listos = datos.filter(d => d.SIP_CAMBIO === 'Listo').length;
+        const listos = datos.filter(d => d.SIP_CAMBIO === 'Ok').length;
         const total  = datos.length;
 
         const elFilt = document.getElementById('contadorFiltrado');
@@ -2241,36 +2241,81 @@ function formatDateForInput(dateValue) {
     console.warn('   ⚠️ Formato de fecha no reconocido:', dateValue);
     return '';
 }
-
+// ── BOTÓN FALTANTES ──
 document.getElementById('btnReporteFaltantes')?.addEventListener('click', async function () {
     const sucursal = document.getElementById('filtroSucursal')?.value ?? '00';
     const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '00';
-
-    // Mapear tipoPer al código que espera el SP
-    const codTipoPer = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
     const codSucursal = sucursal || '00';
 
     Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     try {
-        const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`, {
-            params: { codSucursal, codTipoPer }
+        const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, {
+            params: { codSucursal, codTipoPer, tipo: 1 }
         });
 
         if (!response.data.success || !response.data.data.length) {
-            Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros con los filtros seleccionados.' });
+            Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' });
             return;
         }
 
+        const todosLosDatos = response.data.data;
+        const soloFaltantes = todosLosDatos.filter(d => d.SIP_CAMBIO === 'Falta');
+
         Swal.close();
-        generarReporteFaltantesPDF(response.data.data);
+
+        if (!soloFaltantes.length) {
+            Swal.fire({ icon: 'info', title: 'Sin faltantes', text: 'Todo el personal está actualizado.' });
+            return;
+        }
+
+        // ✅ segundo parámetro = datos completos para los cards del PDF
+        generarReporteFaltantesPDF(soloFaltantes, todosLosDatos);
 
     } catch (error) {
-        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos del reporte.' });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos.' });
     }
 });
 
-async function generarReporteFaltantesPDF(data) {
+// ── BOTÓN ACTUALIZACIÓN ──
+document.getElementById('btnReporteActualizacion')?.addEventListener('click', async function () {
+    const sucursal = document.getElementById('filtroSucursal')?.value ?? '00';
+    const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '00';
+    const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    const codSucursal = sucursal || '00';
+
+    Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, {
+            params: { codSucursal, codTipoPer, tipo: 1 }
+        });
+
+        if (!response.data.success || !response.data.data.length) {
+            Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' });
+            return;
+        }
+
+        const todosLosDatos = response.data.data;
+        const soloActualizados = todosLosDatos.filter(d => d.SIP_CAMBIO === 'Ok');
+
+        Swal.close();
+
+        if (!soloActualizados.length) {
+            Swal.fire({ icon: 'info', title: 'Sin actualizados', text: 'No hay personal actualizado aún.' });
+            return;
+        }
+
+        // ✅ segundo parámetro = datos completos para los cards del PDF
+        generarReporteFaltantesPDF(soloActualizados, todosLosDatos);
+
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos.' });
+    }
+});
+async function generarReporteFaltantesPDF(data, todosLosDatos = null) {
+     const datosParaCards = todosLosDatos ?? data;
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape', compress: true });
 
@@ -2289,10 +2334,15 @@ async function generarReporteFaltantesPDF(data) {
     } catch (_) {}
 
     pdf.setFontSize(10); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(180, 0, 0);
-    pdf.text('SISTEMA INTEGRADO SOLMAR – SISOLMAR', pageW / 2, y + 6, { align: 'center' });
+    pdf.text('SISTEMA INTEGRADO SOLMAR – SISOLMAR WEB', pageW / 2, y + 6, { align: 'center' });
 
     pdf.setFontSize(13); pdf.setTextColor(0);
-    pdf.text('REPORTE DE PERSONAL SIN MIGRACIÓN DJ 2026', pageW / 2, y + 12, { align: 'center' });
+    pdf.text(`REPORTE DE ACTUALIZACIÓN DE DATOS DE PERSONAL ${ data[0].TIPO_PER }`, pageW / 2, y + 12, { align: 'center' });
+
+    pdf.setFontSize(11); pdf.setTextColor(0);
+    pdf.text(`SOL ${ data[0].SUCURSAl }`, pageW / 2, y + 18, { align: 'center' });
+
+    y += 5;
 
     const now = new Date();
     const fechaStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}  ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -2303,17 +2353,15 @@ async function generarReporteFaltantesPDF(data) {
     y += 18;
 
     // ── RESUMEN ──
-    const totalFalta   = data.filter(d => d.SIP_CAMBIO === 'Falta').length;
-    const totalListo   = data.filter(d => d.SIP_CAMBIO === 'Listo').length;
-    const totalMigrado = data.filter(d => d.MIGRADO_CAMBIO === 'Migrado').length;
-    const totalSinMig  = data.filter(d => d.MIGRADO_CAMBIO === 'Sin migrar').length;
+      const totalFalta   = datosParaCards.filter(d => d.SIP_CAMBIO === 'Falta').length;
+    const totalListo   = datosParaCards.filter(d => d.SIP_CAMBIO === 'Ok').length;
+    const totalMigrado = datosParaCards.filter(d => d.MIGRADO_CAMBIO === 'Verificado').length;
 
     const cards = [
-        { label: 'Total',       val: data.length,   r: 50,  g: 50,  b: 50  },
-        { label: 'Falta DJ',    val: totalFalta,     r: 180, g: 0,   b: 0   },
-        { label: 'Con DJ',      val: totalListo,     r: 0,   g: 100, b: 60  },
-        { label: 'Migrado',     val: totalMigrado,   r: 0,   g: 80,  b: 160 },
-        { label: 'Sin migrar',  val: totalSinMig,    r: 160, g: 100, b: 0   },
+        { label: 'Total',          val: datosParaCards.length, r: 50,  g: 50,  b: 50  },
+        { label: 'Sin actualizar', val: totalFalta,            r: 180, g: 0,   b: 0   },
+        { label: 'Actualizados',   val: totalListo,            r: 0,   g: 100, b: 60  },
+        { label: 'Verificados',    val: totalMigrado,          r: 0,   g: 80,  b: 160 },
     ];
 
     const cardW = 36, cardH = 13, cardGap = 5;
@@ -2331,16 +2379,28 @@ async function generarReporteFaltantesPDF(data) {
     y += cardH + 5;
 
     // ── TABLA ──
+    // const cols = [
+    //     { header: 'Estado',       key: 'SIP_CAMBIO',      w: 18 },
+    //     { header: 'Verificado',    key: 'MIGRADO_CAMBIO',  w: 22 },
+    //     { header: 'Nombre Completo', key: 'NOMBRE',       w: 72 },
+    //     { header: 'DNI',          key: 'NRO_DOCU_IDEN',   w: 22 },
+    //     { header: 'Fecha de ingreso',  key: 'FECH_INGRE',   w: 22 },
+    //     // { header: 'Sucursal',     key: 'SUCURSAL',        w: 28 },
+    //     // { header: 'Tipo',         key: 'TIPO_PER',        w: 26 },
+    //     { header: 'Fecha Actualización',     key: 'SIP_CREACION',    w: 32 },
+    //     { header: 'Fecha Verificado.',   key: 'MIGRADO_FECHA',   w: 32 },
+    // ];
+
     const cols = [
-        { header: 'Estado SIP',       key: 'SIP_CAMBIO',      w: 18 },
-        { header: 'Migración',    key: 'MIGRADO_CAMBIO',  w: 22 },
-        { header: 'Nombre Completo', key: 'NOMBRE',       w: 72 },
-        { header: 'DNI',          key: 'NRO_DOCU_IDEN',   w: 22 },
-        { header: 'Sucursal',     key: 'SUCURSAl',        w: 28 },
-        { header: 'Tipo',         key: 'TIPO_PER',        w: 26 },
-        { header: 'Registro SIP',     key: 'SIP_CREACION',    w: 32 },
-        { header: 'Migración.',   key: 'MIGRADO_FECHA',   w: 32 },
-    ];
+    { header: 'N°',           key: '__rownum__',      w: 12 },  // ← AGREGAR ESTA LÍNEA
+    { header: 'Estado',       key: 'SIP_CAMBIO',      w: 18 },
+    { header: 'Verificado',   key: 'MIGRADO_CAMBIO',  w: 22 },
+    { header: 'Nombre Completo', key: 'NOMBRE',       w: 66 },  // ← reducir un poco el ancho
+    { header: 'DNI',          key: 'NRO_DOCU_IDEN',   w: 22 },
+    { header: 'Fecha de ingreso',  key: 'FECH_INGRE', w: 22 },
+    { header: 'Fecha Actualización', key: 'SIP_CREACION', w: 32 },
+    { header: 'Fecha Verificado.', key: 'MIGRADO_FECHA',  w: 32 },
+];
 
     const rowH = 5.5;
     const headerH = 7;
@@ -2380,7 +2440,9 @@ async function generarReporteFaltantesPDF(data) {
 
         let rx = mL + 1;
         cols.forEach(c => {
-            let val = String(row[c.key] ?? '');
+            let val = c.key === '__rownum__'
+                ? String(idx + 1)              // ← número de orden
+                : String(row[c.key] ?? '');
             const maxW = c.w - 2;
 
             // Color dinámico por columna

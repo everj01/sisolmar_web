@@ -141,6 +141,7 @@ Route::get('/get-folios-vigentes', [ConsultaController::class, 'getFoliosVigente
 Route::get('/get-folios-pendientes', [ConsultaController::class, 'getFoliosPendientes']);
 Route::get('/folios/proximos-vencer', [ConsultaController::class, 'getFoliosProximosVencer']);
 Route::get('/reporte-personal-sin-migracion', [DjController::class, 'reportePersonalSinMigracion']);
+Route::get('/reporte-personal-sin-migracion-v2', [DjController::class, 'reportePersonalSinMigracionV2']);
 
 // Route::prefix('dj')->group(function () {
 //     Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);

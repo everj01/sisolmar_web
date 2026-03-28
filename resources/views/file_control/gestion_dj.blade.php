@@ -112,6 +112,12 @@
             <i class='bx bx-download text-base'></i>
             Rep. faltantes
         </button>
+
+        <button type="button" id="btnReporteActualizacion"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors">
+            <i class='bx bx-download text-base'></i>
+            Rep. Actualización
+        </button>
     </div>
 </div>
                     

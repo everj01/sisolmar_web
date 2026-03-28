@@ -1591,27 +1591,53 @@ private function extraerApellido($nombreCompleto, $index)
     }
 
     public function reportePersonalSinMigracion(Request $request)
-{
-    try {
-        $codSucursal = $request->get('codSucursal', '00');
-        $codTipoPer  = $request->get('codTipoPer', '00');
+    {
+        try {
+            $codSucursal = $request->get('codSucursal', '00');
+            $codTipoPer  = $request->get('codTipoPer', '00');
 
-        $data = DB::select(
-            "EXEC sisolm_web.dbo.SW_REPORTE_LISTAR_PERSONAL_SIN_MIGRACION ?, ?",
-            [$codSucursal, $codTipoPer]
-        );
+            $data = DB::select(
+                "EXEC sisolm_web.dbo.SW_REPORTE_LISTAR_PERSONAL_SIN_MIGRACION ?, ?",
+                [$codSucursal, $codTipoPer]
+            );
 
-        return response()->json([
-            'success' => true,
-            'data'    => $data
-        ]);
+            return response()->json([
+                'success' => true,
+                'data'    => $data
+            ]);
 
-    } catch (\Exception $e) {
-        Log::error('Error en reportePersonalSinMigracion: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
+        } catch (\Exception $e) {
+            Log::error('Error en reportePersonalSinMigracion: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    public function reportePersonalSinMigracionV2(Request $request)
+    {
+        try {
+            $codSucursal = $request->get('codSucursal', '00');
+            $codTipoPer  = $request->get('codTipoPer', '00');
+            $tipo  = $request->get('tipo', null);
+
+            $data = DB::select(
+                "EXEC sisolm_web.dbo.SW_REPORTE_LISTAR_PERSONAL_SIN_MIGRACION ?, ?, ?",
+                [$codSucursal, $codTipoPer, $tipo]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data'    => $data
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en reportePersonalSinMigracionV2: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
