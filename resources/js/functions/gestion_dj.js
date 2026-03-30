@@ -2173,10 +2173,17 @@ function addFamiliarRow(data = {}, container = null) {
     console.log('  FECHA 1 ', data.FECH_NACI) ;
     //const fechaFormateada = formatDateForInput(data.FECH_NACI);
 
-    let fechaFormateada = data.FECH_NACI.substring(0,4) + "-" +
-                      data.FECH_NACI.substring(4,6) + "-" +
-                      data.FECH_NACI.substring(6,8);
-                          console.log('  FECHA 2 ', fechaFormateada) ;
+    let fechaFormateada = '';
+    if (data.FECH_NACI) {
+        const f = String(data.FECH_NACI);
+        if (f.length >= 8 && !f.includes('-') && !f.includes('/')) {
+            // Formato YYYYMMDD
+            fechaFormateada = f.substring(0,4) + "-" + f.substring(4,6) + "-" + f.substring(6,8);
+        } else {
+            // Usar formatDateForInput para otros formatos
+            fechaFormateada = formatDateForInput(f);
+        }
+    }
 
     const row = document.createElement('div');
     row.className = 'family-row';

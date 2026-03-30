@@ -1220,7 +1220,7 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
             'PERS_DEPT_ACT', 'PERS_PROV_ACT', 'PERS_DIST_ACT',
             'PERS_EMBARGO', 'PERS_WHATSAPP', 'PERS_SMO', 'dj2026_familiar_empresa','dj2026_banco',
             'dj2026_cantprofesion', 'dj2026_ciudad_naci', 'dj2026_ocupacion_principal', 'dj2026_experiencia_anios',
-            'dj2026_familiar_nombre', 'dj2026_familiar_parentesco'
+            'dj2026_familiar_nombre', 'dj2026_familiar_parentesco', 'dj2026_laboral_1', 'dj2026_laboral_2'
         ];
 
         // 5. Construir UPDATE dinámico: solo columnas donde DJ2026 NO es NULL
