@@ -204,7 +204,9 @@ private function completarCamposNull($data, $codiPers)
         'PERS_PROV_DIRDNI',
         'PERS_DIST_DIRDNI',
         'PERS_DIREC_DNI',
-        'PERS_SEXO'
+        'PERS_SEXO',
+        'dj2026_laboral_1',
+        'dj2026_laboral_2',
     ];
 
     // Completar campos NULL
@@ -401,10 +403,10 @@ private function completarCamposNull($data, $codiPers)
         $this->migrarFamiliares($codiPers);
 
         // ✅ 5. GUARDAR OCUPACIONES en tabla temporal
-        $this->saveOcupacionesTemp($dni, $data);
+        //$this->saveOcupacionesTemp($dni, $data);
 
         // ✅ 6. COPIAR OCUPACIONES a DJ2026_OCUPACIONES_PER
-        $this->migrarOcupaciones($dni);
+        //$this->migrarOcupaciones($dni);
 
         DB::commit();
 
@@ -825,7 +827,14 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
         'dj2026_familiar_empresa' => $getValue('familiar_empresa', 'dj2026_familiar_empresa'),
         'dj2026_familiar_nombre' => $getValue('familiar_nombre', 'dj2026_familiar_nombre'),
         'dj2026_familiar_parentesco' => $getValue('familiar_parentesco', 'dj2026_familiar_parentesco'),
-        'dj2026_cantprofesion' => isset($data['ocupacion_alterna']) ? count(array_filter($data['ocupacion_alterna'])) : 0,
+        // 'dj2026_cantprofesion' => isset($data['ocupacion_alterna']) ? count(array_filter($data['ocupacion_alterna'])) : 0,
+        'dj2026_laboral_1'    => $getValue('dj2026_laboral_1', 'dj2026_laboral_1') 
+                          ? strtoupper(trim($getValue('dj2026_laboral_1', 'dj2026_laboral_1'))) 
+                          : null,
+        'dj2026_laboral_2'    => $getValue('dj2026_laboral_2', 'dj2026_laboral_2') 
+                                ? strtoupper(trim($getValue('dj2026_laboral_2', 'dj2026_laboral_2'))) 
+                                : null,
+        'dj2026_cantprofesion' => ((!empty($data['dj2026_laboral_1']) ? 1 : 0) + (!empty($data['dj2026_laboral_2']) ? 1 : 0)),
         
         // ✅ TODOS LOS DEMÁS CAMPOS (con cascada: formulario → migra → original → null)
         'CODI_TIPO_DOCU' => $getValue('CODI_TIPO_DOCU', 'CODI_TIPO_DOCU'),

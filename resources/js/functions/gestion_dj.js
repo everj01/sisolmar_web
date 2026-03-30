@@ -447,6 +447,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (provinciaSelectDni) provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
         if (distritoSelectDni) distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
+
+        setValue('dj2026_laboral_1', '');
+        setValue('dj2026_laboral_2', '');
     }
 
    function resaltarTexto(tabla, valor) {
@@ -1649,10 +1652,10 @@ function aplicarFiltrosMigracion() {
                     // ✅ Nombres correctos para el backend
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
-                    FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
+                    FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]')
                     
                     // ✅ Ocupaciones alternas
-                    dj2026_descripcion: formData.getAll('ocupacion_alterna[]')
+                    // ,dj2026_descripcion: formData.getAll('ocupacion_alterna[]')
                 };
 
                 console.log('📤 Payload a enviar:', payload);
@@ -1836,7 +1839,7 @@ async function cargarDatosPersonales(codiPers) {
         renderFamiliares(familiares);
 
         // Llenar ocupaciones
-        renderOcupaciones(ocupaciones_alternas);
+        //renderOcupaciones(ocupaciones_alternas);
 
     } catch (error) {
         console.error('Error cargando datos personales:', error);
@@ -1860,6 +1863,9 @@ function llenarFormulario(data) {
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI)); // ✅ FORMATEAR
     setValue('#sabe_nadar', data.PERS_SNADAR);
     setValue('#dj2026_ciudad_naci', data.dj2026_ciudad_naci);
+
+    setValue('#dj2026_laboral_1', data.dj2026_laboral_1 || '');
+    setValue('#dj2026_laboral_2', data.dj2026_laboral_2 || '');
 
     // Contacto
     setValue('#celular', data.PERS_TELEFONO);
@@ -2008,16 +2014,16 @@ function renderFamiliares(familiares) {
     console.log('═══════════════════════════════════════');
 }
 
-function renderOcupaciones(ocupaciones) {
-    const tbody = document.getElementById('bodyOcupAlterna');
-    if (!tbody) return;
+// function renderOcupaciones(ocupaciones) {
+//     const tbody = document.getElementById('bodyOcupAlterna');
+//     if (!tbody) return;
 
-    tbody.innerHTML = '';
+//     tbody.innerHTML = '';
 
-    ocupaciones.forEach(o => {
-        addOcupacionRow(o.dj2026_descripcion);
-    });
-}
+//     // ocupaciones.forEach(o => {
+//     //     addOcupacionRow(o.dj2026_descripcion);
+//     // });
+// }
 
 function addFamiliarRow(data = {}, container = null) {
     console.log('   📝 addFamiliarRow con data:', data);
@@ -2089,15 +2095,15 @@ function addFamiliarRow(data = {}, container = null) {
     });
 }
 
-function addOcupacionRow(descripcion = '') {
-    const tbody = document.getElementById('bodyOcupAlterna');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td><input type="text" name="dj2026_descripcion[]" value="${descripcion}" class="dj-input"></td>
-        <td><button type="button" class="btn-remove-ocup btn-sm">Eliminar</button></td>
-    `;
-    tbody.appendChild(row);
-}
+// function addOcupacionRow(descripcion = '') {
+//     const tbody = document.getElementById('bodyOcupAlterna');
+//     const row = document.createElement('tr');
+//     row.innerHTML = `
+//         <td><input type="text" name="dj2026_descripcion[]" value="${descripcion}" class="dj-input"></td>
+//         <td><button type="button" class="btn-remove-ocup btn-sm">Eliminar</button></td>
+//     `;
+//     tbody.appendChild(row);
+// }
 
 async function cargarUbicaciones(tipo, dept, prov, dist) {
     const prefix = tipo === 'actual' ? '_actual' : '_dni';
@@ -2289,7 +2295,7 @@ document.getElementById('btnReporteActualizacion')?.addEventListener('click', as
 
     try {
         const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, {
-            params: { codSucursal, codTipoPer, tipo: 1 }
+            params: { codSucursal, codTipoPer, tipo: null }
         });
 
         if (!response.data.success || !response.data.data.length) {
@@ -2298,6 +2304,7 @@ document.getElementById('btnReporteActualizacion')?.addEventListener('click', as
         }
 
         const todosLosDatos = response.data.data;
+        
         const soloActualizados = todosLosDatos.filter(d => d.SIP_CAMBIO === 'Ok');
 
         Swal.close();
@@ -2340,7 +2347,7 @@ async function generarReporteFaltantesPDF(data, todosLosDatos = null) {
     pdf.text(`REPORTE DE ACTUALIZACIÓN DE DATOS DE PERSONAL ${ data[0].TIPO_PER }`, pageW / 2, y + 12, { align: 'center' });
 
     pdf.setFontSize(11); pdf.setTextColor(0);
-    pdf.text(`SOL ${ data[0].SUCURSAl }`, pageW / 2, y + 18, { align: 'center' });
+    pdf.text(`SOL ${ data[0].SUCURSAL }`, pageW / 2, y + 18, { align: 'center' });
 
     y += 5;
 
@@ -2358,9 +2365,9 @@ async function generarReporteFaltantesPDF(data, todosLosDatos = null) {
     const totalMigrado = datosParaCards.filter(d => d.MIGRADO_CAMBIO === 'Verificado').length;
 
     const cards = [
-        { label: 'Total',          val: datosParaCards.length, r: 50,  g: 50,  b: 50  },
+        { label: 'Total',          val: document.getElementById('contadorTotal').textContent, r: 50,  g: 50,  b: 50  },
         { label: 'Sin actualizar', val: totalFalta,            r: 180, g: 0,   b: 0   },
-        { label: 'Actualizados',   val: totalListo,            r: 0,   g: 100, b: 60  },
+        { label: 'Actualizados',   val: document.getElementById('contadorFiltrado').textContent,            r: 0,   g: 100, b: 60  },
         { label: 'Verificados',    val: totalMigrado,          r: 0,   g: 80,  b: 160 },
     ];
 

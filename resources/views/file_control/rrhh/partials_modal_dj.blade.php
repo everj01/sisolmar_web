@@ -228,7 +228,7 @@
                                         <label class="dj-label">Sistema Previsional</label>
                                         <select id="sistema_previsional" name="sistema_previsional" class="dj-select">
                                             <option value="">—</option>
-                                            <option value="ON">ONP</option><option value="AF">AFP</option>
+                                            <option value="01">ONP</option><option value="03">AFP</option>
                                             <option value="A1">AFP - Mixta</option><option value="A2">AFP - Flujo</option>
                                         </select>
                                     </div>
@@ -500,21 +500,26 @@
 
                         <div class="dj-section">
                             <div class="dj-section-header">
-                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
                                 Profesión u Ocupación Alterna
                             </div>
                             <div class="dj-section-body">
-                                <table class="dj-table">
-                                    <thead><tr>
-                                        <th>Descripción</th>
-                                        <th style="text-align:right;width:100px;">
-                                            <button type="button" id="btnAddOcupAlterna" class="dj-btn-sm dj-btn-primary">
-                                                <i class='bx bx-plus'></i> Agregar
-                                            </button>
-                                        </th>
-                                    </tr></thead>
-                                    <tbody id="bodyOcupAlterna"></tbody>
-                                </table>
+                                <div class="dj-grid-2">
+                                    <div>
+                                        <label class="dj-label">Ocupación Alterna 1</label>
+                                        <input type="text" id="dj2026_laboral_1" name="dj2026_laboral_1" 
+                                            class="dj-input" placeholder="Descripción ocupación alterna 1"
+                                            style="text-transform:uppercase;">
+                                    </div>
+                                    <div>
+                                        <label class="dj-label">Ocupación Alterna 2</label>
+                                        <input type="text" id="dj2026_laboral_2" name="dj2026_laboral_2" 
+                                            class="dj-input" placeholder="Descripción ocupación alterna 2"
+                                            style="text-transform:uppercase;">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -591,19 +596,19 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('curso_sucamec')?.addEventListener('change', function () {
         document.getElementById('div_sucamec_obs').classList.toggle('hidden', this.value !== 'SI');
     });
-    document.getElementById('btnAddOcupAlterna')?.addEventListener('click', function () {
-        const tbody = document.getElementById('bodyOcupAlterna');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="padding:4px 6px;">
-                <input type="text" name="ocupacion_alterna[]" class="dj-input"
-                    style="text-transform:uppercase;" placeholder="Descripción de la ocupación alterna">
-            </td>
-            <td style="padding:4px 6px;text-align:right;">
-                <button type="button" class="btn-remove-ocup dj-btn-sm dj-btn-danger">Eliminar</button>
-            </td>`;
-        tbody.appendChild(tr);
-        tr.querySelector('.btn-remove-ocup').addEventListener('click', () => tr.remove());
-    });
+    // document.getElementById('btnAddOcupAlterna')?.addEventListener('click', function () {
+    //     const tbody = document.getElementById('bodyOcupAlterna');
+    //     const tr = document.createElement('tr');
+    //     tr.innerHTML = `
+    //         <td style="padding:4px 6px;">
+    //             <input type="text" name="ocupacion_alterna[]" class="dj-input"
+    //                 style="text-transform:uppercase;" placeholder="Descripción de la ocupación alterna">
+    //         </td>
+    //         <td style="padding:4px 6px;text-align:right;">
+    //             <button type="button" class="btn-remove-ocup dj-btn-sm dj-btn-danger">Eliminar</button>
+    //         </td>`;
+    //     tbody.appendChild(tr);
+    //     tr.querySelector('.btn-remove-ocup').addEventListener('click', () => tr.remove());
+    // });
 });
 </script>
