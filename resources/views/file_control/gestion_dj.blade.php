@@ -52,6 +52,18 @@
                     autocomplete="off"
                 />
 
+                <!-- <button type="button" id="btnDescargarDJs"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
+                    <i class='bx bx-archive-in text-base'></i>
+                    Descargar DJ's
+                </button>
+                <button type="button" id="btnDJUnificado"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-amber-500 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors">
+                    <i class='bx bx-file text-base'></i>
+                    DJ Unificado
+
+                </button> -->
+
                 <button type="button"
                     id="btnNuevaDJ"
                     class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white flex items-center gap-1 px-4 py-1"

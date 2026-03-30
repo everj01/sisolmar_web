@@ -984,67 +984,34 @@ function aplicarFiltrosMigracion() {
     });
 
    async function drawFotoEnPDF(pdf, x, y, w, h) {
+    let imageSrc = "";
     try {
-        let imageSrc = "";
 
-<<<<<<< HEAD
-        // 1. Foto subida manualmente desde input
-        if (inputFoto?.files?.[0]) {
-            imageSrc = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(inputFoto.files[0]);
-            });
-        }
-
-        // 2. Preview visible — puede ser base64 o URL externa
-        if (!imageSrc && preview && !preview.classList.contains("hidden") && preview.src) {
-            const src = preview.src;
-            if (src.startsWith("data:")) {
-                // Ya es base64, usar directamente
-                imageSrc = src;
-            } else if (src.startsWith("http")) {
-                // URL externa → convertir a base64 vía canvas
-                try {
-                    imageSrc = await new Promise((resolve, reject) => {
-                        const imgEl = new Image();
-                        imgEl.crossOrigin = "anonymous";
-                        imgEl.onload = () => {
-                            const canvas = document.createElement("canvas");
-                            canvas.width  = imgEl.naturalWidth;
-                            canvas.height = imgEl.naturalHeight;
-                            canvas.getContext("2d").drawImage(imgEl, 0, 0);
-                            resolve(canvas.toDataURL("image/jpeg", 0.9));
-                        };
-                        imgEl.onerror = reject;
-                        imgEl.src = src;
-                    });
-                } catch (_) {
-                    console.warn('No se pudo convertir foto vía canvas');
-=======
             if (preview && preview.src && !preview.classList.contains("hidden")) {
                 const src = preview.src;
-                // Si es una URL remota, intentar convertirla a dataURL
-                if (src && !src.startsWith("data:") && (src.startsWith("http://") || src.startsWith("https://"))) {
+                // Si ya es dataURL (foto subida manualmente)
+                if (src && src.startsWith("data:")) {
+                    imageSrc = src;
+                } else if (src && (src.startsWith("http://") || src.startsWith("https://"))) {
+                    // Usar proxy del backend para evitar CORS
                     try {
-                        const resp = await fetch(src);
-                        const blob = await resp.blob();
-                        imageSrc = await new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result);
-                            reader.onerror = () => resolve("");
-                            reader.readAsDataURL(blob);
+                        const urlObj = new URL(src);
+                        const pathParts = urlObj.pathname.split('/');
+                        const filename = pathParts[pathParts.length - 1];
+                        const codiPers = filename.replace('.jpg', '').replace('.jpeg', '').replace('.png', '');
+                        const resp = await axios.get(`${API_URL}/dj/proxy-foto`, {
+                            params: { codi_pers: codiPers }
                         });
-                    } catch {
+                        if (resp.data && resp.data.success && resp.data.base64) {
+                            imageSrc = resp.data.base64;
+                        }
+                    } catch (proxyErr) {
+                        console.warn('No se pudo obtener foto via proxy:', proxyErr);
                         imageSrc = "";
                     }
-                } else {
-                    imageSrc = src;
->>>>>>> 0c07314 (Agregando detalles a DJ - Generación PDF masivo/ZIP/PDF - Cambio de SP de la tabla 'Pendientes/Listos')
                 }
             }
-        }
+
 
         // Dibujar borde
         pdf.setDrawColor(0);
@@ -2457,10 +2424,17 @@ function addFamiliarRow(data = {}, container = null) {
     console.log('  FECHA 1 ', data.FECH_NACI) ;
     //const fechaFormateada = formatDateForInput(data.FECH_NACI);
 
-    let fechaFormateada = data.FECH_NACI.substring(0,4) + "-" +
-                      data.FECH_NACI.substring(4,6) + "-" +
-                      data.FECH_NACI.substring(6,8);
-                          console.log('  FECHA 2 ', fechaFormateada) ;
+    let fechaFormateada = '';
+    if (data.FECH_NACI) {
+        const f = String(data.FECH_NACI);
+        if (f.length >= 8 && !f.includes('-') && !f.includes('/')) {
+            // Formato YYYYMMDD
+            fechaFormateada = f.substring(0,4) + "-" + f.substring(4,6) + "-" + f.substring(6,8);
+        } else {
+            // Usar formatDateForInput para otros formatos
+            fechaFormateada = formatDateForInput(f);
+        }
+    }
 
     const row = document.createElement('div');
     row.className = 'family-row';
