@@ -40,21 +40,37 @@ class DjController extends Controller
     public function getPersonalData(Request $request)
     {
         try {
-            $codiPers = $request->get('codi_pers') ?? session('USER_Codi_Pers');
-            $empresaCod = session('USER_Empresa_cod', '01');
+        $codiPers = $request->get('codi_pers') ?? session('USER_Codi_Pers');
+        $source   = $request->get('source', 'migracion'); // ✅ NUEVO parámetro
 
-            // 1. Verificar si ya existe en DJ2026_PERSONAL
+        // ✅ Si viene de PENDIENTES → usar directamente si_solm.dbo.PERSONAL
+        if ($source === 'pendiente') {
+            $personalData = DB::select(
+                "SELECT * FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?",
+                [$codiPers]
+            );
+
+            if (empty($personalData)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron datos del personal'
+                ], 404);
+            }
+
+            $data       = (array) $personalData[0];
+            $sourceTable = 'PERSONAL';
+
+        } else {
+            // ✅ Flujo original para MIGRACIÓN
             $djData = DB::select(
                 "SELECT * FROM si_solm.dbo.DJ2026_PERSONAL WHERE CODI_PERS = ?",
                 [$codiPers]
             );
 
             if (!empty($djData)) {
-                // Ya migrado, usar datos de DJ2026
-                $data = (array) $djData[0];
+                $data        = (array) $djData[0];
                 $sourceTable = 'DJ2026_PERSONAL';
             } else {
-                // No migrado, usar datos de sw_MIGRA_PERSONAL
                 $migraData = DB::select(
                     "SELECT * FROM sisolm_web.dbo.sw_MIGRA_PERSONAL WHERE CODI_PERS = ?",
                     [$codiPers]
@@ -67,25 +83,30 @@ class DjController extends Controller
                     ], 404);
                 }
 
-                $data = (array) $migraData[0];
+                $data        = (array) $migraData[0];
                 $sourceTable = 'sw_MIGRA_PERSONAL';
             }
+        }
 
-            // ✅ 2. COMPLETAR CAMPOS NULL DESDE si_solm.dbo.PERSONAL
+        // ✅ Completar campos NULL desde PERSONAL (solo si no viene ya de PERSONAL)
+        if ($source !== 'pendiente') {
             $data = $this->completarCamposNull($data, $codiPers);
+        }
 
-            // 3. Obtener DNI para consultas relacionadas
-            $dni = $data['NRO_DOCU_IDEN'] ?? '';
+        $dni = $data['NRO_DOCU_IDEN'] ?? '';
 
-            // 4. Obtener FAMILIARES
-            $familiaresTable = ($sourceTable === 'DJ2026_PERSONAL') 
-                ? 'si_solm.dbo.DJ2026_DERECHO_HABIENTE' 
-                : 'sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE';
+        // Familiares — pendiente usa DERECHO_HABIENTE directamente
+        $familiaresTable = ($sourceTable === 'DJ2026_PERSONAL')
+            ? 'si_solm.dbo.DJ2026_DERECHO_HABIENTE'
+            : ($source === 'pendiente'
+                ? 'si_solm.dbo.DERECHO_HABIENTE'
+                : 'sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE');
 
             $familiares = DB::select(
                 "SELECT *, 
                 (ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ', ' + ISNULL(NOMB_1,'') + ' ' + ISNULL(NOMB_2,'')) AS Nombres,
-                CONVERT(CHAR(10), FECH_NACI, 105) AS FECH_NACI
+                CONVERT(CHAR(10), FECH_NACI, 105) AS FECH_NACI,
+                FECH_NACI AS FECH_NACI2
                 FROM {$familiaresTable}
                 WHERE CODI_PERS = ?
                 ORDER BY TIPO_RELA",
@@ -427,6 +448,50 @@ private function completarCamposNull($data, $codiPers)
     }
 }
 
+public function getBackupData(Request $request)
+{
+    try {
+        $codiPers = $request->get('codi_pers');
+        
+        if (empty($codiPers)) {
+            return response()->json(['success' => false, 'message' => 'Código requerido'], 400);
+        }
+
+        $backup = DB::select(
+            "SELECT * FROM si_solm.dbo.DJ2026_BACKUP_PERSONAL WHERE CODI_PERS = ?",
+            [$codiPers]
+        );
+
+        if (empty($backup)) {
+            return response()->json(['success' => false, 'message' => 'Sin registro previo']);
+        }
+
+        $data = $this->formatDatesForInput((array) $backup[0]);
+
+        // ✅ FAMILIARES DEL BACKUP
+        $familiares = DB::select(
+            "SELECT 
+                TIPO_RELA,
+                ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ', ' + 
+                ISNULL(NOMB_1,'') + ' ' + ISNULL(NOMB_2,'') AS Nombres,
+                CONVERT(CHAR(10), FECH_NACI, 103) AS FECH_NACI
+             FROM si_solm.dbo.DERECHO_HABIENTE 
+             WHERE CODI_PERS = ?
+             ORDER BY TIPO_RELA",
+            [$codiPers]
+        );
+
+        return response()->json([
+            'success'    => true,
+            'data'       => $data,
+            'familiares' => $familiares
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error en getBackupData: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
 
 // ✅ FAMILIARES - Guardar en tabla temporal
 private function saveFamiliaresTemp($codiPers, $data)

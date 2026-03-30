@@ -7,12 +7,13 @@ import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import Tagify from '@yaireo/tagify';
 import '@yaireo/tagify/dist/tagify.css';
 const API_URL = `${VITE_URL_APP}/api`;
+let registroSeleccionado = null;
+
 document.addEventListener('DOMContentLoaded', function () {
 
     // =========================
     // REFERENCIAS DOM
     // =========================
-    let registroSeleccionado = null;
 
     const modalDjGestion = document.getElementById('modalDjGestion');
     const form = document.getElementById('formDatos');
@@ -189,11 +190,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     }         
                 },
                 cellClick: function (e, cell) {
-                     const btn = e.target.closest('.form-btn');
+                        const btn = e.target.closest('.form-btn');
                     if (!btn) return;
 
                     registroSeleccionado = cell.getRow().getData();
-                    btnNuevaDJ?.click();
+                    registroSeleccionado._sinSplit = true; // ✅ marcar que viene de pendientes
+                        btnNuevaDJ?.click();
+
+                        // ✅ OBTENER DATOS DIRECTAMENTE DE TABULATOR
+                        const rowData = cell.getRow().getData();
+
+                    console.log('AQUIII MMHUEVO ', registroSeleccionado);
+                    const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+                    abrirFormularioDJ(codiPers, 'pendiente');
+                    //tnNuevaDJ?.click();
                 }
             },
         ],
@@ -450,6 +460,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
         setValue('dj2026_laboral_1', '');
         setValue('dj2026_laboral_2', '');
+limpiarSplitView();
+        // Ocultar panel backup al limpiar
+//         const panelBk = document.getElementById('panelDJAnterior');
+//         if (panelBk) panelBk.style.display = 'none';
+//         const cuerpoBk = document.getElementById('cuerpoDJAnterior');
+//         if (cuerpoBk) cuerpoBk.style.display = 'none';
+//         const iconoBk = document.getElementById('iconoDJAnterior');
+//         if (iconoBk) iconoBk.textContent = '▼';
+
+//         const tbodyBk = document.getElementById('bodyBackupFamiliares');
+// if (tbodyBk) {
+//     tbodyBk.innerHTML = `
+//         <tr>
+//             <td colspan="3" style="padding:6px 8px;color:#9ca3af;font-style:italic;font-size:11px;">
+//                 Cargando...
+//             </td>
+//         </tr>`;
+// }
     }
 
    function resaltarTexto(tabla, valor) {
@@ -798,9 +826,9 @@ function aplicarFiltrosMigracion() {
     });
 
     btnNuevaDJ?.addEventListener('click', function () {
-    if (registroSeleccionado && registroSeleccionado.codPersonal) {
-        // Si hay un registro seleccionado de la tabla, usar su código
-        abrirFormularioDJ(registroSeleccionado.codPersonal);
+     if (registroSeleccionado && registroSeleccionado.codPersonal) {
+        const source = registroSeleccionado._sinSplit ? 'pendiente' : 'migracion';
+        abrirFormularioDJ(registroSeleccionado.codPersonal, source);
     } else {
         // Si no hay registro seleccionado, solo abrir modal vacío
         const modal = document.getElementById('modalDjGestion');
@@ -922,15 +950,11 @@ function aplicarFiltrosMigracion() {
     // =========================
     btnPrevisualizar?.addEventListener("click", function (e) {
         e.preventDefault();
-    
+
+        // ✅ Solo validar nombres y DNI
         const camposObligatorios = [
             { input: nombreDJtxt, nombre: 'Nombre' },
-            { input: dniDJtxt, nombre: 'DNI' },
-            { input: dniCaducaDJtxt, nombre: 'Caducidad de DNI' },
-            { input: estadoCivilDJtxt, nombre: 'Estado civil' },
-            { input: sexoDJtxt, nombre: 'Sexo' },
-            { input: fechaNacDJtxt, nombre: 'Fecha de nacimiento' },
-            { input: sabeNadarDJtxt, nombre: 'Sabe nadar' }
+            { input: dniDJtxt,    nombre: 'DNI' },
         ];
 
         const campoFaltante = camposObligatorios.find(campo => {
@@ -943,21 +967,11 @@ function aplicarFiltrosMigracion() {
                 title: 'Campos obligatorios',
                 text: `Falta completar: ${campoFaltante.nombre}`
             });
-
             campoFaltante.input?.focus();
             return;
         }
 
-        if (!inputFoto.files || inputFoto.files.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Campo obligatorio',
-                text: 'Debe selecionar una foto'
-            });
-
-            return;
-        }
-
+        // ✅ Quitar validación de foto — se maneja automáticamente en drawFotoEnPDF
         generarDeclaracionJuradaPDF();
     });
 
@@ -966,73 +980,91 @@ function aplicarFiltrosMigracion() {
         tblPersonas.setPageSize(size);
     });
 
-    async function drawFotoEnPDF(pdf, x, y, w, h) {
-        try {
-            let imageSrc = "";
+   async function drawFotoEnPDF(pdf, x, y, w, h) {
+    try {
+        let imageSrc = "";
 
-            if (preview && preview.src && !preview.classList.contains("hidden")) {
-                imageSrc = preview.src;
+        // 1. Foto subida manualmente desde input
+        if (inputFoto?.files?.[0]) {
+            imageSrc = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(inputFoto.files[0]);
+            });
+        }
+
+        // 2. Preview visible — puede ser base64 o URL externa
+        if (!imageSrc && preview && !preview.classList.contains("hidden") && preview.src) {
+            const src = preview.src;
+            if (src.startsWith("data:")) {
+                // Ya es base64, usar directamente
+                imageSrc = src;
+            } else if (src.startsWith("http")) {
+                // URL externa → convertir a base64 vía canvas
+                try {
+                    imageSrc = await new Promise((resolve, reject) => {
+                        const imgEl = new Image();
+                        imgEl.crossOrigin = "anonymous";
+                        imgEl.onload = () => {
+                            const canvas = document.createElement("canvas");
+                            canvas.width  = imgEl.naturalWidth;
+                            canvas.height = imgEl.naturalHeight;
+                            canvas.getContext("2d").drawImage(imgEl, 0, 0);
+                            resolve(canvas.toDataURL("image/jpeg", 0.9));
+                        };
+                        imgEl.onerror = reject;
+                        imgEl.src = src;
+                    });
+                } catch (_) {
+                    console.warn('No se pudo convertir foto vía canvas');
+                }
             }
+        }
 
-            if (!imageSrc && inputFoto?.files?.[0]) {
-                imageSrc = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(inputFoto.files[0]);
-                });
-            }
+        // Dibujar borde
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.20);
+        pdf.rect(x, y, w, h);
 
-            pdf.setDrawColor(0);
-            pdf.setLineWidth(0.20);
-            pdf.rect(x, y, w, h);
-
-            if (!imageSrc) {
-                pdf.setFontSize(8);
-                pdf.setFont("helvetica", "normal");
-                pdf.setTextColor(150);
-                pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
-                return;
-            }
-
-            pdf.setFillColor(255, 255, 255);
-            pdf.rect(x, y, w, h, "F");
-            pdf.setDrawColor(0);
-            pdf.setLineWidth(0.20);
-            pdf.rect(x, y, w, h);
-
-            const props = pdf.getImageProperties(imageSrc);
-            const imgW = props.width;
-            const imgH = props.height;
-
-            const ratio = Math.min(w / imgW, h / imgH);
-            const finalW = imgW * ratio;
-            const finalH = imgH * ratio;
-
-            const offsetX = x + (w - finalW) / 2;
-            const offsetY = y + (h - finalH) / 2;
-
-            let format = "JPEG";
-            if (imageSrc.startsWith("data:image/png")) {
-                format = "PNG";
-            } else if (imageSrc.startsWith("data:image/webp")) {
-                format = "WEBP";
-            }
-
-            pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
-        } catch (error) {
-            console.error("Error dibujando foto en PDF:", error);
-
-            pdf.setDrawColor(0);
-            pdf.setLineWidth(0.20);
-            pdf.rect(x, y, w, h);
-
+        if (!imageSrc) {
             pdf.setFontSize(8);
             pdf.setFont("helvetica", "normal");
             pdf.setTextColor(150);
             pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
+            return;
         }
+
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(x, y, w, h, "F");
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.20);
+        pdf.rect(x, y, w, h);
+
+        const props  = pdf.getImageProperties(imageSrc);
+        const ratio  = Math.min(w / props.width, h / props.height);
+        const finalW = props.width  * ratio;
+        const finalH = props.height * ratio;
+        const offsetX = x + (w - finalW) / 2;
+        const offsetY = y + (h - finalH) / 2;
+
+        let format = "JPEG";
+        if (imageSrc.startsWith("data:image/png"))  format = "PNG";
+        if (imageSrc.startsWith("data:image/webp")) format = "WEBP";
+
+        pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
+
+    } catch (error) {
+        console.error("Error dibujando foto en PDF:", error);
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.20);
+        pdf.rect(x, y, w, h);
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(150);
+        pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
     }
+}
 
     async function generarDeclaracionJuradaPDF() {
         try {
@@ -1711,6 +1743,88 @@ function aplicarFiltrosMigracion() {
     }
 
 
+    (function initResizer() {
+    const wrapper  = document.getElementById('djSplitWrapper');
+    const resizer  = document.getElementById('djResizer');
+    const panelBk  = document.getElementById('panelBackup');
+ 
+    if (!wrapper || !resizer || !panelBk) return;
+ 
+    let isResizing = false;
+    let startX     = 0;
+    let startW     = 0;
+ 
+    resizer.addEventListener('mousedown', function (e) {
+        isResizing = true;
+        startX     = e.clientX;
+        startW     = panelBk.offsetWidth;
+ 
+        resizer.classList.add('dragging');
+        document.body.style.cursor    = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+ 
+    document.addEventListener('mousemove', function (e) {
+        if (!isResizing) return;
+ 
+        const delta   = e.clientX - startX;
+        const newW    = Math.max(220, Math.min(startW + delta, wrapper.offsetWidth - 280));
+        panelBk.style.width    = newW + 'px';
+        panelBk.style.flexBasis = newW + 'px';
+    });
+ 
+    document.addEventListener('mouseup', function () {
+        if (!isResizing) return;
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor     = '';
+        document.body.style.userSelect = '';
+    });
+ 
+    // Touch support
+    resizer.addEventListener('touchstart', function (e) {
+        isResizing = true;
+        startX     = e.touches[0].clientX;
+        startW     = panelBk.offsetWidth;
+        e.preventDefault();
+    }, { passive: false });
+ 
+    document.addEventListener('touchmove', function (e) {
+        if (!isResizing) return;
+        const delta = e.touches[0].clientX - startX;
+        const newW  = Math.max(220, Math.min(startW + delta, wrapper.offsetWidth - 280));
+        panelBk.style.width    = newW + 'px';
+        panelBk.style.flexBasis = newW + 'px';
+    });
+ 
+    document.addEventListener('touchend', function () {
+        isResizing = false;
+    });
+ 
+    // Doble click → resetear al 38%
+    resizer.addEventListener('dblclick', function () {
+        panelBk.style.width    = '38%';
+        panelBk.style.flexBasis = '38%';
+    });
+})();
+
+(function initSyncScroll() {
+    const panelBk   = document.getElementById('panelBackup');
+    const panelForm = document.getElementById('panelForm');
+    if (!panelBk || !panelForm) return;
+
+    // ✅ SOLO el form mueve al backup — el backup NO mueve al form
+    panelForm.addEventListener('scroll', function () {
+        const ratio = panelForm.scrollTop / 
+                      (panelForm.scrollHeight - panelForm.clientHeight || 1);
+        panelBk.scrollTop = ratio * 
+                      (panelBk.scrollHeight - panelBk.clientHeight);
+    });
+
+    // ✅ El backup scrollea LIBRE, sin afectar al form
+    // (sin listener en panelBk)
+})();
      
 
 });
@@ -1750,7 +1864,7 @@ function aplicarFiltrosMigracion() {
 //     }
 // }
 
-async function abrirFormularioDJ(codiPers) {
+async function abrirFormularioDJ(codiPers, source = 'migracion') {
     console.log('🚀 1. Iniciando abrirFormularioDJ con código:', codiPers);
     
     try {
@@ -1765,7 +1879,7 @@ async function abrirFormularioDJ(codiPers) {
         console.log('✅ Catálogos cargados');
 
         console.log('🚀 3. Cargando datos personales...');
-        await cargarDatosPersonales(codiPers);
+        await cargarDatosPersonales(codiPers, source);
         console.log('✅ Datos personales cargados');
 
         console.log('🚀 4. Cerrando Swal...');
@@ -1785,6 +1899,14 @@ async function abrirFormularioDJ(codiPers) {
         } else {
             console.error('❌ NO SE ENCONTRÓ EL MODAL #modalDjGestion');
         }
+
+        if (source === 'migracion') {
+            await cargarDatosBackup(codiPers);
+        } else {
+            limpiarSplitView();
+        }
+
+        
 
     } catch (error) {
         console.error('❌ ERROR GENERAL:', error);
@@ -1818,11 +1940,14 @@ async function cargarCatalogos() {
     }
 }
 
-async function cargarDatosPersonales(codiPers) {
+async function cargarDatosPersonales(codiPers,  source = 'migracion') {
     console.log('CODIGO PERSONAL:', codiPers);
     try {
         const response = await axios.get(`${API_URL}/dj/get-personal-data`, {
-            params: { codi_pers: codiPers }
+            params: { 
+                codi_pers: codiPers,
+                source: source  // ✅ enviar origen
+            }
         });
 
         const { data, familiares, ocupaciones_alternas, is_migrado } = response.data;
@@ -1833,7 +1958,7 @@ async function cargarDatosPersonales(codiPers) {
         }
 
         // Llenar campos del formulario
-        llenarFormulario(data);
+        await llenarFormulario(data);
 
         // Llenar familiares
         renderFamiliares(familiares);
@@ -1847,7 +1972,7 @@ async function cargarDatosPersonales(codiPers) {
     }
 }
 
-function llenarFormulario(data) {
+async function llenarFormulario(data) {
     console.log('Datos personales recibidos:', data);
     // Identidad
     setValue('cod_postulante', data.CODI_PERS);
@@ -1960,12 +2085,16 @@ cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS
 
     // Foto
     if (data.FOTO_PATH) {
-        const img = document.getElementById('previewFoto');
-        if (img) {
-            img.src = data.FOTO_PATH;
-            img.classList.remove('hidden');
-        }
+    const img = document.getElementById('previewFoto');
+    const placeholderEl = document.getElementById('placeholderFoto');
+    if (img) {
+        img.src = data.FOTO_PATH;
+        img.classList.remove('hidden');
+        if (placeholderEl) placeholderEl.classList.add('hidden');
+        const btnElim = document.getElementById('btnEliminarFoto');
+        if (btnElim) btnElim.classList.remove('hidden');
     }
+}
 }
 
 function renderFamiliares(familiares) {
@@ -2041,8 +2170,13 @@ function addFamiliarRow(data = {}, container = null) {
     }
 
     // ✅ FORMATEAR FECHA ANTES DE USARLA
-    const fechaFormateada = formatDateForInput(data.FECH_NACI);
-    console.log('   ✅ Fecha formateada para input:', fechaFormateada);
+    console.log('  FECHA 1 ', data.FECH_NACI) ;
+    //const fechaFormateada = formatDateForInput(data.FECH_NACI);
+
+    let fechaFormateada = data.FECH_NACI.substring(0,4) + "-" +
+                      data.FECH_NACI.substring(4,6) + "-" +
+                      data.FECH_NACI.substring(6,8);
+                          console.log('  FECHA 2 ', fechaFormateada) ;
 
     const row = document.createElement('div');
     row.className = 'family-row';
@@ -2516,4 +2650,425 @@ function animarContador(el, desde, hasta, duracion = 400) {
     }
 
     requestAnimationFrame(tick);
+}
+
+
+// Agregar dentro de abrirFormularioDJ(), justo después de cargarDatosPersonales()
+
+
+// // Nueva función:
+// async function cargarDatosBackup(codiPers) {
+//     const panel = document.getElementById('panelDJAnterior');
+//     if (!panel) return;
+
+//     try {
+//         const response = await axios.get(`${API_URL}/dj/get-backup-data`, {
+//             params: { codi_pers: codiPers }
+//         });
+
+//         if (!response.data.success) {
+//             panel.style.display = 'none';
+//             return;
+//         }
+
+//         const bk = response.data.data;
+
+//         // Mostrar panel
+//         panel.style.display = 'block';
+
+//         // Fecha del registro
+//         const badge = document.getElementById('badgeFechaDJ');
+//         if (badge && bk.USUA_FECHA_MOD) {
+//             const f = new Date(bk.USUA_FECHA_MOD);
+//             badge.textContent = `Última mod: ${f.getDate().toString().padStart(2,'0')}/${(f.getMonth()+1).toString().padStart(2,'0')}/${f.getFullYear()}`;
+//         }
+
+//         // Campos de fecha a formatear
+//         const dateFields = ['FECH_NACI','PERS_FECHCADUCADNI','FECH_INGRE','FECH_CESE'];
+
+//         // Llenar todos los .bk-val
+//         panel.querySelectorAll('.bk-val').forEach(el => {
+//             const field = el.getAttribute('data-field');
+//             let val = bk[field] ?? '';
+
+//             // Formatear fechas
+//             if (dateFields.includes(field) && val) {
+//                 const d = new Date(val);
+//                 if (!isNaN(d)) {
+//                     val = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
+//                 }
+//             }
+
+//             el.textContent = val ? String(val).toUpperCase() : '—';
+
+//             // Resaltar si difiere del campo actual del formulario
+//             const inputActual = document.getElementById(
+//                 field === 'APEL_1' ? 'apellido_paterno' :
+//                 field === 'APEL_2' ? 'apellido_materno' :
+//                 field === 'NOMB_1' ? 'nombre1' :
+//                 field === 'NOMB_2' ? 'nombre2' :
+//                 field === 'NRO_DOCU_IDEN' ? 'dni' :
+//                 field === 'PERS_FECHCADUCADNI' ? 'caduca' :
+//                 field === 'PERS_SEXO' ? 'sexo' :
+//                 field === 'FECH_NACI' ? 'fecha_nacimiento' :
+//                 field === 'PERS_SNADAR' ? 'sabe_nadar' :
+//                 field === 'PERS_TELEFONO' ? 'celular' :
+//                 field === 'PERS_EMAIL' ? 'correo' :
+//                 field === 'tipo_sangr' ? 'tipo_sangre' :
+//                 field === 'peso_kilo' ? 'peso' :
+//                 field === 'tall_metr' ? 'talla' :
+//                 field === 'CODI_SIST_PENS' ? 'sistema_previsional' :
+//                 field === 'ESSALUD' ? 'essalud' :
+//                 field === 'PERS_PENSIONISTA' ? 'pensionista' :
+//                 field === 'PERS_GRADO_INSTRUCCION' ? 'grado_instruccion' :
+//                 field === 'EGRESO_EDUCATIVO' ? 'anio_egreso' :
+//                 field === 'DIRECCION' ? 'direccion_actual' :
+//                 field === 'PERS_DIREC_DNI' ? 'direccion_dni' :
+//                 field === 'PERS_CONDISCAMEC' ? 'curso_sucamec' :
+//                 field === 'PERS_CONLICARMAS' ? 'licencia_arma' :
+//                 field === 'PERS_TIPOARMA' ? 'tipo_arma' :
+//                 field === 'PERS_BREVETE' ? 'brevete' :
+//                 field === 'PERS_CTRABANT' ? 'empresa_anterior' :
+//                 field === 'PERS_CARGOTRABANT' ? 'cargo_anterior' :
+//                 field === 'PERS_NOMCONTACTO' ? 'contacto_emergencia' :
+//                 field === 'PERS_NROEMERGENCIA' ? 'celular_emergencia' :
+//                 field === 'PERS_CONYUGE' ? 'parentesco_emergencia' :
+//                 field.toLowerCase()
+//             );
+
+//             if (inputActual && val) {
+//                 const valActual = String(inputActual.value ?? '').toUpperCase().trim();
+//                 const valBk = String(val).toUpperCase().trim();
+//                 if (valBk && valActual && valBk !== valActual) {
+//                     // Resaltar en amarillo el dato del backup que difiere
+//                     el.style.cssText = 'font-size:11px;display:block;background:#fde68a;color:#92400e;font-weight:700;padding:1px 4px;border-radius:3px;';
+//                 }
+//             }
+//         });
+
+//         const tbody = document.getElementById('bodyBackupFamiliares');
+// if (tbody) {
+//     const familiares = response.data.familiares ?? [];
+
+//     if (familiares.length === 0) {
+//         tbody.innerHTML = `
+//             <tr>
+//                 <td colspan="3" style="padding:6px 8px;color:#9ca3af;font-style:italic;font-size:11px;">
+//                     Sin familiares registrados
+//                 </td>
+//             </tr>`;
+//     } else {
+//         tbody.innerHTML = familiares.map((f, i) => `
+//             <tr style="background:${i % 2 === 0 ? '#fffbeb' : '#fef9c3'};">
+//                 <td style="padding:4px 8px;color:#1f2937;font-weight:600;">${f.TIPO_RELA ?? '—'}</td>
+//                 <td style="padding:4px 8px;color:#1f2937;">${f.Nombres ? f.Nombres.toUpperCase().trim() : '—'}</td>
+//                 <td style="padding:4px 8px;color:#1f2937;">${f.FECH_NACI ?? '—'}</td>
+//             </tr>
+//         `).join('');
+//     }
+// }
+
+//     } catch (err) {
+//         console.warn('Sin backup DJ:', err);
+//         panel.style.display = 'none';
+//     }
+// }
+
+// Toggle colapsable
+document.getElementById('headerDJAnterior')?.addEventListener('click', function() {
+    const cuerpo = document.getElementById('cuerpoDJAnterior');
+    const icono = document.getElementById('iconoDJAnterior');
+    if (!cuerpo) return;
+    const abierto = cuerpo.style.display !== 'none';
+    cuerpo.style.display = abierto ? 'none' : 'block';
+    icono.textContent = abierto ? '▼' : '▲';
+});
+
+
+// ============================================================
+// SPLIT VIEW — Lógica de comparación backup vs nuevo
+// Agregar en gestion_dj.js
+// ============================================================
+
+// Mapa: id del campo del formulario → campo del backup
+const CAMPO_MAP = {
+    'apellido_paterno':       'APEL_1',
+    'apellido_materno':       'APEL_2',
+    'nombre1':                'NOMB_1',
+    'nombre2':                'NOMB_2',
+    'dni':                    'NRO_DOCU_IDEN',
+    'caduca':                 'PERS_FECHCADUCADNI',
+    'estado_civil':           'ESCI_CODIGO',
+    'sexo':                   'PERS_SEXO',
+    'fecha_nacimiento':       'FECH_NACI',
+    'sabe_nadar':             'PERS_SNADAR',
+    'celular':                'PERS_TELEFONO',
+    'correo':                 'PERS_EMAIL',
+    'tipo_sangre':            'tipo_sangr',
+    'peso':                   'peso_kilo',
+    'talla':                  'tall_metr',
+    'sistema_previsional':    'CODI_SIST_PENS',
+    'essalud':                'ESSALUD',
+    'pensionista':            'PERS_PENSIONISTA',
+    'grado_instruccion':      'PERS_GRADO_INSTRUCCION',
+    'anio_egreso':            'EGRESO_EDUCATIVO',
+    'embargos':               'PERS_EMBARGO',
+    'consumo_sustancias':     'PERS_CONSMO',
+    'direccion_actual':       'DIRECCION',
+    'direccion_dni':          'PERS_DIREC_DNI',
+    'contacto_emergencia':    'PERS_NOMCONTACTO',
+    'celular_emergencia':     'PERS_NROEMERGENCIA',
+    'parentesco_emergencia':  'PERS_CONYUGE',
+    'ocupacion_principal':    'PERS_PROFESION',
+    'curso_sucamec':          'PERS_CONDISCAMEC',
+    'licencia_arma':          'PERS_CONLICARMAS',
+    'tipo_arma':              'PERS_TIPOARMA',
+    'arma_propia':            'PERS_CONARMAS',
+    'brevete':                'PERS_BREVETE',
+    'clase_brevete':          'CLASE_BREVETE',
+    'empresa_anterior':       'PERS_CTRABANT',
+    'cargo_anterior':         'PERS_CARGOTRABANT',
+    'smo':                    'PERS_LUGARSMO',
+};
+
+// Campos de fecha que necesitan formato DD/MM/YYYY
+const FECHA_FIELDS_BK = ['FECH_NACI','PERS_FECHCADUCADNI','FECH_INGRE','FECH_CESE'];
+
+// Guarda el backup en memoria para comparaciones posteriores
+let _backupData = null;
+
+// ============================================================
+// Función principal: carga backup y activa split view
+// ============================================================
+async function cargarDatosBackup(codiPers) {
+    const wrapper   = document.getElementById('djSplitWrapper');
+    const panelBk   = document.getElementById('panelBackup');
+    const badgeSplit = document.getElementById('splitModeBadge');
+    const contDiffs = document.getElementById('contadorDiffs');
+
+    if (!wrapper) return;
+
+    try {
+        const response = await axios.get(`${API_URL}/dj/get-backup-data`, {
+            params: { codi_pers: codiPers }
+        });
+
+        if (!response.data.success) {
+            // Sin backup → ocultar panel izquierdo
+            wrapper.classList.add('no-backup');
+            if (panelBk)   panelBk.style.display   = 'none';
+            if (badgeSplit) badgeSplit.style.display = 'none';
+            _backupData = null;
+            return;
+        }
+
+        _backupData = response.data.data;
+
+        // Activar split
+        wrapper.classList.remove('no-backup');
+        if (panelBk)    panelBk.style.display    = 'block';
+        if (badgeSplit) badgeSplit.style.display  = 'flex';
+
+        // Fecha última modificación
+        const badge = document.getElementById('bkFechaModBadge');
+        if (badge && _backupData.USUA_FECHA_MOD) {
+            const f = new Date(_backupData.USUA_FECHA_MOD);
+            if (!isNaN(f)) {
+                badge.textContent = `Últ. mod: ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
+            }
+        }
+
+        // Llenar campos del panel backup
+        wrapper.querySelectorAll('.bk-val[data-field]').forEach(el => {
+            const field = el.getAttribute('data-field');
+            let val = _backupData[field] ?? '';
+
+            if (FECHA_FIELDS_BK.includes(field) && val) {
+                const d = new Date(val);
+                if (!isNaN(d)) {
+                    val = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                }
+            }
+
+            el.textContent = val ? String(val).toUpperCase().trim() : '—';
+        });
+
+        // Familiares del backup
+        const tbody = document.getElementById('bodyBackupFamiliares');
+        if (tbody) {
+            const familiares = response.data.familiares ?? [];
+            if (familiares.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="padding:6px 8px;color:#9ca3af;font-style:italic;font-size:11px;">Sin familiares registrados</td></tr>`;
+            } else {
+                tbody.innerHTML = familiares.map((f, i) => `
+                    <tr>
+                        <td>${f.TIPO_RELA ?? '—'}</td>
+                        <td>${f.Nombres ? f.Nombres.toUpperCase().trim() : '—'}</td>
+                        <td>${f.FECH_NACI ?? '—'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Comparar y marcar diferencias (después de que el form ya esté lleno)
+        // Pequeño delay para asegurar que llenarFormulario terminó
+        setTimeout(() => {
+            const diffs = marcarDiferencias();
+            if (contDiffs) {
+                if (diffs > 0) {
+                    contDiffs.style.display = 'inline-block';
+                    contDiffs.textContent   = `${diffs} campo${diffs > 1 ? 's' : ''} diferente${diffs > 1 ? 's' : ''}`;
+                } else {
+                    contDiffs.style.display = 'none';
+                }
+            }
+        }, 300);
+
+        // Activar interactividad focus/hover
+        activarInteractividad();
+
+    } catch (err) {
+        console.warn('Sin backup DJ:', err);
+        wrapper.classList.add('no-backup');
+        if (panelBk)    panelBk.style.display    = 'none';
+        if (badgeSplit) badgeSplit.style.display  = 'none';
+        _backupData = null;
+    }
+}
+
+// ============================================================
+// Marcar diferencias: borde rojo en campo nuevo
+//                     fondo amarillo en campo backup
+// ============================================================
+function marcarDiferencias() {
+    if (!_backupData) return 0;
+ 
+    let totalDiffs = 0;
+ 
+    // Limpiar estados previos
+    document.querySelectorAll('[data-compare]').forEach(el => {
+        el.classList.remove('has-diff');
+    });
+    document.querySelectorAll('.bk-field').forEach(el => {
+        el.classList.remove('is-diff');
+    });
+ 
+    Object.entries(CAMPO_MAP).forEach(([formId, bkField]) => {
+        const inputEl = document.getElementById(formId);
+        if (!inputEl) return;
+ 
+        let valForm = String(inputEl.value ?? '').trim();
+        let valBk   = String(_backupData[bkField] ?? '').trim();
+ 
+        // ── Normalizar fechas ──────────────────────────────────
+        if (FECHA_FIELDS_BK.includes(bkField)) {
+            // Backup puede venir como "2024-03-15T00:00:00.000" o "2024-03-15 00:00:00"
+            if (valBk) {
+                const cleanBk = valBk.replace('T', ' ').split(' ')[0]; // → "2024-03-15"
+                valBk = cleanBk;
+            }
+            // Form viene como "2024-03-15" (input[type=date])
+            // No hace falta transformar valForm
+        }
+ 
+        // ── Normalizar a mayúsculas para comparar ──────────────
+        const normForm = valForm.toUpperCase();
+        const normBk   = valBk.toUpperCase();
+ 
+        // Solo marcar si ambos tienen valor y difieren
+        if (normForm && normBk && normForm !== normBk) {
+            totalDiffs++;
+            inputEl.classList.add('has-diff');
+ 
+            const bkEl = document.querySelector(`.bk-field[data-bk="${formId}"]`);
+            if (bkEl) bkEl.classList.add('is-diff');
+        }
+    });
+ 
+    return totalDiffs;
+}
+
+// ============================================================
+// Interactividad: focus en campo nuevo → ilumina el backup
+// ============================================================
+function activarInteractividad() {
+    // Limpiar listeners previos clonando el wrapper
+    const wrapper = document.getElementById('djSplitWrapper');
+    if (!wrapper) return;
+
+    // Usar delegación de eventos en el panel del formulario
+    const panelForm = document.getElementById('panelForm');
+    if (!panelForm) return;
+
+    // Quitar listener previo si existe
+    if (panelForm._splitFocusIn)  panelForm.removeEventListener('focusin',  panelForm._splitFocusIn);
+    if (panelForm._splitFocusOut) panelForm.removeEventListener('focusout', panelForm._splitFocusOut);
+
+    panelForm._splitFocusIn = function(e) {
+        const target = e.target;
+        const compareId = target.getAttribute('data-compare') || target.id;
+        if (!compareId) return;
+
+        // Quitar is-active previos
+        document.querySelectorAll('.bk-field.is-active').forEach(el => el.classList.remove('is-active'));
+
+        // Activar el campo backup correspondiente
+        const bkEl = document.querySelector(`.bk-field[data-bk="${compareId}"]`);
+        if (bkEl) {
+            bkEl.classList.add('is-active');
+
+            // Scroll del panel backup para mostrar el campo activo
+            const panelBk = document.getElementById('panelBackup');
+            if (panelBk) {
+                const bkTop    = bkEl.getBoundingClientRect().top;
+                const panelTop = panelBk.getBoundingClientRect().top;
+                panelBk.scrollTop += (bkTop - panelTop) - 80;
+            }
+        }
+    };
+
+    panelForm._splitFocusOut = function(e) {
+        // Pequeño delay para no parpadear al cambiar entre campos
+        setTimeout(() => {
+            if (!panelForm.contains(document.activeElement)) {
+                document.querySelectorAll('.bk-field.is-active').forEach(el => el.classList.remove('is-active'));
+            }
+        }, 150);
+    };
+
+    panelForm.addEventListener('focusin',  panelForm._splitFocusIn);
+    panelForm.addEventListener('focusout', panelForm._splitFocusOut);
+}
+
+// ============================================================
+// Limpiar split al cerrar/limpiar formulario
+// Agregar esto al final de tu función limpiarFormulario()
+// ============================================================
+function limpiarSplitView() {
+    _backupData = null;
+
+    const wrapper    = document.getElementById('djSplitWrapper');
+    const panelBk    = document.getElementById('panelBackup');
+    const badgeSplit = document.getElementById('splitModeBadge');
+    const contDiffs  = document.getElementById('contadorDiffs');
+
+    if (wrapper)    wrapper.classList.add('no-backup');
+    if (panelBk)    panelBk.style.display    = 'none';
+    if (badgeSplit) badgeSplit.style.display  = 'none';
+    if (contDiffs)  contDiffs.style.display   = 'none';
+
+    // Limpiar valores backup
+    document.querySelectorAll('.bk-val').forEach(el => el.textContent = '—');
+    document.querySelectorAll('.bk-field').forEach(el => el.classList.remove('is-diff','is-active'));
+    document.querySelectorAll('[data-compare]').forEach(el => el.classList.remove('has-diff'));
+
+    // Limpiar familiares backup
+    const tbody = document.getElementById('bodyBackupFamiliares');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="3" style="padding:6px;color:#9ca3af;font-style:italic;">Cargando...</td></tr>`;
+    }
+
+    // Limpiar badge fecha
+    const badge = document.getElementById('bkFechaModBadge');
+    if (badge) badge.textContent = '';
 }

@@ -125,6 +125,8 @@ Route::get('/get-personal-dj', [FileController::class, 'getListaDJ']);
 Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigracion']);
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
+// Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
+
 
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
 
@@ -157,6 +159,8 @@ Route::prefix('dj')->group(function () {
     
     // ✅ ASEGÚRATE QUE ESTA RUTA EXISTA
     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
+
+    Route::get('/get-backup-data', [DjController::class, 'getBackupData']);
 });
 
 
