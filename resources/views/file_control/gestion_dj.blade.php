@@ -117,6 +117,17 @@
             class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors">
             <i class='bx bx-download text-base'></i>
             Rep. Actualización
+
+        <button type="button" id="btnDescargarDJs"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
+            <i class='bx bx-archive-in text-base'></i>
+            Descargar DJ's
+        </button>
+        <button type="button" id="btnDJUnificado"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-amber-500 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors">
+            <i class='bx bx-file text-base'></i>
+            DJ Unificado
+
         </button>
     </div>
 </div>
@@ -162,6 +173,8 @@
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script>
         window.logoUrl = "{{ asset('images/logo_sol.png') }}";
     </script>

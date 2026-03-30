@@ -123,22 +123,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
-            {
-                title: "Estado",
-                field: "estado",
-                hozAlign: "center",
-                widthGrow: 2,
-                formatter: function (cell) {
-                    const data = cell.getData();
-                    let colorEstado = 'border-yellow-300 bg-yellow-100 text-yellow-800';
-                    if(data.estado == 'listo'){
-                        colorEstado = 'border-info bg-info text-white';
-                    }
-                    return `<span class="inline-flex items-center rounded-full border ${ colorEstado } px-3 py-1 text-sm font-medium ">
-                    ${ capitalizeWords(data.estado ?? '') ?? '' }
-                    </span>`.trim();
-                }
-            },
+
+            // COLUMNA DE ESTADO EN (PENDIENTES/LISTOS)
+
+            // {
+            //     title: "Estado",
+            //     field: "estado",
+            //     hozAlign: "center",
+            //     widthGrow: 2,
+            //     formatter: function (cell) {
+            //         const data = cell.getData();
+            //         let colorEstado = 'border-yellow-300 bg-yellow-100 text-yellow-800';
+            //         if(data.estado == 'listo'){
+            //             colorEstado = 'border-info bg-info text-white';
+            //         }
+            //         return `<span class="inline-flex items-center rounded-full border ${ colorEstado } px-3 py-1 text-sm font-medium ">
+            //         ${ capitalizeWords(data.estado ?? '') ?? '' }
+            //         </span>`.trim();
+            //     }
+            // },
             {
                 title: "Ultimo Cambio",
                 field: "cambio",
@@ -984,6 +987,7 @@ function aplicarFiltrosMigracion() {
     try {
         let imageSrc = "";
 
+<<<<<<< HEAD
         // 1. Foto subida manualmente desde input
         if (inputFoto?.files?.[0]) {
             imageSrc = await new Promise((resolve, reject) => {
@@ -1018,6 +1022,26 @@ function aplicarFiltrosMigracion() {
                     });
                 } catch (_) {
                     console.warn('No se pudo convertir foto vía canvas');
+=======
+            if (preview && preview.src && !preview.classList.contains("hidden")) {
+                const src = preview.src;
+                // Si es una URL remota, intentar convertirla a dataURL
+                if (src && !src.startsWith("data:") && (src.startsWith("http://") || src.startsWith("https://"))) {
+                    try {
+                        const resp = await fetch(src);
+                        const blob = await resp.blob();
+                        imageSrc = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = () => resolve("");
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch {
+                        imageSrc = "";
+                    }
+                } else {
+                    imageSrc = src;
+>>>>>>> 0c07314 (Agregando detalles a DJ - Generación PDF masivo/ZIP/PDF - Cambio de SP de la tabla 'Pendientes/Listos')
                 }
             }
         }
@@ -1066,7 +1090,7 @@ function aplicarFiltrosMigracion() {
     }
 }
 
-    async function generarDeclaracionJuradaPDF() {
+    async function generarDeclaracionJuradaPDF(returnBlob = false) {
         try {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
@@ -1651,10 +1675,18 @@ function aplicarFiltrosMigracion() {
                 String(f.getMinutes()).padStart(2, '0');
 
             const nombreArchivo = `DJ_${dni}_${nombres.replace(/ /g, "-")}_${fechaHora}.pdf`;
+
+            if (returnBlob) {
+                return { blob: pdf.output('blob'), filename: nombreArchivo };
+            }
+
             pdf.save(nombreArchivo);
 
         } catch (error) {
             console.error("Error al generar PDF:", error);
+            if (returnBlob) {
+                return null;
+            }
             Swal.fire({
                 icon: 'error',
                 title: 'Error de PDF',
@@ -1662,6 +1694,258 @@ function aplicarFiltrosMigracion() {
             });
         }
     }
+
+    // =========================
+    // DESCARGA MASIVA DE DJ's
+    // =========================
+    const btnDescargarDJs = document.getElementById('btnDescargarDJs');
+
+    btnDescargarDJs?.addEventListener('click', async function () {
+        // Obtener filas filtradas visibles en la tabla de migración
+        const filasVisibles = tblPersonasMigrado.getData("active");
+
+        if (!filasVisibles || filasVisibles.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin resultados',
+                text: 'No hay registros visibles para descargar.'
+            });
+            return;
+        }
+
+        const confirmacion = await Swal.fire({
+            icon: 'question',
+            title: 'Descarga masiva de DJ\'s',
+            html: `Se generarán <b>${filasVisibles.length}</b> PDF(s) en un archivo ZIP.<br>¿Desea continuar?`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, descargar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmacion.isConfirmed) return;
+
+        const zip = new JSZip();
+        let generados = 0;
+        let errores = 0;
+
+        Swal.fire({
+            title: 'Generando PDFs...',
+            html: `Procesando <b>0</b> de <b>${filasVisibles.length}</b>`,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Cargar catálogos una sola vez
+        try {
+            await cargarCatalogos();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' });
+            return;
+        }
+
+        for (let i = 0; i < filasVisibles.length; i++) {
+            const fila = filasVisibles[i];
+            const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
+            const nombreFila = fila.nombres || `Personal_${codiPers}`;
+
+            // Actualizar progreso
+            Swal.update({
+                html: `Procesando <b>${i + 1}</b> de <b>${filasVisibles.length}</b><br><small>${nombreFila}</small>`
+            });
+
+            try {
+                // Cargar datos del personal en el formulario
+                await cargarDatosPersonales(codiPers);
+
+                // Esperar a que selects y cascadas terminen de cargarse
+                await new Promise(resolve => setTimeout(resolve, 600));
+
+                // Generar PDF como blob
+                const resultado = await generarDeclaracionJuradaPDF(true);
+
+                if (resultado && resultado.blob) {
+                    zip.file(resultado.filename, resultado.blob);
+                    generados++;
+                } else {
+                    console.warn(`No se pudo generar PDF para ${codiPers}`);
+                    errores++;
+                }
+            } catch (err) {
+                console.error(`Error generando PDF para ${codiPers}:`, err);
+                errores++;
+            }
+        }
+
+        if (generados === 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo generar ningún PDF.'
+            });
+            return;
+        }
+
+        // Generar y descargar ZIP
+        Swal.update({ html: 'Comprimiendo archivos...' });
+
+        try {
+            const contenidoZip = await zip.generateAsync({ type: 'blob' });
+
+            const f = new Date();
+            const fechaHora = f.getFullYear() +
+                String(f.getMonth() + 1).padStart(2, '0') +
+                String(f.getDate()).padStart(2, '0') + '_' +
+                String(f.getHours()).padStart(2, '0') +
+                String(f.getMinutes()).padStart(2, '0');
+
+            const nombreZip = `DJ_Masivo_${fechaHora}.zip`;
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(contenidoZip);
+            link.download = nombreZip;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Descarga completada',
+                html: `Se generaron <b>${generados}</b> PDF(s) correctamente.` +
+                    (errores > 0 ? `<br><small class="text-red-500">${errores} registro(s) con error.</small>` : '')
+            });
+        } catch (err) {
+            console.error('Error al generar ZIP:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Hubo un error al generar el archivo ZIP.'
+            });
+        }
+    });
+
+    // =========================
+    // DJ UNIFICADO (un solo PDF)
+    // =========================
+    const btnDJUnificado = document.getElementById('btnDJUnificado');
+
+    btnDJUnificado?.addEventListener('click', async function () {
+        const filasVisibles = tblPersonasMigrado.getData("active");
+
+        if (!filasVisibles || filasVisibles.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin resultados',
+                text: 'No hay registros visibles para descargar.'
+            });
+            return;
+        }
+
+        const confirmacion = await Swal.fire({
+            icon: 'question',
+            title: 'DJ Unificado',
+            html: `Se generará <b>1 PDF</b> con las <b>${filasVisibles.length}</b> declaraciones juradas.<br>¿Desea continuar?`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmacion.isConfirmed) return;
+
+        const pdfBlobs = [];
+        let errores = 0;
+
+        Swal.fire({
+            title: 'Generando DJ Unificado...',
+            html: `Procesando <b>0</b> de <b>${filasVisibles.length}</b>`,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            await cargarCatalogos();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' });
+            return;
+        }
+
+        for (let i = 0; i < filasVisibles.length; i++) {
+            const fila = filasVisibles[i];
+            const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
+            const nombreFila = fila.nombres || `Personal_${codiPers}`;
+
+            Swal.update({
+                html: `Procesando <b>${i + 1}</b> de <b>${filasVisibles.length}</b><br><small>${nombreFila}</small>`
+            });
+
+            try {
+                await cargarDatosPersonales(codiPers);
+                await new Promise(resolve => setTimeout(resolve, 600));
+
+                const resultado = await generarDeclaracionJuradaPDF(true);
+
+                if (resultado && resultado.blob) {
+                    const arrayBuf = await resultado.blob.arrayBuffer();
+                    pdfBlobs.push(arrayBuf);
+                } else {
+                    errores++;
+                }
+            } catch (err) {
+                console.error(`Error generando PDF para ${codiPers}:`, err);
+                errores++;
+            }
+        }
+
+        if (pdfBlobs.length === 0) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar ningún PDF.' });
+            return;
+        }
+
+        Swal.update({ html: 'Unificando documentos...' });
+
+        try {
+            const { PDFDocument } = PDFLib;
+            const mergedPdf = await PDFDocument.create();
+
+            for (const buf of pdfBlobs) {
+                const donorPdf = await PDFDocument.load(buf);
+                const pages = await mergedPdf.copyPages(donorPdf, donorPdf.getPageIndices());
+                pages.forEach(page => mergedPdf.addPage(page));
+            }
+
+            const mergedBytes = await mergedPdf.save();
+
+            const f = new Date();
+            const fechaHora = f.getFullYear() +
+                String(f.getMonth() + 1).padStart(2, '0') +
+                String(f.getDate()).padStart(2, '0') + '_' +
+                String(f.getHours()).padStart(2, '0') +
+                String(f.getMinutes()).padStart(2, '0');
+
+            const nombreArchivo = `DJ_Unificado_${fechaHora}.pdf`;
+
+            const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nombreArchivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'DJ Unificado generado',
+                html: `Se unificaron <b>${pdfBlobs.length}</b> declaraciones en un solo PDF.` +
+                    (errores > 0 ? `<br><small class="text-red-500">${errores} registro(s) con error.</small>` : '')
+            });
+        } catch (err) {
+            console.error('Error al unificar PDFs:', err);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al unificar los documentos.' });
+        }
+    });
 
     // =========================
     // GUARDAR FORMULARIO
