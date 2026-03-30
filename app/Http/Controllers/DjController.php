@@ -1664,6 +1664,41 @@ private function extraerApellido($nombreCompleto, $index)
         return $grouped;
     }
 
+    public function proxyFoto(Request $request)
+    {
+        $codiPers = $request->get('codi_pers');
+        if (!$codiPers || !preg_match('/^[a-zA-Z0-9]+$/', $codiPers)) {
+            return response()->json(['success' => false], 400);
+        }
+
+        $url = "http://190.116.178.163/Biblioteca_Grafica/Fotos/{$codiPers}.jpg";
+
+        try {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            $imageData = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || empty($imageData)) {
+                return response()->json(['success' => false, 'message' => 'Imagen no encontrada'], 404);
+            }
+
+            $base64 = 'data:' . ($contentType ?: 'image/jpeg') . ';base64,' . base64_encode($imageData);
+
+            return response()->json([
+                'success' => true,
+                'base64' => $base64
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error proxy foto: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al obtener imagen'], 500);
+        }
+    }
+
     public function reportePersonalSinMigracion(Request $request)
     {
         try {

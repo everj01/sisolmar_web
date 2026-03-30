@@ -161,6 +161,8 @@ Route::prefix('dj')->group(function () {
     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
 
     Route::get('/get-backup-data', [DjController::class, 'getBackupData']);
+    
+    Route::get('/proxy-foto', [DjController::class, 'proxyFoto']);
 });
 
 
