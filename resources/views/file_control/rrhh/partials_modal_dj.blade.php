@@ -734,8 +734,12 @@
                                             <label class="dj-label">Sistema Previsional</label>
                                             <select id="sistema_previsional" name="sistema_previsional" class="dj-select" data-compare="sistema_previsional">
                                                 <option value="">—</option>
-                                                <option value="01">ONP</option><option value="03">AFP</option>
-                                                <option value="A1">AFP - Mixta</option><option value="A2">AFP - Flujo</option>
+                                                 <option value="03">AFP</option>
+                                                <option value="01">ONP</option>
+                                                <option value="02">AFP INTEGRA</option>
+                                                <option value="07">NO APORTACION</option>
+                                                <option value="10">AFP PRIMA</option>
+                                                <option value="27">AFP HABITAT</option>
                                             </select>
                                         </div>
                                         <div>

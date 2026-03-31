@@ -123,6 +123,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
+            { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
+            { 
+                title: "Tipo", 
+                field: "tipoPer", 
+                hozAlign: "center", 
+                widthGrow: 2,
+                formatter: function(cell) {
+                    const val = cell.getValue() ?? '';
+                    const color = val === 'OPERATIVO' 
+                        ? 'border-blue-300 bg-blue-100 text-blue-800' 
+                        : 'border-purple-300 bg-purple-100 text-purple-800';
+                    return val 
+                        ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium">${capitalizeWords(val)}</span>`
+                        : '';
+                }
+            },
 
             // COLUMNA DE ESTADO EN (PENDIENTES/LISTOS)
 
@@ -671,6 +687,19 @@ limpiarSplitView();
         .then(response => {
             const datosTabla = response.data;
             tblPersonas.setData(datosTabla);
+            const sucursales = [...new Map(
+                        datosTabla.filter(d => d.sucursal)
+                            .map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])
+                    ).values()];
+
+
+                    console.log(sucursales);
+             const filtroSucursal = document.getElementById('filtroSucursalPEN');
+            if (filtroSucursal) {
+                filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+            }
    
         })
         .catch(error => {
@@ -749,8 +778,31 @@ function aplicarFiltrosMigracion() {
     // ── Card siempre desde SP con filtros actuales ──
     actualizarCardDesdeSP(sucursal, tipoPer);
 }
+
+function aplicarFiltrosPEN() {
+    const sucursal = document.getElementById('filtroSucursalPEN')?.value ?? '';
+    const tipoPer  = document.getElementById('filtroTipoPerPEN')?.value ?? '';
+
+    const filtros = [];
+    if (sucursal) filtros.push({ field: "codSucursal", type: "=", value: sucursal });
+    if (tipoPer)  filtros.push({ field: "tipoPer",     type: "=", value: tipoPer });
+
+    const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
+    if (texto) {
+        filtros.push([
+            { field: "nombres", type: "like", value: texto },
+            { field: "dni",     type: "like", value: texto },
+        ]);
+    }
+
+    tblPersonas.setFilter(filtros);
+
+}
     document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
     document.getElementById('filtroTipoPer')?.addEventListener('change', aplicarFiltrosMigracion);
+
+    document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
+    document.getElementById('filtroTipoPerPEN')?.addEventListener('change', aplicarFiltrosPEN);
 
 //     document.getElementById('contadorFiltrado').textContent = filasFiltradas.length.toLocaleString();
 // document.getElementById('contadorTotal').textContent = totalRegistros.toLocaleString();
@@ -1666,6 +1718,115 @@ function aplicarFiltrosMigracion() {
     // DESCARGA MASIVA DE DJ's
     // =========================
     const btnDescargarDJs = document.getElementById('btnDescargarDJs');
+    const btnDescargarDJs_PEN = document.getElementById('btnDescargarDJs_PEN');
+
+    
+    btnDJUnificado_PEN?.addEventListener('click', async function () {
+    const filasVisibles = tblPersonas.getData("active");
+
+    if (!filasVisibles || filasVisibles.length === 0) {
+        Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles para descargar.' });
+        return;
+    }
+
+    const confirmacion = await Swal.fire({
+        icon: 'question',
+        title: 'DJ Unificado — Pendientes',
+        html: `Se generará <b>1 PDF</b> con las <b>${filasVisibles.length}</b> declaraciones.<br>¿Desea continuar?`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, generar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirmacion.isConfirmed) return;
+
+    const pdfBlobs = [];
+    let errores = 0;
+
+    Swal.fire({
+        title: 'Generando DJ Unificado...',
+        html: `Procesando <b>0</b> de <b>${filasVisibles.length}</b>`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        await cargarCatalogos();
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' });
+        return;
+    }
+
+    for (let i = 0; i < filasVisibles.length; i++) {
+        const fila = filasVisibles[i];
+        const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
+        const nombreFila = fila.nombres || `Personal_${codiPers}`;
+
+        Swal.update({
+            html: `Procesando <b>${i + 1}</b> de <b>${filasVisibles.length}</b><br><small>${nombreFila}</small>`
+        });
+
+        try {
+            // ✅ source = 'pendiente' — jala de si_solm.dbo.PERSONAL
+            await cargarDatosPersonales(codiPers, 'pendiente');
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            const resultado = await generarDeclaracionJuradaPDF(true);
+
+            if (resultado && resultado.blob) {
+                const arrayBuf = await resultado.blob.arrayBuffer();
+                pdfBlobs.push(arrayBuf);
+            } else {
+                errores++;
+            }
+        } catch (err) {
+            console.error(`Error generando PDF para ${codiPers}:`, err);
+            errores++;
+        }
+    }
+
+    if (pdfBlobs.length === 0) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar ningún PDF.' });
+        return;
+    }
+
+    Swal.update({ html: 'Unificando documentos...' });
+
+    try {
+        const { PDFDocument } = PDFLib;
+        const mergedPdf = await PDFDocument.create();
+
+        for (const buf of pdfBlobs) {
+            const donorPdf = await PDFDocument.load(buf);
+            const pages = await mergedPdf.copyPages(donorPdf, donorPdf.getPageIndices());
+            pages.forEach(page => mergedPdf.addPage(page));
+        }
+
+        const mergedBytes = await mergedPdf.save();
+        const f = new Date();
+        const fechaHora = f.getFullYear() + String(f.getMonth()+1).padStart(2,'0') + String(f.getDate()).padStart(2,'0') + '_' + String(f.getHours()).padStart(2,'0') + String(f.getMinutes()).padStart(2,'0');
+        const nombreArchivo = `DJ_Unificado_Pendientes_${fechaHora}.pdf`;
+
+        const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = nombreArchivo;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'DJ Unificado generado',
+            html: `Se unificaron <b>${pdfBlobs.length}</b> declaraciones en un solo PDF.` +
+                (errores > 0 ? `<br><small class="text-red-500">${errores} registro(s) con error.</small>` : '')
+        });
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al unificar los documentos.' });
+    }
+});
 
     btnDescargarDJs?.addEventListener('click', async function () {
         // Obtener filas filtradas visibles en la tabla de migración
@@ -2232,53 +2393,53 @@ async function llenarFormulario(data) {
     setValue('#nombre2', data.NOMB_2 || '');
     setValue('#apellido_paterno', data.APEL_1 || '');
     setValue('#apellido_materno', data.APEL_2 || '');
-    setValue('#dni', data.NRO_DOCU_IDEN);
-    setValue('#caduca', data.PERS_FECHCADUCADNI); // ✅ FORMATEAR
-    setValue('#estado_civil', data.ESCI_CODIGO);
-    setValue('#sexo', data.PERS_SEXO || data.SEXO);
+    setValue('#dni', data.NRO_DOCU_IDEN ? data.NRO_DOCU_IDEN.trim() : '');
+    setValue('#caduca', data.PERS_FECHCADUCADNI ? data.PERS_FECHCADUCADNI.trim() : ''); // ✅ FORMATEAR
+    setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
+    setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI)); // ✅ FORMATEAR
-    setValue('#sabe_nadar', data.PERS_SNADAR);
-    setValue('#dj2026_ciudad_naci', data.dj2026_ciudad_naci);
+    setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
+    setValue('#dj2026_ciudad_naci', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
 
-    setValue('#dj2026_laboral_1', data.dj2026_laboral_1 || '');
-    setValue('#dj2026_laboral_2', data.dj2026_laboral_2 || '');
+    setValue('#dj2026_laboral_1', data.dj2026_laboral_1 ? data.dj2026_laboral_1.trim() : '');
+    setValue('#dj2026_laboral_2', data.dj2026_laboral_2 ? data.dj2026_laboral_2.trim() : '');
 
     // Contacto
-    setValue('#celular', data.PERS_TELEFONO);
-    setValue('#correo', data.PERS_EMAIL);
-    setValue('#whatsapp', data.PERS_WHATSAPP);
+    setValue('#celular', data.PERS_TELEFONO ? data.PERS_TELEFONO.trim() : '');
+    setValue('#correo', data.PERS_EMAIL ? data.PERS_EMAIL.trim() : '');
+    setValue('#whatsapp', data.PERS_WHATSAPP ? data.PERS_WHATSAPP.trim() : '');
 
     // Médica
-    setValue('#tipo_sangre', data.tipo_sangr);
-    setValue('#peso', data.peso_kilo);
-    setValue('#talla', data.tall_metr);
+    setValue('#tipo_sangre', data.tipo_sangr ? data.tipo_sangr.trim() : '');
+    setValue('#peso', data.peso_kilo ? data.peso_kilo.trim() : '');
+    setValue('#talla', data.tall_metr ? data.tall_metr.trim() : '');
 
     // Previsional
-    setValue('#sistema_previsional', data.CODI_SIST_PENS);
-    setValue('#essalud', data.ESSALUD);
-    setValue('#pensionista', data.PERS_PENSIONISTA);
+    setValue('#sistema_previsional', data.CODI_SIST_PENS ? data.CODI_SIST_PENS.trim() : '');
+    setValue('#essalud', data.ESSALUD ? data.ESSALUD.trim() : '');
+    setValue('#pensionista', data.PERS_PENSIONISTA ? data.PERS_PENSIONISTA.trim() : '');
 
     // Educación
-    setValue('#grado_instruccion', data.PERS_GRADO_INSTRUCCION);
-    setValue('#institucion', data.IEDU_CODIGO);
-    setValue('#carrera', data.CARR_CODIGO);
-    setValue('#anio_egreso', data.EGRESO_EDUCATIVO);
+    setValue('#grado_instruccion', data.PERS_GRADO_INSTRUCCION ? data.PERS_GRADO_INSTRUCCION.trim() : '');
+    setValue('#institucion', data.IEDU_CODIGO ? data.IEDU_CODIGO.trim() : '');
+    setValue('#carrera', data.CARR_CODIGO ? data.CARR_CODIGO.trim() : '');
+    setValue('#anio_egreso', data.EGRESO_EDUCATIVO ? data.EGRESO_EDUCATIVO.trim() : '');
 
     // Adicional
-    setValue('#embargos', data.PERS_EMBARGO);
-    setValue('#consumo_sustancias', data.PERS_CONSMO);
-    setValue('#cuenta_banco', data.dj2026_banco);
+    setValue('#embargos', data.PERS_EMBARGO ? data.PERS_EMBARGO.trim() : '');
+    setValue('#consumo_sustancias', data.PERS_CONSMO ? data.PERS_CONSMO.trim() : '');
+    setValue('#cuenta_banco', data.dj2026_banco ? data.dj2026_banco.trim() : '');
 
     // Direcciones
-    setValue('#direccion_actual', data.DIRECCION);
-    setValue('#direccion_dni', data.PERS_DIREC_DNI);
+    setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
+    setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
 
     // ============================================
 // DIRECCIONES Y UBICACIONES
 // ============================================
 console.log('🔄 Llenando DIRECCIONES Y UBICACIONES...');
-setValue('direccion_actual', data.DIRECCION);
-setValue('direccion_dni', data.PERS_DIREC_DNI);
+setValue('direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
+setValue('direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
 
 // ✅ DEBUGGING UBICACIONES
 console.log('═══════════════════════════════════════');
@@ -2295,8 +2456,8 @@ console.log('══════════════════════�
 
 // Cargar ubicaciones
 console.log('🔄 Cargando ubicaciones cascada...');
-cargarUbicaciones('actual', data.PERS_DEPT_ACT, data.PERS_PROV_ACT, data.PERS_DIST_ACT);
-cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS_DIST_DIRDNI);
+cargarUbicaciones('actual', data.PERS_DEPT_ACT ? data.PERS_DEPT_ACT.trim() : '', data.PERS_PROV_ACT ? data.PERS_PROV_ACT.trim() : '', data.PERS_DIST_ACT ? data.PERS_DIST_ACT.trim() : '');
+cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI ? data.PERS_DPTO_DIRDNI.trim() : '', data.PERS_PROV_DIRDNI ? data.PERS_PROV_DIRDNI.trim() : '', data.PERS_DIST_DIRDNI ? data.PERS_DIST_DIRDNI.trim() : '');
 
     // cargarUbicaciones('actual', data.PERS_DEPT_ACT, data.PERS_PROV_ACT, data.PERS_DIST_ACT);
     // cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS_DIST_DIRDNI);
@@ -2308,31 +2469,31 @@ cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI, data.PERS_PROV_DIRDNI, data.PERS
     const experienciaLimpia = experiencia ? String(experiencia).replace(/[^0-9]/g, '') : '';
     setValue('#experiencia_anios', experienciaLimpia);
     
-    setValue('#familiar_empresa', data.dj2026_familiar_empresa);
-    setValue('#familiar_nombre', data.dj2026_familiar_nombre);
-    setValue('#familiar_parentesco', data.dj2026_familiar_parentesco);
+    setValue('#familiar_empresa', data.dj2026_familiar_empresa ? data.dj2026_familiar_empresa.trim() : '');
+    setValue('#familiar_nombre', data.dj2026_familiar_nombre ? data.dj2026_familiar_nombre.trim() : '');
+    setValue('#familiar_parentesco', data.dj2026_familiar_parentesco ? data.dj2026_familiar_parentesco.trim() : '');
 
-    setValue('#curso_sucamec', data.PERS_CONDISCAMEC);
-    setValue('#sucamec_obs', data.PERS_NRODISCAMEC);
-    setValue('#smo', data.PERS_SMO);
+    setValue('#curso_sucamec', data.PERS_CONDISCAMEC ? data.PERS_CONDISCAMEC.trim() : '');
+    setValue('#sucamec_obs', data.PERS_NRODISCAMEC ? data.PERS_NRODISCAMEC.trim() : '');
+    setValue('#smo', data.PERS_SMO ? data.PERS_SMO.trim() : '');
 
-    setValue('#licencia_arma', data.PERS_CONLICARMAS);
-    setValue('#tipo_arma', data.PERS_TIPOARMA);
-    setValue('#arma_propia', data.PERS_CONARMAS);
+    setValue('#licencia_arma', data.PERS_CONLICARMAS ? data.PERS_CONLICARMAS.trim() : '');
+    setValue('#tipo_arma', data.PERS_TIPOARMA ? data.PERS_TIPOARMA.trim() : '');
+    setValue('#arma_propia', data.PERS_CONARMAS ? data.PERS_CONARMAS.trim() : '');
 
-    setValue('#brevete', data.PERS_BREVETE);
-    setValue('#clase_brevete', data.CLASE_BREVETE);
-    setValue('#tipo_vehiculo', data.PERS_TIPO_VEHICULO);
-    setValue('#vehiculo_propio', data.PERS_VEHICULO_PROPIO);
+    setValue('#brevete', data.PERS_BREVETE ? data.PERS_BREVETE.trim() : '');
+    setValue('#clase_brevete', data.CLASE_BREVETE ? data.CLASE_BREVETE.trim() : '');
+    setValue('#tipo_vehiculo', data.PERS_TIPO_VEHICULO ? data.PERS_TIPO_VEHICULO.trim() : '');
+    setValue('#vehiculo_propio', data.PERS_VEHICULO_PROPIO ? data.PERS_VEHICULO_PROPIO.trim() : '');
 
-    setValue('#empresa_anterior', data.PERS_CTRABANT);
-    setValue('#cargo_anterior', data.PERS_CARGOTRABANT);
-    setValue('#duracion_anterior', data.PERS_DURACIONANT);
+    setValue('#empresa_anterior', data.PERS_CTRABANT ? data.PERS_CTRABANT.trim() : '');
+    setValue('#cargo_anterior', data.PERS_CARGOTRABANT ? data.PERS_CARGOTRABANT.trim() : '');
+    setValue('#duracion_anterior', data.PERS_DURACIONANT ? data.PERS_DURACIONANT.trim() : '');
 
     // Emergencia
-    setValue('#contacto_emergencia', data.PERS_NOMCONTACTO);
-    setValue('#celular_emergencia', data.PERS_NROEMERGENCIA);
-    setValue('#parentesco_emergencia', data.PERS_CONYUGE);
+    setValue('#contacto_emergencia', data.PERS_NOMCONTACTO ? data.PERS_NOMCONTACTO.trim() : '');
+    setValue('#celular_emergencia', data.PERS_NROEMERGENCIA ? data.PERS_NROEMERGENCIA.trim() : '');
+    setValue('#parentesco_emergencia', data.PERS_CONYUGE ? data.PERS_CONYUGE.trim() : '');
 
     // Foto
     if (data.FOTO_PATH) {
