@@ -705,15 +705,22 @@ window.restaurarFormCurso = () => {
         btnDownload.href = '#';
     }
 
-    mensaje.textContent = 'Nuevo';
-    title.textContent = 'Actualizar plantilla';
+    if (mensaje) {
+        mensaje.textContent = 'Nuevo';
+        mensaje.classList.add('bg-primary/25', 'text-primary-800');
+        mensaje.classList.remove('bg-warning/25', 'text-warning-800');
+    }
+    
+    if (title) {
+        title.textContent = 'Actualizar plantilla';
+    }
 
-    mensaje.classList.add('bg-primary/25', 'text-primary-800');
-    mensaje.classList.remove('bg-warning/25', 'text-warning-800');
+    if (view) {
+        view.classList.add('hidden');
+    }
 
-    view.classList.add('hidden');
-
-    document.getElementById('codGestionEditar').value = '-1';
+    const codEditar = document.getElementById('codGestionEditar');
+    if (codEditar) codEditar.value = '-1';
 
     // Al llamar a restaurarFormCurso (Crear curso), limpiamos el estado de Alpine
     const formElement = document.querySelector('[x-data="formCursoGestion()"]');
@@ -758,6 +765,7 @@ window.formCursoGestion = function () {
         archivoIA: null,
         archivoIANombre: '',
         cargandoIA: false,
+        preguntasExamenIA: [],  // Almacena las preguntas extraídas hasta que se guarde el curso
 
         async analizarConIA() {
             if (!this.archivoIA) return;
@@ -765,21 +773,16 @@ window.formCursoGestion = function () {
             try {
                 const formData = new FormData();
                 formData.append('archivo', this.archivoIA);
-                
-                // Usamos la constante global que ya existe en el proyecto
+
                 const res = await axios.post(`${VITE_URL_APP}/api/capacitacion/procesar-examen-ia`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
 
                 if (res.data.success) {
-                    // Disparamos evento al modal flotante de IA
-                    window.dispatchEvent(new CustomEvent('abrir-modal-ia', { 
-                        detail: { 
-                            preguntas: res.data.preguntas,
-                            cursoId: this.codigo, // ID del curso actual (o -1 si es nuevo)
-                            examenId: document.getElementById('codGestionEditar')?.value || -1
-                        } 
-                    }));
+                    // Guardamos las preguntas en estado Alpine (no guardamos en BD aún)
+                    this.preguntasExamenIA = res.data.preguntas;
+                    // Abrimos el modal de previsualización automáticamente
+                    this.verVistaPrevia();
                 } else {
                     Swal.fire('Error', res.data.message, 'error');
                 }
@@ -789,6 +792,22 @@ window.formCursoGestion = function () {
             } finally {
                 this.cargandoIA = false;
             }
+        },
+
+        // Abrir el modal de previsualización con las preguntas ya cargadas
+        verVistaPrevia() {
+            if (this.preguntasExamenIA.length === 0) {
+                Swal.fire('Sin preguntas', 'Primero debe analizar un archivo con IA.', 'info');
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('abrir-modal-ia', {
+                detail: {
+                    preguntas: this.preguntasExamenIA,
+                    cursoId: this.codigo,
+                    examenId: document.getElementById('codGestionEditar')?.value || -1,
+                    nombreArc: this.archivoIANombre
+                }
+            }));
         },
 
         // Lógica PAC
@@ -932,6 +951,11 @@ window.formCursoGestion = function () {
             this.busquedaAreaPCI = '';
             this.busquedaEmpresa = '';
 
+            // IA 2026: limpiar preguntas cargadas
+            this.archivoIA = null;
+            this.archivoIANombre = '';
+            this.preguntasExamenIA = [];
+
             this.aplicaEvaluacion = true;
             this.obligatorioAlta = false;
             this.esDemanda = false; // 👈 NUEVO
@@ -988,9 +1012,10 @@ window.formCursoGestion = function () {
                 }
             }
 
-            if (!archivoSeleccionado) {
-                Swal.fire('Atención', 'Debe importar la plantilla', 'warning')
-                return
+            // Validación opcional de plantilla, ahora validamos si existe archivoIA (el word)
+            if (this.aplicaEvaluacion && !this.archivoIA && this.preguntasExamenIA.length === 0) {
+                // Ya no es estrictamente obligatorio pero avisamos
+                console.info('No se subió archivo de examen. Continuando sin archivo adjunto.');
             }
 
             const formData = new FormData();
@@ -1002,7 +1027,7 @@ window.formCursoGestion = function () {
             formData.append('es_periodico', this.frecuencia ? 1 : 0);
             formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
             formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
-            formData.append('es_demanda', this.esDemanda ? 1 : 0); // 👈 NUEVO
+            formData.append('es_demanda', this.esDemanda ? 1 : 0);
             formData.append('target_group', this.targetGroup || 'TODOS');
 
             // Campos del examen solo cuando aplica evaluación
@@ -1025,13 +1050,31 @@ window.formCursoGestion = function () {
             }
 
             formData.append('cod_responsable', this.codResponsable);
-            formData.append('archivo', archivoSeleccionado);
+            
+            if (this.archivoIA) {
+                formData.append('archivo', this.archivoIA);
+            }
 
             axios.post(`${VITE_URL_APP}/api/save-cursos`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
-                .then(async (res) => {
+                    .then(async (res) => {
                     if (res.status === 200 && res.data.success) {
+
+                        // Si hay preguntas de IA cargadas, guardarlas en el banco 2026
+                        if (this.preguntasExamenIA.length > 0 && res.data.codigo) {
+                            try {
+                                await axios.post(`${VITE_URL_APP}/api/capacitacion/guardar-examen-ia`, {
+                                    cod_curso: res.data.codigo,
+                                    cod_examen: -1,
+                                    preguntas: this.preguntasExamenIA,
+                                    tiempo: 60
+                                });
+                            } catch (iaErr) {
+                                console.warn('Banco IA: no se pudo guardar automáticamente', iaErr);
+                            }
+                        }
+
                         Swal.fire('Éxito', res.data.message || 'Curso registrado correctamente', 'success')
 
                         const valoresPorDefecto = {

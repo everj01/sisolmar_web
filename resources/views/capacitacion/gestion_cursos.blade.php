@@ -531,46 +531,6 @@
                         </div>
                     </div>
 
-                    <!-- Archivo de Plantilla (.mbz) -->
-                        <div>
-                            <label class="text-gray-800 text-sm font-medium inline-block mb-1">Archivo de Plantilla (.mbz)</label>
-                            <div class="flex items-center gap-2">
-                                <div id="listaArchivos" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50 flex items-center justify-between min-h-[38px]">
-                                    Seleccione archivo...
-                                </div>
-                                <button type="button" id="btnSeleccionar" class="btn btn-sm bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all rounded-lg px-4">
-                                    <i class="bx bx-file-blank mr-1"></i> Seleccionar
-                                </button>
-                                <input type="file" id="archivoInput" class="hidden" accept=".mbz">
-                            </div>
-                        </div>
-
-                        <!-- NUEVO: IMPORTADOR IA 2026 -->
-                        <div class="border-t border-dashed border-gray-200 pt-4 mt-2">
-                            <label class="text-primary text-[10px] font-black uppercase tracking-widest mb-2 block">
-                                <i class="bx bxs-zap mr-1"></i> Módulo Inteligente (Beta 2026)
-                            </label>
-                            <div class="flex items-center gap-2">
-                                <div class="flex-1 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between min-h-[38px]">
-                                    <span class="text-xs text-blue-600 font-medium italic" x-text="archivoIANombre || 'Subir examen (.dot, .docx) para procesar con IA...'"></span>
-                                    <button x-show="archivoIANombre" @click="archivoIANombre = ''; archivoIA = null" class="text-red-400 hover:text-red-600">
-                                        <i class="bx bx-trash"></i>
-                                    </button>
-                                </div>
-                                <button type="button" @click="$refs.inputIA.click()" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 transition-all rounded-lg px-4 shadow-sm font-bold">
-                                    <i class="bx bx-upload mr-1"></i> Cargar Word
-                                </button>
-                                <input type="file" x-ref="inputIA" class="hidden" accept=".doc,.docx,.dot" 
-                                       @change="archivoIA = $event.target.files[0]; archivoIANombre = $event.target.files[0].name">
-                                
-                                <button type="button" @click="analizarConIA()" :disabled="!archivoIA || cargandoIA"
-                                        class="btn btn-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all rounded-lg px-4 border border-indigo-200 font-bold disabled:opacity-50">
-                                    <i x-show="!cargandoIA" class="bx bxs-magic-wand mr-1"></i>
-                                    <i x-show="cargandoIA" class="bx bx-loader-alt bx-spin mr-1"></i>
-                                    Analizar con IA
-                                </button>
-                            </div>
-                        </div>
 
                     <!-- Área de Conocimiento -->
                     <div>
@@ -858,57 +818,39 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col py-5">
-                    <div class="mt-2">
-
-                        <div class="flex items-center justify-between mb-4">
-                            <label for="txtNota" class="text-gray-800 text-sm font-medium inline-block" id="txtTitleFile">
-                                Subir Plantilla
-                            </label>
-                            <a class="btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white cursor-pointer hidden text-xs px-3 py-1"
-                            id="btnDownloadPlantilla">
-                                <i class='bx bxs-cloud-download'></i>&nbsp;Descargar plantilla
-                            </a>
-                        </div>
-
-
-                        <div class="mt-2">
-                            <!-- Botón para seleccionar archivo -->
-                            <div id="btnSeleccionar"
-                                class="cursor-pointer py-8 px-4 flex justify-center bg-white border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-lg transition-colors">
-
-                                <div class="text-center">
-                                    <span class="mx-auto flex justify-center items-center w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full cursor-pointer mb-3">
-                                        <i class="i-tabler-upload size-5 shrink-0"></i>
-                                    </span>
-                                    <div class="flex flex-wrap justify-center text-sm leading-6 text-gray-500">
-                                        Arrastra tu archivo .mbz aquí o&nbsp;
-                                        <span class="font-semibold text-indigo-600 hover:text-indigo-500 cursor-pointer">
-                                            SELECCIONAR
-                                        </span>
-                                    </div>
-                                    <p class="mt-1 text-xs text-gray-400">Peso menor a 1MB.</p>
-                                </div>
-                            </div>
-
-                            <!-- Input oculto -->
-                            <input type="file" id="archivoInput" accept=".mbz" class="hidden">
-
-                            <!-- Lista de archivos -->
-                            <div class="mt-1">
-                                <ul id="listaArchivos" class="mt-4 space-y-2"></ul>
-                            </div>
-
-                            <!-- Botón analizar -->
-                            <div class="mt-4 flex">
-                                <button id="btnAnalizar" type="button"
-                                    class="px-5 py-2 btn rounded-full bg-info/25 text-info hover:bg-info hover:text-white disabled:opacity-50 transition-colors cursor-pointer font-medium"
-                                    disabled>
-                                    Analizar Plantilla
+                <div class="flex flex-col py-5" x-show="aplicaEvaluacion" x-transition.opacity>
+                    <!-- NUEVO: IMPORTADOR IA 2026 -->
+                    <div class="border border-dashed border-blue-300 bg-blue-50/40 rounded-xl p-5 shadow-sm">
+                        <label class="text-primary text-[11px] font-black uppercase tracking-widest mb-3 flex items-center">
+                            <i class="bx bxs-zap mr-1.5 text-base"></i> Módulo Inteligente (Beta 2026)
+                        </label>
+                        <div class="flex flex-col sm:flex-row items-center gap-3">
+                            <div class="flex-1 w-full bg-white border border-blue-200 rounded-lg px-4 py-2.5 flex items-center justify-between shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                                <span class="text-xs text-blue-700 font-medium" :class="!archivoIANombre ? 'italic text-blue-400' : ''" x-text="archivoIANombre || 'Subir examen (.dot, .docx) para procesar con IA...'"></span>
+                                <button x-show="archivoIANombre" type="button" @click="archivoIANombre = ''; archivoIA = null; preguntasExamenIA = []" class="text-red-400 hover:text-red-600 transition-colors ml-2">
+                                    <i class="bx bx-trash text-lg"></i>
                                 </button>
                             </div>
-
-                            <div id="resumenPlantilla" class="mt-4"></div>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button type="button" @click="$refs.inputIA.click()" class="flex-1 sm:flex-none btn btn-sm bg-blue-600 text-white hover:bg-blue-700 transition-all rounded-lg px-5 shadow-sm font-bold h-[42px] flex items-center justify-center">
+                                    <i class="bx bx-upload mr-2 text-lg"></i> Cargar Word
+                                </button>
+                                <input type="file" x-ref="inputIA" class="hidden" accept=".doc,.docx,.dot" 
+                                       @change="archivoIA = $event.target.files[0]; archivoIANombre = $event.target.files[0].name"
+                                       title="archivoIA">
+                                
+                                <button type="button" @click="analizarConIA()" :disabled="!archivoIA || cargandoIA"
+                                        class="flex-1 sm:flex-none btn btn-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all rounded-lg px-5 border border-indigo-200 font-bold disabled:opacity-50 h-[42px] flex items-center justify-center">
+                                    <i x-show="!cargandoIA" class="bx bxs-magic-wand mr-2 text-lg"></i>
+                                    <i x-show="cargandoIA" class="bx bx-loader-alt bx-spin mr-2 text-lg"></i>
+                                    Analizar con IA
+                                </button>
+                                
+                                <button type="button" @click="verVistaPrevia()" x-show="preguntasExamenIA.length > 0" x-transition
+                                        class="flex-1 sm:flex-none btn btn-sm bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all rounded-lg px-5 border border-emerald-200 font-bold h-[42px] flex items-center justify-center shadow-sm">
+                                    <i class="bx bxs-show mr-2 text-lg"></i> Previsualizar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1162,22 +1104,17 @@
 
             {{-- Footer --}}
             <div style="padding:1rem 1.75rem;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-                <div style="display:flex;align-items:center;gap:0.75rem">
-                    <span style="font-size:0.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em">Tiempo límite</span>
-                    <div style="display:flex;align-items:center;background:#f1f5f9;border-radius:0.625rem;padding:0.375rem 0.75rem;border:1px solid #e2e8f0">
-                        <i class="bx bxs-timer" style="color:#94a3b8;margin-right:0.4rem"></i>
-                        <input type="number" x-model="tiempoExamenIA" style="width:3rem;background:transparent;border:none;outline:none;font-size:0.9rem;font-weight:900;color:#334155;padding:0">
-                        <span style="font-size:0.65rem;font-weight:900;color:#94a3b8;margin-left:0.25rem">MIN</span>
-                    </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:0.625rem;padding:0.5rem 0.875rem">
+                    <i class="bx bx-info-circle" style="color:#3b82f6;font-size:1rem"></i>
+                    <span style="font-size:0.7rem;color:#1d4ed8;font-weight:600">Las preguntas se guardarán automáticamente al crear el curso</span>
                 </div>
                 <div style="display:flex;gap:0.75rem">
                     <button @click="mostrarModalIA=false" style="padding:0.6rem 1.25rem;border-radius:0.75rem;font-size:0.75rem;font-weight:700;color:#64748b;background:transparent;border:1px solid #e2e8f0;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
                         Cancelar
                     </button>
-                    <button @click="confirmarGuardadoIA()" :disabled="cargandoIA" style="padding:0.6rem 1.75rem;border-radius:0.75rem;font-size:0.75rem;font-weight:900;color:#fff;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 15px -3px rgba(37,99,235,0.5);transition:all 0.2s;text-transform:uppercase;letter-spacing:0.05em">
-                        <i x-show="!cargandoIA" class="bx bxs-file-plus"></i>
-                        <i x-show="cargandoIA" class="bx bx-loader-alt bx-spin"></i>
-                        Guardar en Banco 2026
+                    <button @click="mostrarModalIA=false" style="padding:0.6rem 1.75rem;border-radius:0.75rem;font-size:0.75rem;font-weight:900;color:#fff;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 15px -3px rgba(37,99,235,0.5);transition:all 0.2s;text-transform:uppercase;letter-spacing:0.05em">
+                        <i class="bx bxs-check-circle"></i>
+                        Confirmar Vista Previa
                     </button>
                 </div>
             </div>

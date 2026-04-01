@@ -40,8 +40,8 @@ class DispatchMatriculaBatchJob implements ShouldQueue
         // Evitar timeout para procesos de gran volumen
         set_time_limit(0);
 
-        // Asegurar usuario_id no nulo para evitar errores 23000 de SQL
-        $this->usuarioId = $this->usuarioId ?? 999;
+        // Asegurar usuario_id válido (no nulo, no vacío, no 0) para evitar errores o inconsistencias
+        $this->usuarioId = empty($this->usuarioId) ? 999 : $this->usuarioId;
 
         Log::info("Iniciando Job de Matrícula Masiva para Curso ID: {$this->cursoId} (Total: " . count($this->personales) . " personas)");
 
@@ -76,9 +76,8 @@ class DispatchMatriculaBatchJob implements ShouldQueue
         $enviados = count($this->personales) - $totalNuevos;
         $fallidos = 0;
 
-        // 3. Procesar por LOTES (Chunks de 500)
-        $chunks = array_chunk($nuevosPersonales, 500);
-        
+        // 3. Procesar por LOTES (Chunks de 200)
+        $chunks = array_chunk($nuevosPersonales, 200);
         foreach ($chunks as $chunk) {
             try {
                 $batchData = [];
@@ -89,6 +88,7 @@ class DispatchMatriculaBatchJob implements ShouldQueue
                         'cod_personal'     => trim($codPers),
                         'fecha_matricula'  => DB::raw('GETDATE()'),
                         'estado'           => 'MATRICULADO',
+                        'tipo_matricula'   => 'REGULAR',
                         'usuario_id'       => $this->usuarioId,
                         'origen_matricula' => 'WEB_BATCH',
                         'created_at'       => DB::raw('GETDATE()'),

@@ -12,6 +12,7 @@ use App\Models\Matricula;
 use App\Jobs\DispatchMatriculaBatchJob;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -503,7 +504,7 @@ class CapacitacionController extends Controller
         $nombreCurso = $curso ? $curso->nombre : "Curso #{$cursoId}";
 
         // Enviar a segundo plano (Pauta 11)
-        \App\Jobs\DispatchMatriculaBatchJob::dispatch($cursoId, $progId, $personales, $usuarioId);
+        DispatchMatriculaBatchJob::dispatch($cursoId, $progId, $personales, $usuarioId);
 
         // Notificar (Fase 7)
         NotificacionMatricula::crearNotificacionExitosa($usuarioId, $cursoId, $nombreCurso, count($personales));
@@ -874,11 +875,7 @@ class CapacitacionController extends Controller
                     $phpWord = IOFactory::load($file->getRealPath());
                     $sections = $phpWord->getSections();
                     foreach ($sections as $section) {
-                        foreach ($section->getElements() as $element) {
-                            if (method_exists($element, 'getText')) {
-                                $content .= $element->getText() . "\n";
-                            }
-                        }
+                        $content .= $this->extraerTextoDeElementos($section->getElements());
                     }
                     // Asegurar codificación UTF-8
                     $content = mb_convert_encoding($content, 'UTF-8', mb_detect_encoding($content, 'UTF-8, ISO-8859-1, windows-1252', true));
@@ -891,9 +888,9 @@ class CapacitacionController extends Controller
                 return response()->json(['success' => false, 'message' => 'Formato no soportado. Use .doc, .dot, .dto o .docx'], 400);
             }
 
-            // Limitar el contenido a los primeros 15,000 caracteres para evitar timeout y exceso de tokens
-            if (strlen($content) > 15000) {
-                $content = substr($content, 0, 15000);
+            // Limitar el contenido a los primeros 40,000 caracteres para evitar exceso de tokens en el modelo mini
+            if (strlen($content) > 40000) {
+                $content = substr($content, 0, 40000);
             }
 
             $iaService = new OpenAIService();
@@ -958,6 +955,31 @@ class CapacitacionController extends Controller
         }
     }
 
+    /**
+     * Extrae texto de forma recursiva de los elementos de PHPWord (párrafos, tablas, celdas).
+     */
+    private function extraerTextoDeElementos($elements)
+    {
+        $text = "";
+        foreach ($elements as $element) {
+            if (method_exists($element, 'getText')) {
+                // Maneja TextRun y Text
+                $text .= $element->getText() . "\n";
+            } elseif ($element instanceof \PhpOffice\PhpWord\Element\Table) {
+                // Maneja contenido dentro de tablas
+                foreach ($element->getRows() as $row) {
+                    foreach ($row->getCells() as $cell) {
+                        $text .= $this->extraerTextoDeElementos($cell->getElements());
+                    }
+                }
+            } elseif (method_exists($element, 'getElements')) {
+                // Recurrencia para elementos contenedores (como ListItem)
+                $text .= $this->extraerTextoDeElementos($element->getElements());
+            }
+        }
+        return $text;
+    }
+
     public function guardarExamenIA(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -973,24 +995,38 @@ class CapacitacionController extends Controller
 
         DB::beginTransaction();
         try {
+            $codExamen = $request->cod_examen;
+            
+            // Si el cod_examen es -1 (caso de curso nuevo), buscamos el ID real en la tabla
+            if ($codExamen == -1 || $codExamen <= 0) {
+                $examenExistente = DB::connection('sqlsrv')->table('sw_cursos_examen')
+                    ->where('cod_cursos', $request->cod_curso)
+                    ->first();
+                
+                if (!$examenExistente) {
+                    throw new \Exception("No existe registro de examen para el curso con código: " . $request->cod_curso);
+                }
+                $codExamen = $examenExistente->codigo;
+            }
+
             // 1. Configuración 2026
             $config = ExamenConfiguracion2026::updateOrCreate(
-                ['cod_examen' => $request->cod_examen, 'cod_curso' => $request->cod_curso],
+                ['cod_examen' => $codExamen, 'cod_curso' => $request->cod_curso],
                 ['cant_preguntas_examen' => count($request->preguntas), 'habilitado' => 1]
             );
 
             // 2. Actualizar tiempo en cabecera original (opcional, para compatibilidad)
             DB::connection('sqlsrv')->table('sw_cursos_examen')
-                ->where('codigo', $request->cod_examen)
+                ->where('codigo', $codExamen)
                 ->update(['tiempo' => $request->tiempo]);
 
             // 3. Limpiar preguntas antiguas de este examen (si las hubiera en la tabla 2026)
-            ExamenPregunta2026::where('cod_examen', $request->cod_examen)->delete();
+            ExamenPregunta2026::where('cod_examen', $codExamen)->delete();
 
             // 4. Insertar Banco 2026
             foreach ($request->preguntas as $p) {
                 ExamenPregunta2026::create([
-                    'cod_examen' => $request->cod_examen,
+                    'cod_examen' => $codExamen,
                     'tipo_pregunta' => $p['tipo'] ?? 'A',
                     'texto_pregunta' => $p['pregunta'],
                     'opciones_json' => $p['opciones'],
