@@ -494,7 +494,7 @@
                             <div class="bk-field" data-bk="nombre2"><label>Segundo Nombre</label><span class="bk-val" data-field="NOMB_2"></span></div>
                             <div class="bk-field" data-bk="dni"><label>DNI</label><span class="bk-val" data-field="NRO_DOCU_IDEN"></span></div>
                             <div class="bk-field" data-bk="caduca"><label>Caduca DNI</label><span class="bk-val" data-field="PERS_FECHCADUCADNI"></span></div>
-                            <div class="bk-field" data-bk="estado_civil"><label>Estado Civil</label><span class="bk-val" data-field="ESCI_CODIGO"></span></div>
+                            <div class="bk-field" data-bk="estado_civil"><label>Estado Civil</label><span class="bk-val" data-field="ESCI_DESCRIPCION"></span></div>
                             <div class="bk-field" data-bk="sexo"><label>Sexo</label><span class="bk-val" data-field="PERS_SEXO"></span></div>
                             <div class="bk-field" data-bk="fecha_nacimiento"><label>Fecha Nacimiento</label><span class="bk-val" data-field="FECH_NACI"></span></div>
                             <div class="bk-field" data-bk="sabe_nadar"><label>Sabe Nadar</label><span class="bk-val" data-field="PERS_SNADAR"></span></div>
@@ -510,10 +510,10 @@
                             <div class="bk-field" data-bk="tipo_sangre"><label>Tipo Sangre</label><span class="bk-val" data-field="tipo_sangr"></span></div>
                             <div class="bk-field" data-bk="peso"><label>Peso (kg)</label><span class="bk-val" data-field="peso_kilo"></span></div>
                             <div class="bk-field" data-bk="talla"><label>Talla (m)</label><span class="bk-val" data-field="tall_metr"></span></div>
-                            <div class="bk-field" data-bk="sistema_previsional"><label>Sist. Previsional</label><span class="bk-val" data-field="CODI_SIST_PENS"></span></div>
+                            <div class="bk-field" data-bk="sistema_previsional"><label>Sist. Previsional</label><span class="bk-val" data-field="DESC_SIST_PENS"></span></div>
                             <div class="bk-field" data-bk="essalud"><label>EsSalud Vida</label><span class="bk-val" data-field="ESSALUD"></span></div>
                             <div class="bk-field" data-bk="pensionista"><label>Pensionista</label><span class="bk-val" data-field="PERS_PENSIONISTA"></span></div>
-                            <div class="bk-field" data-bk="grado_instruccion"><label>Grado Instrucción</label><span class="bk-val" data-field="PERS_GRADO_INSTRUCCION"></span></div>
+                            <div class="bk-field" data-bk="grado_instruccion"><label>Grado Instrucción</label><span class="bk-val" data-field="NIED_ABREVIADO"></span></div>
                             <div class="bk-field" data-bk="anio_egreso"><label>Año Egreso</label><span class="bk-val" data-field="EGRESO_EDUCATIVO"></span></div>
                             <div class="bk-field" data-bk="embargos"><label>Embargos</label><span class="bk-val" data-field="PERS_EMBARGO"></span></div>
                             <div class="bk-field" data-bk="consumo_sustancias"><label>Consumo Sust.</label><span class="bk-val" data-field="PERS_CONSMO"></span></div>
@@ -659,11 +659,16 @@
                                             <label class="dj-label">Estado Civil</label>
                                             <select id="estado_civil" name="estado_civil" class="dj-select" data-compare="estado_civil">
                                                 <option value="">—</option>
-                                                <option value="2007000001">Soltero(a)</option>
-                                                <option value="2007000002">Casado(a)</option>
-                                                <option value="2007000003">Divorciado(a)</option>
-                                                <option value="2007000004">Viudo(a)</option>
-                                                <option value="2007000008">Conviviente</option>
+                                                <option value="2007000001">SOLTERO</option>
+                                                <option value="2007000002">CASADO</option>
+                                                <option value="2007000003">DIVORCIADO</option>
+                                                <option value="2007000004">VIUDO</option>
+                                                <option value="2007000008">CONVIVIENTE</option>
+                                                 {{-- <option value="S">SOLTERO</option>
+                                                <option value="C">CASADO</option>
+                                                <option value="D">DIVORCIADO</option>
+                                                <option value="V">VIUDO</option>
+                                                <option value="2007000008">CONVIVIENTE</option> --}}
                                             </select>
                                         </div>
                                         <div>
@@ -676,7 +681,7 @@
                                         </div>
                                         <div><label class="dj-label">Fecha de Nacimiento</label><input type="date" id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input" data-compare="fecha_nacimiento"></div>
                                         <div><label class="dj-label">Ciudad de Nacimiento</label><input type="text" id="ciudad_nacimiento" name="ciudad_nacimiento" class="dj-input" placeholder="Lima, Arequipa…" style="text-transform:uppercase;"></div>
-                                        <div>
+                                        <div style="visibility:hidden;">
                                             <label class="dj-label">¿Sabe nadar?</label>
                                             <select id="sabe_nadar" name="sabe_nadar" class="dj-select" data-compare="sabe_nadar">
                                                 <option value="">—</option>

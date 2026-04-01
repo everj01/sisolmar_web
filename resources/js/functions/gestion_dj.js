@@ -3217,7 +3217,7 @@ const CAMPO_MAP = {
     'nombre2':                'NOMB_2',
     'dni':                    'NRO_DOCU_IDEN',
     'caduca':                 'PERS_FECHCADUCADNI',
-    'estado_civil':           'ESCI_CODIGO',
+    'estado_civil':           'ESCI_DESCRIPCION',
     'sexo':                   'PERS_SEXO',
     'fecha_nacimiento':       'FECH_NACI',
     'sabe_nadar':             'PERS_SNADAR',
@@ -3226,10 +3226,10 @@ const CAMPO_MAP = {
     'tipo_sangre':            'tipo_sangr',
     'peso':                   'peso_kilo',
     'talla':                  'tall_metr',
-    'sistema_previsional':    'CODI_SIST_PENS',
+    'sistema_previsional':    'DESC_SIST_PENS',
     'essalud':                'ESSALUD',
     'pensionista':            'PERS_PENSIONISTA',
-    'grado_instruccion':      'PERS_GRADO_INSTRUCCION',
+    'grado_instruccion':      'NIED_ABREVIADO',
     'anio_egreso':            'EGRESO_EDUCATIVO',
     'embargos':               'PERS_EMBARGO',
     'consumo_sustancias':     'PERS_CONSMO',
@@ -3395,13 +3395,35 @@ function marcarDiferencias() {
         const normBk   = valBk.toUpperCase();
  
         // Solo marcar si ambos tienen valor y difieren
-        if (normForm && normBk && normForm !== normBk) {
-            totalDiffs++;
-            inputEl.classList.add('has-diff');
- 
-            const bkEl = document.querySelector(`.bk-field[data-bk="${formId}"]`);
-            if (bkEl) bkEl.classList.add('is-diff');
+        if(formId == 'estado_civil'){
+            const estados = {
+                '2007000001': 'SOLTERO',
+                '2007000002': 'CASADO',
+                '2007000003': 'DIVORCIADO',
+                '2007000004': 'VIUDO',
+                '2007000008': 'CONVIVIENTE'
+            };
+            nomrForm = estados[nomrForm] || nomrForm;
+            
+            if (normForm && normBk && normForm !== normBk) {
+                totalDiffs++;
+                console.log('valor 1, :', normForm, 'valor 2, :',  normBk, 'formId:', formId, 'bkField:', bkField);
+                inputEl.classList.add('has-diff');
+    
+                const bkEl = document.querySelector(`.bk-field[data-bk="${formId}"]`);
+                if (bkEl) bkEl.classList.add('is-diff');
+            }
+        }else{
+            if (normForm && normBk && normForm !== normBk) {
+                totalDiffs++;
+                console.log('valor 1, :', normForm, 'valor 2, :',  normBk, 'formId:', formId, 'bkField:', bkField);
+                inputEl.classList.add('has-diff');
+    
+                const bkEl = document.querySelector(`.bk-field[data-bk="${formId}"]`);
+                if (bkEl) bkEl.classList.add('is-diff');
+            }
         }
+        
     });
  
     return totalDiffs;

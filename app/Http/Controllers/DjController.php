@@ -458,7 +458,10 @@ public function getBackupData(Request $request)
         }
 
         $backup = DB::select(
-            "SELECT * FROM si_solm.dbo.DJ2026_BACKUP_PERSONAL WHERE CODI_PERS = ?",
+            "SELECT per.*, CO.ESCI_DESCRIPCION, SS.DESC_SIST_PENS, edu.NIED_ABREVIADO FROM si_solm.dbo.DJ2026_BACKUP_PERSONAL as per
+            INNER JOIN si_solm.dbo.ADMI_ESTADO_CIVIL AS CO ON CO.ESCI_CODIGO = per.ESCI_CODIGO
+            INNER JOIN si_solm.dbo.SISTEMA_PENSIONES AS SS ON SS.CODI_SIST_PENS = per.CODI_SIST_PENS
+            INNER JOIN si_solm.dbo.SUNAT_NIVEL_EDUCATIVO AS EDU ON EDU.NIED_CODIGO = per.PERS_GRADO_INSTRUCCION WHERE per.CODI_PERS = ?",
             [$codiPers]
         );
 
