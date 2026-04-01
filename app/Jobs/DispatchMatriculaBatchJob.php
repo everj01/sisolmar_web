@@ -36,7 +36,14 @@ class DispatchMatriculaBatchJob implements ShouldQueue
      */
     public function handle()
     {
-        Log::info("Iniciando Job de Matrícula Masiva para Curso ID: {$this->cursoId}");
+        // Rule 11: Optimización masiva (Batching)
+        // Evitar timeout para procesos de gran volumen
+        set_time_limit(0);
+
+        // Asegurar usuario_id no nulo para evitar errores 23000 de SQL
+        $this->usuarioId = $this->usuarioId ?? 999;
+
+        Log::info("Iniciando Job de Matrícula Masiva para Curso ID: {$this->cursoId} (Total: " . count($this->personales) . " personas)");
 
         $curso = DB::connection('sqlsrv')->table('sw_cursos')->where('codigo', $this->cursoId)->first();
         if (!$curso) {
@@ -44,39 +51,58 @@ class DispatchMatriculaBatchJob implements ShouldQueue
             return;
         }
 
-        $enviados = 0;
+        // 1. Pre-cargar matrículas existentes para filtrar en memoria (Rápido)
+        $existentes = DB::connection('sqlsrv')->table('sw_matriculas')
+            ->where('cod_curso', $this->cursoId)
+            ->where('cod_programacion', $this->progId)
+            ->pluck('cod_personal')
+            ->map(fn($p) => trim($p))
+            ->toArray();
+        
+        $existentesMap = array_flip($existentes);
+
+        // 2. Filtrar lista para solo procesar los nuevos
+        $nuevosPersonales = array_filter($this->personales, function($codPers) use ($existentesMap) {
+            return !isset($existentesMap[trim($codPers)]);
+        });
+
+        if (empty($nuevosPersonales)) {
+            Log::info("No hay nuevos personales para matricular (todos ya existen).");
+            NotificacionMatricula::crearNotificacionExitosa($this->usuarioId, $this->cursoId, $curso->nombre, count($this->personales));
+            return;
+        }
+
+        $totalNuevos = count($nuevosPersonales);
+        $enviados = count($this->personales) - $totalNuevos;
         $fallidos = 0;
 
-        foreach ($this->personales as $codPers) {
+        // 3. Procesar por LOTES (Chunks de 500)
+        $chunks = array_chunk($nuevosPersonales, 500);
+        
+        foreach ($chunks as $chunk) {
             try {
-                // Verificar si ya existe matrícula activa en este curso/programación
-                $existe = DB::connection('sqlsrv')->table('sw_matriculas')
-                    ->where('cod_curso', $this->cursoId)
-                    ->where('cod_programacion', $this->progId)
-                    ->where('cod_personal', trim($codPers))
-                    ->exists();
-
-                if ($existe) {
-                    $enviados++; // Contamos como procesado
-                    continue;
+                $batchData = [];
+                foreach ($chunk as $codPers) {
+                    $batchData[] = [
+                        'cod_programacion' => $this->progId,
+                        'cod_curso'        => $this->cursoId,
+                        'cod_personal'     => trim($codPers),
+                        'fecha_matricula'  => DB::raw('GETDATE()'),
+                        'estado'           => 'MATRICULADO',
+                        'usuario_id'       => $this->usuarioId,
+                        'origen_matricula' => 'WEB_BATCH',
+                        'created_at'       => DB::raw('GETDATE()'),
+                        'updated_at'       => DB::raw('GETDATE()')
+                    ];
                 }
 
-                // Insertar matrícula (Pauta DB: Query Builder + GETDATE)
-                DB::connection('sqlsrv')->table('sw_matriculas')->insert([
-                    'cod_programacion' => $this->progId,
-                    'cod_curso'        => $this->cursoId,
-                    'cod_personal'     => trim($codPers),
-                    'fecha_matricula'  => DB::raw('GETDATE()'),
-                    'estado'           => 'MATRICULADO',
-                    'usuario_id'       => $this->usuarioId,
-                    'origen_matricula' => 'WEB_BATCH',
-                    'fecha_creacion'   => DB::raw('GETDATE()')
-                ]);
+                // Inserción Masiva por lote (Muy Rápido)
+                DB::connection('sqlsrv')->table('sw_matriculas')->insert($batchData);
+                $enviados += count($chunk);
 
-                $enviados++;
             } catch (\Exception $e) {
-                $fallidos++;
-                Log::error("Error en Matrícula Batch (CP:{$codPers}, C:{$this->cursoId}): " . $e->getMessage());
+                $fallidos += count($chunk);
+                Log::error("Error en Lote de Matrícula Batch: " . $e->getMessage());
             }
         }
 
@@ -99,6 +125,6 @@ class DispatchMatriculaBatchJob implements ShouldQueue
             );
         }
 
-        Log::info("Job de Matrícula Masiva finalizado: {$enviados} exitosos, {$fallidos} fallidos.");
+        Log::info("Job finalizado: {$enviados} matriculados/actualizados, {$fallidos} fallidos en lotes.");
     }
 }

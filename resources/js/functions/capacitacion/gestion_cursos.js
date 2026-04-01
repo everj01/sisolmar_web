@@ -79,6 +79,20 @@ if (btnAnalizar) {
                 return;
             }
 
+            // --- AUTO-RELLENADO INTELIGENTE (PAUTA 7/11) ---
+            const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+            if (formElement && window.Alpine) {
+                const alpineData = Alpine.$data(formElement);
+                // Sincronizar el total de preguntas detectadas
+                alpineData.preguntasBalotario = data.totalQuestions || 0;
+                
+                // Si el usuario no ha puesto una cantidad de preguntas, sugerir que se tomen todas
+                if (!alpineData.cantidadPreguntas || alpineData.cantidadPreguntas == 0) {
+                    alpineData.cantidadPreguntas = data.totalQuestions || 0;
+                }
+            }
+            // -----------------------------------------------
+
             let actividadesHtml = "";
 
             resumenPlantilla.innerHTML = `
@@ -103,10 +117,6 @@ if (btnAnalizar) {
                   <div>
                       <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalActivities}</p>
                       <p class="text-sm text-slate-500">Actividades</p>
-                  </div>
-                  <div class="col-span-2 mt-4">
-                      <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalQuestions}</p>
-                      <p class="text-sm text-slate-500">Preguntas</p>
                   </div>
               </div>
 
@@ -488,6 +498,8 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
                 alpineData.nota = curso.examen?.nota_minima ?? 0;
                 alpineData.intentos = curso.examen?.intentos ?? 0;
+                alpineData.cantidadPreguntas = curso.examen?.cantidad_preguntas ?? 0;
+                alpineData.preguntasBalotario = curso.examen?.preguntas_balotario ?? 0;
             }
 
             // Se eliminaron asignaciones manuales por ID para usar x-model de Alpine
@@ -600,6 +612,8 @@ window.editarFormGestionCurso = (e) => {
         tiempo: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtLimite').value) || 0) : 0,
         nota: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtNota').value) || 0) : 0,
         intentos: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtIntentos').value) || 0) : 0,
+        cantidad_preguntas: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtCantidadPreguntas').value) || 0) : 0,
+        preguntas_balotario: alpineData.aplicaEvaluacion ? (parseInt(document.getElementById('txtPreguntasBalotario').value) || 0) : 0,
     }
 
     const formData = new FormData();
@@ -610,6 +624,8 @@ window.editarFormGestionCurso = (e) => {
     formData.append('tiempo', data.tiempo);
     formData.append('nota', data.nota);
     formData.append('intentos', data.intentos);
+    formData.append('cantidad_preguntas', data.cantidad_preguntas);
+    formData.append('preguntas_balotario', data.preguntas_balotario);
     formData.append('frecuencia', alpineData.frecuencia);
     formData.append('es_periodico', alpineData.frecuencia ? 1 : 0);
     // NUEVO: Enviar estados de los checks
@@ -738,6 +754,43 @@ window.formCursoGestion = function () {
         obligatorioAlta: false,
         esDemanda: false,         // 👈 NUEVO
 
+        // IA 2026
+        archivoIA: null,
+        archivoIANombre: '',
+        cargandoIA: false,
+
+        async analizarConIA() {
+            if (!this.archivoIA) return;
+            this.cargandoIA = true;
+            try {
+                const formData = new FormData();
+                formData.append('archivo', this.archivoIA);
+                
+                // Usamos la constante global que ya existe en el proyecto
+                const res = await axios.post(`${VITE_URL_APP}/api/capacitacion/procesar-examen-ia`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                if (res.data.success) {
+                    // Disparamos evento al modal flotante de IA
+                    window.dispatchEvent(new CustomEvent('abrir-modal-ia', { 
+                        detail: { 
+                            preguntas: res.data.preguntas,
+                            cursoId: this.codigo, // ID del curso actual (o -1 si es nuevo)
+                            examenId: document.getElementById('codGestionEditar')?.value || -1
+                        } 
+                    }));
+                } else {
+                    Swal.fire('Error', res.data.message, 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'No se pudo procesar el archivo con IA', 'error');
+            } finally {
+                this.cargandoIA = false;
+            }
+        },
+
         // Lógica PAC
         esPAC: false,
         sucursalesAsignadas: [],
@@ -822,13 +875,24 @@ window.formCursoGestion = function () {
                     this.empresasDisponibles = res.data || [];
                 });
 
-            // Sincronizar Frecuencia y Es por Demanda (Pauta 7)
+            // Sincronizar Frecuencia, Obligatorio al Alta y Es por Demanda
             this.$watch('esDemanda', (val) => {
-                if (val) this.frecuencia = ''; // Si es por demanda, no hay frecuencia
+                if (val) {
+                    this.frecuencia = ''; // Si es por demanda, no hay frecuencia
+                    this.obligatorioAlta = false; // No puede ser automático al alta si es manual por demanda
+                }
+            });
+
+            this.$watch('obligatorioAlta', (val) => {
+                if (val) {
+                    this.esDemanda = false; // No puede ser por demanda si es automático al alta
+                }
             });
 
             this.$watch('frecuencia', (val) => {
-                if (val) this.esDemanda = false; // Si hay frecuencia, no puede ser por demanda
+                if (val) {
+                    this.esDemanda = false; // Si hay frecuencia (es periódico), no puede ser por demanda
+                }
             });
         },
 
@@ -946,6 +1010,8 @@ window.formCursoGestion = function () {
                 formData.append('tiempo', this.limiteTiempo);
                 formData.append('nota', this.nota);
                 formData.append('intentos', this.intentos);
+                formData.append('cantidad_preguntas', this.cantidadPreguntas);
+                formData.append('preguntas_balotario', this.preguntasBalotario);
             }
             // Recolección PAC, PCU, PCI compartiendo el mismo campo en Backend
             if (this.esPAC && this.sucursalesAsignadas.length > 0) {

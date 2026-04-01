@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Auth;
+use App\Models\ExamenConfiguracion2026;
+use App\Models\ExamenPregunta2026;
+use App\Services\OpenAIService;
+use PhpOffice\PhpWord\IOFactory;
 
 class CapacitacionController extends Controller
 {
@@ -137,6 +140,12 @@ class CapacitacionController extends Controller
         $curso->sucursales = DB::connection('sqlsrv')->table('sw_curso_sucursales')
             ->where('curso_codigo', $curso->codigo)
             ->pluck('sucursal');
+
+        // Asegurar que los campos numéricos se retornen correctamente
+        if ($curso->examen) {
+            $curso->examen->cantidad_preguntas = $curso->examen->cantidad_preguntas ?? 0;
+            $curso->examen->preguntas_balotario = $curso->examen->preguntas_balotario ?? 0;
+        }
 
         if ($curso->cod_responsable) {
             $resp = DB::connection('sqlsrv')->selectOne("
@@ -370,7 +379,7 @@ class CapacitacionController extends Controller
             $progCode = $respProg->getData()->codigo;
             $prog = CursoProgramacion::where('codigo_programacion', $progCode)->first();
 
-            $query = DB::connection('sqlsrv')->table('si_solm.dbo.PERSONAL')->where('ESTA_ACTI', 1);
+            $query = DB::connection('sqlsrv')->table('si_solm.dbo.PERSONAL')->where('ESTA_ACTI', '1');
             $tipoDesc = strtoupper($curso->tipoCurso->descripcion ?? '');
 
             // Rule 11: Filtros inteligentes desde el Request
@@ -416,25 +425,33 @@ class CapacitacionController extends Controller
                 $query->orWhereIn('NRO_DOCU_IDEN', array_map('trim', $dnis));
             }
 
-            $personales = $query->pluck('CODI_PERS')->toArray();
+            // Rule 11: Garantizar identidad única por DNI agrupando directamente en SQL
+            $personales = $query->select(DB::raw('MIN(CODI_PERS) as CODI_PERS'))
+                ->groupBy('NRO_DOCU_IDEN')
+                ->pluck('CODI_PERS')
+                ->map(fn($p) => trim($p))
+                ->toArray();
+
+            Log::info("Matrícula Masiva: Preparado para matricular a " . count($personales) . " personas únicas.");
             
             // Lógica diferenciada (Pauta 7 y 11)
-            if ($curso->es_demanda) {
-                // Para cursos bajo demanda, solo matriculamos si hay DNIs específicos pegados
-                if ($request->filled('dnis')) {
-                    if (empty($personales)) throw new \Exception("Los DNIs ingresados no coinciden con personal activo.");
-                    DispatchMatriculaBatchJob::dispatch($curso->codigo, $prog->codigo_programacion, $personales, Auth::id());
-                    $msg = 'Ciclo abierto y matrícula de ' . count($personales) . ' personas específicas iniciada.';
+                $usuarioId = Auth::id() ?? 999; // Fallback a sistema si no hay sesión
+                if ($curso->es_demanda) {
+                    // Para cursos bajo demanda, solo matriculamos si hay DNIs específicos pegados
+                    if ($request->filled('dnis')) {
+                        if (empty($personales)) throw new \Exception("Los DNIs ingresados no coinciden con personal activo.");
+                        DispatchMatriculaBatchJob::dispatch($curso->codigo, $prog->codigo_programacion, $personales, $usuarioId);
+                        $msg = 'Ciclo abierto y matrícula de ' . count($personales) . ' personas específicas iniciada.';
+                    } else {
+                        // Si no hay DNI, solo abrimos el ciclo
+                        $msg = 'Ciclo bajo demanda abierto exitosamente. Ya puede matricular personal desde la pestaña de Matrículas.';
+                    }
                 } else {
-                    // Si no hay DNI, solo abrimos el ciclo
-                    $msg = 'Ciclo bajo demanda abierto exitosamente. Ya puede matricular personal desde la pestaña de Matrículas.';
+                    // Para cursos periódicos (PCI, PCU, PCE), mantenemos la matrícula masiva automática
+                    if (empty($personales)) throw new \Exception("No hay personal que cumpla con los criterios del Plan de Capacitación.");
+                    DispatchMatriculaBatchJob::dispatch($curso->codigo, $prog->codigo_programacion, $personales, $usuarioId);
+                    $msg = 'Ciclo abierto correctamente. Matrícula masiva de ' . count($personales) . ' personas iniciada en segundo plano.';
                 }
-            } else {
-                // Para cursos periódicos (PCI, PCU, PCE), mantenemos la matrícula masiva automática
-                if (empty($personales)) throw new \Exception("No hay personal que cumpla con los criterios del Plan de Capacitación.");
-                DispatchMatriculaBatchJob::dispatch($curso->codigo, $prog->codigo_programacion, $personales, Auth::id());
-                $msg = 'Ciclo abierto correctamente. Matrícula masiva de ' . count($personales) . ' personas iniciada en segundo plano.';
-            }
 
             DB::commit();
             return response()->json(['success' => true, 'message' => $msg]);
@@ -624,6 +641,8 @@ class CapacitacionController extends Controller
                 'nota_minima' => $req->nota ?? 0,
                 'intentos' => $req->intentos ?? 1,
                 'tiempo' => $req->tiempo ?? $exists->tiempo ?? 60,
+                'cantidad_preguntas' => $req->input('cantidad_preguntas', 0),
+                'preguntas_balotario' => $req->input('preguntas_balotario', 0),
                 'fecha_modificacion' => DB::raw('GETDATE()')
             ]);
         } else {
@@ -634,6 +653,8 @@ class CapacitacionController extends Controller
                 'nota_minima' => $req->nota ?? 0,
                 'intentos' => $req->intentos ?? 1,
                 'tiempo' => $req->tiempo ?? 60,
+                'cantidad_preguntas' => $req->input('cantidad_preguntas', 0),
+                'preguntas_balotario' => $req->input('preguntas_balotario', 0),
                 'file_tiene' => 0,
                 'file_nombre' => '',
                 'file_ruta' => '',
@@ -672,6 +693,7 @@ class CapacitacionController extends Controller
                     );
                 })
                 ->where('P.PERS_VIGENCIA', 'SI')
+                ->groupBy('P.CODI_PERS', 'P.APEL_1', 'P.APEL_2', 'P.NOMB_1', 'P.NOMB_2', 'P.NRO_DOCU_IDEN', 'S.SUCU_ABREVIATURA', 'C.DESC_CARGO')
                 ->select([
                     'P.CODI_PERS as codigo',
                     DB::raw("LTRIM(RTRIM(P.APEL_1 + ' ' + ISNULL(P.APEL_2, '') + ' ' + P.NOMB_1 + ' ' + ISNULL(P.NOMB_2, ''))) as nombre_completo"),
@@ -826,6 +848,165 @@ class CapacitacionController extends Controller
     public function vistaHistorialCapacitaciones()
     {
         return view('capacitacion.consulta_matriculas');
+    }
+
+    /**
+     * Group 6: Inteligencia Artificial (Exámenes 2026)
+     */
+
+    public function procesarExamenConIA(Request $request)
+    {
+        // Incrementar límite de tiempo para procesamiento de documentos + llamada a IA
+        ini_set('max_execution_time', 300);
+        set_time_limit(300);
+
+        try {
+            if (!$request->hasFile('archivo')) {
+                return response()->json(['success' => false, 'message' => 'No se subió ningún archivo.'], 400);
+            }
+
+            $file = $request->file('archivo');
+            $ext = strtolower($file->getClientOriginalExtension());
+            $content = "";
+
+            if (in_array($ext, ['doc', 'dot', 'docx', 'dto'])) {
+                try {
+                    $phpWord = IOFactory::load($file->getRealPath());
+                    $sections = $phpWord->getSections();
+                    foreach ($sections as $section) {
+                        foreach ($section->getElements() as $element) {
+                            if (method_exists($element, 'getText')) {
+                                $content .= $element->getText() . "\n";
+                            }
+                        }
+                    }
+                    // Asegurar codificación UTF-8
+                    $content = mb_convert_encoding($content, 'UTF-8', mb_detect_encoding($content, 'UTF-8, ISO-8859-1, windows-1252', true));
+                } catch (\Exception $e) {
+                    // Fallback: lectura básica para .dot/.dto binarios
+                    $content = file_get_contents($file->getRealPath());
+                    $content = preg_replace('/[^[:print:]\n\r\t]/', '', $content);
+                }
+            } else {
+                return response()->json(['success' => false, 'message' => 'Formato no soportado. Use .doc, .dot, .dto o .docx'], 400);
+            }
+
+            // Limitar el contenido a los primeros 15,000 caracteres para evitar timeout y exceso de tokens
+            if (strlen($content) > 15000) {
+                $content = substr($content, 0, 15000);
+            }
+
+            $iaService = new OpenAIService();
+            $resultado = $iaService->procesarTextoExamen($content);
+
+            if (!$resultado) {
+                return response()->json(['success' => false, 'message' => 'La IA no pudo procesar el contenido del documento.'], 500);
+            }
+
+            // Normalización post-IA: Aplanar bloques y convertir respuesta_correcta de letra a índice
+            $letraAIndice = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4];
+            $preguntasFinales = [];
+
+            $normalizarPregunta = function($pregunta, $bloque) use ($letraAIndice) {
+                $pregunta['tipo'] = $bloque;
+
+                // Limpiar prefijos de letra de las opciones si la IA los incluyó ("A. ", "a) ", etc.)
+                if (isset($pregunta['opciones']) && is_array($pregunta['opciones'])) {
+                    $pregunta['opciones'] = array_map(function($opt) {
+                        return preg_replace('/^[A-Ea-e][\.\)]\s*/', '', trim($opt));
+                    }, $pregunta['opciones']);
+                }
+
+                // Convertir respuesta_correcta: letra → índice numérico
+                $rc = $pregunta['respuesta_correcta'] ?? null;
+                if (is_string($rc)) {
+                    $rcUpper = strtoupper(trim($rc));
+                    $pregunta['respuesta_correcta'] = $letraAIndice[$rcUpper] ?? null;
+                } elseif (is_int($rc)) {
+                    $pregunta['respuesta_correcta'] = $rc;
+                } else {
+                    $pregunta['respuesta_correcta'] = null;
+                }
+
+                return $pregunta;
+            };
+
+            if (isset($resultado['A']) || isset($resultado['B'])) {
+                foreach (['A', 'B'] as $bloque) {
+                    if (isset($resultado[$bloque]) && is_array($resultado[$bloque])) {
+                        foreach ($resultado[$bloque] as $pregunta) {
+                            $preguntasFinales[] = $normalizarPregunta($pregunta, $bloque);
+                        }
+                    }
+                }
+            } else {
+                foreach ($resultado as $pregunta) {
+                    $bloque = $pregunta['tipo'] ?? 'A';
+                    $preguntasFinales[] = $normalizarPregunta($pregunta, $bloque);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'preguntas' => $preguntasFinales,
+                'archivo_nombre' => $file->getClientOriginalName()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("IA Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error crítico: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function guardarExamenIA(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'cod_curso' => 'required|exists:sw_cursos,codigo',
+            'cod_examen' => 'required',
+            'preguntas' => 'required|array',
+            'tiempo' => 'required|integer|min:1' // RRHH lo pone manualmente según regla
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Configuración 2026
+            $config = ExamenConfiguracion2026::updateOrCreate(
+                ['cod_examen' => $request->cod_examen, 'cod_curso' => $request->cod_curso],
+                ['cant_preguntas_examen' => count($request->preguntas), 'habilitado' => 1]
+            );
+
+            // 2. Actualizar tiempo en cabecera original (opcional, para compatibilidad)
+            DB::connection('sqlsrv')->table('sw_cursos_examen')
+                ->where('codigo', $request->cod_examen)
+                ->update(['tiempo' => $request->tiempo]);
+
+            // 3. Limpiar preguntas antiguas de este examen (si las hubiera en la tabla 2026)
+            ExamenPregunta2026::where('cod_examen', $request->cod_examen)->delete();
+
+            // 4. Insertar Banco 2026
+            foreach ($request->preguntas as $p) {
+                ExamenPregunta2026::create([
+                    'cod_examen' => $request->cod_examen,
+                    'tipo_pregunta' => $p['tipo'] ?? 'A',
+                    'texto_pregunta' => $p['pregunta'],
+                    'opciones_json' => $p['opciones'],
+                    'respuesta_correcta' => $p['respuesta_correcta'],
+                    'estado_revision' => 1, // Ya revisadas en el modal por RRHH
+                    'fecha_creacion' => now()
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Examen guardado exitosamente en el Banco 2026']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Save IA Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()], 500);
+        }
     }
 
 }

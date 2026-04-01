@@ -531,6 +531,47 @@
                         </div>
                     </div>
 
+                    <!-- Archivo de Plantilla (.mbz) -->
+                        <div>
+                            <label class="text-gray-800 text-sm font-medium inline-block mb-1">Archivo de Plantilla (.mbz)</label>
+                            <div class="flex items-center gap-2">
+                                <div id="listaArchivos" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50 flex items-center justify-between min-h-[38px]">
+                                    Seleccione archivo...
+                                </div>
+                                <button type="button" id="btnSeleccionar" class="btn btn-sm bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all rounded-lg px-4">
+                                    <i class="bx bx-file-blank mr-1"></i> Seleccionar
+                                </button>
+                                <input type="file" id="archivoInput" class="hidden" accept=".mbz">
+                            </div>
+                        </div>
+
+                        <!-- NUEVO: IMPORTADOR IA 2026 -->
+                        <div class="border-t border-dashed border-gray-200 pt-4 mt-2">
+                            <label class="text-primary text-[10px] font-black uppercase tracking-widest mb-2 block">
+                                <i class="bx bxs-zap mr-1"></i> Módulo Inteligente (Beta 2026)
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 flex items-center justify-between min-h-[38px]">
+                                    <span class="text-xs text-blue-600 font-medium italic" x-text="archivoIANombre || 'Subir examen (.dot, .docx) para procesar con IA...'"></span>
+                                    <button x-show="archivoIANombre" @click="archivoIANombre = ''; archivoIA = null" class="text-red-400 hover:text-red-600">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                                <button type="button" @click="$refs.inputIA.click()" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 transition-all rounded-lg px-4 shadow-sm font-bold">
+                                    <i class="bx bx-upload mr-1"></i> Cargar Word
+                                </button>
+                                <input type="file" x-ref="inputIA" class="hidden" accept=".doc,.docx,.dot" 
+                                       @change="archivoIA = $event.target.files[0]; archivoIANombre = $event.target.files[0].name">
+                                
+                                <button type="button" @click="analizarConIA()" :disabled="!archivoIA || cargandoIA"
+                                        class="btn btn-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all rounded-lg px-4 border border-indigo-200 font-bold disabled:opacity-50">
+                                    <i x-show="!cargandoIA" class="bx bxs-magic-wand mr-1"></i>
+                                    <i x-show="cargandoIA" class="bx bx-loader-alt bx-spin mr-1"></i>
+                                    Analizar con IA
+                                </button>
+                            </div>
+                        </div>
+
                     <!-- Área de Conocimiento -->
                     <div>
                         <label class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
@@ -696,40 +737,42 @@
                                             placeholder="Buscar por nombre o DNI en Administrativos 5...">
                                     </div>
 
-                                    <!-- Cabecera de "Tabla" -->
-                                    <div class="bg-indigo-50 px-4 py-2 border-b flex gap-x-2 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
-                                        <div class="w-16 shrink-0">Código</div>
-                                        <div class="flex-1 px-2 border-l border-indigo-100">Nombre Completo</div>
+                                    <!-- Cabecera de "Tabla" - Usando Divs con Flex para evitar bug 'after' de Alpine -->
+                                    <div class="bg-indigo-50 px-4 py-2 border-b flex gap-2 text-[10px] font-bold text-gray-500 uppercase flex-shrink-0">
+                                        <div class="w-16 shrink-0 text-center">Código</div>
+                                        <div class="flex-1 px-4 border-l border-indigo-100">Nombre Completo</div>
                                         <div class="w-24 shrink-0 text-center border-l border-indigo-100">DNI</div>
-                                        <div class="w-28 shrink-0 text-right border-l border-indigo-100 pl-2">Sucursal</div>
+                                        <div class="w-28 shrink-0 text-center border-l border-indigo-100 italic">Sucursal</div>
                                     </div>
 
-                                    <div class="overflow-y-auto custom-scrollbar" style="max-height: 280px !important;">
-                                        <template x-for="p in results" :key="p.codigo">
+                                    <div class="overflow-y-auto custom-scrollbar bg-white" style="max-height: 280px !important;">
+                                        <template x-for="(p, index) in results" :key="p.codigo + '-' + index">
                                             <div @click="select(p)" 
-                                                class="px-4 py-1 text-[11px] hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors group flex items-center leading-tight h-8 gap-x-2">
-                                                <div class="w-16 shrink-0 font-mono text-gray-400 group-hover:text-indigo-500" x-text="p.codigo"></div>
-                                                <div class="flex-1 px-2 font-bold text-gray-800 group-hover:text-indigo-700 truncate" x-text="p.nombre_completo"></div>
-                                                <div class="w-24 shrink-0 text-center text-gray-500 border-l border-indigo-50" x-text="p.dni"></div>
-                                                <div class="w-28 shrink-0 text-right text-gray-400 italic truncate pl-2 border-l border-indigo-50" x-text="p.sucursal || 'N/A'"></div>
+                                                class="px-4 py-2 text-[11px] hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors group flex items-center gap-2 min-h-[36px]">
+                                                <div class="w-16 shrink-0 font-mono text-gray-400 group-hover:text-indigo-600 font-bold text-center" x-text="p.codigo"></div>
+                                                <div class="flex-1 px-4 font-bold text-gray-800 group-hover:text-indigo-700 truncate" x-text="p.nombre_completo"></div>
+                                                <div class="w-24 shrink-0 text-center text-gray-600 font-medium" x-text="p.dni"></div>
+                                                <div class="w-28 shrink-0 text-center text-gray-500 italic truncate text-[10px]" x-text="p.sucursal || 'N/A'"></div>
                                             </div>
                                         </template>
                                         
                                         <!-- Estados -->
-                                        <div x-show="loading" class="p-6 text-center text-xs text-gray-500">
-                                            <i class="bx bx-loader-alt bx-spin mr-2 text-indigo-500"></i> Cargando...
+                                        <div x-show="loading" class="p-8 text-center text-xs text-indigo-500 font-medium">
+                                            <i class="bx bx-loader-alt bx-spin mr-2 text-lg align-middle"></i> Buscando responsables...
                                         </div>
                                         
-                                        <div x-show="error" class="p-4 text-center text-xs text-red-500 bg-red-50" x-text="error"></div>
+                                        <div x-show="error" class="p-4 text-center text-[11px] text-red-500 bg-red-50" x-text="error"></div>
                                         
-                                        <div x-show="!loading && !error && results.length === 0" class="p-6 text-center text-xs text-gray-400">
-                                            No se encontraron resultados
+                                        <div x-show="!loading && !error && results.length === 0" class="p-10 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
+                                            <i class="bx bx-search-alt-2 text-3xl opacity-20"></i>
+                                            <span>No se encontraron coincidencias</span>
                                         </div>
                                     </div>
 
-                                    <div class="bg-indigo-600 p-2 text-[10px] text-center text-white font-medium flex justify-between px-4 items-center">
-                                        <span><i class="bx bx-user-circle mr-1"></i> Administrativos Activos</span>
-                                        <span x-text="results.length + ' registros encontrados'"></span>
+                                    <!-- Footer Informativo -->
+                                    <div class="bg-indigo-600 p-2 text-[10px] text-center text-white font-bold flex justify-between px-4 items-center">
+                                        <span class="flex items-center gap-1"><i class="bx bx-check-shield text-sm"></i> ADMINISTRATIVOS ACTIVOS</span>
+                                        <span class="bg-white/20 px-2 py-0.5 rounded text-[9px]" x-text="results.length + ' RESULTADOS'"></span>
                                     </div>
                                 </div>
                             </div>
@@ -1016,14 +1059,6 @@
             </div>
         </div>
 
-
-
-</div>
-
-
-
-
-
 @endsection
 
 @section('script')
@@ -1031,3 +1066,179 @@
 @endsection
 
 @vite(['resources/js/functions/capacitacion/gestion_cursos.js'])
+
+{{-- ============================================================ --}}
+{{-- MODAL IA 2026 - Independiente del layout principal           --}}
+{{-- Debe estar FUERA del @section('content') para que            --}}
+{{-- position:fixed funcione correctamente sobre toda la UI       --}}
+{{-- ============================================================ --}}
+<div id="modal-ia-2026"
+     x-data="modalIA2026()"
+     @abrir-modal-ia.window="abrirModalIA($event.detail.preguntas, $event.detail.cursoId, $event.detail.examenId, $event.detail.nombreArc)"
+     style="display:contents">
+
+    <div x-show="mostrarModalIA"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px)">
+
+        <div style="background:#f8fafc;border-radius:1.25rem;width:100%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,0.15);box-shadow:0 25px 60px -15px rgba(0,0,0,0.5)">
+
+            {{-- Header --}}
+            <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:1.25rem 1.75rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+                <div>
+                    <h3 style="color:#fff;font-size:1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:0.5rem">
+                        <i class="bx bxs-bot" style="color:#6366f1;font-size:1.35rem"></i>
+                        Revisión Inteligente de Examen
+                        <span style="background:rgba(255,255,255,0.1);color:#cbd5e1;font-size:0.6rem;padding:0.15rem 0.6rem;border-radius:100px;border:1px solid rgba(255,255,255,0.15);font-weight:900;letter-spacing:0.1em">IA 2026</span>
+                    </h3>
+                    <p style="color:#64748b;font-size:0.7rem;margin:0.15rem 0 0;display:flex;align-items:center;gap:0.25rem">
+                        <i class="bx bx-file-blank"></i> Fuente: <span x-text="archivoIANombre" style="color:#94a3b8"></span>
+                    </p>
+                </div>
+                <button @click="mostrarModalIA=false" style="width:2rem;height:2rem;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                    <i class="bx bx-x" style="font-size:1.25rem"></i>
+                </button>
+            </div>
+
+            {{-- Sub-header info --}}
+            <div style="padding:0.75rem 1.75rem;background:#f1f5f9;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+                <p style="font-size:0.7rem;color:#64748b;margin:0">
+                    <i class="bx bx-info-circle" style="color:#3b82f6"></i>
+                    Valide las respuestas correctas antes de guardar. Use los selects para cambiar el tipo de pregunta.
+                </p>
+                <div style="display:flex;gap:0.5rem">
+                    <span style="font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:0.375rem;color:#475569;display:flex;align-items:center;gap:0.3rem">
+                        <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#3b82f6;display:inline-block"></span> Teoría
+                    </span>
+                    <span style="font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:0.375rem;color:#475569;display:flex;align-items:center;gap:0.3rem">
+                        <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#f97316;display:inline-block"></span> Razonamiento
+                    </span>
+                </div>
+            </div>
+
+            {{-- Grid de preguntas (scroll interno) --}}
+            <div style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem;background:#f8fafc">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.875rem">
+                    <template x-for="(p, index) in preguntasIA" :key="index">
+                        <div style="background:#fff;border-radius:0.75rem;border:1px solid #e2e8f0;border-left:4px solid;display:flex;flex-direction:column;overflow:hidden;transition:box-shadow 0.2s"
+                             :style="p.tipo=='A' ? 'border-left-color:#3b82f6' : 'border-left-color:#f97316'">
+
+                            {{-- Card Header --}}
+                            <div style="padding:0.5rem 0.75rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:0.25rem">
+                                    P. <span x-text="index+1" style="background:#e2e8f0;color:#475569;width:1.1rem;height:1.1rem;border-radius:0.25rem;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem"></span>
+                                </span>
+                                <select x-model="p.tipo" style="font-size:0.65rem;font-weight:700;border:1px solid #e2e8f0;border-radius:0.375rem;padding:0.15rem 0.4rem;background:transparent;color:#475569;cursor:pointer">
+                                    <option value="A">Teoría</option>
+                                    <option value="B">Razon. (B)</option>
+                                </select>
+                            </div>
+
+                            {{-- Card Body --}}
+                            <div style="padding:0.75rem;flex:1">
+                                <p style="font-size:0.72rem;font-weight:700;color:#1e293b;margin:0 0 0.625rem;line-height:1.35" x-text="p.pregunta"></p>
+                                <div style="display:flex;flex-direction:column;gap:0.35rem">
+                                    <template x-for="(opt, optIndex) in p.opciones" :key="optIndex">
+                                        <label style="display:flex;align-items:center;padding:0.375rem 0.5rem;border-radius:0.5rem;border:1px solid;cursor:pointer;transition:all 0.15s"
+                                               :style="p.respuesta_correcta==optIndex ? 'border-color:#86efac;background:#f0fdf4' : 'border-color:#f1f5f9;background:#fafafa'">
+                                            <input type="radio" :name="'resp_'+index" :value="optIndex" x-model="p.respuesta_correcta"
+                                                   style="width:0.8rem;height:0.8rem;accent-color:#16a34a;flex-shrink:0">
+                                            <span style="margin-left:0.5rem;font-size:0.68rem;font-weight:500;color:#475569;flex:1;line-height:1.3" x-text="opt"></span>
+                                            <i x-show="p.respuesta_correcta==optIndex" class="bx bxs-check-circle" style="color:#16a34a;font-size:0.85rem;margin-left:auto;flex-shrink:0"></i>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            {{-- Footer --}}
+            <div style="padding:1rem 1.75rem;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+                <div style="display:flex;align-items:center;gap:0.75rem">
+                    <span style="font-size:0.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em">Tiempo límite</span>
+                    <div style="display:flex;align-items:center;background:#f1f5f9;border-radius:0.625rem;padding:0.375rem 0.75rem;border:1px solid #e2e8f0">
+                        <i class="bx bxs-timer" style="color:#94a3b8;margin-right:0.4rem"></i>
+                        <input type="number" x-model="tiempoExamenIA" style="width:3rem;background:transparent;border:none;outline:none;font-size:0.9rem;font-weight:900;color:#334155;padding:0">
+                        <span style="font-size:0.65rem;font-weight:900;color:#94a3b8;margin-left:0.25rem">MIN</span>
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.75rem">
+                    <button @click="mostrarModalIA=false" style="padding:0.6rem 1.25rem;border-radius:0.75rem;font-size:0.75rem;font-weight:700;color:#64748b;background:transparent;border:1px solid #e2e8f0;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                        Cancelar
+                    </button>
+                    <button @click="confirmarGuardadoIA()" :disabled="cargandoIA" style="padding:0.6rem 1.75rem;border-radius:0.75rem;font-size:0.75rem;font-weight:900;color:#fff;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 15px -3px rgba(37,99,235,0.5);transition:all 0.2s;text-transform:uppercase;letter-spacing:0.05em">
+                        <i x-show="!cargandoIA" class="bx bxs-file-plus"></i>
+                        <i x-show="cargandoIA" class="bx bx-loader-alt bx-spin"></i>
+                        Guardar en Banco 2026
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function modalIA2026() {
+    return {
+        mostrarModalIA: false,
+        cargandoIA: false,
+        preguntasIA: [],
+        tiempoExamenIA: 60,
+        codExamenActual: null,
+        codCursoActual: null,
+        archivoIANombre: '',
+
+        abrirModalIA(data, cursoId, examenId, nombreArc) {
+            this.preguntasIA = Array.isArray(data) ? data : [];
+            this.codCursoActual = cursoId;
+            this.codExamenActual = examenId;
+            this.archivoIANombre = nombreArc || '';
+            this.mostrarModalIA = true;
+        },
+
+        async confirmarGuardadoIA() {
+            if (this.tiempoExamenIA < 1) {
+                Swal.fire('Validación', 'Debe ingresar un tiempo límite válido.', 'warning');
+                return;
+            }
+            this.cargandoIA = true;
+            try {
+                const appUrl = '{{ env('APP_URL', '') }}';
+                const response = await fetch(appUrl + '/api/capacitacion/guardar-examen-ia', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        cod_curso: this.codCursoActual,
+                        cod_examen: this.codExamenActual,
+                        preguntas: this.preguntasIA,
+                        tiempo: this.tiempoExamenIA
+                    })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    Swal.fire('¡Éxito!', res.message, 'success');
+                    this.mostrarModalIA = false;
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'No se pudo guardar el examen.', 'error');
+            } finally {
+                this.cargandoIA = false;
+            }
+        }
+    };
+}
+</script>

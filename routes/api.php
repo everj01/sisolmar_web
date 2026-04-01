@@ -120,6 +120,10 @@ Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'get
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 
+// Módulo Inteligente de Exámenes (Beta 2026)
+Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
+Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
+
 
 Route::get('/ubicacion/departamentos', [UbicacionController::class, 'departamentos']);
 Route::get('/ubicacion/provincias/{departamento_id}', [UbicacionController::class, 'provincias']);
