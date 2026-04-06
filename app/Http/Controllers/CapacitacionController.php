@@ -877,76 +877,110 @@ class CapacitacionController extends Controller
                     foreach ($sections as $section) {
                         $content .= $this->extraerTextoDeElementos($section->getElements());
                     }
-                    // Asegurar codificación UTF-8
-                    $content = mb_convert_encoding($content, 'UTF-8', mb_detect_encoding($content, 'UTF-8, ISO-8859-1, windows-1252', true));
+                    // Detección y conversión robusta a UTF-8
+                    $enc = mb_detect_encoding($content, 'UTF-8, ISO-8859-1, windows-1252', true);
+                    if ($enc && $enc != 'UTF-8') {
+                        $content = mb_convert_encoding($content, 'UTF-8', $enc);
+                    }
                 } catch (\Exception $e) {
-                    // Fallback: lectura básica para .dot/.dto binarios
-                    $content = file_get_contents($file->getRealPath());
-                    $content = preg_replace('/[^[:print:]\n\r\t]/', '', $content);
+                    // Fallback para .dto/.dot (archivos que PHPWord no pudo parsear como XML)
+                    $contentRaw = file_get_contents($file->getRealPath());
+                    
+                    // Limpieza MENOS AGRESIVA: Permitimos casi todo el rango ASCII y Latin-1
+                    // para capturar símbolos de bullet/check que Word usa (\x70, \xFE, \xA8, etc.)
+                    $content = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', ' ', $contentRaw); // Solo quitamos control chars críticos
+                    
+                    // Forzar conversión a UTF-8 desde ISO-8859-1 (común en binarios Word)
+                    $content = mb_convert_encoding($content, 'UTF-8', 'ISO-8859-1');
+
+                    // LOG DE DEPURACIÓN: Ver qué estamos enviando a la IA (Solo para el desarrollador)
+                    Log::info("IA_PRE_TEXT_EXTRACT (First 1000 chars): " . substr($content, 0, 1000));
                 }
             } else {
                 return response()->json(['success' => false, 'message' => 'Formato no soportado. Use .doc, .dot, .dto o .docx'], 400);
             }
 
-            // Limitar el contenido a los primeros 40,000 caracteres para evitar exceso de tokens en el modelo mini
-            if (strlen($content) > 40000) {
-                $content = substr($content, 0, 40000);
+            // Limitar el contenido a los primeros 100,000 caracteres (ahora más amplio)
+            if (strlen($content) > 100000) {
+                $content = substr($content, 0, 100000);
             }
+
+            // LOG DE AUDITORÍA: Verificar integridad del texto enviado
+            Log::info("IA_TEXT_STATS: Total Chars=" . strlen($content) . " | Final Chars=" . substr($content, -500));
+
+            // 1. Preparar los trozos (Chunks)
+            // Usamos [MARCA_NEGRITA] como delimitador natural de inicio de cada pregunta
+            $partesRaw = explode("[MARCA_NEGRITA]", $content);
+            $preguntasTxt = [];
+            foreach ($partesRaw as $p) {
+                $trimmed = trim($p);
+                if ($trimmed) $preguntasTxt[] = "[MARCA_NEGRITA] " . $trimmed;
+            }
+
+            // 2. Agrupar en bloques de 15 preguntas para no saturar la salida de la IA
+            $chunks = array_chunk($preguntasTxt, 15);
+            $preguntasFinales = [];
+            $totalMetrics = [
+                'tokens_input' => 0,
+                'tokens_output' => 0,
+                'tokens_total' => 0,
+                'costo_usd' => 0,
+                'tiempo_seg' => 0
+            ];
 
             $iaService = new OpenAIService();
-            $resultado = $iaService->procesarTextoExamen($content);
+            
+            // 3. Procesar cada bloque secuencialmente y fusionar resultados
+            foreach ($chunks as $chunk) {
+                $textoBloque = implode("\n\n", $chunk);
+                $iaResult = $iaService->procesarTextoExamen($textoBloque);
 
-            if (!$resultado) {
-                return response()->json(['success' => false, 'message' => 'La IA no pudo procesar el contenido del documento.'], 500);
-            }
+                if ($iaResult && ($iaResult['success'] ?? false)) {
+                    $resultado = $iaResult['data'] ?? [];
+                    // Mapeo de letras a índices numéricos para Alpine.js
+                    $mapLetraAIndice = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4, 'F' => 5];
 
-            // Normalización post-IA: Aplanar bloques y convertir respuesta_correcta de letra a índice
-            $letraAIndice = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4];
-            $preguntasFinales = [];
+                    foreach (['A', 'B'] as $tipo) {
+                        if (isset($resultado[$tipo]) && is_array($resultado[$tipo])) {
+                            foreach ($resultado[$tipo] as $pIA) {
+                                $rFinal = $pIA['r'] ?? null;
+                                if (is_string($rFinal)) {
+                                    $letra = strtoupper(trim($rFinal));
+                                    if (isset($mapLetraAIndice[$letra])) {
+                                        $rFinal = $mapLetraAIndice[$letra];
+                                    }
+                                }
 
-            $normalizarPregunta = function($pregunta, $bloque) use ($letraAIndice) {
-                $pregunta['tipo'] = $bloque;
-
-                // Limpiar prefijos de letra de las opciones si la IA los incluyó ("A. ", "a) ", etc.)
-                if (isset($pregunta['opciones']) && is_array($pregunta['opciones'])) {
-                    $pregunta['opciones'] = array_map(function($opt) {
-                        return preg_replace('/^[A-Ea-e][\.\)]\s*/', '', trim($opt));
-                    }, $pregunta['opciones']);
-                }
-
-                // Convertir respuesta_correcta: letra → índice numérico
-                $rc = $pregunta['respuesta_correcta'] ?? null;
-                if (is_string($rc)) {
-                    $rcUpper = strtoupper(trim($rc));
-                    $pregunta['respuesta_correcta'] = $letraAIndice[$rcUpper] ?? null;
-                } elseif (is_int($rc)) {
-                    $pregunta['respuesta_correcta'] = $rc;
-                } else {
-                    $pregunta['respuesta_correcta'] = null;
-                }
-
-                return $pregunta;
-            };
-
-            if (isset($resultado['A']) || isset($resultado['B'])) {
-                foreach (['A', 'B'] as $bloque) {
-                    if (isset($resultado[$bloque]) && is_array($resultado[$bloque])) {
-                        foreach ($resultado[$bloque] as $pregunta) {
-                            $preguntasFinales[] = $normalizarPregunta($pregunta, $bloque);
+                                $preguntasFinales[] = [
+                                    'pregunta' => $pIA['p'] ?? '',
+                                    'opciones' => $pIA['o'] ?? [],
+                                    'respuesta_correcta' => $rFinal,
+                                    'tipo' => $tipo
+                                ];
+                            }
                         }
                     }
+
+                    // Acumular métricas de todos los bloques
+                    if (isset($iaResult['metrics'])) {
+                        $totalMetrics['tokens_input'] += $iaResult['metrics']['tokens_input'];
+                        $totalMetrics['tokens_output'] += $iaResult['metrics']['tokens_output'];
+                        $totalMetrics['tokens_total'] += $iaResult['metrics']['tokens_total'];
+                        $totalMetrics['costo_usd'] += $iaResult['metrics']['costo_usd'];
+                        $totalMetrics['tiempo_seg'] += $iaResult['metrics']['tiempo_seg'];
+                    }
                 }
-            } else {
-                foreach ($resultado as $pregunta) {
-                    $bloque = $pregunta['tipo'] ?? 'A';
-                    $preguntasFinales[] = $normalizarPregunta($pregunta, $bloque);
-                }
+            }
+
+            if (empty($preguntasFinales)) {
+                return response()->json(['success' => false, 'message' => 'La IA no pudo extraer ninguna pregunta válida.'], 500);
             }
 
             return response()->json([
                 'success' => true,
                 'preguntas' => $preguntasFinales,
-                'archivo_nombre' => $file->getClientOriginalName()
+                'archivo_nombre' => $file->getClientOriginalName(),
+                'metrics' => $totalMetrics
             ]);
 
         } catch (\Exception $e) {
@@ -962,18 +996,49 @@ class CapacitacionController extends Controller
     {
         $text = "";
         foreach ($elements as $element) {
+            // Manejo de Texto y Estilos (Color/Negrita)
             if (method_exists($element, 'getText')) {
-                // Maneja TextRun y Text
-                $text .= $element->getText() . "\n";
-            } elseif ($element instanceof \PhpOffice\PhpWord\Element\Table) {
-                // Maneja contenido dentro de tablas
+                $content = $element->getText();
+                $prefix = "";
+                
+                if (method_exists($element, 'getFontStyle')) {
+                    $font = $element->getFontStyle();
+                    if ($font) {
+                        $color = strtoupper($font->getColor() ?? '');
+                        
+                        // Registro de depuración de color (Opcional, ayuda a encontrar el tono exacto)
+                        if ($color && $color != '000000') {
+                            Log::info("IA_COLOR_SCAN: '" . $content . "' has color #$color");
+                        }
+
+                        // Verdes comunes en Word (Ampliado para cubrir más tonos)
+                        $verdes = ['008000', '00FF00', '228B22', '32CD32', '006400', '90EE90', '70AD47', '91D271', 'C6EFCE', '00B050'];
+                        $esVerde = in_array($color, $verdes);
+                        
+                        // Rojos comunes en Word
+                        $esRojo = in_array($color, ['FF0000', '8B0000', 'B22222', 'DC143C', 'FF4500']);
+
+                        if ($esVerde) {
+                            $prefix = "[MARCA_VERDE_CORRECTA] ";
+                        } elseif ($esRojo) {
+                            $prefix = "[MARCA_ROJA_INCORRECTA] ";
+                        } elseif ($font->isBold()) {
+                            $prefix = "[MARCA_NEGRITA] ";
+                        }
+                    }
+                }
+                $text .= $prefix . $content . "\n";
+            } 
+            // Manejo de Tablas
+            elseif ($element instanceof \PhpOffice\PhpWord\Element\Table) {
                 foreach ($element->getRows() as $row) {
                     foreach ($row->getCells() as $cell) {
                         $text .= $this->extraerTextoDeElementos($cell->getElements());
                     }
                 }
-            } elseif (method_exists($element, 'getElements')) {
-                // Recurrencia para elementos contenedores (como ListItem)
+            } 
+            // Manejo de Contenedores (TextRun, ListItem)
+            elseif (method_exists($element, 'getElements')) {
                 $text .= $this->extraerTextoDeElementos($element->getElements());
             }
         }

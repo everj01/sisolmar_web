@@ -37,6 +37,15 @@ class ExamenPregunta2026 extends Model
      * El campo opciones_json se maneja como array/objeto
      */
     protected $casts = [
-        'opciones_json' => 'array'
+        'opciones_json' => 'array',
+        'fecha_creacion' => 'datetime'
     ];
+
+    /**
+     * Asegura que los acentos se guarden de forma legible en la DB
+     */
+    protected function setOpcionesJsonAttribute($value)
+    {
+        $this->attributes['opciones_json'] = json_encode($value, JSON_UNESCAPED_UNICODE);
+    }
 }

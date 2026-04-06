@@ -766,6 +766,13 @@ window.formCursoGestion = function () {
         archivoIANombre: '',
         cargandoIA: false,
         preguntasExamenIA: [],  // Almacena las preguntas extraídas hasta que se guarde el curso
+        iaMetrics: {
+            tokensInput: 0,
+            tokensOutput: 0,
+            tokensTotal: 0,
+            costoUSD: 0,
+            tiempoSeg: 0
+        },
 
         async analizarConIA() {
             if (!this.archivoIA) return;
@@ -781,6 +788,23 @@ window.formCursoGestion = function () {
                 if (res.data.success) {
                     // Guardamos las preguntas en estado Alpine (no guardamos en BD aún)
                     this.preguntasExamenIA = res.data.preguntas;
+                    
+                    // Almacenar métricas de consumo y costo
+                    if (res.data.metrics) {
+                        this.iaMetrics = {
+                            tokensInput: res.data.metrics.tokens_input,
+                            tokensOutput: res.data.metrics.tokens_output,
+                            tokensTotal: res.data.metrics.tokens_total,
+                            costoUSD: res.data.metrics.costo_usd,
+                            tiempoSeg: res.data.metrics.tiempo_seg
+                        };
+                    }
+
+                    // Autocompletado automático de la cantidad de preguntas (Pauta 2026)
+                    const count = res.data.preguntas.length;
+                    this.cantidadPreguntas = count;
+                    this.preguntasBalotario = count;
+
                     // Abrimos el modal de previsualización automáticamente
                     this.verVistaPrevia();
                 } else {
@@ -805,7 +829,8 @@ window.formCursoGestion = function () {
                     preguntas: this.preguntasExamenIA,
                     cursoId: this.codigo,
                     examenId: document.getElementById('codGestionEditar')?.value || -1,
-                    nombreArc: this.archivoIANombre
+                    nombreArc: this.archivoIANombre,
+                    metrics: this.iaMetrics // 👈 Pasar métricas al modal si es necesario
                 }
             }));
         },

@@ -811,7 +811,9 @@
                             Preguntas en el balotario
                             </label>
                             <input type="number" id="txtPreguntasBalotario"
-                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
+                            :class="preguntasExamenIA.length > 0 ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'"
+                            :readonly="preguntasExamenIA.length > 0"
                             x-model="preguntasBalotario" placeholder=""
                             />
                         </div>
@@ -1016,7 +1018,7 @@
 {{-- ============================================================ --}}
 <div id="modal-ia-2026"
      x-data="modalIA2026()"
-     @abrir-modal-ia.window="abrirModalIA($event.detail.preguntas, $event.detail.cursoId, $event.detail.examenId, $event.detail.nombreArc)"
+     @abrir-modal-ia.window="abrirModalIA($event.detail.preguntas, $event.detail.cursoId, $event.detail.examenId, $event.detail.nombreArc, $event.detail.metrics)"
      style="display:contents">
 
     <div x-show="mostrarModalIA"
@@ -1048,12 +1050,26 @@
                 </button>
             </div>
 
-            {{-- Sub-header info --}}
-            <div style="padding:0.75rem 1.75rem;background:#f1f5f9;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-                <p style="font-size:0.7rem;color:#64748b;margin:0">
-                    <i class="bx bx-info-circle" style="color:#3b82f6"></i>
-                    Valide las respuestas correctas antes de guardar. Use los selects para cambiar el tipo de pregunta.
-                </p>
+            {{-- Sub-header info & Metrics --}}
+            <div style="padding:0.75rem 1.75rem;background:#f1f5f9;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:1rem">
+                <div style="display:flex;flex-direction:column;gap:0.25rem">
+                    <p style="font-size:0.7rem;color:#64748b;margin:0">
+                        <i class="bx bx-info-circle" style="color:#3b82f6"></i>
+                        Valide las respuestas correctas antes de guardar. Use los selects para cambiar el tipo de pregunta.
+                    </p>
+                    {{-- Panel de Métricas Premium --}}
+                    <div style="display:flex;gap:0.75rem;margin-top:0.25rem">
+                        <span style="font-size:0.6rem;color:#059669;background:#ecfdf5;border:1px solid #d1fae5;padding:0.15rem 0.5rem;border-radius:6px;display:flex;align-items:center;gap:0.25rem;font-weight:700">
+                            <i class="bx bx-time-five"></i> IA: <span x-text="iaMetrics.tiempoSeg"></span>s
+                        </span>
+                        <span style="font-size:0.6rem;color:#4f46e5;background:#eef2ff;border:1px solid #e0e7ff;padding:0.15rem 0.5rem;border-radius:6px;display:flex;align-items:center;gap:0.25rem;font-weight:700">
+                            <i class="bx bx-chip"></i> <span x-text="iaMetrics.tokensTotal"></span> Tokens
+                        </span>
+                        <span style="font-size:0.6rem;color:#d97706;background:#fffbeb;border:1px solid #fef3c7;padding:0.15rem 0.5rem;border-radius:6px;display:flex;align-items:center;gap:0.25rem;font-weight:700">
+                            <i class="bx bx-dollar-circle"></i> Inversión: $<span x-text="iaMetrics.costoUSD"></span> USD
+                        </span>
+                    </div>
+                </div>
                 <div style="display:flex;gap:0.5rem">
                     <span style="font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:0.375rem;color:#475569;display:flex;align-items:center;gap:0.3rem">
                         <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#3b82f6;display:inline-block"></span> Teoría
@@ -1132,12 +1148,24 @@ function modalIA2026() {
         codExamenActual: null,
         codCursoActual: null,
         archivoIANombre: '',
+        iaMetrics: {
+            tokensInput: 0,
+            tokensOutput: 0,
+            tokensTotal: 0,
+            costoUSD: 0,
+            tiempoSeg: 0
+        },
 
-        abrirModalIA(data, cursoId, examenId, nombreArc) {
+        abrirModalIA(data, cursoId, examenId, nombreArc, metrics = null) {
             this.preguntasIA = Array.isArray(data) ? data : [];
             this.codCursoActual = cursoId;
             this.codExamenActual = examenId;
             this.archivoIANombre = nombreArc || '';
+            
+            if (metrics) {
+                this.iaMetrics = metrics;
+            }
+            
             this.mostrarModalIA = true;
         },
 
