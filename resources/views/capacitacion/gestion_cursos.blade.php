@@ -858,25 +858,38 @@
                 </div>
 
                 <!-- NUEVO: Auditoría / Metadatos -->
-                <div class="w-full mt-2 mb-4 bg-gray-50/70 border border-gray-200 rounded-lg p-5 opacity-60 pointer-events-none select-none">
-                    <h5 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Información de Sistema <span class="text-[10px] ml-2 lowercase font-normal italic">(Solo lectura - Próximamente)</span></h5>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
-                        <div class="flex flex-col">
-                            <span class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Código Interno</span>
-                            <span class="text-gray-400 font-bold bg-gray-100 border border-gray-200 px-3 py-1.5 rounded mt-1.5 w-fit min-w-[70px] text-center shadow-sm">-</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Registrado por</span>
-                            <div class="text-xs text-gray-400 mt-1.5 flex flex-col gap-0.5">
-                                <span class="font-medium text-gray-400"><i class="bx bx-user mr-1 text-gray-300"></i>(-) -</span>
-                                <span class="text-gray-400 ml-5">-</span>
+                <div style="width:100%; margin-top:0.5rem; margin-bottom:1rem; padding:1.25rem; background:rgba(249,250,251,0.7); border:1px solid #e5e7eb; border-radius:0.5rem; opacity:0.7; pointer-events:none; user-select:none;">
+                    <h5 style="font-size:0.75rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #e5e7eb;">
+                        Información de Sistema <span style="font-size:0.65rem; font-weight:400; font-style:italic; text-transform:none; margin-left:0.5rem;">(Solo lectura - Próximamente)</span>
+                    </h5>
+                    
+                    <div style="display:flex; flex-wrap:wrap; gap:2.5rem;">
+                        <div style="display:flex; flex-direction:column; min-width:120px;">
+                            <span style="font-size:0.68rem; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.025em; margin-bottom:0.5rem;">Código Interno</span>
+                            <div x-text="sys_codigo" style="background:#f3f4f6; border:1px solid #e5e7eb; padding:0.375rem 0.75rem; border-radius:0.25rem; color:#9ca3af; font-weight:700; font-size:0.8rem; display:inline-block; text-align:center; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); width:max-content; min-width:70px;">
+                                -
                             </div>
                         </div>
-                        <div class="flex flex-col">
-                            <span class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Última modificación</span>
-                            <div class="text-xs text-gray-400 mt-1.5 flex flex-col gap-0.5">
-                                <span class="font-medium text-gray-400"><i class="bx bx-user-pin mr-1 text-gray-300"></i>(-) -</span>
-                                <span class="text-gray-400 ml-5">-</span>
+                        
+                        <div style="display:flex; flex-direction:column; min-width:180px;">
+                            <span style="font-size:0.68rem; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.025em; margin-bottom:0.5rem;">Registrado por</span>
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <div style="display:flex; align-items:center; gap:0.35rem; color:#9ca3af; font-size:0.75rem; font-weight:600;">
+                                    <i class="bx bx-user" style="color:#d1d5db; font-size:0.9rem;"></i>
+                                    <span x-text="sys_creado_por || '-'">(-) -</span>
+                                </div>
+                                <span x-text="sys_fecha_creacion || '-'" style="color:#9ca3af; font-size:0.75rem; padding-left:1.35rem;">-</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex; flex-direction:column; min-width:180px;">
+                            <span style="font-size:0.68rem; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.025em; margin-bottom:0.5rem;">Última modificación</span>
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <div style="display:flex; align-items:center; gap:0.35rem; color:#9ca3af; font-size:0.75rem; font-weight:600;">
+                                    <i class="bx bx-user-pin" style="color:#d1d5db; font-size:0.9rem;"></i>
+                                    <span x-text="sys_modificado_por || '-'">(-) -</span>
+                                </div>
+                                <span x-text="sys_fecha_modificacion || '-'" style="color:#9ca3af; font-size:0.75rem; padding-left:1.35rem;">-</span>
                             </div>
                         </div>
                     </div>
@@ -1139,7 +1152,7 @@
 </div>
 
 <script>
-function modalIA2026() {
+window.modalIA2026 = function() {
     return {
         mostrarModalIA: false,
         cargandoIA: false,
@@ -1206,4 +1219,291 @@ function modalIA2026() {
         }
     };
 }
+
+/**
+ * Componente para Matrícula Masiva vía Excel (2026)
+ */
+window.modalImportacionExcel = function() {
+    return {
+        mostrarModal: false,
+        cargando: false,
+        procesandoMatricula: false,
+        preguntasIA: [], // No se usa aquí pero para consistencia si hay conflictos
+        codCursoActual: null,
+        nombreCursoActual: '',
+        personalEncontrado: [],
+        resumen: { total: 0, encontrados: 0, errores: 0, advertencias: 0 },
+        filtros: { soloErrores: false },
+
+        abrirModalExcel(curso) {
+            this.codCursoActual = curso.codigo;
+            this.nombreCursoActual = curso.nombre;
+            this.personalEncontrado = [];
+            this.mostrarModal = true;
+            this.resetResumen();
+            // Limpiar input file si existe
+            const input = document.getElementById('inputExcelMatricula');
+            if (input) input.value = '';
+        },
+
+        resetResumen() {
+            this.resumen = { total: 0, encontrados: 0, errores: 0, advertencias: 0 };
+        },
+
+        async procesarArchivo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            this.cargando = true;
+            const formData = new FormData();
+            formData.append('archivo', file);
+
+            try {
+                const response = await fetch('{{ env('APP_URL', '') }}/api/capacitacion/validar-excel-matricula', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: formData
+                });
+                const res = await response.json();
+
+                if (res.success) {
+                    this.personalEncontrado = res.data;
+                    this.actualizarResumen();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'No se pudo procesar el archivo Excel.', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+
+        actualizarResumen() {
+            this.resumen.total = this.personalEncontrado.length;
+            this.resumen.encontrados = this.personalEncontrado.filter(p => p.status !== 'RED').length;
+            this.resumen.errores = this.personalEncontrado.filter(p => p.status === 'RED').length;
+            this.resumen.advertencias = this.personalEncontrado.filter(p => p.status === 'AMBER').length;
+        },
+
+        get listaFiltrada() {
+            if (this.filtros.soloErrores) {
+                return this.personalEncontrado.filter(p => p.status === 'RED');
+            }
+            return this.personalEncontrado;
+        },
+
+        async confirmarMatricula() {
+            const swal = window.Swal;
+            const validos = this.personalEncontrado.filter(p => p.status !== 'RED');
+            if (validos.length === 0) {
+                swal ? swal.fire('Atención', 'No hay personal válido para matricular.', 'warning') : alert('No hay personal válido para matricular.');
+                return;
+            }
+
+            const confirmResult = swal ? await swal.fire({
+                title: '¿Confirmar Matrícula Masiva?',
+                text: `Se matricularán ${validos.length} personas al curso "${this.nombreCursoActual}".`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, matricular',
+                cancelButtonText: 'Cancelar'
+            }) : { isConfirmed: confirm(`¿Matricular ${validos.length} personas?`) };
+
+            if (!confirmResult.isConfirmed) return;
+
+            this.procesandoMatricula = true;
+            try {
+                const response = await fetch('{{ env('APP_URL', '') }}/api/capacitacion/confirmar-matricula-masiva', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        cod_curso: this.codCursoActual,
+                        personal: validos
+                    })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    swal ? swal.fire('¡Éxito!', res.message, 'success') : alert(res.message);
+                    this.mostrarModal = false;
+                } else {
+                    swal ? swal.fire('Error', res.message, 'error') : alert('Error: ' + res.message);
+                }
+            } catch (e) {
+                console.error(e);
+                swal ? swal.fire('Error', 'Ocurrió un problema al procesar la matrícula masiva.', 'error') : alert('Error al procesar la matrícula.');
+            } finally {
+                this.procesandoMatricula = false;
+            }
+        }
+    };
+}
 </script>
+
+<!-- MODAL: MATRÍCULA MASIVA EXCEL (2026) -->
+<div 
+    x-data="modalImportacionExcel()" 
+    @abrir-modal-excel.window="abrirModalExcel($event.detail)"
+    style="display:contents">
+
+    <div x-show="mostrarModal"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px)"
+    >
+    {{-- Contenedor: tamaño automático según contenido, con máximo --}}
+    <div style="background:#fff;border-radius:1rem;width:100%;max-width:780px;margin:auto;display:flex;flex-direction:column;border:1px solid #e2e8f0;box-shadow:0 20px 60px -10px rgba(0,0,0,0.25);overflow:hidden">
+
+        {{-- Header --}}
+        <div style="padding:0.875rem 1.25rem;background:linear-gradient(135deg,#1d4ed8,#4338ca);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+            <div>
+                <h3 style="margin:0;font-size:0.95rem;font-weight:800;display:flex;align-items:center;gap:0.5rem">
+                    <i class="bx bxs-file-import"></i> Matrícula Masiva vía Excel
+                </h3>
+                <p style="margin:0;font-size:0.7rem;opacity:0.75;margin-top:0.15rem" x-text="'Curso: ' + nombreCursoActual"></p>
+            </div>
+            <button @click="mostrarModal = false" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:50%;width:2rem;height:2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                <i class="bx bx-x" style="font-size:1.1rem"></i>
+            </button>
+        </div>
+
+        {{-- Body --}}
+        <div style="padding:1rem;background:#f8fafc;overflow-y:auto;max-height:calc(90vh - 130px)">
+
+            {{-- Zona de Carga (compacta) --}}
+            <div x-show="personalEncontrado.length === 0 && !cargando"
+                 style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;border:2px dashed #cbd5e1;border-radius:0.875rem;background:#fff;cursor:pointer;transition:all 0.2s"
+                 onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+                 onmouseout="this.style.borderColor='#cbd5e1';this.style.background='#fff'"
+                 @click="$refs.fileInput.click()">
+                <input type="file" x-ref="fileInput" id="inputExcelMatricula" class="hidden" accept=".xlsx,.xls,.csv" @change="procesarArchivo">
+                <div style="width:3.5rem;height:3.5rem;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:0.75rem">
+                    <i class="bx bx-cloud-upload" style="font-size:1.75rem;color:#2563eb"></i>
+                </div>
+                <h4 style="margin:0 0 0.35rem;font-size:0.875rem;font-weight:700;color:#1e293b">Subir listado de agentes</h4>
+                <p style="margin:0 0 0.875rem;font-size:0.72rem;color:#94a3b8;text-align:center;max-width:320px;line-height:1.5">Archivo Excel (.xlsx/.xls) con columnas: <strong>DNI, Nombre, Cargo y Cliente</strong></p>
+                <button type="button" style="padding:0.45rem 1.25rem;background:#2563eb;color:#fff;border:none;border-radius:0.5rem;font-size:0.75rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,0.35);transition:all 0.2s" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                    Seleccionar archivo
+                </button>
+            </div>
+
+            {{-- Loader --}}
+            <div x-show="cargando" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem;gap:0.75rem">
+                <div style="width:2.5rem;height:2.5rem;border:4px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+                <span style="font-size:0.8rem;color:#64748b;font-weight:600">Analizando documento...</span>
+            </div>
+
+            {{-- Resultados (Resumen + Tabla) --}}
+            <div x-show="personalEncontrado.length > 0 && !cargando" x-transition style="display:flex;flex-direction:column;gap:0.75rem">
+
+                {{-- Resumen en una sola fila horizontal --}}
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem">
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:0.625rem;padding:0.6rem 0.75rem;display:flex;align-items:center;gap:0.6rem">
+                        <div style="background:#eff6ff;border-radius:0.375rem;padding:0.375rem;color:#2563eb"><i class="bx bx-group" style="font-size:1rem;display:block"></i></div>
+                        <div><p style="margin:0;font-size:0.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Total</p><span style="font-size:1rem;font-weight:900;color:#1e293b" x-text="resumen.total"></span></div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:0.625rem;padding:0.6rem 0.75rem;display:flex;align-items:center;gap:0.6rem">
+                        <div style="background:#f0fdf4;border-radius:0.375rem;padding:0.375rem;color:#16a34a"><i class="bx bx-check-circle" style="font-size:1rem;display:block"></i></div>
+                        <div><p style="margin:0;font-size:0.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Listos</p><span style="font-size:1rem;font-weight:900;color:#1e293b" x-text="resumen.encontrados"></span></div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:0.625rem;padding:0.6rem 0.75rem;display:flex;align-items:center;gap:0.6rem">
+                        <div style="background:#fff7ed;border-radius:0.375rem;padding:0.375rem;color:#ea580c"><i class="bx bx-error" style="font-size:1rem;display:block"></i></div>
+                        <div><p style="margin:0;font-size:0.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Alerta</p><span style="font-size:1rem;font-weight:900;color:#1e293b" x-text="resumen.advertencias"></span></div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:0.625rem;padding:0.6rem 0.75rem;display:flex;align-items:center;gap:0.6rem">
+                        <div style="background:#fef2f2;border-radius:0.375rem;padding:0.375rem;color:#dc2626"><i class="bx bx-x-circle" style="font-size:1rem;display:block"></i></div>
+                        <div><p style="margin:0;font-size:0.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Error</p><span style="font-size:1rem;font-weight:900;color:#1e293b" x-text="resumen.errores"></span></div>
+                    </div>
+                </div>
+
+                {{-- Tabla con scroll interno --}}
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:0.75rem;overflow:hidden">
+                    <div style="padding:0.6rem 0.875rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;background:#f8fafc">
+                        <span style="font-size:0.75rem;font-weight:700;color:#475569">Previsualización de Personal</span>
+                        <div style="display:flex;align-items:center;gap:0.875rem">
+                            <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer">
+                                <input type="checkbox" x-model="filtros.soloErrores" style="accent-color:#dc2626;width:0.85rem;height:0.85rem">
+                                <span style="font-size:0.68rem;font-weight:600;color:#64748b">Solo errores</span>
+                            </label>
+                            <button @click="personalEncontrado = []" style="font-size:0.68rem;font-weight:700;color:#94a3b8;background:none;border:none;cursor:pointer;transition:color 0.15s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">Cambiar archivo</button>
+                        </div>
+                    </div>
+                    <div style="overflow-y:auto;max-height:300px">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.72rem;text-align:left">
+                            <thead style="position:sticky;top:0;z-index:1">
+                                <tr style="background:#f8fafc;color:#94a3b8;font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em">
+                                    <th style="padding:0.5rem 0.75rem;border-bottom:1px solid #f1f5f9">Estado</th>
+                                    <th style="padding:0.5rem 0.75rem;border-bottom:1px solid #f1f5f9">DNI</th>
+                                    <th style="padding:0.5rem 0.75rem;border-bottom:1px solid #f1f5f9">Personal (Sistema)</th>
+                                    <th style="padding:0.5rem 0.75rem;border-bottom:1px solid #f1f5f9">Nombre Excel</th>
+                                    <th style="padding:0.5rem 0.75rem;border-bottom:1px solid #f1f5f9">Cargo / Cliente</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(p, index) in listaFiltrada" :key="p.dni || index">
+                                    <tr style="border-bottom:1px solid #f8fafc;transition:background 0.1s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                                        <td style="padding:0.45rem 0.75rem">
+                                            <template x-if="p.status === 'GREEN'">
+                                                <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#dcfce7;color:#15803d;font-size:0.6rem;font-weight:800">
+                                                    <span style="width:0.35rem;height:0.35rem;border-radius:50%;background:#16a34a;display:inline-block"></span> LISTO
+                                                </span>
+                                            </template>
+                                            <template x-if="p.status === 'AMBER'">
+                                                <span @click="window.Swal ? window.Swal.fire('Motivo de Alerta', p.warnings.join('<br>'), 'warning') : alert(p.warnings.join('\n'))" 
+                                                      style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#ffedd5;color:#c2410c;font-size:0.6rem;font-weight:800;cursor:pointer;transition:transform 0.1s" 
+                                                      onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"
+                                                      :title="'Clic para ver detalle'">
+                                                    <span style="width:0.35rem;height:0.35rem;border-radius:50%;background:#ea580c;display:inline-block"></span> ALERTA
+                                                </span>
+                                            </template>
+                                            <template x-if="p.status === 'RED'">
+                                                <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#fee2e2;color:#b91c1c;font-size:0.6rem;font-weight:800">
+                                                    <span style="width:0.35rem;height:0.35rem;border-radius:50%;background:#dc2626;display:inline-block"></span> NO EXISTE
+                                                </span>
+                                            </template>
+                                        </td>
+                                        <td style="padding:0.45rem 0.75rem;font-family:monospace;font-weight:700;color:#475569" x-text="p.dni"></td>
+                                        <td style="padding:0.45rem 0.75rem;font-weight:600;color:#1e293b" x-text="p.nombre_db"></td>
+                                        <td style="padding:0.45rem 0.75rem;color:#94a3b8;font-style:italic" x-text="p.nombre_excel"></td>
+                                        <td style="padding:0.45rem 0.75rem">
+                                            <div style="font-weight:700;color:#334155" x-text="p.cargo"></div>
+                                            <div style="font-size:0.62rem;color:#94a3b8" x-text="p.cliente"></div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <div x-show="listaFiltrada.length === 0" style="padding:2rem;text-align:center;color:#94a3b8;font-size:0.8rem">No hay datos con los filtros actuales.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Footer --}}
+        <div style="padding:0.75rem 1.25rem;background:#fff;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+            <button @click="mostrarModal = false" style="padding:0.45rem 1rem;font-size:0.78rem;font-weight:700;color:#64748b;background:transparent;border:1px solid #e2e8f0;border-radius:0.5rem;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">Cerrar</button>
+            <button 
+                x-show="personalEncontrado.length > 0"
+                @click="confirmarMatricula"
+                :disabled="procesandoMatricula || resumen.encontrados === 0"
+                style="padding:0.45rem 1.25rem;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border:none;border-radius:0.5rem;font-size:0.78rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:0.4rem;box-shadow:0 4px 15px -3px rgba(37,99,235,0.4);transition:all 0.2s"
+                :style="(procesandoMatricula || resumen.encontrados === 0) ? 'opacity:0.5;cursor:not-allowed' : ''"
+            >
+                <template x-if="!procesandoMatricula">
+                    <i class="bx bxs-paper-plane"></i>
+                </template>
+                <template x-if="procesandoMatricula">
+                    <div style="width:0.85rem;height:0.85rem;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+                </template>
+                Procesar Matrícula Masiva
+            </button>
+        </div>
+    </div>
+    </div>{{-- cierre x-show --}}
+</div>{{-- cierre x-data --}}

@@ -124,6 +124,10 @@ Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'anali
 Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
 Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
 
+// Matrícula Masiva vía Excel (2026)
+Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
+Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
+
 
 Route::get('/ubicacion/departamentos', [UbicacionController::class, 'departamentos']);
 Route::get('/ubicacion/provincias/{departamento_id}', [UbicacionController::class, 'provincias']);

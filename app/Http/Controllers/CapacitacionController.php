@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use App\Models\ExamenConfiguracion2026;
 use App\Models\ExamenPregunta2026;
 use App\Services\OpenAIService;
-use PhpOffice\PhpWord\IOFactory;
+use App\Models\Personal;
+use App\Models\ExamenConfiguracion2026;
+use PhpOffice\PhpWord\IOFactory as WordIOFactory;
+use PhpOffice\PhpSpreadsheet\IOFactory as SpreadsheetIOFactory;
 
 class CapacitacionController extends Controller
 {
@@ -872,7 +874,7 @@ class CapacitacionController extends Controller
 
             if (in_array($ext, ['doc', 'dot', 'docx', 'dto'])) {
                 try {
-                    $phpWord = IOFactory::load($file->getRealPath());
+                    $phpWord = WordIOFactory::load($file->getRealPath());
                     $sections = $phpWord->getSections();
                     foreach ($sections as $section) {
                         $content .= $this->extraerTextoDeElementos($section->getElements());
@@ -1110,4 +1112,216 @@ class CapacitacionController extends Controller
         }
     }
 
+    /**
+     * Group 4: Matrícula Masiva vía Excel (2026)
+     */
+
+    public function validarExcelMatricula(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'archivo' => 'required|file|mimes:xlsx,xls,csv'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Archivo no válido.'], 400);
+        }
+
+        try {
+            $file = $request->file('archivo');
+            $spreadsheet = SpreadsheetIOFactory::load($file->getRealPath());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+
+            // 1. Identificar cabeceras y mapear columnas
+            $headerRowIndex = -1;
+            $mapping = ['dni' => -1, 'nombre' => -1, 'cargo' => -1, 'cliente' => -1, 'codigo' => -1];
+
+            foreach ($rows as $idx => $row) {
+                $rowClean = array_map(fn($v) => strtoupper(trim((string)$v)), $row);
+                if (in_array('DNI', $rowClean)) {
+                    $headerRowIndex = $idx;
+                    foreach ($rowClean as $colIdx => $val) {
+                        if (str_contains($val, 'DNI')) $mapping['dni'] = $colIdx;
+                        if (str_contains($val, 'NOMBRE')) $mapping['nombre'] = $colIdx;
+                        if (str_contains($val, 'CARGO')) $mapping['cargo'] = $colIdx;
+                        if (str_contains($val, 'CLIENTE')) $mapping['cliente'] = $colIdx;
+                        if (str_contains($val, 'CODIGO')) $mapping['codigo'] = $colIdx;
+                    }
+                    break;
+                }
+            }
+
+            if ($mapping['dni'] === -1) {
+                return response()->json(['success' => false, 'message' => 'No se encontró la columna DNI en el archivo.'], 400);
+            }
+
+            // 2. Extraer datos del Excel
+            $dataExcel = [];
+            $allDnis = [];
+            $uniqueDnisInFile = []; // Rastreo local para evitar duplicados del mismo archivo
+
+            for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+                $dni = trim((string)($rows[$i][$mapping['dni']] ?? ''));
+                if (empty($dni)) continue;
+
+                $dni = str_pad($dni, 8, '0', STR_PAD_LEFT); // Normalizar DNI
+
+                // IMPORTANTE: Ignorar duplicados del mismo archivo para no romper el Alpine.js (x-for key)
+                if (in_array($dni, $uniqueDnisInFile)) continue;
+                
+                $uniqueDnisInFile[] = $dni;
+                $allDnis[] = $dni;
+                $dataExcel[] = [
+                    'codigo' => trim((string)($rows[$i][$mapping['codigo']] ?? '')),
+                    'dni' => $dni,
+                    'nombre' => trim((string)($rows[$i][$mapping['nombre']] ?? '')),
+                    'cargo' => trim((string)($rows[$i][$mapping['cargo']] ?? '')),
+                    'cliente' => trim((string)($rows[$i][$mapping['cliente']] ?? '')),
+                ];
+            }
+
+            // 3. Consultar masivamente en la base de datos Maestra
+            $personalDB = Personal::whereIn('NRO_DOCU_IDEN', $allDnis)->get()
+                ->keyBy('NRO_DOCU_IDEN');
+
+            $resultadoFinal = [];
+            foreach ($dataExcel as $item) {
+                $dni = $item['dni'];
+                $status = 'RED'; // Por defecto no encontrado
+                $warnings = [];
+                $person = $personalDB->get($dni);
+                $codiPers = null;
+
+                if ($person) {
+                    $status = 'GREEN';
+                    $codiPers = $person->CODI_PERS;
+
+                    // Validación de Nombre (Aproximada)
+                    $nombreDB = strtoupper(trim("{$person->APEL_1} {$person->APEL_2} {$person->NOMB_1} {$person->NOMB_2}"));
+                    if (!empty($item['nombre']) && str_replace(' ', '', strtoupper($item['nombre'])) !== str_replace(' ', '', $nombreDB)) {
+                        $status = 'AMBER';
+                        $warnings[] = "Nombre difiere. Excel: '{$item['nombre']}' | DB: '{$nombreDB}'";
+                    }
+                    
+                    // Aquí se podrían añadir validaciones de Cargo y Cliente si tenemos los catálogos vinculados
+                }
+
+                $resultadoFinal[] = [
+                    'codi_pers' => $codiPers,
+                    'dni' => $dni,
+                    'codigo_empresa' => $item['codigo'],
+                    'nombre_excel' => $item['nombre'],
+                    'nombre_db' => $person ? "{$person->APEL_1} {$person->APEL_2} {$person->NOMB_1} {$person->NOMB_2}" : 'NO ENCONTRADO',
+                    'cargo' => $item['cargo'],
+                    'cliente' => $item['cliente'],
+                    'status' => $status,
+                    'warnings' => $warnings
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $resultadoFinal,
+                'total' => count($resultadoFinal),
+                'encontrados' => $personalDB->count()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Excel Import Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al procesar Excel: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function confirmarMatriculaMasiva(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'cod_curso' => 'required',
+            'personal' => 'required|array'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Datos incompletos.'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $codCurso = $request->cod_curso;
+            $usuarioId = Auth::user()->id_usuario ?? 1;
+            
+            // 1. Asegurar que exista un ciclo (programación) para este curso
+            // Buscamos el ciclo vigente o más reciente habilitado
+            $programacion = CursoProgramacion::where('cod_cursos', $codCurso)
+                ->where('habilitado', 1)
+                ->orderBy('fecha_inicio', 'desc')
+                ->first();
+
+            // Si no existe ninguno, creamos uno automático para el mes actual (Regla de negocio 2026)
+            if (!$programacion) {
+                $inicio = now()->startOfMonth();
+                $final = now()->endOfMonth();
+                $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
+                $newCode = str_pad(($lastProg ? intval($lastProg->codigo_programacion) : 1000) + 1, 4, '0', STR_PAD_LEFT);
+
+                $progId = DB::connection('sqlsrv')->table('sw_cursos_programacion')->insertGetId([
+                    'codigo_programacion' => $newCode,
+                    'cod_cursos'          => $codCurso,
+                    'periodo'             => $inicio->format('Y-m'),
+                    'tipo'                => 'REGULAR',
+                    'estado_periodo'      => 'VIGENTE',
+                    'fecha_inicio'        => DB::raw("CAST('" . $inicio->startOfDay()->format('Ymd H:i:s') . "' AS DATETIME)"),
+                    'fecha_final'         => DB::raw("CAST('" . $final->endOfDay()->format('Ymd H:i:s') . "' AS DATETIME)"),
+                    'habilitado'          => 1,
+                    'fecha_creacion'      => DB::raw('GETDATE()')
+                ], 'codigo_programacion');
+                
+                $codProgramacion = $newCode;
+            } else {
+                $codProgramacion = $programacion->codigo_programacion;
+            }
+
+            $count = 0;
+            // Evitar procesar DNIs duplicados que puedan venir en el mismo array del Excel
+            $processedDnis = [];
+
+            foreach ($request->personal as $p) {
+                if (empty($p['codi_pers'])) continue;
+                if (in_array($p['codi_pers'], $processedDnis)) continue;
+
+                // Evitar duplicidad de matrícula en el mismo curso y ciclo
+                $existe = DB::connection('sqlsrv')->table('sw_matriculas')
+                    ->where('cod_curso', $codCurso)
+                    ->where('cod_personal', $p['codi_pers'])
+                    ->where('cod_programacion', $codProgramacion)
+                    ->exists();
+
+                if (!$existe) {
+                    DB::connection('sqlsrv')->table('sw_matriculas')->insert([
+                        'cod_curso'        => $codCurso,
+                        'cod_programacion' => $codProgramacion,
+                        'cod_personal'     => $p['codi_pers'],
+                        'usuario_id'       => $usuarioId,
+                        'fecha_matricula'  => DB::raw('GETDATE()'),
+                        'estado'           => 'MATRICULADO',
+                        'tipo_matricula'   => 'POR_DEMANDA',
+                        'origen_matricula' => 'EXCEL_MASS_LOAD',
+                        'created_at'       => DB::raw('GETDATE()'),
+                        'updated_at'       => DB::raw('GETDATE()')
+                    ]);
+                    $count++;
+                    $processedDnis[] = $p['codi_pers'];
+                }
+            }
+
+            DB::commit();
+            return response()->json([
+                'success' => true, 
+                'message' => "Se matricularon exitosamente $count personas en el ciclo $codProgramacion."
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Mass Enrollment Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al registrar: ' . $e->getMessage()], 500);
+        }
+    }
 }

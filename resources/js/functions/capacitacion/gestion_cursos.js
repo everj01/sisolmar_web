@@ -372,7 +372,7 @@ window.renderTablaCursos = function (data) {
         </td>
         <td>
             <div class="flex items-center gap-2">
-                <button type="button" @click="gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                <button type="button" onclick="window.gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                 class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
                     <i class="bx bxs-edit text-base"></i>
                 </button>
@@ -382,23 +382,30 @@ window.renderTablaCursos = function (data) {
                     `<button type="button" 
                         ${curso.tiene_vigente
                         ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
-                        : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" @click="$dispatch('open-apertura-modal', { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' })"`}>
+                        : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' } }))"`}>
                         <i class="bx bx-calendar-star text-base"></i>
                     </button>
                     
-                    <button type="button"  @click="gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    <button type="button"  onclick="window.gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
                         <i class="bx bx-trash text-base"></i>
                     </button>`
                     :
-                    `<button type="button"  @click="gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    `<button type="button"  onclick="window.gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
                         <i class='bx bx-check text-base'></i>
                     </button>
-                    <button type="button"  @click="gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    <button type="button"  onclick="window.gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
                         <i class="bx bx-trash text-base"></i>
                     </button>`
+                }
+
+                ${curso.es_demanda == '1' ?
+                    `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' } }))"
+                    class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
+                        <i class="bx bxs-file-import text-base"></i>
+                    </button>` : ''
                 }
             </div>
         </td>
@@ -476,7 +483,12 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
 
-
+                // METADATOS DE SISTEMA
+                alpineData.sys_codigo = curso.codigo ?? "-";
+                alpineData.sys_creado_por = curso.creado_por || "-";
+                alpineData.sys_fecha_creacion = curso.fecha_creacion || "-";
+                alpineData.sys_modificado_por = curso.modificado_por || "-";
+                alpineData.sys_fecha_modificacion = curso.fecha_modificacion || curso.updated_at || "-";
 
                 // Update PAC logic
                 const esPacCurso = curso.tipo_curso?.descripcion?.toUpperCase().includes('PAC') || false;
@@ -738,6 +750,13 @@ window.restaurarFormCurso = () => {
 window.formCursoGestion = function () {
     return {
         codigo: '-1',
+        // Información de Sistema
+        sys_codigo: '-',
+        sys_creado_por: '-',
+        sys_fecha_creacion: '-',
+        sys_modificado_por: '-',
+        sys_fecha_modificacion: '-',
+
         nombre: '',
         tipoCurso: '',
         areaConocimiento: '',
