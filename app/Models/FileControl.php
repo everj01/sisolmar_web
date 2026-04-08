@@ -427,7 +427,7 @@ class FileControl extends Model
     public static function getGradosInstruccionDJ()
     {
         return DB::select(
-                "SELECT NIED_CODIGO AS id, NIED_DESCRIPCION AS text 
+                "SELECT NIED_CODIGO AS id, NIED_ABREVIADO AS text 
                 FROM si_solm.dbo.SUNAT_NIVEL_EDUCATIVO 
                 ORDER BY NIED_DESCRIPCION"
             );

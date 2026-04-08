@@ -252,7 +252,7 @@ private function completarCamposNull($data, $codiPers)
     {
         try {
             $grados = DB::select(
-                "SELECT NIED_CODIGO AS id, NIED_DESCRIPCION AS text 
+                "SELECT NIED_CODIGO AS id, NIED_ABREVIADO AS text 
                 FROM si_solm.dbo.SUNAT_NIVEL_EDUCATIVO 
                 ORDER BY NIED_DESCRIPCION"
             );
@@ -723,6 +723,23 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
         return $rawValue;
     };
     $sanitizeFinalValue = function ($field, $value) use ($datetimeFields, $bitFields, $numericFields) {
+
+    $charLimits = [
+    'PERS_ACTUALIZAR'   => 300,
+    'CONTROL_VERIF_TRANS' => 50,
+    'PERS_OBSERVACIONES' => 300,
+    'OBS_CESE'           => 500,
+    'MOTI_CESE'          => 200,
+    'OBSERVACIONES'      => 200,
+];
+
+if (isset($charLimits[$field]) && is_string($value) && strlen($value) > $charLimits[$field]) {
+    $value = substr($value, 0, $charLimits[$field]);
+}
+
+    if (is_string($value) && strlen($value) > 50 && $field === 'CONTROL_VERIF_TRANS') {
+            $value = substr($value, 0, 50);
+        }
     // Normalizar strings
     if (is_string($value)) {
         $value = trim($value);
@@ -875,7 +892,9 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
         'PERS_NRODISCAMEC' => $getValue('sucamec_obs', 'PERS_NRODISCAMEC'),
         'PERS_SMO' => $getValue('smo', 'PERS_SMO'),
         'PERS_LUGARSMO' => $getValue('smo', 'PERS_LUGARSMO'),
-        'PERS_CONLICARMAS' => $getValue('licencia_arma', 'PERS_CONLICARMAS'),
+        //'PERS_CONLICARMAS' => $getValue('licencia_arma', 'PERS_CONLICARMAS'),
+        //'PERS_CONLICARMAS' => 'SI', // o extraer el valor del JSON
+        'PERS_NROLICENCIA' => $getValue('licencia_arma', 'PERS_NROLICENCIA'),
         'PERS_TIPOARMA' => $getValue('tipo_arma', 'PERS_TIPOARMA'),
         'PERS_CONARMAS' => $getValue('arma_propia', 'PERS_CONARMAS'),
         'PERS_BREVETE' => $getValue('brevete', 'PERS_BREVETE'),
@@ -1351,7 +1370,8 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
         'ESSALUD' => $data['essalud'] ?? 'NO',
         'PERS_PENSIONISTA' => $data['pensionista'] ?? 'NO',
         'PERS_EMBARGO' => $data['embargos'] ?? 'NO',
-        'PERS_CONSMO' => $data['consumo_sustancias'] ?? 'NO',
+        'PERS_CONSMO' => $data['consumo_sustancias'] != 'NO' ? 'SI' : 'NO',
+        'PERS_SMO' => $data['consumo_sustancias'] ?? 'NO',
         'PERS_DEPT_ACT' => $data['departamento_actual'] ?? null,
         'PERS_PROV_ACT' => $data['provincia_actual'] ?? null,
         'PERS_DIST_ACT' => $data['distrito_actual'] ?? null,
@@ -1365,9 +1385,9 @@ private function insertOrUpdateDJ2026Personal($codiPers, $data)
         'EGRESO_EDUCATIVO' => $data['anio_egreso'] ?? null,
         'PERS_CONDISCAMEC' => $data['curso_sucamec'] ?? 'NO',
         'PERS_NRODISCAMEC' => $data['sucamec_obs'] ?? null,
-        'PERS_SMO' => $data['smo'] ?? 'NO',
-        'PERS_LUGARSMO' => ($data['smo'] ?? 'NO') !== 'NO' ? $data['smo'] : null,
-        'PERS_CONLICARMAS' => $data['licencia_arma'] ?? null,
+        //'PERS_SMO' => $data['smo'] ?? 'NO',
+        'PERS_LUGARSMO' => ($data['consumo_sustancias'] ?? 'NO') !== 'NO' ? $data['consumo_sustancias'] : null,
+        'PERS_NROLICENCIA' => $data['licencia_arma'] ?? null,
         'PERS_TIPOARMA' => $data['tipo_arma'] ?? null,
         'PERS_CONARMAS' => $data['arma_propia'] ?? 'NO',
         'PERS_BREVETE' => $data['brevete'] ?? null,

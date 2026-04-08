@@ -15,6 +15,10 @@
         ::-moz-placeholder {
             color: #9ca3af !important;
         }
+        .tab-btn.border-b-white {
+            margin-bottom: -1px;
+            border-bottom-color: white !important;
+        }
     </style>
 @endsection
 
@@ -25,21 +29,29 @@
     <div id="divListado" class="grid lg:grid-cols-1 gap-6 mt-8">
         <div class="card overflow-hidden">
             <div class="card-header">
-                <h4 class="card-title">Listado de Personal</h4>
+                <h4 class="card-title">Registro de personal (DJ)</h4>
             </div>
 
             {{-- PESTAÑAS --}}
             <div class="px-5 pt-4">
-                <div class="flex gap-1 border-b border-gray-200 justify-center items-center">
-                    <button id="tabBtnPendiente" type="button" class="tab-btn px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
-                                   bg-white text-primary border-gray-200" data-tab="pendiente">
+                <div class="flex gap-1 border-b border-gray-200 items-end">
+                    <button id="tabBtnPendiente" type="button"
+                        class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
+                            bg-white text-primary border-gray-200"
+                        data-tab="pendiente">
                         Pendientes / Listos
                     </button>
-                    <button id="tabBtnMigrado" type="button" class="tab-btn px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
-                                   bg-gray-50 text-gray-500 border-transparent hover:text-gray-700" data-tab="migrado">
+                    <button id="tabBtnMigrado" type="button"
+                        class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
+                            bg-gray-50 text-gray-500 border-transparent hover:text-gray-700"
+                        data-tab="migrado">
                         Migración
                     </button>
                 </div>
+                {{-- Título dinámico --}}
+                <p id="tituloTabActiva" class="text text-gray-400 mt-2 ml-1 flex items-center content-center justify-center gap-1">
+                    <span class="font-medium text-primary">Pendientes / Listos</span>
+                </p>
             </div>
 
             {{-- CONTROLES COMUNES --}}
