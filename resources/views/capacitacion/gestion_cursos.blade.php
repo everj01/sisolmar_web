@@ -652,18 +652,6 @@
                         <p class="text-xs text-indigo-500 mt-2 font-medium">Seleccione explícitamente las sucursales donde este curso estará activo.</p>
                     </div>
 
-                    <!-- NUEVO: Obligatorio al Alta -->
-                    <div class="flex items-center gap-6 -mt-1 mb-1">
-                        <div class="flex items-center">
-                            <input class="form-switch" type="checkbox" role="switch" id="chkObligatorioAlta" x-model="obligatorioAlta" class="cursor-pointer">
-                            <label for="chkObligatorioAlta" class="ml-2 text-gray-800 text-sm font-medium cursor-pointer">Obligatorio al Alta</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input class="form-switch" type="checkbox" role="switch" id="chkEsDemanda" x-model="esDemanda" class="cursor-pointer">
-                            <label for="chkEsDemanda" class="ml-2 text-gray-800 text-sm font-medium cursor-pointer">Es por Demanda</label>
-                        </div>
-                    </div>
-
                     <!-- NUEVO: Responsable (Estilo Escritorio) -->
                     <div class="mt-4 bg-gray-50/50 border border-gray-100 rounded-lg p-3 shadow-sm">
                         <label class="text-indigo-800 text-[11px] font-bold uppercase tracking-wider mb-2 block">
@@ -1043,8 +1031,7 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px)">
-
-        <div style="background:#f8fafc;border-radius:1.25rem;width:100%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,0.15);box-shadow:0 25px 60px -15px rgba(0,0,0,0.5)">
+        <div style="background:#f8fafc;border-radius:1.25rem;width:100%;max-width:1250px;max-height:88vh;margin:auto;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,0.15);box-shadow:0 25px 60px -15px rgba(0,0,0,0.5)">
 
             {{-- Header --}}
             <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:1.25rem 1.75rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
@@ -1085,10 +1072,10 @@
                 </div>
                 <div style="display:flex;gap:0.5rem">
                     <span style="font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:0.375rem;color:#475569;display:flex;align-items:center;gap:0.3rem">
-                        <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#3b82f6;display:inline-block"></span> Teoría
+                        <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#3b82f6;display:inline-block"></span> Básica
                     </span>
                     <span style="font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:0.375rem;color:#475569;display:flex;align-items:center;gap:0.3rem">
-                        <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#f97316;display:inline-block"></span> Razonamiento
+                        <span style="width:0.5rem;height:0.5rem;border-radius:50%;background:#f97316;display:inline-block"></span> Complementaria
                     </span>
                 </div>
             </div>
@@ -1102,26 +1089,26 @@
 
                             {{-- Card Header --}}
                             <div style="padding:0.5rem 0.75rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
-                                <span style="font-size:0.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:0.25rem">
-                                    P. <span x-text="index+1" style="background:#e2e8f0;color:#475569;width:1.1rem;height:1.1rem;border-radius:0.25rem;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem"></span>
+                                <span style="font-size:0.75rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:0.35rem">
+                                    P. <span x-text="index+1" style="background:#e2e8f0;color:#475569;width:1.4rem;height:1.4rem;border-radius:0.25rem;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem"></span>
                                 </span>
-                                <select x-model="p.tipo" style="font-size:0.65rem;font-weight:700;border:1px solid #e2e8f0;border-radius:0.375rem;padding:0.15rem 0.4rem;background:transparent;color:#475569;cursor:pointer">
-                                    <option value="A">Teoría</option>
-                                    <option value="B">Razon. (B)</option>
+                                <select x-model="p.tipo" style="font-size:0.75rem;font-weight:700;border:1px solid #e2e8f0;border-radius:0.375rem;padding:0.25rem 0.5rem;background:transparent;color:#475569;cursor:pointer">
+                                    <option value="A">Básica</option>
+                                    <option value="B">Complementaria</option>
                                 </select>
                             </div>
 
                             {{-- Card Body --}}
                             <div style="padding:0.75rem;flex:1">
-                                <p style="font-size:0.72rem;font-weight:700;color:#1e293b;margin:0 0 0.625rem;line-height:1.35" x-text="p.pregunta"></p>
-                                <div style="display:flex;flex-direction:column;gap:0.35rem">
+                                <p style="font-size:0.85rem;font-weight:700;color:#1e293b;margin:0 0 0.625rem;line-height:1.4" x-text="p.pregunta"></p>
+                                <div style="display:flex;flex-direction:column;gap:0.4rem">
                                     <template x-for="(opt, optIndex) in p.opciones" :key="optIndex">
                                         <label style="display:flex;align-items:center;padding:0.375rem 0.5rem;border-radius:0.5rem;border:1px solid;cursor:pointer;transition:all 0.15s"
                                                :style="p.respuesta_correcta==optIndex ? 'border-color:#86efac;background:#f0fdf4' : 'border-color:#f1f5f9;background:#fafafa'">
                                             <input type="radio" :name="'resp_'+index" :value="optIndex" x-model="p.respuesta_correcta"
-                                                   style="width:0.8rem;height:0.8rem;accent-color:#16a34a;flex-shrink:0">
-                                            <span style="margin-left:0.5rem;font-size:0.68rem;font-weight:500;color:#475569;flex:1;line-height:1.3" x-text="opt"></span>
-                                            <i x-show="p.respuesta_correcta==optIndex" class="bx bxs-check-circle" style="color:#16a34a;font-size:0.85rem;margin-left:auto;flex-shrink:0"></i>
+                                                   style="width:0.85rem;height:0.85rem;accent-color:#16a34a;flex-shrink:0">
+                                            <span style="margin-left:0.5rem;font-size:0.80rem;font-weight:500;color:#475569;flex:1;line-height:1.35" x-text="opt"></span>
+                                            <i x-show="p.respuesta_correcta==optIndex" class="bx bxs-check-circle" style="color:#16a34a;font-size:0.95rem;margin-left:auto;flex-shrink:0"></i>
                                         </label>
                                     </template>
                                 </div>

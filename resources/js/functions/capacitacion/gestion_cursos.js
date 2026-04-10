@@ -503,8 +503,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
                 // Datos de Examen (Sincronizar con Alpine)
                 alpineData.aplicaEvaluacion = curso.aplica_evaluacion == 1;
-                alpineData.obligatorioAlta = curso.obligatorio_alta == 1;
-                alpineData.esDemanda = curso.es_demanda == 1; // 👈 NUEVO
+                alpineData.obligatorioAlta = true; // Siempre true por regla de negocio
+                alpineData.esDemanda = false;      // Retirado por regla de negocio
+
                 alpineData.targetGroup = curso.target_group || 'TODOS';
 
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
@@ -777,8 +778,9 @@ window.formCursoGestion = function () {
         nombreResponsable: '',
 
         aplicaEvaluacion: true,
-        obligatorioAlta: false,
-        esDemanda: false,         // 👈 NUEVO
+        obligatorioAlta: true, // Siempre true por regla de negocio
+        esDemanda: false,      // Retirado
+
 
         // IA 2026
         archivoIA: null,
@@ -938,24 +940,11 @@ window.formCursoGestion = function () {
                     this.empresasDisponibles = res.data || [];
                 });
 
-            // Sincronizar Frecuencia, Obligatorio al Alta y Es por Demanda
-            this.$watch('esDemanda', (val) => {
-                if (val) {
-                    this.frecuencia = ''; // Si es por demanda, no hay frecuencia
-                    this.obligatorioAlta = false; // No puede ser automático al alta si es manual por demanda
-                }
-            });
-
-            this.$watch('obligatorioAlta', (val) => {
-                if (val) {
-                    this.esDemanda = false; // No puede ser por demanda si es automático al alta
-                }
-            });
+            // Eliminado el bloque de exclusión mutua ($watch) entre obligatorioAlta y esDemanda,
+            // ya que ahora obligatorioAlta siempre es true y esDemanda siempre es false por requerimiento.
 
             this.$watch('frecuencia', (val) => {
-                if (val) {
-                    this.esDemanda = false; // Si hay frecuencia (es periódico), no puede ser por demanda
-                }
+                // Mantenemos otras lógicas de frecuencia si existen
             });
         },
 
@@ -1001,8 +990,9 @@ window.formCursoGestion = function () {
             this.preguntasExamenIA = [];
 
             this.aplicaEvaluacion = true;
-            this.obligatorioAlta = false;
-            this.esDemanda = false; // 👈 NUEVO
+            this.obligatorioAlta = true; // Forzado a true por requerimiento
+            this.esDemanda = false;
+
             this.targetGroup = 'TODOS';
 
             // Forzar limpieza de inputs de archivos y estados visuales
