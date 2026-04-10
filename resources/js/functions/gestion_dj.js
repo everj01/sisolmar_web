@@ -15,10 +15,47 @@ import { generarDeclaracionJuradaPDF, generarReporteFaltantesPDF } from './dj_pd
 const API_URL = `${VITE_URL_APP}/api`;
 let registroSeleccionado = null;
 
+const categoriasSe = {
+    'A': [
+        { val: 'A-I', text: 'A-I: Particulares' },
+        { val: 'A-IIa', text: 'A-IIa: Taxi / Ambulancia' },
+        { val: 'A-IIb', text: 'A-IIb: Microbús / Pickup' },
+        { val: 'A-IIIa', text: 'A-IIIa: Ómnibus' },
+        { val: 'A-IIIb', text: 'A-IIIb: Camiones' },
+        { val: 'A-IIIc', text: 'A-IIIc: Todos los anteriores' }
+    ],
+    'B': [
+        { val: 'B-IIa', text: 'B-IIa: Bicimotos' },
+        { val: 'B-IIb', text: 'B-IIb: Motocicletas' },
+        { val: 'B-IIc', text: 'B-IIc: Mototaxis' }
+    ]
+};
+
+
+
+function actualizarCategorias() {
+    const claseSel = document.getElementById('clase_brevete').value;
+    const catSelect = document.getElementById('tipo_vehiculo');
+    
+    // Limpiar opciones previas
+    catSelect.innerHTML = '<option value="">-- Seleccione Categoría --</option>';
+    
+    if (claseSel && categoriasSe[claseSel]) {
+        categoriasSe[claseSel].forEach(item => {
+            let opt = document.createElement('option');
+            opt.value = item.val;
+            opt.textContent = item.text;
+            catSelect.appendChild(opt);
+        });
+    }
+}
+
 // ============================================================
 // DOCUMENT READY
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
+
+    document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
 
     // ── Referencias DOM ──────────────────────────────────────
     const modalDjGestion        = document.getElementById('modalDjGestion');
@@ -56,9 +93,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const departamentoSelect    = document.getElementById("departamento_actual");
     const provinciaSelect       = document.getElementById("provincia_actual");
     const distritoSelect        = document.getElementById("distrito_actual");
+
     const departamentoSelectDni = document.getElementById("departamento_dni");
     const provinciaSelectDni    = document.getElementById("provincia_dni");
     const distritoSelectDni     = document.getElementById("distrito_dni");
+
+    const departamentoSelectNac    = document.getElementById("departamento_nac");
+    const provinciaSelectNac       = document.getElementById("provincia_nac");
+    const distritoSelectNac        = document.getElementById("distrito_nac");
 
     // Campos validación PDF
     const nombreDJtxt   = document.getElementById("nombres_apellidos");
@@ -103,7 +145,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
-                    const color = val === 'OPERATIVO' ? 'border-blue-300 bg-blue-100 text-blue-800' : 'border-purple-300 bg-purple-100 text-purple-800';
+                    let color = '';
+                    if(val === 'OPERATIVO'){
+                       color = 'border-blue-300 bg-blue-100 text-blue-800' ;
+
+                    }else if (val === 'ADMINISTRATIVO'){
+                        color = 'border-purple-300 bg-purple-100 text-purple-800';
+
+                    }else{
+                        color = 'border-black-300 bg-black-100 text-black-800' ;
+
+                    }
                     return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium">${capitalizeWords(val)}</span>` : '';
                 }
             },
@@ -301,10 +353,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (container) { container.innerHTML = ''; container.insertAdjacentHTML('beforeend', makeFamilyRow()); }
         if (institucionContainer) institucionContainer.classList.add("hidden");
         if (institucionInput)     institucionInput.value = "";
+
         if (provinciaSelect)      provinciaSelect.innerHTML = '<option value="">Seleccionar</option>';
         if (distritoSelect)       distritoSelect.innerHTML  = '<option value="">Seleccionar</option>';
+
         if (provinciaSelectDni)   provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
         if (distritoSelectDni)    distritoSelectDni.innerHTML  = '<option value="">Seleccionar</option>';
+
+        if (provinciaSelectNac)   provinciaSelectNac.innerHTML = '<option value="">Seleccionar</option>';
+        if (distritoSelectNac)    distritoSelectNac.innerHTML  = '<option value="">Seleccionar</option>';
 
         setValue('dj2026_laboral_1', '');
         setValue('dj2026_laboral_2', '');
@@ -360,21 +417,28 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error cargando distritos:", error); }
     }
 
-    if (departamentoSelect && departamentoSelectDni) {
+    if (departamentoSelect && departamentoSelectDni && departamentoSelectNac) {
         axios.get(`${API_BASE}/departamentos`)
             .then(response => {
                 response.data.forEach(dep => {
                     departamentoSelect.add(new Option(dep.depa_descripcion, dep.depa_codigo));
                     departamentoSelectDni.add(new Option(dep.depa_descripcion, dep.depa_codigo));
+                    departamentoSelectNac.add(new Option(dep.depa_descripcion, dep.depa_codigo));
                 });
             })
             .catch(error => console.error("Error cargando departamentos:", error));
     }
 
+  
+
     departamentoSelect?.addEventListener("change",    async function () { await cargarProvincias(provinciaSelect, distritoSelect, this.value); });
     provinciaSelect?.addEventListener("change",       async function () { await cargarDistritos(distritoSelect, this.value); });
+    
     departamentoSelectDni?.addEventListener("change", async function () { await cargarProvincias(provinciaSelectDni, distritoSelectDni, this.value); });
     provinciaSelectDni?.addEventListener("change",    async function () { await cargarDistritos(distritoSelectDni, this.value); });
+    
+    departamentoSelectNac?.addEventListener("change", async function () { await cargarProvincias(provinciaSelectNac, distritoSelectNac, this.value); });
+    provinciaSelectNac?.addEventListener("change",    async function () { await cargarDistritos(distritoSelectNac, this.value); });
 
     // ============================================================
     // CARGA DE DATOS (API)
@@ -471,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Título dinámico
         const tituloEl = document.getElementById('tituloTabActiva');
-        const titulos  = { pendiente: 'Pendientes / Listos', migrado: 'Migración' };
+        const titulos  = { pendiente: 'DJ Listos', migrado: 'Migración' };
         if (tituloEl) {
             tituloEl.innerHTML = `<span class="font-medium text-primary">${titulos[tab]}</span>`;
         }
@@ -900,6 +964,11 @@ async function llenarFormulario(data) {
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
     setValue('#sabe_nadar',       data.PERS_SNADAR        ? data.PERS_SNADAR.trim()        : '');
     setValue('#ciudad_nacimiento',data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
+
+    // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
+    // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
+    // setValue('#distrito_nac',data.DIST_NACI ? data.DIST_NACI.trim() : '');
+
     setValue('#dj2026_laboral_1', data.dj2026_laboral_1   ? data.dj2026_laboral_1.trim()   : '');
     setValue('#dj2026_laboral_2', data.dj2026_laboral_2   ? data.dj2026_laboral_2.trim()   : '');
 
@@ -944,6 +1013,8 @@ async function llenarFormulario(data) {
 
     cargarUbicaciones('actual', data.PERS_DEPT_ACT   ?.trim()??'', data.PERS_PROV_ACT   ?.trim()??'', data.PERS_DIST_ACT   ?.trim()??'');
     cargarUbicaciones('dni',    data.PERS_DPTO_DIRDNI?.trim()??'', data.PERS_PROV_DIRDNI?.trim()??'', data.PERS_DIST_DIRDNI?.trim()??'');
+    cargarUbicaciones('nac',    data.DEPA_CODIGO_NACI  ?.trim()??'', data.PROVI_CODIGO_NACI ?.trim()??'', data.DIST_NACI?.trim()??'');
+
 
     setValue('#ocupacion_principal',  data.dj2026_ocupacion_principal);
     setValue('#experiencia_anios',    data.dj2026_experiencia_anios ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
@@ -1041,7 +1112,7 @@ function addFamiliarRow(data = {}, container = null) {
 
 // ── Ubicaciones cascada ──────────────────────────────────────
 async function cargarUbicaciones(tipo, dept, prov, dist) {
-    const prefix = tipo === 'actual' ? '_actual' : '_dni';
+     const prefix = tipo === 'actual' ? '_actual' : tipo === 'dni' ? '_dni' : '_nac';
     if (!dept) return;
     const depts = await axios.get(`${API_URL}/dj/get-ubicacion?type=dept`);
     populateSelect(`#departamento${prefix}`, depts.data);

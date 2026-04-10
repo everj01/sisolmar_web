@@ -508,125 +508,145 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         // SECCIÓN: DATOS FAMILIARES
         // ════════════════════════════════════════════════════════
         checkPageBreak(40);
-        // Título + header familiares en UN solo bloque sin gap entre ellos
+ 
         const fmC1 = boxWidth * 0.15, fmC2 = boxWidth * 0.70, fmC3 = boxWidth * 0.15;
         const fmHeaderH = rowH * 1.3;
-        const fmBloqueH = sectionTitleH + fmHeaderH;
-
-        // Dibujar título (sin borde inferior propio)
+ 
+        // Título sin borde inferior propio (lo cierra el header de familiares)
         pdf.setFillColor(...colors.sectionBg);
         pdf.rect(boxX, y, boxWidth, sectionTitleH, "F");
         pdf.setDrawColor(...colors.borderColor); pdf.setLineWidth(0.20);
-        // Solo bordes: top, left, right (NO bottom — lo dibuja el header)
-        pdf.line(boxX, y, boxX + boxWidth, y);              // top
-        pdf.line(boxX, y, boxX, y + sectionTitleH);         // left
-        pdf.line(boxX + boxWidth, y, boxX + boxWidth, y + sectionTitleH); // right
+        pdf.line(boxX,             y,                 boxX + boxWidth, y);                 // top
+        pdf.line(boxX,             y,                 boxX,            y + sectionTitleH); // left
+        pdf.line(boxX + boxWidth,  y,                 boxX + boxWidth, y + sectionTitleH); // right
         pdf.setFontSize(8.5); pdf.setFont(FONT_FAMILY, "bold"); pdf.setTextColor(...colors.sectionText);
         pdf.text("MIS DATOS FAMILIARES", boxX + boxWidth / 2, y + sectionTitleH / 2 + 1.2, { align: "center" });
         y += sectionTitleH;
-
+ 
         // Línea separadora entre título y header de familiares
         pdf.setDrawColor(...colors.borderColor); pdf.setLineWidth(0.20);
         pdf.line(boxX, y, boxX + boxWidth, y);
-
-        // Header familiares
+ 
+        // Header de columnas familiares
         pdf.setFillColor(...colors.labelBg);
-        pdf.rect(boxX, y, fmC1, fmHeaderH, "F");
-        pdf.rect(boxX + fmC1, y, fmC2, fmHeaderH, "F");
+        pdf.rect(boxX,             y, fmC1, fmHeaderH, "F");
+        pdf.rect(boxX + fmC1,      y, fmC2, fmHeaderH, "F");
         pdf.rect(boxX + fmC1 + fmC2, y, fmC3, fmHeaderH, "F");
         pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-        // Solo bordes: left, right, bottom + divisores verticales (NO top)
-        pdf.line(boxX, y, boxX, y + fmHeaderH);             // left
-        pdf.line(boxX + boxWidth, y, boxX + boxWidth, y + fmHeaderH); // right
-        pdf.line(boxX, y + fmHeaderH, boxX + boxWidth, y + fmHeaderH); // bottom
-        pdf.line(boxX + fmC1,        y, boxX + fmC1,        y + fmHeaderH);
+        pdf.line(boxX,             y, boxX,             y + fmHeaderH); // left
+        pdf.line(boxX + boxWidth,  y, boxX + boxWidth,  y + fmHeaderH); // right
+        pdf.line(boxX,             y + fmHeaderH, boxX + boxWidth, y + fmHeaderH); // bottom
+        pdf.line(boxX + fmC1,      y, boxX + fmC1,      y + fmHeaderH);
         pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + fmHeaderH);
         pdf.setFontSize(8); pdf.setFont(FONT_FAMILY, "normal");
-        pdf.text("Parentesco",          boxX + fmC1/2,               y + fmHeaderH/2 + 1, { align: "center" });
-        pdf.text("Apellidos y Nombres", boxX + fmC1 + fmC2/2,       y + fmHeaderH/2 + 1, { align: "center" });
+        pdf.text("Parentesco",          boxX + fmC1 / 2,               y + fmHeaderH / 2 + 1, { align: "center" });
+        pdf.text("Apellidos y Nombres", boxX + fmC1 + fmC2 / 2,       y + fmHeaderH / 2 + 1, { align: "center" });
         const fnLines = pdf.splitTextToSize("Fecha Nacimiento", fmC3 - 4);
-        pdf.text(fnLines, boxX + fmC1 + fmC2 + fmC3/2, y + fmHeaderH/2 - (fnLines.length > 1 ? 1.5 : 0) + 1, { align: "center" });
+        pdf.text(fnLines, boxX + fmC1 + fmC2 + fmC3 / 2, y + fmHeaderH / 2 - (fnLines.length > 1 ? 1.5 : 0) + 1, { align: "center" });
         y += fmHeaderH;
-
+ 
+        // Filas de familiares
         const parentescos = document.getElementsByName("parentesco[]");
         const nombresFam  = document.getElementsByName("apellidosNombres[]");
         const fechasFam   = document.getElementsByName("fechaNacimiento[]");
         const rowCount    = Math.max(parentescos.length, 5);
+ 
         for (let i = 0; i < rowCount; i++) {
             checkPageBreak(rowH);
-            const par = parentescos[i]?.value || "", nom = nombresFam[i]?.value || "", fec = formatDateToDMY(fechasFam[i]?.value || "");
-            pdf.setDrawColor(0); pdf.setLineWidth(0.20); pdf.rect(boxX, y, boxWidth, rowH);
-            pdf.line(boxX + fmC1,        y, boxX + fmC1,        y + rowH);
-            pdf.line(boxX + fmC1 + fmC2, y, boxX + fmC1 + fmC2, y + rowH);
+            const par = parentescos[i]?.value || "";
+            const nom = nombresFam[i]?.value  || "";
+            const fec = formatDateToDMY(fechasFam[i]?.value || "");
+ 
+            pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+            pdf.rect(boxX, y, boxWidth, rowH);
+            pdf.line(boxX + fmC1,         y, boxX + fmC1,         y + rowH);
+            pdf.line(boxX + fmC1 + fmC2,  y, boxX + fmC1 + fmC2,  y + rowH);
             pdf.setFont(FONT_FAMILY, "normal"); pdf.setFontSize(8); pdf.setTextColor(0);
-            pdf.text(par.toUpperCase(), boxX + 2,                y + rowH/2 + 1);
-            pdf.text(nom.toUpperCase(), boxX + fmC1 + 2,         y + rowH/2 + 1);
-            pdf.text(fec,               boxX + fmC1 + fmC2 + 2,  y + rowH/2 + 1);
+            pdf.text(par.toUpperCase(), boxX + 2,               y + rowH / 2 + 1);
+            pdf.text(nom.toUpperCase(), boxX + fmC1 + 2,        y + rowH / 2 + 1);
+            pdf.text(fec,               boxX + fmC1 + fmC2 + 2, y + rowH / 2 + 1);
             y += rowH;
         }
-
+ 
+        // ════════════════════════════════════════════════════════
+        // SALTO DE PÁGINA CONDICIONAL
+        // Si hay 6 o más familiares (rowCount >= 6), forzar nueva
+        // página antes de CONFORMIDAD + FIRMA para que no queden
+        // aplastados al final de la hoja.
+        // ════════════════════════════════════════════════════════
+        // Solo salta de página cuando hay 6 o más familiares — sin condición adicional
+        if (rowCount >= 6) {
+            pdf.addPage();
+            y = marginTop;
+        }
+ 
         // ════════════════════════════════════════════════════════
         // SECCIÓN: CONFORMIDAD
         // ════════════════════════════════════════════════════════
-              drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y);
+        drawSectionTitle("MI CONFORMIDAD CON LA DECLARACION JURADA", y);
         y += sectionTitleH;
+ 
         pdf.setFontSize(8.5); pdf.setFont(FONT_FAMILY, "normal");
         const confTextBase = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento.";
         const confTextOper = " En mi Sistema de Información Personal SIP verificaré periódicamente la exactitud de la información que contiene mi Declaración Jurada.";
         const confLines = pdf.splitTextToSize(
             esOper ? confTextBase + confTextOper : confTextBase,
-            boxWidth - 4);
+            boxWidth - 4
+        );
         const confBoxH = confLines.length * lineH + paraTopPad + paraBottomPad;
-        pdf.setDrawColor(0); pdf.setLineWidth(0.20); pdf.rect(boxX, y, boxWidth, confBoxH);
+        pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+        pdf.rect(boxX, y, boxWidth, confBoxH);
         pdf.setTextColor(0);
         drawJustifiedText(pdf, confLines, boxX + 2, y + paraTopPad, boxWidth - 4, lineH);
         y += confBoxH;
-
+ 
         // ════════════════════════════════════════════════════════
-        // TABLA ÚNICA: firma/huella + fila fecha/nombre
+        // TABLA: Firma / Huella + fila fecha/nombre
         // ════════════════════════════════════════════════════════
         const firmaW  = boxWidth * 0.6;
         const huellaW = boxWidth * 0.4;
-        const firmaH  = Math.max(firmaMinH, pageHeight - marginBottom - footerRowH - y - 1);
-        const tablaH  = firmaH + footerRowH;
-
+ 
+        // Altura fija para la celda de firma/huella — no crece con el espacio restante
+        const firmaH = firmaMinH; // 45mm definido arriba en las constantes
+        const tablaH = firmaH + footerRowH;
+ 
         pdf.setDrawColor(0); pdf.setLineWidth(0.3);
         pdf.rect(boxX, y, boxWidth, tablaH);
         pdf.setLineWidth(0.20);
         pdf.line(boxX + firmaW, y, boxX + firmaW, y + firmaH);
         pdf.line(boxX, y + firmaH, boxX + boxWidth, y + firmaH);
-
+ 
         const firmaLabelY = y + firmaH - 6;
         pdf.setFont(FONT_FAMILY, "bold"); pdf.setFontSize(7.5); pdf.setTextColor(0);
-        pdf.text("Firma Registrada",              boxX + firmaW / 2,         firmaLabelY,     { align: "center" });
-        pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,         firmaLabelY + 3, { align: "center" });
-        pdf.text("Huella Registrada",             boxX + firmaW + huellaW/2, firmaLabelY,     { align: "center" });
-        pdf.text("INDICE DERECHO",                boxX + firmaW + huellaW/2, firmaLabelY + 3, { align: "center" });
-
-        const footerY = y + firmaH;
-        const fechaW  = boxWidth * 0.25, fechaValW = boxWidth * 0.15;
+        pdf.text("Firma Registrada",              boxX + firmaW / 2,          firmaLabelY,     { align: "center" });
+        pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,          firmaLabelY + 3, { align: "center" });
+        pdf.text("Huella Registrada",              boxX + firmaW + huellaW / 2, firmaLabelY,   { align: "center" });
+        pdf.text("INDICE DERECHO",                 boxX + firmaW + huellaW / 2, firmaLabelY + 3, { align: "center" });
+ 
+        const footerY          = y + firmaH;
+        const fechaW           = boxWidth * 0.25;
+        const fechaValW        = boxWidth * 0.15;
         const nombreLabelStart = boxX + fechaW + fechaValW;
         const nombreLabelEnd   = boxX + firmaW;
-
-        pdf.setFillColor(...colors.labelBg); pdf.rect(boxX,             footerY, fechaW,                            footerRowH, "F");
-        pdf.setFillColor(255);               pdf.rect(boxX + fechaW,    footerY, fechaValW,                         footerRowH, "F");
-        pdf.setFillColor(...colors.labelBg); pdf.rect(nombreLabelStart, footerY, nombreLabelEnd - nombreLabelStart, footerRowH, "F");
-        pdf.setFillColor(255);               pdf.rect(nombreLabelEnd,   footerY, (boxX + boxWidth) - nombreLabelEnd,footerRowH, "F");
-
+ 
+        pdf.setFillColor(...colors.labelBg); pdf.rect(boxX,              footerY, fechaW,                             footerRowH, "F");
+        pdf.setFillColor(255);               pdf.rect(boxX + fechaW,     footerY, fechaValW,                          footerRowH, "F");
+        pdf.setFillColor(...colors.labelBg); pdf.rect(nombreLabelStart,  footerY, nombreLabelEnd - nombreLabelStart,  footerRowH, "F");
+        pdf.setFillColor(255);               pdf.rect(nombreLabelEnd,    footerY, (boxX + boxWidth) - nombreLabelEnd, footerRowH, "F");
+ 
         pdf.setDrawColor(0); pdf.setLineWidth(0.20);
         pdf.line(boxX + fechaW,    footerY, boxX + fechaW,    footerY + footerRowH);
         pdf.line(nombreLabelStart, footerY, nombreLabelStart, footerY + footerRowH);
         pdf.line(nombreLabelEnd,   footerY, nombreLabelEnd,   footerY + footerRowH);
-
-        // Borde exterior de la fila footer más grueso
+ 
         pdf.setLineWidth(0.3);
         pdf.rect(boxX, footerY, boxWidth, footerRowH);
-
+ 
         pdf.setTextColor(0); pdf.setFont(FONT_FAMILY, "normal"); pdf.setFontSize(7.5);
-        pdf.text("Fecha de la declaración", boxX + 2,             footerY + footerRowH/2 + 1);
-        pdf.text(formatDateToDMY(new Date()),boxX + fechaW + 2,   footerY + footerRowH/2 + 1);
-        pdf.text("Nombre",                  nombreLabelStart + 2,  footerY + footerRowH/2 + 1);
-        pdf.text(nombres,                    nombreLabelEnd + 2,    footerY + footerRowH/2 + 1);
+        pdf.text("Fecha de la declaración", boxX + 2,            footerY + footerRowH / 2 + 1);
+        pdf.text(formatDateToDMY(new Date()), boxX + fechaW + 2,  footerY + footerRowH / 2 + 1);
+        pdf.text("Nombre",                   nombreLabelStart + 2, footerY + footerRowH / 2 + 1);
+        pdf.text(nombres,                     nombreLabelEnd + 2,   footerY + footerRowH / 2 + 1);
 
         const f = new Date();
         const fechaHora = f.getFullYear() + String(f.getMonth()+1).padStart(2,'0') + String(f.getDate()).padStart(2,'0')

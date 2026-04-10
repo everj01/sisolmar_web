@@ -1,454 +1,700 @@
 {{-- Partial: _modal_dj.blade.php — Split View Comparación --}}
 
 <style>
-/* ============================================================
+    /* ============================================================
    ESTILOS GENERALES DEL MODAL DJ
    ============================================================ */
-#modalDjGestion .dj-input,
-#modalDjGestion .dj-select,
-#modalDjGestion .dj-textarea {
-    width:100%; font-size:13px; padding:5px 10px;
-    border:1px solid #d1d5db; border-radius:6px;
-    background:#fff; color:#111827;
-    transition:border-color .15s, box-shadow .15s; box-sizing:border-box;
-}
-#modalDjGestion .dj-input:focus,
-#modalDjGestion .dj-select:focus,
-#modalDjGestion .dj-textarea:focus { outline:none; border-color:var(--color-primary,#6366f1); }
-#modalDjGestion .dj-input::placeholder,
-#modalDjGestion .dj-textarea::placeholder { color:#9ca3af; }
-#modalDjGestion .dj-textarea { resize:vertical; min-height:56px; }
-#modalDjGestion .dj-label {
-    display:block; font-size:11px; font-weight:600;
-    color:#6b7280; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;
-}
-#modalDjGestion .dj-section {
-    border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; margin-bottom:12px;
-}
-#modalDjGestion .dj-section-header {
-    display:flex; align-items:center; gap:6px; padding:7px 14px;
-    background:#f9fafb; border-bottom:1px solid #e5e7eb;
-    font-size:12px; font-weight:700; color:#374151;
-    text-transform:uppercase; letter-spacing:.04em;
-}
-#modalDjGestion .dj-section-header svg { width:14px; height:14px; stroke:var(--color-primary,#6366f1); flex-shrink:0; }
-#modalDjGestion .dj-section-body { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
-#modalDjGestion .dj-divider { border:none; border-top:1px solid #f3f4f6; margin:4px 0; }
-#modalDjGestion .dj-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-#modalDjGestion .dj-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-#modalDjGestion .dj-grid-4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; }
-@media(max-width:768px){
-    #modalDjGestion .dj-grid-2,
-    #modalDjGestion .dj-grid-3,
-    #modalDjGestion .dj-grid-4{grid-template-columns:1fr;}
-}
-#modalDjGestion .dj-group { border-radius:8px; overflow:hidden; margin-bottom:16px; border:1px solid #e5e7eb; }
-#modalDjGestion .dj-group-header {
-    padding:8px 16px; font-size:11px; font-weight:700;
-    letter-spacing:.06em; text-transform:uppercase; color:#fff;
-    background:var(--color-primary,#6366f1);
-}
-#modalDjGestion .dj-group-body { padding:14px 16px; display:flex; flex-direction:column; gap:12px; background:#fff; }
-#modalDjGestion .dj-foto-wrap {
-    width:110px; height:130px; border:2px dashed #d1d5db; border-radius:6px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    cursor:pointer; overflow:hidden; flex-shrink:0; position:relative; background:#f9fafb;
-}
-#modalDjGestion .dj-foto-wrap img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-#modalDjGestion .dj-table { width:100%; border-collapse:collapse; font-size:12px; }
-#modalDjGestion .dj-table thead tr { border-bottom:1px solid #e5e7eb; }
-#modalDjGestion .dj-table thead th { padding:5px 6px; font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; text-align:left; }
-#modalDjGestion .dj-table tbody tr { border-bottom:1px solid #f3f4f6; }
-#modalDjGestion .dj-table tbody td { padding:5px 6px; vertical-align:middle; }
-#modalDjGestion .dj-subpanel { background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:10px 12px; margin-top:6px; }
-#modalDjGestion .dj-btn-sm {
-    font-size:11px; font-weight:600; padding:4px 12px; border-radius:20px;
-    cursor:pointer; border:none; display:inline-flex; align-items:center; gap:4px;
-    transition:background .15s,color .15s;
-}
-#modalDjGestion .dj-btn-primary { background:rgba(99,102,241,.15); color:var(--color-primary,#6366f1); }
-#modalDjGestion .dj-btn-primary:hover { background:var(--color-primary,#6366f1); color:#fff; }
-#modalDjGestion .dj-btn-danger { background:#fee2e2; color:#b91c1c; }
-#modalDjGestion .dj-btn-danger:hover { background:#fca5a5; }
+    #modalDjGestion .dj-input,
+    #modalDjGestion .dj-select,
+    #modalDjGestion .dj-textarea {
+        width: 100%;
+        font-size: 13px;
+        padding: 5px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #fff;
+        color: #111827;
+        transition: border-color .15s, box-shadow .15s;
+        box-sizing: border-box;
+    }
 
-/* ============================================================
+    #modalDjGestion .dj-input:focus,
+    #modalDjGestion .dj-select:focus,
+    #modalDjGestion .dj-textarea:focus {
+        outline: none;
+        border-color: var(--color-primary, #6366f1);
+    }
+
+    #modalDjGestion .dj-input::placeholder,
+    #modalDjGestion .dj-textarea::placeholder {
+        color: #9ca3af;
+    }
+
+    #modalDjGestion .dj-textarea {
+        resize: vertical;
+        min-height: 56px;
+    }
+
+    #modalDjGestion .dj-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin-bottom: 3px;
+    }
+
+    #modalDjGestion .dj-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 12px;
+    }
+
+    #modalDjGestion .dj-section-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 12px;
+        font-weight: 700;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    #modalDjGestion .dj-section-header svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--color-primary, #6366f1);
+        flex-shrink: 0;
+    }
+
+    #modalDjGestion .dj-section-body {
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #modalDjGestion .dj-divider {
+        border: none;
+        border-top: 1px solid #f3f4f6;
+        margin: 4px 0;
+    }
+
+    #modalDjGestion .dj-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    #modalDjGestion .dj-grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+    }
+
+    #modalDjGestion .dj-grid-4 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 10px;
+    }
+
+    @media(max-width:768px) {
+
+        #modalDjGestion .dj-grid-2,
+        #modalDjGestion .dj-grid-3,
+        #modalDjGestion .dj-grid-4 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    #modalDjGestion .dj-group {
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        border: 1px solid #e5e7eb;
+    }
+
+    #modalDjGestion .dj-group-header {
+        padding: 8px 16px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: #fff;
+        background: var(--color-primary, #6366f1);
+    }
+
+    #modalDjGestion .dj-group-body {
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #fff;
+    }
+
+    #modalDjGestion .dj-foto-wrap {
+        width: 110px;
+        height: 130px;
+        border: 2px dashed #d1d5db;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+        flex-shrink: 0;
+        position: relative;
+        background: #f9fafb;
+    }
+
+    #modalDjGestion .dj-foto-wrap img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #modalDjGestion .dj-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    #modalDjGestion .dj-table thead tr {
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    #modalDjGestion .dj-table thead th {
+        padding: 5px 6px;
+        font-size: 10px;
+        font-weight: 700;
+        color: #9ca3af;
+        text-transform: uppercase;
+        text-align: left;
+    }
+
+    #modalDjGestion .dj-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    #modalDjGestion .dj-table tbody td {
+        padding: 5px 6px;
+        vertical-align: middle;
+    }
+
+    #modalDjGestion .dj-subpanel {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 10px 12px;
+        margin-top: 6px;
+    }
+
+    #modalDjGestion .dj-btn-sm {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: background .15s, color .15s;
+    }
+
+    #modalDjGestion .dj-btn-primary {
+        background: rgba(99, 102, 241, .15);
+        color: var(--color-primary, #6366f1);
+    }
+
+    #modalDjGestion .dj-btn-primary:hover {
+        background: var(--color-primary, #6366f1);
+        color: #fff;
+    }
+
+    #modalDjGestion .dj-btn-danger {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    #modalDjGestion .dj-btn-danger:hover {
+        background: #fca5a5;
+    }
+
+    /* ============================================================
    SPLIT VIEW
    ============================================================ */
-.dj-split-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    min-height: 0;
-}
+    .dj-split-wrapper {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        min-height: 0;
+    }
 
-/* Panel izquierdo - BACKUP (solo lectura) */
-.dj-panel-backup {
-    background: #fffbeb;
-    border-right: 2px solid #fde68a;
-    padding: 14px 16px;
-    overflow-y: auto;
-}
-.dj-panel-backup-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    border-radius: 8px;
-    margin-bottom: 14px;
-}
-.dj-panel-backup-header span {
-    font-size: 11px;
-    font-weight: 700;
-    color: #92400e;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-.dj-panel-backup .bk-group {
-    margin-bottom: 14px;
-}
-.dj-panel-backup .bk-group-title {
-    font-size: 10px;
-    font-weight: 700;
-    color: #92400e;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    padding: 5px 8px;
-    background: #fde68a;
-    border-radius: 5px;
-    margin-bottom: 8px;
-}
-.dj-panel-backup .bk-field {
-    margin-bottom: 8px;
-    padding: 4px 6px;
-    border-radius: 5px;
-    transition: background .2s, box-shadow .2s;
-    cursor: default;
-}
-.dj-panel-backup .bk-field label {
-    display: block;
-    font-size: 9px;
-    font-weight: 700;
-    color: #78350f;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    margin-bottom: 2px;
-}
-.dj-panel-backup .bk-field .bk-val {
-    font-size: 12px;
-    color: #1f2937;
-    display: block;
-    min-height: 18px;
-    word-break: break-word;
-}
-/* Estado: campo diferente en backup */
-.dj-panel-backup .bk-field.is-diff {
-    background: #fef08a;
-    border-left: 3px solid #f59e0b;
-}
-/* Estado: campo activo (cuando el usuario hace focus en el form) */
-.dj-panel-backup .bk-field.is-active {
-    background: #fde68a;
-    box-shadow: 0 0 0 2px #f59e0b;
-}
+    /* Panel izquierdo - BACKUP (solo lectura) */
+    .dj-panel-backup {
+        background: #fffbeb;
+        border-right: 2px solid #fde68a;
+        padding: 14px 16px;
+        overflow-y: auto;
+    }
 
-/* Panel derecho - FORMULARIO NUEVO */
-.dj-panel-form {
-    padding: 14px 16px;
-    overflow-y: auto;
-    background: #fff;
-}
-.dj-panel-form-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #f0fdf4;
-    border: 1px solid #86efac;
-    border-radius: 8px;
-    margin-bottom: 14px;
-}
-.dj-panel-form-header span {
-    font-size: 11px;
-    font-weight: 700;
-    color: #166534;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
+    .dj-panel-backup-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #fef3c7;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        margin-bottom: 14px;
+    }
 
-/* Inputs con diferencia detectada */
-#modalDjGestion .dj-input.has-diff,
-#modalDjGestion .dj-select.has-diff,
-#modalDjGestion .dj-textarea.has-diff {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 2px rgba(239,68,68,.15);
-    background: #fff5f5;
-}
+    .dj-panel-backup-header span {
+        font-size: 11px;
+        font-weight: 700;
+        color: #92400e;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
 
-/* Badge CAMBIÓ */
-.badge-diff {
-    display: inline-block;
-    font-size: 8px;
-    font-weight: 700;
-    background: #ef4444;
-    color: #fff;
-    padding: 1px 5px;
-    border-radius: 10px;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    margin-left: 4px;
-    vertical-align: middle;
-}
+    .dj-panel-backup .bk-group {
+        margin-bottom: 14px;
+    }
 
-/* Tabla familiares backup */
-.bk-fam-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-    margin-top: 6px;
-}
-.bk-fam-table thead tr {
-    background: #fde68a;
-}
-.bk-fam-table thead th {
-    padding: 4px 6px;
-    font-size: 9px;
-    font-weight: 700;
-    color: #78350f;
-    text-transform: uppercase;
-    text-align: left;
-}
-.bk-fam-table tbody tr:nth-child(even) { background: #fef9c3; }
-.bk-fam-table tbody tr:nth-child(odd)  { background: #fffbeb; }
-.bk-fam-table tbody td {
-    padding: 4px 6px;
-    color: #1f2937;
-    border-bottom: 1px solid #fde68a;
-}
+    .dj-panel-backup .bk-group-title {
+        font-size: 10px;
+        font-weight: 700;
+        color: #92400e;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        padding: 5px 8px;
+        background: #fde68a;
+        border-radius: 5px;
+        margin-bottom: 8px;
+    }
 
-/* Scrollbar del split */
-.dj-panel-backup::-webkit-scrollbar,
-.dj-panel-form::-webkit-scrollbar { width: 5px; }
-.dj-panel-backup::-webkit-scrollbar-track { background: #fef9c3; }
-.dj-panel-backup::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 3px; }
-.dj-panel-form::-webkit-scrollbar-track { background: #f9fafb; }
-.dj-panel-form::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    .dj-panel-backup .bk-field {
+        margin-bottom: 8px;
+        padding: 4px 6px;
+        border-radius: 5px;
+        transition: background .2s, box-shadow .2s;
+        cursor: default;
+    }
 
-/* Ocultar split cuando no hay backup */
-.dj-split-wrapper.no-backup .dj-panel-backup { display: none; }
-.dj-split-wrapper.no-backup { grid-template-columns: 1fr; }
+    .dj-panel-backup .bk-field label {
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #78350f;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin-bottom: 2px;
+    }
+
+    .dj-panel-backup .bk-field .bk-val {
+        font-size: 12px;
+        color: #1f2937;
+        display: block;
+        min-height: 18px;
+        word-break: break-word;
+    }
+
+    /* Estado: campo diferente en backup */
+    .dj-panel-backup .bk-field.is-diff {
+        background: #fef08a;
+        border-left: 3px solid #f59e0b;
+    }
+
+    /* Estado: campo activo (cuando el usuario hace focus en el form) */
+    .dj-panel-backup .bk-field.is-active {
+        background: #fde68a;
+        box-shadow: 0 0 0 2px #f59e0b;
+    }
+
+    /* Panel derecho - FORMULARIO NUEVO */
+    .dj-panel-form {
+        padding: 14px 16px;
+        overflow-y: auto;
+        background: #fff;
+    }
+
+    .dj-panel-form-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 8px;
+        margin-bottom: 14px;
+    }
+
+    .dj-panel-form-header span {
+        font-size: 11px;
+        font-weight: 700;
+        color: #166534;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    /* Inputs con diferencia detectada */
+    #modalDjGestion .dj-input.has-diff,
+    #modalDjGestion .dj-select.has-diff,
+    #modalDjGestion .dj-textarea.has-diff {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, .15);
+        background: #fff5f5;
+    }
+
+    /* Badge CAMBIÓ */
+    .badge-diff {
+        display: inline-block;
+        font-size: 8px;
+        font-weight: 700;
+        background: #ef4444;
+        color: #fff;
+        padding: 1px 5px;
+        border-radius: 10px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-left: 4px;
+        vertical-align: middle;
+    }
+
+    /* Tabla familiares backup */
+    .bk-fam-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin-top: 6px;
+    }
+
+    .bk-fam-table thead tr {
+        background: #fde68a;
+    }
+
+    .bk-fam-table thead th {
+        padding: 4px 6px;
+        font-size: 9px;
+        font-weight: 700;
+        color: #78350f;
+        text-transform: uppercase;
+        text-align: left;
+    }
+
+    .bk-fam-table tbody tr:nth-child(even) {
+        background: #fef9c3;
+    }
+
+    .bk-fam-table tbody tr:nth-child(odd) {
+        background: #fffbeb;
+    }
+
+    .bk-fam-table tbody td {
+        padding: 4px 6px;
+        color: #1f2937;
+        border-bottom: 1px solid #fde68a;
+    }
+
+    /* Scrollbar del split */
+    .dj-panel-backup::-webkit-scrollbar,
+    .dj-panel-form::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .dj-panel-backup::-webkit-scrollbar-track {
+        background: #fef9c3;
+    }
+
+    .dj-panel-backup::-webkit-scrollbar-thumb {
+        background: #fbbf24;
+        border-radius: 3px;
+    }
+
+    .dj-panel-form::-webkit-scrollbar-track {
+        background: #f9fafb;
+    }
+
+    .dj-panel-form::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 3px;
+    }
+
+    /* Ocultar split cuando no hay backup */
+    .dj-split-wrapper.no-backup .dj-panel-backup {
+        display: none;
+    }
+
+    .dj-split-wrapper.no-backup {
+        grid-template-columns: 1fr;
+    }
 
 
-/* ============================================================
+    /* ============================================================
    MODAL TAMAÑO RESPONSIVO
    ============================================================ */
-#modalDjGestion > div {
-    width: 94% !important;
-    max-width: 1600px !important;
-    margin: 16px auto !important;
-}
+    #modalDjGestion>div {
+        width: 94% !important;
+        max-width: 1600px !important;
+        margin: 16px auto !important;
+    }
 
-@media (max-width: 1024px) {
-    #modalDjGestion > div {
-        width: 98% !important;
-        margin: 8px auto !important;
+    @media (max-width: 1024px) {
+        #modalDjGestion>div {
+            width: 98% !important;
+            margin: 8px auto !important;
+        }
     }
-}
 
-@media (max-width: 768px) {
-    #modalDjGestion > div {
-        width: 100% !important;
-        margin: 0 !important;
-        border-radius: 0 !important;
-        height: 100vh !important;
-    }
-    .dj-split-wrapper {
-        grid-template-columns: 1fr !important;
-        flex-direction: column !important;
-    }
-    .dj-panel-backup {
-        border-right: none !important;
-        border-bottom: 2px solid #fde68a !important;
-        max-height: 40vh !important;
-    }
-}
+    @media (max-width: 768px) {
+        #modalDjGestion>div {
+            width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            height: 100vh !important;
+        }
 
-/* ============================================================
+        .dj-split-wrapper {
+            grid-template-columns: 1fr !important;
+            flex-direction: column !important;
+        }
+
+        .dj-panel-backup {
+            border-right: none !important;
+            border-bottom: 2px solid #fde68a !important;
+            max-height: 40vh !important;
+        }
+    }
+
+    /* ============================================================
    SPLIT WRAPPER — altura fija con scroll independiente
    ============================================================ */
-.dj-split-wrapper {
-    display: flex !important;
-    flex-direction: row;
-    overflow: hidden;
-    height: calc(85vh - 100px);
-    position: relative;
-}
+    .dj-split-wrapper {
+        display: flex !important;
+        flex-direction: row;
+        overflow: hidden;
+        height: calc(85vh - 100px);
+        position: relative;
+    }
 
-.dj-split-wrapper.no-backup {
-    display: block !important;
-    height: calc(85vh - 100px);
-    overflow: hidden;
-}
+    .dj-split-wrapper.no-backup {
+        display: block !important;
+        height: calc(85vh - 100px);
+        overflow: hidden;
+    }
 
-.dj-split-wrapper.no-backup .dj-panel-form {
-    height: 100%;
-    overflow-y: auto;
-}
+    .dj-split-wrapper.no-backup .dj-panel-form {
+        height: 100%;
+        overflow-y: auto;
+    }
 
-/* ============================================================
+    /* ============================================================
    PANELES CON SCROLL PROPIO
    ============================================================ */
-.dj-panel-backup {
-    flex: 0 0 auto;
-    width: 38%;
-    min-width: 240px;
-    max-width: 55%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    height: 100%;
-    border-right: none !important; /* el divisor lo reemplaza */
-    scroll-behavior: smooth;
-}
+    .dj-panel-backup {
+        flex: 0 0 auto;
+        width: 38%;
+        min-width: 240px;
+        max-width: 55%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: 100%;
+        border-right: none !important;
+        /* el divisor lo reemplaza */
+        scroll-behavior: smooth;
+    }
 
-.dj-panel-form {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    overflow-x: hidden;
-    height: 100%;
-    min-width: 0;
-}
+    .dj-panel-form {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: 100%;
+        min-width: 0;
+    }
 
-/* Scrollbars visibles y con estilo */
-.dj-panel-backup::-webkit-scrollbar,
-.dj-panel-form::-webkit-scrollbar {
-    width: 7px;
-}
-.dj-panel-backup::-webkit-scrollbar-track { background: #fef9c3; border-radius: 4px; }
-.dj-panel-backup::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 4px; }
-.dj-panel-backup::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
-.dj-panel-form::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-.dj-panel-form::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
-.dj-panel-form::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    /* Scrollbars visibles y con estilo */
+    .dj-panel-backup::-webkit-scrollbar,
+    .dj-panel-form::-webkit-scrollbar {
+        width: 7px;
+    }
 
-/* Firefox */
-.dj-panel-backup { scrollbar-width: thin; scrollbar-color: #fbbf24 #fef9c3; }
-.dj-panel-form   { scrollbar-width: thin; scrollbar-color: #94a3b8 #f1f5f9; }
+    .dj-panel-backup::-webkit-scrollbar-track {
+        background: #fef9c3;
+        border-radius: 4px;
+    }
 
-/* ============================================================
+    .dj-panel-backup::-webkit-scrollbar-thumb {
+        background: #fbbf24;
+        border-radius: 4px;
+    }
+
+    .dj-panel-backup::-webkit-scrollbar-thumb:hover {
+        background: #f59e0b;
+    }
+
+    .dj-panel-form::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+
+    .dj-panel-form::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 4px;
+    }
+
+    .dj-panel-form::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+
+    /* Firefox */
+    .dj-panel-backup {
+        scrollbar-width: thin;
+        scrollbar-color: #fbbf24 #fef9c3;
+    }
+
+    .dj-panel-form {
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 #f1f5f9;
+    }
+
+    /* ============================================================
    DIVISOR ARRASTRABLE (RESIZER)
    ============================================================ */
-#djResizer {
-    flex: 0 0 10px;
-    width: 10px;
-    background: #e5e7eb;
-    cursor: col-resize;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    transition: background .15s;
-    user-select: none;
-    z-index: 10;
-}
+    #djResizer {
+        flex: 0 0 10px;
+        width: 10px;
+        background: #e5e7eb;
+        cursor: col-resize;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        transition: background .15s;
+        user-select: none;
+        z-index: 10;
+    }
 
-#djResizer:hover,
-#djResizer.dragging {
-    background: #fbbf24;
-}
+    #djResizer:hover,
+    #djResizer.dragging {
+        background: #fbbf24;
+    }
 
-/* Línea decorativa vertical con label */
-#djResizer::before {
-    content: '';
-    position: absolute;
-    top: 0; bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 2px;
-    background: #d1d5db;
-    border-radius: 2px;
-    transition: background .15s;
-}
-#djResizer:hover::before,
-#djResizer.dragging::before {
-    background: #f59e0b;
-}
+    /* Línea decorativa vertical con label */
+    #djResizer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        background: #d1d5db;
+        border-radius: 2px;
+        transition: background .15s;
+    }
 
-/* Badge central del divisor */
-#djResizerBadge {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #fff;
-    border: 1px solid #d1d5db;
-    border-radius: 20px;
-    padding: 6px 3px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.08);
-    transition: border-color .15s, box-shadow .15s;
-    cursor: col-resize;
-    z-index: 11;
-}
-#djResizer:hover #djResizerBadge,
-#djResizer.dragging #djResizerBadge {
-    border-color: #f59e0b;
-    box-shadow: 0 2px 8px rgba(245,158,11,.25);
-}
-#djResizerBadge span {
-    display: block;
-    width: 3px;
-    height: 3px;
-    background: #9ca3af;
-    border-radius: 50%;
-    transition: background .15s;
-}
-#djResizer:hover #djResizerBadge span,
-#djResizer.dragging #djResizerBadge span {
-    background: #f59e0b;
-}
+    #djResizer:hover::before,
+    #djResizer.dragging::before {
+        background: #f59e0b;
+    }
 
-/* Label ANTIGUO / NUEVO encima del divisor */
-#djResizerLabels {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    pointer-events: none;
-    z-index: 12;
-}
-#djResizerLabels .lbl-ant,
-#djResizerLabels .lbl-new {
-    font-size: 8px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 3px;
-    white-space: nowrap;
-    letter-spacing: .03em;
-}
-#djResizerLabels .lbl-ant {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fde68a;
-}
-#djResizerLabels .lbl-new {
-    background: #f0fdf4;
-    color: #166534;
-    border: 1px solid #86efac;
-}
+    /* Badge central del divisor */
+    #djResizerBadge {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: 20px;
+        padding: 6px 3px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+        transition: border-color .15s, box-shadow .15s;
+        cursor: col-resize;
+        z-index: 11;
+    }
 
-/* En móviles ocultar divisor */
-@media (max-width: 768px) {
-    #djResizer { display: none; }
-    .dj-panel-backup { width: 100% !important; max-width: 100% !important; }
-}
+    #djResizer:hover #djResizerBadge,
+    #djResizer.dragging #djResizerBadge {
+        border-color: #f59e0b;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, .25);
+    }
+
+    #djResizerBadge span {
+        display: block;
+        width: 3px;
+        height: 3px;
+        background: #9ca3af;
+        border-radius: 50%;
+        transition: background .15s;
+    }
+
+    #djResizer:hover #djResizerBadge span,
+    #djResizer.dragging #djResizerBadge span {
+        background: #f59e0b;
+    }
+
+    /* Label ANTIGUO / NUEVO encima del divisor */
+    #djResizerLabels {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        pointer-events: none;
+        z-index: 12;
+    }
+
+    #djResizerLabels .lbl-ant,
+    #djResizerLabels .lbl-new {
+        font-size: 8px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 3px;
+        white-space: nowrap;
+        letter-spacing: .03em;
+    }
+
+    #djResizerLabels .lbl-ant {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+    #djResizerLabels .lbl-new {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+
+    /* En móviles ocultar divisor */
+    @media (max-width: 768px) {
+        #djResizer {
+            display: none;
+        }
+
+        .dj-panel-backup {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+    }
 </style>
 
 <div id="modalDjGestion"
@@ -458,12 +704,19 @@
         <div class="flex flex-col border border-default-200 shadow-sm rounded-lg pointer-events-auto">
 
             {{-- Header --}}
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid #e5e7eb;background:#fff;flex-shrink:0;">
+            <div
+                style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid #e5e7eb;background:#fff;flex-shrink:0;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:13px;font-weight:700;color:#374151;letter-spacing:.02em;text-transform:uppercase;">Declaración Jurada</span>
-                    {{-- <div id="splitModeBadge" style="display:none;align-items:center;gap:6px;background:#fef3c7;border:1px solid #fde68a;padding:2px 10px;border-radius:20px;">
-                        <span style="width:7px;height:7px;background:#f59e0b;border-radius:50%;display:inline-block;"></span>
-                        <span style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.04em;">Modo Comparación Activo</span>
+                    <span
+                        style="font-size:13px;font-weight:700;color:#374151;letter-spacing:.02em;text-transform:uppercase;">Declaración
+                        Jurada</span>
+                    {{-- <div id="splitModeBadge"
+                        style="display:none;align-items:center;gap:6px;background:#fef3c7;border:1px solid #fde68a;padding:2px 10px;border-radius:20px;">
+                        <span
+                            style="width:7px;height:7px;background:#f59e0b;border-radius:50%;display:inline-block;"></span>
+                        <span
+                            style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.04em;">Modo
+                            Comparación Activo</span>
                     </div> --}}
                 </div>
                 <button type="button" data-hs-overlay="#modalDjGestion"
@@ -476,605 +729,250 @@
 
                 {{-- ===================== PANEL IZQUIERDO: BACKUP ===================== --}}
                 {{-- ===================== PANEL IZQUIERDO: BACKUP (nueva estructura) ===================== --}}
-<div class="dj-panel-backup" id="panelBackup">
+                <div class="dj-panel-backup" id="panelBackup">
 
-    <div class="dj-panel-backup-header">
-        <svg style="width:14px;height:14px;stroke:#92400e;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <span>DJ Anterior — Solo lectura</span>
-        <span id="bkFechaModBadge" style="font-size:9px;background:#fde68a;color:#78350f;padding:1px 7px;border-radius:20px;font-weight:600;margin-left:auto;"></span>
-    </div>
-
-    {{-- ① DATOS PERSONALES --}}
-    <div class="dj-group" style="border-color:#fde68a;">
-        <div class="dj-group-header" style="background:#92400e;">① Datos Personales</div>
-        <div class="dj-group-body" style="background:#fffbeb;">
-
-            {{-- Identidad --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.121 17.804zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    Identidad y Datos Personales
-                </div>
-                <div class="dj-section-body">
-                    <div style="display:flex;gap:14px;align-items:flex-start;">
-                        <div style="flex:1;">
-                            <div class="dj-grid-2" style="margin-bottom:8px;">
-                                <div class="bk-field" data-bk="nombre1"><label>Primer Nombre</label><span class="bk-val" data-field="NOMB_1"></span></div>
-                                <div class="bk-field" data-bk="nombre2"><label>Segundo Nombre</label><span class="bk-val" data-field="NOMB_2"></span></div>
-                                <div class="bk-field" data-bk="apellido_paterno"><label>Apellido Paterno</label><span class="bk-val" data-field="APEL_1"></span></div>
-                                <div class="bk-field" data-bk="apellido_materno"><label>Apellido Materno</label><span class="bk-val" data-field="APEL_2"></span></div>
-                            </div>
-                        </div>
-                        {{-- Foto backup --}}
-                        <div style="width:70px;height:85px;border:2px dashed #fbbf24;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fef9c3;flex-shrink:0;">
-                            <span style="font-size:9px;color:#92400e;font-weight:600;">FOTO</span>
-                        </div>
-                    </div>
-                    <hr class="dj-divider" style="border-color:#fde68a;">
-                    <div class="dj-grid-4">
-                        <div class="bk-field" data-bk="dni"><label>DNI</label><span class="bk-val" data-field="NRO_DOCU_IDEN"></span></div>
-                        <div class="bk-field" data-bk="caduca"><label>Caduca</label><span class="bk-val" data-field="PERS_FECHCADUCADNI"></span></div>
-                        <div class="bk-field" data-bk="estado_civil"><label>Estado Civil</label><span class="bk-val" data-field="ESCI_DESCRIPCION"></span></div>
-                        <div class="bk-field" data-bk="sexo"><label>Sexo</label><span class="bk-val" data-field="PERS_SEXO"></span></div>
-                        <div class="bk-field" data-bk="fecha_nacimiento"><label>Fecha de Nacimiento</label><span class="bk-val" data-field="FECH_NACI"></span></div>
-                        <div class="bk-field" data-bk="ciudad_nacimiento"><label>Ciudad de Nacimiento</label><span class="bk-val" data-field="dj2026_ciudad_naci"></span></div>
-                        <div class="bk-field" data-bk="sabe_nadar" style="visibility:hidden;"><label>¿Sabe nadar?</label><span class="bk-val" data-field="PERS_SNADAR"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Contacto --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.372 4.115a1 1 0 01-.21.979l-2.073 2.073a11.05 11.05 0 005.293 5.293l2.073-2.073a1 1 0 01.979-.21l4.115 1.372a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                    Información de Contacto
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="celular"><label>Celular</label><span class="bk-val" data-field="PERS_TELEFONO"></span></div>
-                        <div class="bk-field" data-bk="correo"><label>Correo electrónico</label><span class="bk-val" data-field="PERS_EMAIL"></span></div>
-                        <div class="bk-field" data-bk="whatsapp"><label>WhatsApp</label><span class="bk-val" data-field="PERS_WHATSAPP"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Médica --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-4-4h8m7 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Información Médica
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="tipo_sangre"><label>Tipo de Sangre</label><span class="bk-val" data-field="tipo_sangr"></span></div>
-                        <div class="bk-field" data-bk="peso"><label>Peso (kg)</label><span class="bk-val" data-field="peso_kilo"></span></div>
-                        <div class="bk-field" data-bk="talla"><label>Talla (m)</label><span class="bk-val" data-field="tall_metr"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Previsional --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3v7h6v-7c0-1.657-1.343-3-3-3zM5 13h14M5 17h14M9 21h6"/></svg>
-                    Información Previsional
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="sistema_previsional"><label>Sistema Previsional</label><span class="bk-val" data-field="DESC_SIST_PENS"></span></div>
-                        <div class="bk-field" data-bk="essalud"><label>ESSALUD Vida</label><span class="bk-val" data-field="ESSALUD"></span></div>
-                        <div class="bk-field" data-bk="pensionista"><label>Pensionista</label><span class="bk-val" data-field="PERS_PENSIONISTA"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Educación --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9"/></svg>
-                    Educación
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-4">
-                        <div class="bk-field" data-bk="grado_instruccion"><label>Grado de Instrucción</label><span class="bk-val" data-field="NIED_ABREVIADO"></span></div>
-                        <div class="bk-field"><label>Institución</label><span class="bk-val" data-field="IEDU_CODIGO"></span></div>
-                        <div class="bk-field"><label>Carrera</label><span class="bk-val" data-field="CARR_CODIGO"></span></div>
-                        <div class="bk-field" data-bk="anio_egreso"><label>Año de egreso</label><span class="bk-val" data-field="EGRESO_EDUCATIVO"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Adicional --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
-                    Información Adicional
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="embargos"><label>Embargos financieros</label><span class="bk-val" data-field="PERS_EMBARGO"></span></div>
-                        {{-- <div class="bk-field" data-bk="consumo_sustancias"><label>Consumo de sustancias</label><span class="bk-val" data-field="PERS_CONSMO"></span></div> --}}
-                        <div class="bk-field"><label>Cuenta de Sueldo</label><span class="bk-val" data-field="dj2026_banco"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Direcciones --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0c-4.418 0-8 3.582-8 8a8 8 0 0016 0c0-4.418-3.582-8-8-8z"/></svg>
-                    Direcciones
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-2">
-                        <div>
-                            <p style="font-size:10px;color:#78350f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">— Dirección Actual</p>
-                            <div class="bk-field" data-bk="direccion_actual"><label>Descripción</label><span class="bk-val" data-field="DIRECCION"></span></div>
-                        </div>
-                        <div>
-                            <p style="font-size:10px;color:#78350f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">— Dirección DNI</p>
-                            <div class="bk-field" data-bk="direccion_dni"><label>Descripción</label><span class="bk-val" data-field="PERS_DIREC_DNI"></span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Emergencia --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
-                    Contacto de Emergencia
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="contacto_emergencia"><label>Llamar a</label><span class="bk-val" data-field="PERS_NOMCONTACTO"></span></div>
-                        <div class="bk-field" data-bk="celular_emergencia"><label>Celular</label><span class="bk-val" data-field="PERS_NROEMERGENCIA"></span></div>
-                        <div class="bk-field" data-bk="parentesco_emergencia"><label>Parentesco</label><span class="bk-val" data-field="PERS_CONYUGE"></span></div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>{{-- /① --}}
-
-    {{-- ② DATOS LABORALES --}}
-    <div class="dj-group" style="border-color:#fde68a;">
-        <div class="dj-group-header" style="background:#92400e;">② Datos Laborales</div>
-        <div class="dj-group-body" style="background:#fffbeb;">
-
-            {{-- Solo administrativo --}}
-            <div class="dj-section bk-tipo-section" data-bk-tipo="administrativo" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    Información Profesional
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="ocupacion_principal"><label>Profesión / Ocupación Principal</label><span class="bk-val" data-field="PERS_PROFESION"></span></div>
-                        <div class="bk-field"><label>Experiencia (años)</label><span class="bk-val" data-field="dj2026_experiencia_anios"></span></div>
-                        <div class="bk-field"><label>¿Familiar en la empresa?</label><span class="bk-val" data-field="dj2026_familiar_empresa"></span></div>
-                    </div>
-                    <div class="dj-grid-2" style="margin-top:6px;">
-                        <div class="bk-field"><label>Nombre del familiar</label><span class="bk-val" data-field="dj2026_familiar_nombre"></span></div>
-                        <div class="bk-field"><label>Parentesco</label><span class="bk-val" data-field="dj2026_familiar_parentesco"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Solo operativo --}}
-            <div class="dj-section bk-tipo-section" data-bk-tipo="operativo" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9"/></svg>
-                    Curso SUCAMEC
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-2">
-                        <div class="bk-field" data-bk="curso_sucamec"><label>Curso SUCAMEC</label><span class="bk-val" data-field="PERS_CONDISCAMEC"></span></div>
-                        <div class="bk-field" data-bk="sucamec_obs"><label>Observación</label><span class="bk-val" data-field="PERS_NRODISCAMEC"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- SMO: ambos --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
-                    Servicio Militar Obligatorio
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="smo"><label>S.M.O.</label><span class="bk-val" data-field="PERS_LUGARSMO"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Solo operativo --}}
-            <div class="dj-section bk-tipo-section" data-bk-tipo="operativo" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13l6-6m0 0l6 6m-6-6v12"/></svg>
-                    Licencia y Tipo de Arma
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="licencia_arma"><label>Licencia de Arma</label><span class="bk-val" data-field="PERS_NROLICENCIA"></span></div>
-                        <div class="bk-field" data-bk="tipo_arma"><label>Tipo de Arma</label><span class="bk-val" data-field="PERS_TIPOARMA"></span></div>
-                        <div class="bk-field" data-bk="arma_propia"><label>Arma Propia</label><span class="bk-val" data-field="PERS_CONARMAS"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Brevete: ambos --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13l2-5h14l2 5M5 13v5h2v-2h10v2h2v-5M5 13h14"/></svg>
-                    Licencia de Conducir
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-4">
-                        <div class="bk-field" data-bk="brevete"><label>N° Brevete</label><span class="bk-val" data-field="PERS_BREVETE"></span></div>
-                        <div class="bk-field" data-bk="clase_brevete"><label>Clase</label><span class="bk-val" data-field="CLASE_BREVETE"></span></div>
-                        <div class="bk-field"><label>Tipo de Vehículo</label><span class="bk-val" data-field="PERS_TIPO_VEHICULO"></span></div>
-                        <div class="bk-field"><label>Vehículo Propio</label><span class="bk-val" data-field="PERS_VEHICULO_PROPIO"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Experiencia laboral: ambos --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7V4h6v3m-9 4h12v9H6V11z"/></svg>
-                    Experiencia Laboral
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-3">
-                        <div class="bk-field" data-bk="empresa_anterior"><label>Empresa Anterior</label><span class="bk-val" data-field="PERS_CTRABANT"></span></div>
-                        <div class="bk-field" data-bk="cargo_anterior"><label>Cargo</label><span class="bk-val" data-field="PERS_CARGOTRABANT"></span></div>
-                        <div class="bk-field"><label>Duración (años)</label><span class="bk-val" data-field="PERS_DURACIONANT"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Ocupaciones alternas: ambos --}}
-            <div class="dj-section" style="border-color:#fde68a;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                    Profesión u Ocupación Alterna
-                </div>
-                <div class="dj-section-body">
-                    <div class="dj-grid-2">
-                        <div class="bk-field" data-bk="dj2026_laboral_1"><label>Ocupación Alterna 1</label><span class="bk-val" data-field="dj2026_laboral_1"></span></div>
-                        <div class="bk-field" data-bk="dj2026_laboral_2"><label>Ocupación Alterna 2</label><span class="bk-val" data-field="dj2026_laboral_2"></span></div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>{{-- /② --}}
-
-    {{-- ③ DATOS FAMILIARES --}}
-    <div class="dj-group" style="border-color:#fde68a;margin-bottom:0;">
-        <div class="dj-group-header" style="background:#92400e;">③ Datos Familiares</div>
-        <div class="dj-group-body" style="background:#fffbeb;">
-            <div class="dj-section" style="border-color:#fde68a;margin-bottom:0;">
-                <div class="dj-section-header" style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zM12 14v7m-7-7a9 9 0 0118 0v7H5v-7z"/></svg>
-                    Registros Familiares
-                </div>
-                <div class="dj-section-body">
-                    <table class="bk-fam-table" style="width:100%;">
-                        <thead>
-                            <tr>
-                                <th>Parentesco</th>
-                                <th>Apellidos y Nombres</th>
-                                <th>Fecha Nac.</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bodyBackupFamiliares">
-                            <tr><td colspan="3" style="padding:6px;color:#9ca3af;font-style:italic;">Cargando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>{{-- /③ --}}
-
-</div>{{-- /panel backup --}}
-                    {{-- ✅ AGREGAR ESTO --}}
-<div id="djResizer">
-    {{-- <div id="djResizerLabels">
-        <span class="lbl-ant">◀ ANTIGUO</span>
-        <span class="lbl-new">NUEVO ▶</span>
-    </div> --}}
-    <div id="djResizerBadge">
-        <span></span><span></span><span></span><span></span><span></span>
-    </div>
-</div>
-                {{-- ===================== PANEL DERECHO: FORMULARIO ===================== --}}
-                <div class="dj-panel-form" id="panelForm">
-
-                    <div class="dj-panel-form-header">
-                        <svg style="width:14px;height:14px;stroke:#166534;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    <div class="dj-panel-backup-header">
+                        <svg style="width:14px;height:14px;stroke:#92400e;flex-shrink:0;" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>DJ Nueva — Datos actualizados</span>
-                        <span id="contadorDiffs" style="display:none;font-size:9px;background:#ef4444;color:#fff;padding:1px 8px;border-radius:20px;font-weight:700;margin-left:auto;"></span>
+                        <span>DJ Anterior — Solo lectura</span>
+                        <span id="bkFechaModBadge"
+                            style="font-size:9px;background:#fde68a;color:#78350f;padding:1px 7px;border-radius:20px;font-weight:600;margin-left:auto;"></span>
                     </div>
-
-                    <form id="formDatos" method="POST">
-                    @csrf
-                    <input type="hidden" name="cod_postulante" id="cod_postulante">
-                    <input type="hidden" id="tipo_personal" name="tipo_personal">
 
                     {{-- ① DATOS PERSONALES --}}
-                    <div class="dj-group">
-                        <div class="dj-group-header">① Datos Personales</div>
-                        <div class="dj-group-body">
+                    <div class="dj-group" style="border-color:#fde68a;">
+                        <div class="dj-group-header" style="background:#92400e;">① Datos Personales</div>
+                        <div class="dj-group-body" style="background:#fffbeb;">
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.121 17.804zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            {{-- Identidad --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.121 17.804zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
                                     Identidad y Datos Personales
                                 </div>
                                 <div class="dj-section-body">
                                     <div style="display:flex;gap:14px;align-items:flex-start;">
                                         <div style="flex:1;">
-                                            <input type="hidden" id="nombres_apellidos" name="nombres_apellidos">
-                                            <div class="dj-grid-2" style="margin-bottom:10px;">
-                                                <div>
-                                                    <label class="dj-label">Primer Nombre</label>
-                                                    <input type="text" id="nombre1" name="nombre1" class="dj-input" placeholder="Primer nombre" style="text-transform:uppercase;" data-compare="nombre1">
+                                            <div class="dj-grid-2" style="margin-bottom:8px;">
+                                                <div class="bk-field" data-bk="nombre1"><label>Primer
+                                                        Nombre</label><span class="bk-val" data-field="NOMB_1"></span>
                                                 </div>
-                                                <div>
-                                                    <label class="dj-label">Segundo Nombre</label>
-                                                    <input type="text" id="nombre2" name="nombre2" class="dj-input" placeholder="Segundo nombre (opcional)" style="text-transform:uppercase;" data-compare="nombre2">
+                                                <div class="bk-field" data-bk="nombre2"><label>Segundo
+                                                        Nombre</label><span class="bk-val" data-field="NOMB_2"></span>
                                                 </div>
-                                                <div>
-                                                    <label class="dj-label">Apellido Paterno</label>
-                                                    <input type="text" id="apellido_paterno" name="apellido_paterno" class="dj-input" placeholder="Apellido paterno" style="text-transform:uppercase;" data-compare="apellido_paterno">
+                                                <div class="bk-field" data-bk="apellido_paterno"><label>Apellido
+                                                        Paterno</label><span class="bk-val" data-field="APEL_1"></span>
                                                 </div>
-                                                <div>
-                                                    <label class="dj-label">Apellido Materno</label>
-                                                    <input type="text" id="apellido_materno" name="apellido_materno" class="dj-input" placeholder="Apellido materno" style="text-transform:uppercase;" data-compare="apellido_materno">
+                                                <div class="bk-field" data-bk="apellido_materno"><label>Apellido
+                                                        Materno</label><span class="bk-val" data-field="APEL_2"></span>
                                                 </div>
                                             </div>
-                                            <a href="https://eldni.com/pe/buscar-datos-por-dni" target="_blank"
-                                                style="display:inline-block;margin-top:6px;font-size:11px;color:var(--color-primary,#6366f1);border:1px solid var(--color-primary,#6366f1);padding:3px 10px;border-radius:5px;text-decoration:none;">
-                                                Consultar DNI
-                                            </a>
                                         </div>
-                                        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
-                                            <div class="dj-foto-wrap" id="placeholderFoto">
-                                                <svg style="width:28px;height:28px;stroke:#d1d5db;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z"/></svg>
-                                                <span style="font-size:10px;color:#9ca3af;margin-top:3px;">FOTO</span>
-                                                <img id="previewFoto" class="hidden"/>
-                                                <input type="file" id="inputFoto" accept="image/*" class="hidden"/>
-                                            </div>
-                                            <div style="display:flex;gap:5px;">
-                                                <button type="button" id="btnSubirFoto" class="dj-btn-sm" style="background:#f3f4f6;color:#374151;border-radius:5px;">Subir foto</button>
-                                                <button type="button" id="btnEliminarFoto" class="dj-btn-sm dj-btn-danger hidden">Quitar</button>
-                                            </div>
+                                        {{-- Foto backup --}}
+                                        <div
+                                            style="width:70px;height:85px;border:2px dashed #fbbf24;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fef9c3;flex-shrink:0;">
+                                            <span style="font-size:9px;color:#92400e;font-weight:600;">FOTO</span>
                                         </div>
                                     </div>
-                                    <hr class="dj-divider">
+                                    <hr class="dj-divider" style="border-color:#fde68a;">
                                     <div class="dj-grid-4">
-                                        <div><label class="dj-label">DNI</label><input type="text" id="dni" name="dni" class="dj-input" placeholder="12345678" data-compare="dni"></div>
-                                        <div><label class="dj-label">Caduca</label><input type="date" id="caduca" name="caduca" class="dj-input" data-compare="caduca"></div>
-                                        <div>
-                                            <label class="dj-label">Estado Civil</label>
-                                            <select id="estado_civil" name="estado_civil" class="dj-select" data-compare="estado_civil">
-                                                <option value="">—</option>
-                                                <option value="2007000001">SOLTERO</option>
-                                                <option value="2007000002">CASADO</option>
-                                                <option value="2007000003">DIVORCIADO</option>
-                                                <option value="2007000004">VIUDO</option>
-                                                <option value="2007000008">CONVIVIENTE</option>
-                                                 {{-- <option value="S">SOLTERO</option>
-                                                <option value="C">CASADO</option>
-                                                <option value="D">DIVORCIADO</option>
-                                                <option value="V">VIUDO</option>
-                                                <option value="2007000008">CONVIVIENTE</option> --}}
-                                            </select>
+                                        <div class="bk-field" data-bk="dni"><label>DNI</label><span class="bk-val"
+                                                data-field="NRO_DOCU_IDEN"></span></div>
+                                        <div class="bk-field" data-bk="caduca"><label>Caduca</label><span class="bk-val"
+                                                data-field="PERS_FECHCADUCADNI"></span></div>
+                                        <div class="bk-field" data-bk="estado_civil"><label>Estado Civil</label><span
+                                                class="bk-val" data-field="ESCI_DESCRIPCION"></span></div>
+                                        <div class="bk-field" data-bk="sexo"><label>Sexo</label><span class="bk-val"
+                                                data-field="PERS_SEXO"></span></div>
+                                        <div class="bk-field" data-bk="fecha_nacimiento"><label>Fecha de
+                                                Nacimiento</label><span class="bk-val" data-field="FECH_NACI"></span>
                                         </div>
-                                        <div>
-                                            <label class="dj-label">Sexo</label>
-                                            <select id="sexo" name="sexo" class="dj-select" data-compare="sexo">
-                                                <option value="">—</option>
-                                                <option value="M">Masculino</option>
-                                                <option value="F">Femenino</option>
-                                            </select>
-                                        </div>
-                                        <div><label class="dj-label">Fecha de Nacimiento</label><input type="date" id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input" data-compare="fecha_nacimiento"></div>
-                                        <div><label class="dj-label">Ciudad de Nacimiento</label><input type="text" id="ciudad_nacimiento" name="ciudad_nacimiento" class="dj-input" placeholder="Lima, Arequipa…" style="text-transform:uppercase;"></div>
-                                        <div style="visibility:hidden;">
-                                            <label class="dj-label">¿Sabe nadar?</label>
-                                            <select id="sabe_nadar" name="sabe_nadar" class="dj-select" data-compare="sabe_nadar">
-                                                <option value="">—</option>
-                                                <option value="SI">Sí</option>
-                                                <option value="NO">No</option>
-                                            </select>
-                                        </div>
+                                        <div class="bk-field" data-bk="ciudad_nacimiento"><label>Ciudad de
+                                                Nacimiento</label><span class="bk-val"
+                                                data-field="dj2026_ciudad_naci"></span></div>
+                                        <div class="bk-field" data-bk="sabe_nadar" style="visibility:hidden;">
+                                            <label>¿Sabe nadar?</label><span class="bk-val"
+                                                data-field="PERS_SNADAR"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.372 4.115a1 1 0 01-.21.979l-2.073 2.073a11.05 11.05 0 005.293 5.293l2.073-2.073a1 1 0 01.979-.21l4.115 1.372a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+
+
+                            {{-- Contacto --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.372 4.115a1 1 0 01-.21.979l-2.073 2.073a11.05 11.05 0 005.293 5.293l2.073-2.073a1 1 0 01.979-.21l4.115 1.372a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
                                     Información de Contacto
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div><label class="dj-label">Celular</label><input type="text" id="celular" name="celular" class="dj-input" placeholder="999 999 999" data-compare="celular"></div>
-                                        <div><label class="dj-label">Correo electrónico</label><input type="email" id="correo" name="correo" class="dj-input" placeholder="ejemplo@correo.com" data-compare="correo"></div>
-                                        <div><label class="dj-label">WhatsApp</label><input type="text" id="whatsapp" name="whatsapp" class="dj-input" placeholder="999 999 999"></div>
+                                        <div class="bk-field" data-bk="celular"><label>Celular</label><span
+                                                class="bk-val" data-field="PERS_TELEFONO"></span></div>
+                                        <div class="bk-field" data-bk="correo"><label>Correo electrónico</label><span
+                                                class="bk-val" data-field="PERS_EMAIL"></span></div>
+                                        <div class="bk-field" data-bk="whatsapp"><label>WhatsApp</label><span
+                                                class="bk-val" data-field="PERS_WHATSAPP"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-4-4h8m7 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {{-- Médica --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v8m-4-4h8m7 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
                                     Información Médica
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div>
-                                            <label class="dj-label">Tipo de Sangre</label>
-                                            <select id="tipo_sangre" name="tipo_sangre" class="dj-select" data-compare="tipo_sangre">
-                                                <option value="">—</option>
-                                                <option value="O+">O+</option><option value="O-">O-</option><option value="A+">A+</option><option value="A-">A-</option>
-                                                <option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option>
-                                                <option value="RH">RH</option>
-                                            </select>
-                                        </div>
-                                        <div><label class="dj-label">Peso (kg)</label><input type="number" id="peso" name="peso" step="0.1" class="dj-input" placeholder="70" data-compare="peso"></div>
-                                        <div><label class="dj-label">Talla (m)</label><input type="number" id="talla" name="talla" step="0.01" class="dj-input" placeholder="1.75" data-compare="talla"></div>
+                                        <div class="bk-field" data-bk="tipo_sangre"><label>Tipo de Sangre</label><span
+                                                class="bk-val" data-field="tipo_sangr"></span></div>
+                                        <div class="bk-field" data-bk="peso"><label>Peso (kg)</label><span
+                                                class="bk-val" data-field="peso_kilo"></span></div>
+                                        <div class="bk-field" data-bk="talla"><label>Talla (m)</label><span
+                                                class="bk-val" data-field="tall_metr"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3v7h6v-7c0-1.657-1.343-3-3-3zM5 13h14M5 17h14M9 21h6"/></svg>
+                            {{-- Previsional --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8c-1.657 0-3 1.343-3 3v7h6v-7c0-1.657-1.343-3-3-3zM5 13h14M5 17h14M9 21h6" />
+                                    </svg>
                                     Información Previsional
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div>
-                                            <label class="dj-label">Sistema Previsional</label>
-                                            <select id="sistema_previsional" name="sistema_previsional" class="dj-select" data-compare="sistema_previsional">
-                                                <option value="">—</option>
-                                                 <option value="03">AFP</option>
-                                                <option value="01">ONP</option>
-                                                <option value="02">AFP INTEGRA</option>
-                                                <option value="07">NO APORTACION</option>
-                                                <option value="10">AFP PRIMA</option>
-                                                <option value="27">AFP HABITAT</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">ESSALUD Vida</label>
-                                            <select id="essalud" name="essalud" class="dj-select" data-compare="essalud">
-                                                <option value="">—</option><option value="SI">Sí</option><option value="NO">No</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">Pensionista</label>
-                                            <select id="pensionista" name="pensionista" class="dj-select" data-compare="pensionista">
-                                                <option value="">—</option><option value="SI">Sí</option><option value="NO">No</option>
-                                            </select>
-                                        </div>
+                                        <div class="bk-field" data-bk="sistema_previsional"><label>Sistema
+                                                Previsional</label><span class="bk-val"
+                                                data-field="DESC_SIST_PENS"></span></div>
+                                        <div class="bk-field" data-bk="essalud"><label>ESSALUD Vida</label><span
+                                                class="bk-val" data-field="ESSALUD"></span></div>
+                                        <div class="bk-field" data-bk="pensionista"><label>Pensionista</label><span
+                                                class="bk-val" data-field="PERS_PENSIONISTA"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9"/></svg>
+                            {{-- Educación --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9" />
+                                    </svg>
                                     Educación
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-4">
-                                        <div>
-                                            <label class="dj-label">Grado de Instrucción</label>
-                                            <select id="grado_instruccion" name="grado_instruccion" class="dj-select" data-compare="grado_instruccion">
-                                                <option value="">—</option>
-                                                @foreach ($grados as $grado)
-                                                    <option value="{{ $grado->id }}">{{ $grado->text }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">Institución</label>
-                                            <select id="institucion" name="institucion" class="dj-select">
-                                                <option value="">—</option>
-                                                @foreach ($instituciones as $inst)
-                                                    <option value="{{ $inst->id }}">{{ $inst->text }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">Carrera</label>
-                                            <select id="carrera" name="carrera" class="dj-select">
-                                                <option value="">—</option>
-                                                @foreach ($carreras as $carrera)
-                                                    <option value="{{ $carrera->id }}">{{ $carrera->text }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div><label class="dj-label">Año de egreso</label><input type="number" id="anio_egreso" name="anio_egreso" class="dj-input" placeholder="2020" data-compare="anio_egreso"></div>
+                                        <div class="bk-field" data-bk="grado_instruccion"><label>Grado de
+                                                Instrucción</label><span class="bk-val"
+                                                data-field="NIED_ABREVIADO"></span></div>
+                                        <div class="bk-field"><label>Institución</label><span class="bk-val"
+                                                data-field="IEDU_CODIGO"></span></div>
+                                        <div class="bk-field"><label>Carrera</label><span class="bk-val"
+                                                data-field="CARR_CODIGO"></span></div>
+                                        <div class="bk-field" data-bk="anio_egreso"><label>Año de egreso</label><span
+                                                class="bk-val" data-field="EGRESO_EDUCATIVO"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+                            {{-- Adicional --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                                    </svg>
                                     Información Adicional
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div>
-                                            <label class="dj-label">Embargos financieros</label>
-                                            <select id="embargos" name="embargos" class="dj-select" data-compare="embargos">
-                                                <option value="">—</option><option value="SI">Sí</option><option value="NO">No</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div>
-                                            <label class="dj-label">Cuenta de Sueldo</label>
-                                            <select id="cuenta_banco" name="cuenta_banco" class="dj-select">
-                                                <option value="">—</option>
-                                                <option value="NO">No</option><option value="BCP">BCP</option><option value="INTERBANK">INTERBANK</option>
-                                            </select>
-                                        </div>
+                                        <div class="bk-field" data-bk="embargos"><label>Embargos
+                                                financieros</label><span class="bk-val"
+                                                data-field="PERS_EMBARGO"></span></div>
+                                        {{-- <div class="bk-field" data-bk="consumo_sustancias"><label>Consumo de
+                                                sustancias</label><span class="bk-val" data-field="PERS_CONSMO"></span>
+                                        </div> --}}
+                                        <div class="bk-field"><label>Cuenta de Sueldo</label><span class="bk-val"
+                                                data-field="dj2026_banco"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0c-4.418 0-8 3.582-8 8a8 8 0 0016 0c0-4.418-3.582-8-8-8z"/></svg>
+                            {{-- Direcciones --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0c-4.418 0-8 3.582-8 8a8 8 0 0016 0c0-4.418-3.582-8-8-8z" />
+                                    </svg>
                                     Direcciones
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-2">
                                         <div>
-                                            <p class="dj-label" style="color:#9ca3af;margin-bottom:6px;font-size:10px;">— Dirección Actual</p>
-                                            <div class="dj-grid-3" style="margin-bottom:8px;">
-                                                <div><label class="dj-label">Departamento</label><select id="departamento_actual" name="departamento_actual" class="dj-select"><option value="">—</option></select></div>
-                                                <div><label class="dj-label">Provincia</label><select id="provincia_actual" name="provincia_actual" class="dj-select"><option value="">—</option></select></div>
-                                                <div><label class="dj-label">Distrito</label><select id="distrito_actual" name="distrito_actual" class="dj-select"><option value="">—</option></select></div>
-                                            </div>
-                                            <label class="dj-label">Descripción</label>
-                                            <textarea id="direccion_actual" name="direccion_actual" class="dj-textarea" placeholder="Dirección actual completa" data-compare="direccion_actual"></textarea>
+                                            <p
+                                                style="font-size:10px;color:#78350f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">
+                                                — Dirección Actual</p>
+                                            <div class="bk-field" data-bk="direccion_actual">
+                                                <label>Descripción</label><span class="bk-val"
+                                                    data-field="DIRECCION"></span></div>
                                         </div>
                                         <div>
-                                            <p class="dj-label" style="color:#9ca3af;margin-bottom:6px;font-size:10px;">— Dirección DNI</p>
-                                            <div class="dj-grid-3" style="margin-bottom:8px;">
-                                                <div><label class="dj-label">Departamento</label><select id="departamento_dni" name="departamento_dni" class="dj-select"><option value="">—</option></select></div>
-                                                <div><label class="dj-label">Provincia</label><select id="provincia_dni" name="provincia_dni" class="dj-select"><option value="">—</option></select></div>
-                                                <div><label class="dj-label">Distrito</label><select id="distrito_dni" name="distrito_dni" class="dj-select"><option value="">—</option></select></div>
-                                            </div>
-                                            <label class="dj-label">Descripción</label>
-                                            <textarea id="direccion_dni" name="direccion_dni" class="dj-textarea" placeholder="Dirección registrada en el DNI" data-compare="direccion_dni"></textarea>
+                                            <p
+                                                style="font-size:10px;color:#78350f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">
+                                                — Dirección DNI</p>
+                                            <div class="bk-field" data-bk="direccion_dni">
+                                                <label>Descripción</label><span class="bk-val"
+                                                    data-field="PERS_DIREC_DNI"></span></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+                            {{-- Emergencia --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                                    </svg>
                                     Contacto de Emergencia
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div><label class="dj-label">Llamar a</label><input type="text" id="contacto_emergencia" name="contacto_emergencia" class="dj-input" placeholder="Juan Pérez García" data-compare="contacto_emergencia"></div>
-                                        <div><label class="dj-label">Celular</label><input type="text" id="celular_emergencia" name="celular_emergencia" class="dj-input" placeholder="999 999 999" data-compare="celular_emergencia"></div>
-                                        <div><label class="dj-label">Parentesco</label><input type="text" id="parentesco_emergencia" name="parentesco_emergencia" class="dj-input" placeholder="Madre, Hermano…" data-compare="parentesco_emergencia"></div>
+                                        <div class="bk-field" data-bk="contacto_emergencia"><label>Llamar a</label><span
+                                                class="bk-val" data-field="PERS_NOMCONTACTO"></span></div>
+                                        <div class="bk-field" data-bk="celular_emergencia"><label>Celular</label><span
+                                                class="bk-val" data-field="PERS_NROEMERGENCIA"></span></div>
+                                        <div class="bk-field" data-bk="parentesco_emergencia">
+                                            <label>Parentesco</label><span class="bk-val"
+                                                data-field="PERS_CONYUGE"></span></div>
                                     </div>
                                 </div>
                             </div>
@@ -1083,178 +981,167 @@
                     </div>{{-- /① --}}
 
                     {{-- ② DATOS LABORALES --}}
-                    <div class="dj-group">
-                        <div class="dj-group-header">② Datos Laborales</div>
-                        <div class="dj-group-body">
+                    <div class="dj-group" style="border-color:#fde68a;">
+                        <div class="dj-group-header" style="background:#92400e;">② Datos Laborales</div>
+                        <div class="dj-group-body" style="background:#fffbeb;">
 
-                            <div class="dj-section" data-tipo="administrativo">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            {{-- Solo administrativo --}}
+                            <div class="dj-section bk-tipo-section" data-bk-tipo="administrativo"
+                                style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
                                     Información Profesional
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div><label class="dj-label">Profesión / Ocupación Principal</label><input type="text" id="ocupacion_principal" name="ocupacion_principal" class="dj-input" placeholder="Ej. Agente de Seguridad" style="text-transform:uppercase;" data-compare="ocupacion_principal"></div>
-                                        <div><label class="dj-label">Experiencia (años)</label><input type="number" id="experiencia_anios" name="experiencia_anios" class="dj-input" placeholder="0"></div>
-                                        <div>
-                                            <label class="dj-label">¿Familiar en la empresa?</label>
-                                            <select id="familiar_empresa" name="familiar_empresa" class="dj-select">
-                                                <option value="NO">No</option><option value="SI">Sí</option>
-                                            </select>
-                                        </div>
+                                        <div class="bk-field" data-bk="ocupacion_principal"><label>Profesión / Ocupación
+                                                Principal</label><span class="bk-val"
+                                                data-field="PERS_PROFESION"></span></div>
+                                        <div class="bk-field"><label>Experiencia (años)</label><span class="bk-val"
+                                                data-field="dj2026_experiencia_anios"></span></div>
+                                        <div class="bk-field"><label>¿Familiar en la empresa?</label><span
+                                                class="bk-val" data-field="dj2026_familiar_empresa"></span></div>
                                     </div>
-                                    <div id="div_familiar_interno" class="dj-subpanel hidden">
-                                        <div class="dj-grid-2">
-                                            <div><label class="dj-label">Nombre del familiar</label><input type="text" id="familiar_nombre" name="familiar_nombre" class="dj-input" placeholder="Nombre y apellidos" style="text-transform:uppercase;"></div>
-                                            <div>
-                                                <label class="dj-label">Parentesco</label>
-                                                <select id="familiar_parentesco" name="familiar_parentesco" class="dj-select">
-                                                    <option value="">—</option>
-                                                    <option value="MADRE">Madre</option><option value="PADRE">Padre</option>
-                                                    <option value="CONYUGE">Cónyuge / Pareja</option><option value="HIJO">Hijo(a)</option>
-                                                    <option value="HERMANO">Hermano(a)</option><option value="OTROS">Otros</option>
-                                                </select>
-                                            </div>
-                                        </div>
+                                    <div class="dj-grid-2" style="margin-top:6px;">
+                                        <div class="bk-field"><label>Nombre del familiar</label><span class="bk-val"
+                                                data-field="dj2026_familiar_nombre"></span></div>
+                                        <div class="bk-field"><label>Parentesco</label><span class="bk-val"
+                                                data-field="dj2026_familiar_parentesco"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- SUCAMEC: solo operativo --}}
-                            <div class="dj-section" data-tipo="operativo">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9"/></svg>
+                            {{-- Solo operativo --}}
+                            <div class="dj-section bk-tipo-section" data-bk-tipo="operativo"
+                                style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9" />
+                                    </svg>
                                     Curso SUCAMEC
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-2">
-                                        <div>
-                                            <label class="dj-label">Curso SUCAMEC</label>
-                                            <select id="curso_sucamec" name="curso_sucamec" class="dj-select" data-compare="curso_sucamec">
-                                                <option value="NO">No</option><option value="SI">Sí</option>
-                                            </select>
-                                            <div id="div_sucamec_obs" class="hidden" style="margin-top:6px;">
-                                                <label class="dj-label">Observación</label>
-                                                <input type="text" id="sucamec_obs" name="sucamec_obs" class="dj-input" placeholder="Institución o curso...">
-                                            </div>
-                                        </div>
-                                        <div id="institucion_container" class="hidden">
-                                            <label class="dj-label">Institución</label>
-                                            <input type="text" id="institucion_laboral" name="institucion_laboral" class="dj-input" placeholder="Institución donde realizó el curso">
-                                        </div>
+                                        <div class="bk-field" data-bk="curso_sucamec"><label>Curso SUCAMEC</label><span
+                                                class="bk-val" data-field="PERS_CONDISCAMEC"></span></div>
+                                        <div class="bk-field" data-bk="sucamec_obs"><label>Observación</label><span
+                                                class="bk-val" data-field="PERS_NRODISCAMEC"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- SMO: ambos tipos --}}
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
+                            {{-- SMO: ambos --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                    </svg>
                                     Servicio Militar Obligatorio
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        {{-- <div>
-                                            <label class="dj-label">S.M.O.</label>
-                                            <select id="smo" name="smo" class="dj-select" data-compare="smo">
-                                                <option value="">—</option>
-                                                <option value="NO">No</option>
-                                                <option value="MARINA">Marina</option>
-                                                <option value="EJERCITO">Ejército</option>
-                                                <option value="AVIACION">Aviación</option>
-                                            </select>
-                                        </div> --}}
-                                        <div>
-                                            <label class="dj-label">S.M.O.</label>
-                                            <select id="consumo_sustancias" name="consumo_sustancias" class="dj-select" data-compare="consumo_sustancias">
-                                                <option value="">—</option>
-                                                <option value="NO">NO</option>
-                                                <option value="MA">MARINA</option>
-                                                <option value="EJ">EJÉRCITO</option>
-                                                <option value="AV">AVIACIÓN</option>
-                                            </select>
-                                        </div>
+                                        <div class="bk-field" data-bk="smo"><label>S.M.O.</label><span class="bk-val"
+                                                data-field="PERS_LUGARSMO"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section" data-tipo="operativo">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13l6-6m0 0l6 6m-6-6v12"/></svg>
+                            {{-- Solo operativo --}}
+                            <div class="dj-section bk-tipo-section" data-bk-tipo="operativo"
+                                style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 13l6-6m0 0l6 6m-6-6v12" />
+                                    </svg>
                                     Licencia y Tipo de Arma
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div><label class="dj-label">Licencia de Arma L4</label><input id="licencia_arma" name="licencia_arma" class="dj-input" placeholder="Nº de licencia..." data-compare="licencia_arma"></div>
-                                        {{-- <div>
-                                            <label class="dj-label">Tipo de Arma</label>
-                                            <select id="tipo_arma" name="tipo_arma" class="dj-select" data-compare="tipo_arma">
-                                                <option value="">—</option><option value="PISTOLA">Pistola</option>
-                                                <option value="REVOLVER">Revólver</option><option value="ESCOPETA">Escopeta</option><option value="RIFLE">Rifle</option>
-                                            </select>
-                                        </div> --}}
-                                        <div>
-                                            <label class="dj-label">Arma Propia</label>
-                                            <select id="arma_propia" name="arma_propia" class="dj-select" data-compare="arma_propia">
-                                                <option value="">—</option><option value="SI">Sí</option><option value="NO">No</option>
-                                            </select>
+                                        <div class="bk-field" data-bk="licencia_arma"><label>Licencia de
+                                                Arma</label><span class="bk-val" data-field="PERS_NROLICENCIA"></span>
                                         </div>
+                                        <div class="bk-field" data-bk="tipo_arma"><label>Tipo de Arma</label><span
+                                                class="bk-val" data-field="PERS_TIPOARMA"></span></div>
+                                        <div class="bk-field" data-bk="arma_propia"><label>Arma Propia</label><span
+                                                class="bk-val" data-field="PERS_CONARMAS"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13l2-5h14l2 5M5 13v5h2v-2h10v2h2v-5M5 13h14"/></svg>
+                            {{-- Brevete: ambos --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 13l2-5h14l2 5M5 13v5h2v-2h10v2h2v-5M5 13h14" />
+                                    </svg>
                                     Licencia de Conducir
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-4">
-                                        <div><label class="dj-label">N° Brevete</label><input type="text" id="brevete" name="brevete" class="dj-input" placeholder="Número de brevete" data-compare="brevete"></div>
-                                        <div><label class="dj-label">Clase</label><input type="text" id="clase_brevete" name="clase_brevete" class="dj-input" placeholder="Ej: A-I, B-IIb" data-compare="clase_brevete"></div>
-                                        <div><label class="dj-label">Tipo de Vehículo</label><input type="text" id="tipo_vehiculo" name="tipo_vehiculo" class="dj-input" placeholder="Tipo de vehículo"></div>
-                                        <div>
-                                            <label class="dj-label">Vehículo Propio</label>
-                                            <select id="vehiculo_propio" name="vehiculo_propio" class="dj-select">
-                                                <option value="">—</option><option value="SI">Sí</option><option value="NO">No</option>
-                                            </select>
-                                        </div>
+                                        <div class="bk-field" data-bk="brevete"><label>N° Brevete</label><span
+                                                class="bk-val" data-field="PERS_BREVETE"></span></div>
+                                        <div class="bk-field" data-bk="clase_brevete"><label>Clase</label><span
+                                                class="bk-val" data-field="CLASE_BREVETE"></span></div>
+                                        <div class="bk-field"><label>Tipo de Vehículo</label><span class="bk-val"
+                                                data-field="PERS_TIPO_VEHICULO"></span></div>
+                                        <div class="bk-field"><label>Vehículo Propio</label><span class="bk-val"
+                                                data-field="PERS_VEHICULO_PROPIO"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7V4h6v3m-9 4h12v9H6V11z"/></svg>
+                            {{-- Experiencia laboral: ambos --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 7V4h6v3m-9 4h12v9H6V11z" />
+                                    </svg>
                                     Experiencia Laboral
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
-                                        <div><label class="dj-label">Empresa Anterior</label><input type="text" id="empresa_anterior" name="empresa_anterior" class="dj-input" placeholder="Nombre de la empresa" data-compare="empresa_anterior"></div>
-                                        <div><label class="dj-label">Cargo</label><input type="text" id="cargo_anterior" name="cargo_anterior" class="dj-input" placeholder="Cargo" data-compare="cargo_anterior"></div>
-                                        <div><label class="dj-label">Duración (años)</label><input type="number" id="duracion_anterior" name="duracion_anterior" step="0.5" class="dj-input" placeholder="2"></div>
+                                        <div class="bk-field" data-bk="empresa_anterior"><label>Empresa
+                                                Anterior</label><span class="bk-val" data-field="PERS_CTRABANT"></span>
+                                        </div>
+                                        <div class="bk-field" data-bk="cargo_anterior"><label>Cargo</label><span
+                                                class="bk-val" data-field="PERS_CARGOTRABANT"></span></div>
+                                        <div class="bk-field"><label>Duración (años)</label><span class="bk-val"
+                                                data-field="PERS_DURACIONANT"></span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="dj-section">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                            {{-- Ocupaciones alternas: ambos --}}
+                            <div class="dj-section" style="border-color:#fde68a;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    </svg>
                                     Profesión u Ocupación Alterna
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-2">
-                                        <div>
-                                            <label class="dj-label">Ocupación Alterna 1</label>
-                                            <input type="text" id="dj2026_laboral_1" name="dj2026_laboral_1"
-                                                   class="dj-input" placeholder="Descripción ocupación alterna 1"
-                                                   style="text-transform:uppercase;" data-compare="dj2026_laboral_1">
+                                        <div class="bk-field" data-bk="dj2026_laboral_1"><label>Ocupación Alterna
+                                                1</label><span class="bk-val" data-field="dj2026_laboral_1"></span>
                                         </div>
-                                        <div>
-                                            <label class="dj-label">Ocupación Alterna 2</label>
-                                            <input type="text" id="dj2026_laboral_2" name="dj2026_laboral_2"
-                                                   class="dj-input" placeholder="Descripción ocupación alterna 2"
-                                                   style="text-transform:uppercase;" data-compare="dj2026_laboral_2">
+                                        <div class="bk-field" data-bk="dj2026_laboral_2"><label>Ocupación Alterna
+                                                2</label><span class="bk-val" data-field="dj2026_laboral_2"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -1264,43 +1151,808 @@
                     </div>{{-- /② --}}
 
                     {{-- ③ DATOS FAMILIARES --}}
-                    <div class="dj-group" style="margin-bottom:0;">
-                        <div class="dj-group-header">③ Datos Familiares</div>
-                        <div class="dj-group-body">
-                            <div class="dj-section" style="margin-bottom:0;">
-                                <div class="dj-section-header">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zM12 14v7m-7-7a9 9 0 0118 0v7H5v-7z"/></svg>
+                    <div class="dj-group" style="border-color:#fde68a;margin-bottom:0;">
+                        <div class="dj-group-header" style="background:#92400e;">③ Datos Familiares</div>
+                        <div class="dj-group-body" style="background:#fffbeb;">
+                            <div class="dj-section" style="border-color:#fde68a;margin-bottom:0;">
+                                <div class="dj-section-header"
+                                    style="background:#fef3c7;border-color:#fde68a;color:#92400e;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16 12a4 4 0 10-8 0 4 4 0 008 0zM12 14v7m-7-7a9 9 0 0118 0v7H5v-7z" />
+                                    </svg>
                                     Registros Familiares
                                 </div>
                                 <div class="dj-section-body">
-                                    <div id="familyContainer" style="display:flex;flex-direction:column;gap:8px;">
-                                        <div class="family-row" style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:end;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;">
-                                            <div>
-                                                <label class="dj-label">Parentesco</label>
-                                                <select name="parentesco[]" class="dj-select">
-                                                    <option value="">—</option>
-                                                    <option value="PADRE">Padre</option><option value="MADRE">Madre</option>
-                                                    <option value="ESPOSO">Esposo</option><option value="ESPOSA">Esposa</option>
-                                                    <option value="HIJO">Hijo</option><option value="HIJA">Hija</option>
-                                                    <option value="HERMANO">Hermano</option><option value="HERMANA">Hermana</option>
-                                                    <option value="ABUELO">Abuelo</option><option value="ABUELA">Abuela</option>
-                                                </select>
-                                            </div>
-                                            <div><label class="dj-label">Apellidos y Nombres</label><input type="text" name="apellidosNombres[]" class="dj-input" placeholder="Apellidos y nombres completos"></div>
-                                            <div><label class="dj-label">Fecha de Nacimiento</label><input type="date" name="fechaNacimiento[]" class="dj-input"></div>
-                                            <div><button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button></div>
-                                        </div>
-                                    </div>
-                                    <div style="margin-top:8px;">
-                                        <button id="addFamilyMember" type="button"
-                                            style="width:100%;padding:6px;font-size:12px;border:1px dashed #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:pointer;">
-                                            + Agregar Familiar
-                                        </button>
-                                    </div>
+                                    <table class="bk-fam-table" style="width:100%;">
+                                        <thead>
+                                            <tr>
+                                                <th>Parentesco</th>
+                                                <th>Apellidos y Nombres</th>
+                                                <th>Fecha Nac.</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="bodyBackupFamiliares">
+                                            <tr>
+                                                <td colspan="3" style="padding:6px;color:#9ca3af;font-style:italic;">
+                                                    Cargando...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>{{-- /③ --}}
+
+                </div>{{-- /panel backup --}}
+                {{-- ✅ AGREGAR ESTO --}}
+                <div id="djResizer">
+                    {{-- <div id="djResizerLabels">
+                        <span class="lbl-ant">◀ ANTIGUO</span>
+                        <span class="lbl-new">NUEVO ▶</span>
+                    </div> --}}
+                    <div id="djResizerBadge">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                {{-- ===================== PANEL DERECHO: FORMULARIO ===================== --}}
+                <div class="dj-panel-form" id="panelForm">
+
+                    <div class="dj-panel-form-header">
+                        <svg style="width:14px;height:14px;stroke:#166534;flex-shrink:0;" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>DJ Nueva — Datos actualizados</span>
+                        <span id="contadorDiffs"
+                            style="display:none;font-size:9px;background:#ef4444;color:#fff;padding:1px 8px;border-radius:20px;font-weight:700;margin-left:auto;"></span>
+                    </div>
+
+                    <form id="formDatos" method="POST">
+                        @csrf
+                        <input type="hidden" name="cod_postulante" id="cod_postulante">
+                        <input type="hidden" id="tipo_personal" name="tipo_personal">
+
+                        {{-- ① DATOS PERSONALES --}}
+                        <div class="dj-group">
+                            <div class="dj-group-header">① Datos Personales</div>
+                            <div class="dj-group-body">
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.121 17.804zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Identidad y Datos Personales
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div style="display:flex;gap:14px;align-items:flex-start;">
+                                            <div style="flex:1;">
+                                                <input type="hidden" id="nombres_apellidos" name="nombres_apellidos">
+                                                <div class="dj-grid-2" style="margin-bottom:10px;">
+                                                    <div>
+                                                        <label class="dj-label">Primer Nombre</label>
+                                                        <input type="text" id="nombre1" name="nombre1" class="dj-input"
+                                                            placeholder="Primer nombre"
+                                                            style="text-transform:uppercase;" data-compare="nombre1">
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Segundo Nombre</label>
+                                                        <input type="text" id="nombre2" name="nombre2" class="dj-input"
+                                                            placeholder="Segundo nombre (opcional)"
+                                                            style="text-transform:uppercase;" data-compare="nombre2">
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Apellido Paterno</label>
+                                                        <input type="text" id="apellido_paterno" name="apellido_paterno"
+                                                            class="dj-input" placeholder="Apellido paterno"
+                                                            style="text-transform:uppercase;"
+                                                            data-compare="apellido_paterno">
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Apellido Materno</label>
+                                                        <input type="text" id="apellido_materno" name="apellido_materno"
+                                                            class="dj-input" placeholder="Apellido materno"
+                                                            style="text-transform:uppercase;"
+                                                            data-compare="apellido_materno">
+                                                    </div>
+                                                </div>
+                                                <a href="https://eldni.com/pe/buscar-datos-por-dni" target="_blank"
+                                                    style="display:inline-block;margin-top:6px;font-size:11px;color:var(--color-primary,#6366f1);border:1px solid var(--color-primary,#6366f1);padding:3px 10px;border-radius:5px;text-decoration:none;">
+                                                    Consultar DNI
+                                                </a>
+                                            </div>
+                                            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                                                <div class="dj-foto-wrap" id="placeholderFoto">
+                                                    <svg style="width:28px;height:28px;stroke:#d1d5db;" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="1.5"
+                                                            d="M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z" />
+                                                    </svg>
+                                                    <span
+                                                        style="font-size:10px;color:#9ca3af;margin-top:3px;">FOTO</span>
+                                                    <img id="previewFoto" class="hidden" />
+                                                    <input type="file" id="inputFoto" accept="image/*" class="hidden" />
+                                                </div>
+                                                <div style="display:flex;gap:5px;">
+                                                    <button type="button" id="btnSubirFoto" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">Subir
+                                                        foto</button>
+                                                    <button type="button" id="btnEliminarFoto"
+                                                        class="dj-btn-sm dj-btn-danger hidden">Quitar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr class="dj-divider">
+                                        <div class="dj-grid-4">
+                                            <div><label class="dj-label">DNI</label><input type="text" id="dni"
+                                                    name="dni" class="dj-input" placeholder="12345678"
+                                                    data-compare="dni"></div>
+                                            <div><label class="dj-label">Caduca</label><input type="date" id="caduca"
+                                                    name="caduca" class="dj-input" data-compare="caduca"></div>
+                                            <div>
+                                                <label class="dj-label">Estado Civil</label>
+                                                <select id="estado_civil" name="estado_civil" class="dj-select"
+                                                    data-compare="estado_civil">
+                                                    <option value="">—</option>
+                                                    <option value="2007000001">SOLTERO</option>
+                                                    <option value="2007000002">CASADO</option>
+                                                    <option value="2007000003">DIVORCIADO</option>
+                                                    <option value="2007000004">VIUDO</option>
+                                                    <option value="2007000008">CONVIVIENTE</option>
+                                                    {{-- <option value="S">SOLTERO</option>
+                                                    <option value="C">CASADO</option>
+                                                    <option value="D">DIVORCIADO</option>
+                                                    <option value="V">VIUDO</option>
+                                                    <option value="2007000008">CONVIVIENTE</option> --}}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Sexo</label>
+                                                <select id="sexo" name="sexo" class="dj-select" data-compare="sexo">
+                                                    <option value="">—</option>
+                                                    <option value="M">Masculino</option>
+                                                    <option value="F">Femenino</option>
+                                                </select>
+                                            </div>
+                                            <div><label class="dj-label">Fecha de Nacimiento</label><input type="date"
+                                                    id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input"
+                                                    data-compare="fecha_nacimiento"></div>
+                                            <div style="visibility: hidden"><label class="dj-label">Ciudad de Nacimiento</label><input type="text"
+                                                    id="ciudad_nacimiento" name="ciudad_nacimiento" class="dj-input"
+                                                    placeholder="Lima, Arequipa…" style="text-transform:uppercase;">
+                                            </div>
+                                            <div style="visibility:hidden;">
+                                                <label class="dj-label">¿Sabe nadar?</label>
+                                                <select id="sabe_nadar" name="sabe_nadar" class="dj-select"
+                                                    data-compare="sabe_nadar">
+                                                    <option value="">—</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        Ciudad de nacimiento
+                                    </div>
+                                     <div class="dj-section-body">
+                                        <div style="display:flex;gap:14px;align-items:flex-start;">
+                                            <div style="flex:1;">
+                                                <div class="dj-grid-3" style="margin-bottom:8px;">
+                                                    <div><label class="dj-label">Departamento</label><select
+                                                            id="departamento_nac" name="departamento_nac"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                    <div><label class="dj-label">Provincia</label><select
+                                                            id="provincia_nac" name="provincia_nac"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                    <div><label class="dj-label">Distrito</label><select
+                                                            id="distrito_nac" name="distrito_nac"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.372 4.115a1 1 0 01-.21.979l-2.073 2.073a11.05 11.05 0 005.293 5.293l2.073-2.073a1 1 0 01.979-.21l4.115 1.372a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                        Información de Contacto
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div><label class="dj-label">Celular</label><input type="text" id="celular"
+                                                    name="celular" class="dj-input" placeholder="999 999 999"
+                                                    data-compare="celular"></div>
+                                            <div><label class="dj-label">Correo electrónico</label><input type="email"
+                                                    id="correo" name="correo" class="dj-input"
+                                                    placeholder="ejemplo@correo.com" data-compare="correo"></div>
+                                            <div><label class="dj-label">WhatsApp</label><input type="text"
+                                                    id="whatsapp" name="whatsapp" class="dj-input"
+                                                    placeholder="999 999 999"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v8m-4-4h8m7 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Información Médica
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div>
+                                                <label class="dj-label">Tipo de Sangre</label>
+                                                <select id="tipo_sangre" name="tipo_sangre" class="dj-select"
+                                                    data-compare="tipo_sangre">
+                                                    <option value="">—</option>
+                                                    <option value="O+">O+</option>
+                                                    <option value="O-">O-</option>
+                                                    <option value="A+">A+</option>
+                                                    <option value="A-">A-</option>
+                                                    <option value="B+">B+</option>
+                                                    <option value="B-">B-</option>
+                                                    <option value="AB+">AB+</option>
+                                                    <option value="AB-">AB-</option>
+                                                    <option value="RH">RH</option>
+                                                </select>
+                                            </div>
+                                            <div><label class="dj-label">Peso (kg)</label><input type="number" id="peso"
+                                                    name="peso" step="0.1" class="dj-input" placeholder="70"
+                                                    data-compare="peso"></div>
+                                            <div><label class="dj-label">Talla (m)</label><input type="number"
+                                                    id="talla" name="talla" step="0.01" class="dj-input"
+                                                    placeholder="1.75" data-compare="talla"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8c-1.657 0-3 1.343-3 3v7h6v-7c0-1.657-1.343-3-3-3zM5 13h14M5 17h14M9 21h6" />
+                                        </svg>
+                                        Información Previsional
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div>
+                                                <label class="dj-label">Sistema Previsional</label>
+                                                <select id="sistema_previsional" name="sistema_previsional"
+                                                    class="dj-select" data-compare="sistema_previsional">
+                                                    <option value="">—</option>
+                                                    <option value="03">AFP PROFUTURO</option>
+                                                    <option value="01">ONP</option>
+                                                    <option value="02">AFP INTEGRA</option>
+                                               
+                                                    <option value="10">AFP PRIMA</option>
+                                                    <option value="27">AFP HABITAT</option>
+                                                    <option value="07">NO APORTACION</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">ESSALUD Vida</label>
+                                                <select id="essalud" name="essalud" class="dj-select"
+                                                    data-compare="essalud">
+                                                    <option value="">—</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Pensionista</label>
+                                                <select id="pensionista" name="pensionista" class="dj-select"
+                                                    data-compare="pensionista">
+                                                    <option value="">—</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9" />
+                                        </svg>
+                                        Educación
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-4">
+                                            <div>
+                                                <label class="dj-label">Grado de Instrucción</label>
+                                                <select id="grado_instruccion" name="grado_instruccion"
+                                                    class="dj-select" data-compare="grado_instruccion">
+                                                    <option value="">—</option>
+                                                    @foreach ($grados as $grado)
+                                                        <option value="{{ $grado->id }}">{{ $grado->text }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Institución</label>
+                                                <select id="institucion" name="institucion" class="dj-select">
+                                                    <option value="">—</option>
+                                                    @foreach ($instituciones as $inst)
+                                                        <option value="{{ $inst->id }}">{{ $inst->text }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Carrera</label>
+                                                <select id="carrera" name="carrera" class="dj-select">
+                                                    <option value="">—</option>
+                                                    @foreach ($carreras as $carrera)
+                                                        <option value="{{ $carrera->id }}">{{ $carrera->text }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div><label class="dj-label">Año de egreso</label><input type="number"
+                                                    id="anio_egreso" name="anio_egreso" class="dj-input"
+                                                    placeholder="2020" data-compare="anio_egreso"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                                        </svg>
+                                        Información Adicional
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div>
+                                                <label class="dj-label">Embargos financieros</label>
+                                                <select id="embargos" name="embargos" class="dj-select"
+                                                    data-compare="embargos">
+                                                    <option value="">—</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="dj-label">Cuenta de Sueldo</label>
+                                                <select id="cuenta_banco" name="cuenta_banco" class="dj-select">
+                                                    <option value="" disabled>—</option>
+            
+                                                    <option value="BCP">BCP</option>
+                                                    <option value="INTERBANK">INTERBANK</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0c-4.418 0-8 3.582-8 8a8 8 0 0016 0c0-4.418-3.582-8-8-8z" />
+                                        </svg>
+                                        Direcciones
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-2">
+                                            <div>
+                                                <p class="dj-label"
+                                                    style="color:#9ca3af;margin-bottom:6px;font-size:10px;">— Dirección
+                                                    Actual</p>
+                                                <div class="dj-grid-3" style="margin-bottom:8px;">
+                                                    <div><label class="dj-label">Departamento</label><select
+                                                            id="departamento_actual" name="departamento_actual"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                    <div><label class="dj-label">Provincia</label><select
+                                                            id="provincia_actual" name="provincia_actual"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                    <div><label class="dj-label">Distrito</label><select
+                                                            id="distrito_actual" name="distrito_actual"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                </div>
+                                                <label class="dj-label">Descripción</label>
+                                                <textarea id="direccion_actual" name="direccion_actual"
+                                                    class="dj-textarea" placeholder="Dirección actual completa"
+                                                    data-compare="direccion_actual"></textarea>
+                                            </div>
+                                            <div>
+                                                <p class="dj-label"
+                                                    style="color:#9ca3af;margin-bottom:6px;font-size:10px;">— Dirección
+                                                    DNI</p>
+                                                <div class="dj-grid-3" style="margin-bottom:8px;">
+                                                    <div><label class="dj-label">Departamento</label><select
+                                                            id="departamento_dni" name="departamento_dni"
+                                                            class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                    <div><label class="dj-label">Provincia</label><select
+                                                            id="provincia_dni" name="provincia_dni" class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                    <div><label class="dj-label">Distrito</label><select
+                                                            id="distrito_dni" name="distrito_dni" class="dj-select">
+                                                            <option value="">—</option>
+                                                        </select></div>
+                                                </div>
+                                                <label class="dj-label">Descripción</label>
+                                                <textarea id="direccion_dni" name="direccion_dni" class="dj-textarea"
+                                                    placeholder="Dirección registrada en el DNI"
+                                                    data-compare="direccion_dni"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                                        </svg>
+                                        Contacto de Emergencia
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div><label class="dj-label">Llamar a</label><input type="text"
+                                                    id="contacto_emergencia" name="contacto_emergencia" class="dj-input"
+                                                    placeholder="Juan Pérez García" data-compare="contacto_emergencia">
+                                            </div>
+                                            <div><label class="dj-label">Celular</label><input type="text"
+                                                    id="celular_emergencia" name="celular_emergencia" class="dj-input"
+                                                    placeholder="999 999 999" data-compare="celular_emergencia"></div>
+                                            <div><label class="dj-label">Parentesco</label><input type="text"
+                                                    id="parentesco_emergencia" name="parentesco_emergencia"
+                                                    class="dj-input" placeholder="Madre, Hermano…"
+                                                    data-compare="parentesco_emergencia"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>{{-- /① --}}
+
+                        {{-- ② DATOS LABORALES --}}
+                        <div class="dj-group">
+                            <div class="dj-group-header">② Datos Laborales</div>
+                            <div class="dj-group-body">
+
+                                <div class="dj-section" data-tipo="administrativo">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        Información Profesional
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div><label class="dj-label">Profesión / Ocupación Principal</label><input
+                                                    type="text" id="ocupacion_principal" name="ocupacion_principal"
+                                                    class="dj-input" placeholder="Ej. Agente de Seguridad"
+                                                    style="text-transform:uppercase;"
+                                                    data-compare="ocupacion_principal"></div>
+                                            <div><label class="dj-label">Experiencia (años)</label><input type="number"
+                                                    id="experiencia_anios" name="experiencia_anios" class="dj-input"
+                                                    placeholder="0"></div>
+                                            <div>
+                                                <label class="dj-label">¿Familiar en la empresa?</label>
+                                                <select id="familiar_empresa" name="familiar_empresa" class="dj-select">
+                                                    <option value="NO">No</option>
+                                                    <option value="SI">Sí</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="div_familiar_interno" class="dj-subpanel hidden">
+                                            <div class="dj-grid-2">
+                                                <div><label class="dj-label">Nombre del familiar</label><input
+                                                        type="text" id="familiar_nombre" name="familiar_nombre"
+                                                        class="dj-input" placeholder="Nombre y apellidos"
+                                                        style="text-transform:uppercase;"></div>
+                                                <div>
+                                                    <label class="dj-label">Parentesco</label>
+                                                    <select id="familiar_parentesco" name="familiar_parentesco"
+                                                        class="dj-select">
+                                                        <option value="">—</option>
+                                                        <option value="MADRE">Madre</option>
+                                                        <option value="PADRE">Padre</option>
+                                                        <option value="CONYUGE">Cónyuge / Pareja</option>
+                                                        <option value="HIJO">Hijo(a)</option>
+                                                        <option value="HERMANO">Hermano(a)</option>
+                                                        <option value="OTROS">Otros</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- SUCAMEC: solo operativo --}}
+                                <div class="dj-section" data-tipo="operativo">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0a9 9 0 11-9-9" />
+                                        </svg>
+                                        Curso SUCAMEC
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-2">
+                                            <div>
+                                                <label class="dj-label">Curso SUCAMEC</label>
+                                                <select id="curso_sucamec" name="curso_sucamec" class="dj-select"
+                                                    data-compare="curso_sucamec">
+                                                    <option value="NO">No</option>
+                                                    <option value="SI">Sí</option>
+                                                </select>
+                                                <div id="div_sucamec_obs" class="hidden" style="margin-top:6px;">
+                                                    <label class="dj-label">Observación</label>
+                                                    <input type="text" id="sucamec_obs" name="sucamec_obs"
+                                                        class="dj-input" placeholder="Institución o curso...">
+                                                </div>
+                                            </div>
+                                            <div id="institucion_container" class="hidden">
+                                                <label class="dj-label">Institución</label>
+                                                <input type="text" id="institucion_laboral" name="institucion_laboral"
+                                                    class="dj-input" placeholder="Institución donde realizó el curso">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- SMO: ambos tipos --}}
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                        </svg>
+                                        Servicio Militar Obligatorio
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            {{-- <div>
+                                                <label class="dj-label">S.M.O.</label>
+                                                <select id="smo" name="smo" class="dj-select" data-compare="smo">
+                                                    <option value="">—</option>
+                                                    <option value="NO">No</option>
+                                                    <option value="MARINA">Marina</option>
+                                                    <option value="EJERCITO">Ejército</option>
+                                                    <option value="AVIACION">Aviación</option>
+                                                </select>
+                                            </div> --}}
+                                            <div>
+                                                <label class="dj-label">S.M.O.</label>
+                                                <select id="consumo_sustancias" name="consumo_sustancias"
+                                                    class="dj-select" data-compare="consumo_sustancias">
+                                                    <option value="" disabled>Seleccionar...</option>
+                                                    <option value="NO">NO</option>
+                                                    <option value="MGP">MGP - MARINA DE GUERRA DEL PERU</option>
+                                                    <option value="EP">EP - EJERCITO DEL PERU</option>
+                                                    <option value="FAP">FAP - FUERZA AEREA DEL PERU</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section" data-tipo="operativo">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 13l6-6m0 0l6 6m-6-6v12" />
+                                        </svg>
+                                        Licencia y Tipo de Arma
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div><label class="dj-label">Licencia de Arma L4</label><input
+                                                    id="licencia_arma" name="licencia_arma" class="dj-input"
+                                                    placeholder="Nº de licencia..." data-compare="licencia_arma"></div>
+                                            {{-- <div>
+                                                <label class="dj-label">Tipo de Arma</label>
+                                                <select id="tipo_arma" name="tipo_arma" class="dj-select"
+                                                    data-compare="tipo_arma">
+                                                    <option value="">—</option>
+                                                    <option value="PISTOLA">Pistola</option>
+                                                    <option value="REVOLVER">Revólver</option>
+                                                    <option value="ESCOPETA">Escopeta</option>
+                                                    <option value="RIFLE">Rifle</option>
+                                                </select>
+                                            </div> --}}
+                                            <div>
+                                                <label class="dj-label">Arma Propia</label>
+                                                <select id="arma_propia" name="arma_propia" class="dj-select"
+                                                    data-compare="arma_propia">
+                                                    <option value="">—</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 13l2-5h14l2 5M5 13v5h2v-2h10v2h2v-5M5 13h14" />
+                                        </svg>
+                                        Licencia de Conducir
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-4">
+                                            <div><label class="dj-label">N° Brevete</label><input type="text"
+                                                    id="brevete" name="brevete" class="dj-input"
+                                                    placeholder="Número de brevete" data-compare="brevete"></div>
+
+                                            <div>
+                                                <label class="dj-label">Clase</label>
+                                                {{-- <input type="text"
+                                                    id="clase_brevete" name="clase_brevete" class="dj-input"
+                                                    placeholder="Ej: A-I, B-IIb" data-compare="clase_brevete"> --}}
+                                                    <select name="clase_brevete" id="clase_brevete" data-compare="clase_brevete" class="dj-input" onchange="actualizarCategorias()">
+                                                        <option value="" >Seleccionar...</option>
+                                                        <option value="A">A</option>
+                                                        <option value="B">B</option>
+                                                    </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="dj-label">Tipo de Vehículo</label>
+                                                {{-- <input type="text"
+                                                    id="tipo_vehiculo" name="tipo_vehiculo" class="dj-input"
+                                                    placeholder="Tipo de vehículo"> --}}
+                                                    <select name="tipo_vehiculo" id="tipo_vehiculo" class="dj-input">
+
+                                                    </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Vehículo Propio</label>
+                                                <select id="vehiculo_propio" name="vehiculo_propio" class="dj-select">
+                                                    <option value="">—</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 7V4h6v3m-9 4h12v9H6V11z" />
+                                        </svg>
+                                        Experiencia Laboral
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-3">
+                                            <div><label class="dj-label">Empresa Anterior</label><input type="text"
+                                                    id="empresa_anterior" name="empresa_anterior" class="dj-input"
+                                                    placeholder="Nombre de la empresa" data-compare="empresa_anterior">
+                                            </div>
+                                            <div><label class="dj-label">Cargo</label><input type="text"
+                                                    id="cargo_anterior" name="cargo_anterior" class="dj-input"
+                                                    placeholder="Cargo" data-compare="cargo_anterior"></div>
+                                            <div><label class="dj-label">Duración (años)</label><input type="number"
+                                                    id="duracion_anterior" name="duracion_anterior" step="0.5"
+                                                    class="dj-input" placeholder="2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dj-section">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                        </svg>
+                                        Profesión u Ocupación Alterna
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div class="dj-grid-2">
+                                            <div>
+                                                <label class="dj-label">Ocupación Alterna 1</label>
+                                                <input type="text" id="dj2026_laboral_1" name="dj2026_laboral_1"
+                                                    class="dj-input" placeholder="Descripción ocupación alterna 1"
+                                                    style="text-transform:uppercase;" data-compare="dj2026_laboral_1">
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Ocupación Alterna 2</label>
+                                                <input type="text" id="dj2026_laboral_2" name="dj2026_laboral_2"
+                                                    class="dj-input" placeholder="Descripción ocupación alterna 2"
+                                                    style="text-transform:uppercase;" data-compare="dj2026_laboral_2">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>{{-- /② --}}
+
+                        {{-- ③ DATOS FAMILIARES --}}
+                        <div class="dj-group" style="margin-bottom:0;">
+                            <div class="dj-group-header">③ Datos Familiares</div>
+                            <div class="dj-group-body">
+                                <div class="dj-section" style="margin-bottom:0;">
+                                    <div class="dj-section-header">
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M16 12a4 4 0 10-8 0 4 4 0 008 0zM12 14v7m-7-7a9 9 0 0118 0v7H5v-7z" />
+                                        </svg>
+                                        Registros Familiares
+                                    </div>
+                                    <div class="dj-section-body">
+                                        <div id="familyContainer" style="display:flex;flex-direction:column;gap:8px;">
+                                            <div class="family-row"
+                                                style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:end;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;">
+                                                <div>
+                                                    <label class="dj-label">Parentesco</label>
+                                                    <select name="parentesco[]" class="dj-select">
+                                                        <option value="">—</option>
+                                                        <option value="PADRE">Padre</option>
+                                                        <option value="MADRE">Madre</option>
+                                                        <option value="ESPOSO">Esposo</option>
+                                                        <option value="ESPOSA">Esposa</option>
+                                                        <option value="HIJO">Hijo</option>
+                                                        <option value="HIJA">Hija</option>
+                                                        <option value="HERMANO">Hermano</option>
+                                                        <option value="HERMANA">Hermana</option>
+                                                        <option value="ABUELO">Abuelo</option>
+                                                        <option value="ABUELA">Abuela</option>
+                                                    </select>
+                                                </div>
+                                                <div><label class="dj-label">Apellidos y Nombres</label><input
+                                                        type="text" name="apellidosNombres[]" class="dj-input"
+                                                        placeholder="Apellidos y nombres completos"></div>
+                                                <div><label class="dj-label">Fecha de Nacimiento</label><input
+                                                        type="date" name="fechaNacimiento[]" class="dj-input"></div>
+                                                <div><button type="button" class="remove-family dj-btn-sm dj-btn-danger"
+                                                        style="margin-bottom:1px;">Eliminar</button></div>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top:8px;">
+                                            <button id="addFamilyMember" type="button"
+                                                style="width:100%;padding:6px;font-size:12px;border:1px dashed #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:pointer;">
+                                                + Agregar Familiar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>{{-- /③ --}}
 
                     </form>
                 </div>{{-- /panel form --}}
@@ -1308,7 +1960,8 @@
             </div>{{-- /split wrapper --}}
 
             {{-- Footer --}}
-            <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #e5e7eb;background:#fafafa;flex-shrink:0;">
+            <div
+                style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #e5e7eb;background:#fafafa;flex-shrink:0;">
                 <button id="cerrarModal" type="button" data-hs-overlay="#modalDjGestion"
                     style="padding:7px 18px;font-size:12px;font-weight:600;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;cursor:pointer;">
                     Cancelar
@@ -1328,12 +1981,12 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('familiar_empresa')?.addEventListener('change', function () {
-        document.getElementById('div_familiar_interno').classList.toggle('hidden', this.value !== 'SI');
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('familiar_empresa')?.addEventListener('change', function () {
+            document.getElementById('div_familiar_interno').classList.toggle('hidden', this.value !== 'SI');
+        });
+        document.getElementById('curso_sucamec')?.addEventListener('change', function () {
+            document.getElementById('div_sucamec_obs').classList.toggle('hidden', this.value !== 'SI');
+        });
     });
-    document.getElementById('curso_sucamec')?.addEventListener('change', function () {
-        document.getElementById('div_sucamec_obs').classList.toggle('hidden', this.value !== 'SI');
-    });
-});
 </script>

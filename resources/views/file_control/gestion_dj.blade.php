@@ -39,18 +39,18 @@
                         class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
                             bg-white text-primary border-gray-200"
                         data-tab="pendiente">
-                        Pendientes / Listos
+                        Listos
                     </button>
                     <button id="tabBtnMigrado" type="button"
                         class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
                             bg-gray-50 text-gray-500 border-transparent hover:text-gray-700"
                         data-tab="migrado">
-                        Migración
+                        Migración (SIP)
                     </button>
                 </div>
                 {{-- Título dinámico --}}
                 <p id="tituloTabActiva" class="text text-gray-400 mt-2 ml-1 flex items-center content-center justify-center gap-1">
-                    <span class="font-medium text-primary">Pendientes / Listos</span>
+                    <span class="font-medium text-primary">Listos</span>
                 </p>
             </div>
 
@@ -98,6 +98,7 @@
                                 <option value="">Todos</option>
                                 <option value="OPERATIVO">Operativo</option>
                                 <option value="ADMINISTRATIVO">Administrativo</option>
+                                <option value="ESPECIAL">Especial</option>
                             </select>
                         </div>
                          {{-- <button type="button" id="btnDescargarDJs_PEN"
@@ -151,6 +152,7 @@
                                 <option value="">Todos</option>
                                 <option value="OPERATIVO">Operativo</option>
                                 <option value="ADMINISTRATIVO">Administrativo</option>
+                                  <option value="ESPECIAL">Especial</option>
                             </select>
                         </div>
 
@@ -172,11 +174,11 @@
                                 <i class='bx bx-download text-base'></i>
                                 Rep. Actualización
 
-                                <button type="button" id="btnDescargarDJs"
+                                {{-- <button type="button" id="btnDescargarDJs"
                                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
                                     <i class='bx bx-archive-in text-base'></i>
                                     Descargar DJ's
-                                </button>
+                                </button> --}}
                                 <button type="button" id="btnDJUnificado"
                                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-amber-500 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors">
                                     <i class='bx bx-file text-base'></i>
