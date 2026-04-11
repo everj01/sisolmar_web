@@ -1558,8 +1558,15 @@ private function extraerApellido($nombreCompleto, $index)
             $nomb2 = isset($nameParts[3]) ? implode(' ', array_slice($nameParts, 3)) : '';
         }
 
+        // DB::insert(
+        //     "INSERT INTO sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE 
+        //     (CODI_PERS, TIPO_RELA, APEL_1, APEL_2, NOMB_1, NOMB_2, FECH_NACI) 
+        //     VALUES (?, ?, ?, ?, ?, ?, ?)",
+        //     [$codiPers, $parentesco, $apel1, $apel2, $nomb1, $nomb2, $fechaNaci]
+        // );
+
         DB::insert(
-            "INSERT INTO sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE 
+            "INSERT INTO si_solm.dbo.DERECHO_HABIENTE 
             (CODI_PERS, TIPO_RELA, APEL_1, APEL_2, NOMB_1, NOMB_2, FECH_NACI) 
             VALUES (?, ?, ?, ?, ?, ?, ?)",
             [$codiPers, $parentesco, $apel1, $apel2, $nomb1, $nomb2, $fechaNaci]
@@ -1567,21 +1574,189 @@ private function extraerApellido($nombreCompleto, $index)
     }
 }
 
-    private function migrarFamiliares($codiPers)
-    {
-        // Limpiar destino
-        DB::delete(
-            "DELETE FROM si_solm.dbo.DJ2026_DERECHO_HABIENTE WHERE CODI_PERS = ?",
-            [$codiPers]
-        );
+private function migrarFamiliares($codiPers)
+{
+    // Eliminar todos los familiares existentes del trabajador en DJ2026_DERECHO_HABIENTE
+    DB::delete(
+        "DELETE FROM si_solm.dbo.DJ2026_DERECHO_HABIENTE
+         WHERE CODI_PERS = ?",
+        [$codiPers]
+    );
 
-        // Copiar de migración a DJ2026
-        DB::statement(
-            "INSERT INTO si_solm.dbo.DJ2026_DERECHO_HABIENTE
-            SELECT * FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE WHERE CODI_PERS = ?",
-            [$codiPers]
-        );
-    }
+    // Insertar familiares en DJ2026_DERECHO_HABIENTE excluyendo la columna identity CODI_DERE_HABI
+    DB::statement(
+        "INSERT INTO si_solm.dbo.DJ2026_DERECHO_HABIENTE
+        (
+        CODI_DERE_HABI,
+            CODI_PERS,
+            TIPO_RELA,
+            NOMB_1,
+            NOMB_2,
+            APEL_1,
+            APEL_2,
+            CODI_TIPO_DOCU,
+            NRO_DOCU_IDEN,
+            FECH_NACI,
+            FALLECIDO,
+            DEHA_OCUPACION,
+            DEHA_EDAD,
+            USUA_CODIGO_REG,
+            USUA_FECHA_REG,
+            USUA_CODIGO_MOD,
+            USUA_FECHA_MOD,
+            DEHA_SEXO,
+            
+    
+            DEHA_MES_CONCEPCION,
+            DEHA_FECHA_ALTA,
+            DEHA_TIPO_BAJA,
+            DEHA_FECHA_BAJA,
+            DEHA_INCAPACIDAD,
+            DEHA_RESOL_INCAPACIDAD,
+            DEHA_VIGENCIA,
+            DEHA_telefono,
+            domicilio,
+            DEHA_DEREHABI,
+            TIDV_CODIGO
+        )
+        SELECT
+        CODI_DERE_HABI,
+            CODI_PERS,
+            TIPO_RELA,
+            NOMB_1,
+            NOMB_2,
+            APEL_1,
+            APEL_2,
+            CODI_TIPO_DOCU,
+            NRO_DOCU_IDEN,
+            FECH_NACI,
+            FALLECIDO,
+            DEHA_OCUPACION,
+            DEHA_EDAD,
+            USUA_CODIGO_REG,
+            GETDATE(),
+            USUA_CODIGO_MOD,
+            GETDATE(),
+            DEHA_SEXO,
+           
+       
+            DEHA_MES_CONCEPCION,
+            DEHA_FECHA_ALTA,
+            DEHA_TIPO_BAJA,
+            DEHA_FECHA_BAJA,
+            DEHA_INCAPACIDAD,
+            DEHA_RESOL_INCAPACIDAD,
+            DEHA_VIGENCIA,
+            DEHA_telefono,
+            domicilio,
+            DEHA_DEREHABI,
+            TIDV_CODIGO
+        FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
+        WHERE CODI_PERS = ?",
+        [$codiPers]
+    );
+
+    // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTE
+    DB::delete(
+        "DELETE FROM si_solm.dbo.DERECHO_HABIENTE
+         WHERE CODI_PERS = ?",
+        [$codiPers]
+    );
+
+    // Insertar familiares en DERECHO_HABIENTE excluyendo la columna identity CODI_DERE_HABI
+    DB::statement("
+        INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+        (
+            CODI_PERS,
+            TIPO_RELA,
+            NOMB_1,
+            NOMB_2,
+            APEL_1,
+            APEL_2,
+            CODI_TIPO_DOCU,
+            NRO_DOCU_IDEN,
+            FECH_NACI,
+            FALLECIDO,
+            DEHA_OCUPACION,
+            DEHA_EDAD,
+            USUA_CODIGO_REG,
+            USUA_FECHA_REG,
+            USUA_CODIGO_MOD,
+            USUA_FECHA_MOD,
+            DEHA_SEXO,
+            DEHA_MES_CONCEPCION,
+            DEHA_FECHA_ALTA,
+            DEHA_TIPO_BAJA,
+            DEHA_FECHA_BAJA,
+            DEHA_INCAPACIDAD,
+            DEHA_RESOL_INCAPACIDAD,
+            DEHA_VIGENCIA,
+            DEHA_telefono,
+            domicilio,
+            DEHA_DEREHABI,
+            TIDV_CODIGO
+        )
+        SELECT
+            CODI_PERS,
+            TIPO_RELA,
+            NOMB_1,
+            NOMB_2,
+            APEL_1,
+            APEL_2,
+            CODI_TIPO_DOCU,
+            NRO_DOCU_IDEN,
+            TRY_CONVERT(datetime, NULLIF(FECH_NACI, ''), 103),
+            FALLECIDO,
+            DEHA_OCUPACION,
+            DEHA_EDAD,
+            USUA_CODIGO_REG,
+            GETDATE(),
+            USUA_CODIGO_MOD,
+            GETDATE(),
+            DEHA_SEXO,
+            DEHA_MES_CONCEPCION,
+            TRY_CONVERT(datetime, NULLIF(DEHA_FECHA_ALTA, ''), 103),
+            DEHA_TIPO_BAJA,
+            TRY_CONVERT(datetime, NULLIF(DEHA_FECHA_BAJA, ''), 103),
+            DEHA_INCAPACIDAD,
+            DEHA_RESOL_INCAPACIDAD,
+            TRY_CONVERT(datetime, NULLIF(DEHA_VIGENCIA, ''), 103),
+            DEHA_telefono,
+            domicilio,
+            DEHA_DEREHABI,
+            TIDV_CODIGO
+        FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
+        WHERE CODI_PERS = ?
+    ", [$codiPers]);
+}
+
+    // private function migrarFamiliares($codiPers)
+    // {
+    //     // Limpiar destino
+    //     DB::delete(
+    //         "DELETE TOP (1) FROM si_solm.dbo.DJ2026_DERECHO_HABIENTE WHERE CODI_PERS = ?",
+    //         [$codiPers]
+    //     );
+
+    //     // Copiar de migración a DJ2026
+    //     DB::statement(
+    //         "INSERT INTO si_solm.dbo.DJ2026_DERECHO_HABIENTE
+    //         SELECT * FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE WHERE CODI_PERS = ?",
+    //         [$codiPers]
+    //     );
+
+
+    //     // DB::delete(
+    //     //     "DELETE TOP (1) FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?",
+    //     //     [$codiPers]
+    //     // );
+
+    //     // DB::statement(
+    //     //     "INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+    //     //     SELECT * FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE WHERE CODI_PERS = ?",
+    //     //     [$codiPers]
+    //     // );
+    // }
 
     private function saveOcupaciones($dni, $data)
 {

@@ -1297,7 +1297,7 @@
                                                 <label class="dj-label">Estado Civil</label>
                                                 <select id="estado_civil" name="estado_civil" class="dj-select"
                                                     data-compare="estado_civil">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="2007000001">SOLTERO</option>
                                                     <option value="2007000002">CASADO</option>
                                                     <option value="2007000003">DIVORCIADO</option>
@@ -1313,7 +1313,7 @@
                                             <div>
                                                 <label class="dj-label">Sexo</label>
                                                 <select id="sexo" name="sexo" class="dj-select" data-compare="sexo">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="M">Masculino</option>
                                                     <option value="F">Femenino</option>
                                                 </select>
@@ -1329,7 +1329,7 @@
                                                 <label class="dj-label">¿Sabe nadar?</label>
                                                 <select id="sabe_nadar" name="sabe_nadar" class="dj-select"
                                                     data-compare="sabe_nadar">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="SI">Sí</option>
                                                     <option value="NO">No</option>
                                                 </select>
@@ -1348,17 +1348,17 @@
                                                     <div><label class="dj-label">Departamento</label><select
                                                             id="departamento_nac" name="departamento_nac"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                     <div><label class="dj-label">Provincia</label><select
                                                             id="provincia_nac" name="provincia_nac"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                     <div><label class="dj-label">Distrito</label><select
                                                             id="distrito_nac" name="distrito_nac"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                 </div>
                                             </div>
@@ -1403,7 +1403,7 @@
                                                 <label class="dj-label">Tipo de Sangre</label>
                                                 <select id="tipo_sangre" name="tipo_sangre" class="dj-select"
                                                     data-compare="tipo_sangre">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="O+">O+</option>
                                                     <option value="O-">O-</option>
                                                     <option value="A+">A+</option>
@@ -1439,7 +1439,7 @@
                                                 <label class="dj-label">Sistema Previsional</label>
                                                 <select id="sistema_previsional" name="sistema_previsional"
                                                     class="dj-select" data-compare="sistema_previsional">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="03">AFP PROFUTURO</option>
                                                     <option value="01">ONP</option>
                                                     <option value="02">AFP INTEGRA</option>
@@ -1453,7 +1453,7 @@
                                                 <label class="dj-label">ESSALUD Vida</label>
                                                 <select id="essalud" name="essalud" class="dj-select"
                                                     data-compare="essalud">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="SI">Sí</option>
                                                     <option value="NO">No</option>
                                                 </select>
@@ -1462,7 +1462,7 @@
                                                 <label class="dj-label">Pensionista</label>
                                                 <select id="pensionista" name="pensionista" class="dj-select"
                                                     data-compare="pensionista">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="SI">Sí</option>
                                                     <option value="NO">No</option>
                                                 </select>
@@ -1485,7 +1485,7 @@
                                                 <label class="dj-label">Grado de Instrucción</label>
                                                 <select id="grado_instruccion" name="grado_instruccion"
                                                     class="dj-select" data-compare="grado_instruccion">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     @foreach ($grados as $grado)
                                                         <option value="{{ $grado->id }}">{{ $grado->text }}</option>
                                                     @endforeach
@@ -1494,7 +1494,7 @@
                                             <div>
                                                 <label class="dj-label">Institución</label>
                                                 <select id="institucion" name="institucion" class="dj-select">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     @foreach ($instituciones as $inst)
                                                         <option value="{{ $inst->id }}">{{ $inst->text }}</option>
                                                     @endforeach
@@ -1503,7 +1503,7 @@
                                             <div>
                                                 <label class="dj-label">Carrera</label>
                                                 <select id="carrera" name="carrera" class="dj-select">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     @foreach ($carreras as $carrera)
                                                         <option value="{{ $carrera->id }}">{{ $carrera->text }}</option>
                                                     @endforeach
@@ -1530,7 +1530,7 @@
                                                 <label class="dj-label">Embargos financieros</label>
                                                 <select id="embargos" name="embargos" class="dj-select"
                                                     data-compare="embargos">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="SI">Sí</option>
                                                     <option value="NO">No</option>
                                                 </select>
@@ -1567,17 +1567,17 @@
                                                     <div><label class="dj-label">Departamento</label><select
                                                             id="departamento_actual" name="departamento_actual"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                     <div><label class="dj-label">Provincia</label><select
                                                             id="provincia_actual" name="provincia_actual"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                     <div><label class="dj-label">Distrito</label><select
                                                             id="distrito_actual" name="distrito_actual"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                 </div>
                                                 <label class="dj-label">Descripción</label>
@@ -1593,15 +1593,15 @@
                                                     <div><label class="dj-label">Departamento</label><select
                                                             id="departamento_dni" name="departamento_dni"
                                                             class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                     <div><label class="dj-label">Provincia</label><select
                                                             id="provincia_dni" name="provincia_dni" class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                     <div><label class="dj-label">Distrito</label><select
                                                             id="distrito_dni" name="distrito_dni" class="dj-select">
-                                                            <option value="">—</option>
+                                                            <option value="" disabled>—</option>
                                                         </select></div>
                                                 </div>
                                                 <label class="dj-label">Descripción</label>
@@ -1630,10 +1630,22 @@
                                             <div><label class="dj-label">Celular</label><input type="text"
                                                     id="celular_emergencia" name="celular_emergencia" class="dj-input"
                                                     placeholder="999 999 999" data-compare="celular_emergencia"></div>
-                                            <div><label class="dj-label">Parentesco</label><input type="text"
-                                                    id="parentesco_emergencia" name="parentesco_emergencia"
-                                                    class="dj-input" placeholder="Madre, Hermano…"
-                                                    data-compare="parentesco_emergencia"></div>
+                                            <div>
+                                                <label class="dj-label">Parentesco</label>
+                                                <select id="parentesco_emergencia" name="parentesco_emergencia"
+                                                        class="dj-select" data-compare="parentesco_emergencia">
+                                                    <option value="">—</option>
+                                                    <option value="PADRE">Padre</option>
+                                                    <option value="MADRE">Madre</option>
+                                                    <option value="CÓNYUGE">Cónyuge</option>
+                                                    <option value="HIJO">Hijo(a)</option>
+                                                    <option value="HERMANO">Hermano(a)</option>
+                                                    <option value="ABUELO">Abuelo(a)</option>
+                                                    <option value="TÍO">Tío(a)</option>
+                                                    <option value="PRIMO">Primo(a)</option>
+                                                    <option value="OTRO">Otro</option>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1682,13 +1694,19 @@
                                                     <label class="dj-label">Parentesco</label>
                                                     <select id="familiar_parentesco" name="familiar_parentesco"
                                                         class="dj-select">
-                                                        <option value="">—</option>
-                                                        <option value="MADRE">Madre</option>
+                                                        <option value="" disabled>—</option>
+                                                    
                                                         <option value="PADRE">Padre</option>
-                                                        <option value="CONYUGE">Cónyuge / Pareja</option>
-                                                        <option value="HIJO">Hijo(a)</option>
-                                                        <option value="HERMANO">Hermano(a)</option>
-                                                        <option value="OTROS">Otros</option>
+                                                        <option value="MADRE">Madre</option>
+                                                        <option value="ESPOSO">Esposo</option>
+                                                        <option value="ESPOSA">Esposa</option>
+                                                        <option value="HIJO">Hijo</option>
+                                                        <option value="HIJA">Hija</option>
+                                                        <option value="HERMANO">Hermano</option>
+                                                        <option value="HERMANA">Hermana</option>
+                                                        <option value="ABUELO">Abuelo</option>
+                                                        <option value="ABUELA">Abuela</option>
+                                                        <option value="OTROS">OTROS</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -1743,7 +1761,7 @@
                                             {{-- <div>
                                                 <label class="dj-label">S.M.O.</label>
                                                 <select id="smo" name="smo" class="dj-select" data-compare="smo">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="NO">No</option>
                                                     <option value="MARINA">Marina</option>
                                                     <option value="EJERCITO">Ejército</option>
@@ -1756,9 +1774,9 @@
                                                     class="dj-select" data-compare="consumo_sustancias">
                                                     <option value="" disabled>Seleccionar...</option>
                                                     <option value="NO">NO</option>
-                                                    <option value="MGP">MGP - MARINA DE GUERRA DEL PERU</option>
+                                                    <option value="MG">MGP - MARINA DE GUERRA DEL PERU</option>
                                                     <option value="EP">EP - EJERCITO DEL PERU</option>
-                                                    <option value="FAP">FAP - FUERZA AEREA DEL PERU</option>
+                                                    <option value="FA">FAP - FUERZA AEREA DEL PERU</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1782,7 +1800,7 @@
                                                 <label class="dj-label">Tipo de Arma</label>
                                                 <select id="tipo_arma" name="tipo_arma" class="dj-select"
                                                     data-compare="tipo_arma">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="PISTOLA">Pistola</option>
                                                     <option value="REVOLVER">Revólver</option>
                                                     <option value="ESCOPETA">Escopeta</option>
@@ -1793,7 +1811,7 @@
                                                 <label class="dj-label">Arma Propia</label>
                                                 <select id="arma_propia" name="arma_propia" class="dj-select"
                                                     data-compare="arma_propia">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="SI">Sí</option>
                                                     <option value="NO">No</option>
                                                 </select>
@@ -1829,7 +1847,7 @@
                                             </div>
 
                                             <div>
-                                                <label class="dj-label">Tipo de Vehículo</label>
+                                                <label class="dj-label">Tipo</label>
                                                 {{-- <input type="text"
                                                     id="tipo_vehiculo" name="tipo_vehiculo" class="dj-input"
                                                     placeholder="Tipo de vehículo"> --}}
@@ -1840,7 +1858,7 @@
                                             <div>
                                                 <label class="dj-label">Vehículo Propio</label>
                                                 <select id="vehiculo_propio" name="vehiculo_propio" class="dj-select">
-                                                    <option value="">—</option>
+                                                    <option value="" disabled>—</option>
                                                     <option value="SI">Sí</option>
                                                     <option value="NO">No</option>
                                                 </select>
@@ -1921,7 +1939,7 @@
                                                 <div>
                                                     <label class="dj-label">Parentesco</label>
                                                     <select name="parentesco[]" class="dj-select">
-                                                        <option value="">—</option>
+                                                        <option value="" disabled>—</option>
                                                         <option value="PADRE">Padre</option>
                                                         <option value="MADRE">Madre</option>
                                                         <option value="ESPOSO">Esposo</option>
@@ -1932,6 +1950,7 @@
                                                         <option value="HERMANA">Hermana</option>
                                                         <option value="ABUELO">Abuelo</option>
                                                         <option value="ABUELA">Abuela</option>
+                                                        <option value="OTROS">OTROS</option>
                                                     </select>
                                                 </div>
                                                 <div><label class="dj-label">Apellidos y Nombres</label><input

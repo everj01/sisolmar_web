@@ -8,6 +8,19 @@ import Swal from 'sweetalert2';
 const API_URL_PDF = `${VITE_URL_APP}/api`;
 const FONT_FAMILY = "helvetica";
 
+function drawFotoBorder(pdf, x, y, w, h, leftWidth = 0.6, otherWidth = 0.20) {
+    pdf.setDrawColor(0);
+
+    pdf.setLineWidth(otherWidth);
+    pdf.line(x, y, x + w, y);
+    pdf.line(x + w, y, x + w, y + h);
+    pdf.line(x, y + h, x + w, y + h);
+
+    const leftX = x + 0.15;
+    pdf.setLineWidth(leftWidth);
+    pdf.line(leftX, y + 0.1, leftX, y + h - 0.1);
+}
+
 export async function drawFotoEnPDF(pdf, x, y, w, h) {
     let imageSrc = "";
     try {
@@ -18,21 +31,24 @@ export async function drawFotoEnPDF(pdf, x, y, w, h) {
                 imageSrc = src;
             } else if (src && (src.startsWith("http://") || src.startsWith("https://"))) {
                 try {
-                    const urlObj   = new URL(src);
+                    const urlObj = new URL(src);
                     const pathParts = urlObj.pathname.split('/');
-                    const filename  = pathParts[pathParts.length - 1];
-                    const codiPers  = filename.replace('.jpg','').replace('.jpeg','').replace('.png','');
+                    const filename = pathParts[pathParts.length - 1];
+                    const codiPers = filename.replace('.jpg','').replace('.jpeg','').replace('.png','');
                     const resp = await axios.get(`${API_URL_PDF}/dj/proxy-foto`, { params: { codi_pers: codiPers } });
                     if (resp.data?.success && resp.data?.base64) imageSrc = resp.data.base64;
-                } catch (proxyErr) { console.warn('No se pudo obtener foto via proxy:', proxyErr); }
+                } catch (proxyErr) {
+                    console.warn('No se pudo obtener foto via proxy:', proxyErr);
+                }
             }
         }
 
-        pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-        pdf.rect(x, y, w, h);
-
         if (!imageSrc) {
-            pdf.setFontSize(8); pdf.setFont(FONT_FAMILY, "normal"); pdf.setTextColor(150);
+            drawFotoBorder(pdf, x, y, w, h, 0.4, 0.20);
+
+            pdf.setFontSize(8);
+            pdf.setFont(FONT_FAMILY, "normal");
+            pdf.setTextColor(150);
             pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
             return;
         }
@@ -41,30 +57,100 @@ export async function drawFotoEnPDF(pdf, x, y, w, h) {
         pdf.rect(x, y, w, h, "F");
 
         const padding = 1;
-        const maxW    = w - padding * 2;
-        const maxH    = h - padding * 2;
-        const props   = pdf.getImageProperties(imageSrc);
-        const ratio   = Math.min(maxW / props.width, maxH / props.height);
-        const finalW  = props.width  * ratio;
-        const finalH  = props.height * ratio;
+        const maxW = w - padding * 2;
+        const maxH = h - padding * 2;
+        const props = pdf.getImageProperties(imageSrc);
+        const ratio = Math.min(maxW / props.width, maxH / props.height);
+        const finalW = props.width * ratio;
+        const finalH = props.height * ratio;
         const offsetX = x + padding + (maxW - finalW) / 2;
         const offsetY = y + padding + (maxH - finalH) / 2;
 
         let format = "JPEG";
-        if (imageSrc.startsWith("data:image/png"))  format = "PNG";
+        if (imageSrc.startsWith("data:image/png")) format = "PNG";
         if (imageSrc.startsWith("data:image/webp")) format = "WEBP";
+
         pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
 
-        pdf.setDrawColor(0); pdf.setLineWidth(0.20);
-        pdf.rect(x, y, w, h);
+        drawFotoBorder(pdf, x, y, w, h, 0.4, 0.20);
 
     } catch (error) {
         console.error("Error dibujando foto en PDF:", error);
-        pdf.setDrawColor(0); pdf.setLineWidth(0.20); pdf.rect(x, y, w, h);
-        pdf.setFontSize(8); pdf.setFont(FONT_FAMILY, "normal"); pdf.setTextColor(150);
+
+        drawFotoBorder(pdf, x, y, w, h, 0.4, 0.20);
+
+        pdf.setFontSize(8);
+        pdf.setFont(FONT_FAMILY, "normal");
+        pdf.setTextColor(150);
         pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
     }
 }
+
+// export async function drawFotoEnPDF(pdf, x, y, w, h) {
+//     let imageSrc = "";
+//     try {
+//         const preview = document.getElementById("previewFoto");
+//         if (preview && preview.src && !preview.classList.contains("hidden")) {
+//             const src = preview.src;
+//             if (src && src.startsWith("data:")) {
+//                 imageSrc = src;
+//             } else if (src && (src.startsWith("http://") || src.startsWith("https://"))) {
+//                 try {
+//                     const urlObj   = new URL(src);
+//                     const pathParts = urlObj.pathname.split('/');
+//                     const filename  = pathParts[pathParts.length - 1];
+//                     const codiPers  = filename.replace('.jpg','').replace('.jpeg','').replace('.png','');
+//                     const resp = await axios.get(`${API_URL_PDF}/dj/proxy-foto`, { params: { codi_pers: codiPers } });
+//                     if (resp.data?.success && resp.data?.base64) imageSrc = resp.data.base64;
+//                 } catch (proxyErr) { console.warn('No se pudo obtener foto via proxy:', proxyErr); }
+//             }
+//         }
+
+//         // pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+//         // pdf.rect(x, y, w, h);
+
+//         // pdf.setDrawColor(0);
+//         // pdf.setLineWidth(1.0); // ajusta: 0.8, 1.0, 1.2
+//         // pdf.line(x, y, x, y + h);
+//         drawFotoBorder(pdf, x, y, w, h, 1.0, 0.20);
+
+//         if (!imageSrc) {
+//             pdf.setFontSize(8); pdf.setFont(FONT_FAMILY, "normal"); pdf.setTextColor(150);
+//             pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
+//             return;
+//         }
+
+//         pdf.setFillColor(255, 255, 255);
+//         pdf.rect(x, y, w, h, "F");
+
+//         const padding = 1;
+//         const maxW    = w - padding * 2;
+//         const maxH    = h - padding * 2;
+//         const props   = pdf.getImageProperties(imageSrc);
+//         const ratio   = Math.min(maxW / props.width, maxH / props.height);
+//         const finalW  = props.width  * ratio;
+//         const finalH  = props.height * ratio;
+//         const offsetX = x + padding + (maxW - finalW) / 2;
+//         const offsetY = y + padding + (maxH - finalH) / 2;
+
+//         let format = "JPEG";
+//         if (imageSrc.startsWith("data:image/png"))  format = "PNG";
+//         if (imageSrc.startsWith("data:image/webp")) format = "WEBP";
+//         pdf.addImage(imageSrc, format, offsetX, offsetY, finalW, finalH);
+
+//         // pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+//         // pdf.rect(x, y, w, h);
+
+//         drawFotoBorder(pdf, x, y, w, h, 1.0, 0.20);
+
+//     } catch (error) {
+//         console.error("Error dibujando foto en PDF:", error);
+//         // pdf.setDrawColor(0); pdf.setLineWidth(0.20); pdf.rect(x, y, w, h);
+//         drawFotoBorder(pdf, x, y, w, h, 1.0, 0.20);
+//         pdf.setFontSize(8); pdf.setFont(FONT_FAMILY, "normal"); pdf.setTextColor(150);
+//         pdf.text("FOTO", x + w / 2, y + h / 2, { align: "center" });
+//     }
+// }
 
 async function drawLogo(pdf, x, y, w, h) {
     if (!window.logoUrl) {
@@ -159,7 +245,7 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         let   y            = marginTop;
 
         const rowH          = 6.0;
-        const lineH         = 4.2;   // interlineado párrafo conformidad
+        const lineH         = 5.2;   // interlineado párrafo conformidad
         const declLineH     = 5.2;   // ← interlineado párrafo declaración — SUBE para más espacio, BAJA para menos
         const sectionTitleH = 5.5;
         const sectionGap    = 1.5;
@@ -347,10 +433,24 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         pdf.setDrawColor(0); pdf.setLineWidth(0.20); pdf.rect(boxX, y, boxWidth, declBoxH);
         pdf.setTextColor(0); pdf.setFontSize(8.5); pdf.setFont(FONT_FAMILY, "normal");
 
+   
+        // const fullText = `Yo, ${nombres}, identificado con DNI ${dni}, declaro bajo juramento que los datos personales, laborales y familiares que consigno en este documento son correctos, por lo que asumo la responsabilidad por su veracidad, cumplimiento y actualización, estando conforme con esta declaración jurada.`;
+        // const declLines = pdf.splitTextToSize(fullText, maxParaW);
+        // drawJustifiedText(pdf, declLines, boxX + 2, y + paraTopPad, maxParaW, declLineH);
+        y += 2.11;
         const fullText = `Yo, ${nombres}, identificado con DNI ${dni}, declaro bajo juramento que los datos personales, laborales y familiares que consigno en este documento son correctos, por lo que asumo la responsabilidad por su veracidad, cumplimiento y actualización, estando conforme con esta declaración jurada.`;
+
         const declLines = pdf.splitTextToSize(fullText, maxParaW);
-        drawJustifiedText(pdf, declLines, boxX + 2, y + paraTopPad, maxParaW, declLineH);
-        y += declBoxH;
+
+        // Altura total ocupada por las líneas
+        const textBlockH = declLines.length * declLineH;
+
+        // Y inicial centrado verticalmente dentro del recuadro
+        const textStartY = y + (declBoxH - textBlockH) / 2 + 1;
+
+        // Mantienes el texto justificado
+        drawJustifiedText(pdf, declLines, boxX + 2, textStartY, maxParaW, declLineH);   
+        y += declBoxH - 1.9;
 
         // ════════════════════════════════════════════════════════
         // SECCIÓN: DATOS PERSONALES
@@ -587,6 +687,7 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         y += sectionTitleH;
  
         pdf.setFontSize(8.5); pdf.setFont(FONT_FAMILY, "normal");
+        
         const confTextBase = "De acuerdo con lo dispuesto por mi empleador por norma interna, cumpliré con mi obligación de actualizar cada 12 meses esta Declaración Jurada y también hacerlo, cuando varíe cualquiera de mis datos registrados, asumiendo la responsabilidad en caso de incumplimiento.";
         const confTextOper = " En mi Sistema de Información Personal SIP verificaré periódicamente la exactitud de la información que contiene mi Declaración Jurada.";
         const confLines = pdf.splitTextToSize(
@@ -595,9 +696,10 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         );
         const confBoxH = confLines.length * lineH + paraTopPad + paraBottomPad;
         pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+        
         pdf.rect(boxX, y, boxWidth, confBoxH);
         pdf.setTextColor(0);
-        drawJustifiedText(pdf, confLines, boxX + 2, y + paraTopPad, boxWidth - 4, lineH);
+        drawJustifiedText(pdf, confLines, boxX + 2, y + paraTopPad + 2.8, boxWidth - 4, lineH);
         y += confBoxH;
  
         // ════════════════════════════════════════════════════════

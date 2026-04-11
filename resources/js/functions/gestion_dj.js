@@ -920,7 +920,7 @@ async function abrirFormularioDJ(codiPers, source = 'migracion') {
     try {
         Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-        await cargarCatalogos();
+        await cargarCatalogos(source);
         await cargarDatosPersonales(codiPers, source);
 
         Swal.close();
@@ -944,7 +944,7 @@ async function abrirFormularioDJ(codiPers, source = 'migracion') {
 let catalogosCache = null;
 let catalogosPromise = null;
 
-async function cargarCatalogos() {
+async function cargarCatalogos(source = 'migracion') {
     if (catalogosCache) return catalogosCache;
     if (catalogosPromise) return catalogosPromise;
 
@@ -1094,6 +1094,7 @@ async function llenarFormulario(data) {
     setValue('#arma_propia',    data.PERS_CONARMAS       ? data.PERS_CONARMAS.trim()       : '');
     setValue('#brevete',        data.PERS_BREVETE        ? data.PERS_BREVETE.trim()        : '');
     setValue('#clase_brevete',  data.CLASE_BREVETE       ? data.CLASE_BREVETE.trim()       : '');
+    actualizarCategorias();  // ← puebla el select tipo_vehiculo según la clase
     setValue('#tipo_vehiculo',  data.PERS_TIPO_VEHICULO  ? data.PERS_TIPO_VEHICULO.trim()  : '');
     setValue('#vehiculo_propio',data.PERS_VEHICULO_PROPIO? data.PERS_VEHICULO_PROPIO.trim(): '');
 

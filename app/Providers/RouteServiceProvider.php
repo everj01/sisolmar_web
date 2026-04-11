@@ -17,7 +17,7 @@ class RouteServiceProvider extends ServiceProvider{
         });
 
         RateLimiter::for('dj_api', function (Request $request) {
-            return Limit::perMinute(1000)->by($request->ip());
+            return Limit::perMinute(90000)->by($request->ip());
         });
 
         $this->routes(function () {
