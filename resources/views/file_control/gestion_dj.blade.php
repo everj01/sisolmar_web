@@ -185,6 +185,13 @@
                                     DJ Unificado
 
                                 </button>
+
+                                 <button type="button" id="btnDJUnificadoMigrado"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-amber-500 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors">
+                                    <i class='bx bx-file text-base'></i>
+                                    DJ Unificado (Migrados)
+
+                                </button>
                         </div>
                     </div>
 

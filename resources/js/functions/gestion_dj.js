@@ -185,8 +185,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (!btn) return;
                     registroSeleccionado = cell.getRow().getData();
                     registroSeleccionado._sinSplit = true;
-                    btnNuevaDJ?.click();
+
                     const codiPers = registroSeleccionado.codPersonal || registroSeleccionado.CODI_PERS || registroSeleccionado.id;
+                    
+                    // Limpiar caché solo de esta persona
+                    personalDataCache.delete(`${codiPers}_pendiente`);
+                    personalDataCache.delete(`${codiPers}_migracion`);
+
+                    btnNuevaDJ?.click();
                     abrirFormularioDJ(codiPers, 'pendiente');
                 }
             },
@@ -255,11 +261,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white" data-hs-overlay="#modalDjGestion">DJ</button>`;
                 },
                 cellClick: (e, cell) => {
-                    const btn = e.target.closest('.form-btn-migrado');
+                   const btn = e.target.closest('.form-btn-migrado');
                     if (!btn) return;
-                    btnNuevaDJ?.click();
+
                     const rowData  = cell.getRow().getData();
                     const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+
+                    // Limpiar caché solo de esta persona
+                    personalDataCache.delete(`${codiPers}_pendiente`);
+                    personalDataCache.delete(`${codiPers}_migracion`);
+
+                    btnNuevaDJ?.click();
                     abrirFormularioDJ(codiPers);
                 }
             },
@@ -762,9 +774,29 @@ document.addEventListener('DOMContentLoaded', function () {
     // DJ UNIFICADO (un solo PDF — Migración)
     // ============================================================
     const btnDJUnificado = document.getElementById('btnDJUnificado');
+    const btnDJUnificadoMigrado = document.getElementById('btnDJUnificadoMigrado');
 
     btnDJUnificado?.addEventListener('click', async function () {
         const filasVisibles = tblPersonasMigrado.getData("active");
+        if (!filasVisibles || filasVisibles.length === 0) {
+            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles para descargar.' });
+            return;
+        }
+
+        const confirmacion = await Swal.fire({
+            icon: 'question', title: 'DJ Unificado',
+            html: `Se generará <b>1 PDF</b> con las <b>${filasVisibles.length}</b> declaraciones juradas.<br>¿Desea continuar?`,
+            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+        });
+        if (!confirmacion.isConfirmed) return;
+
+        await _generarUnificado(filasVisibles, 'DJ_Unificado');
+    });
+
+    btnDJUnificadoMigrado?.addEventListener('click', async function () {
+        const filasVisibles = tblPersonasMigrado.getData("active")
+            .filter(fila => fila.migrado == 'Migrado');
+    
         if (!filasVisibles || filasVisibles.length === 0) {
             Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles para descargar.' });
             return;
@@ -1013,6 +1045,8 @@ async function llenarFormulario(data) {
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
+    console.log('TIPO TRAB:', tipotrab); // ← agregar esto
+
     setValue('tipo_personal', tipotrab);
     aplicarVisibilidadPorTipo(tipotrab);
 
@@ -1095,7 +1129,7 @@ async function llenarFormulario(data) {
     setValue('#brevete',        data.PERS_BREVETE        ? data.PERS_BREVETE.trim()        : '');
     setValue('#clase_brevete',  data.CLASE_BREVETE       ? data.CLASE_BREVETE.trim()       : '');
     actualizarCategorias();  // ← puebla el select tipo_vehiculo según la clase
-    setValue('#tipo_vehiculo',  data.PERS_TIPO_VEHICULO  ? data.PERS_TIPO_VEHICULO.trim()  : '');
+    setValue('#tipo_vehiculo',  data.CATEGORIA_BREVETE  ? data.CATEGORIA_BREVETE.trim()  : '');
     setValue('#vehiculo_propio',data.PERS_VEHICULO_PROPIO? data.PERS_VEHICULO_PROPIO.trim(): '');
 
     setValue('#empresa_anterior',  data.PERS_CTRABANT    ? data.PERS_CTRABANT.trim()    : '');
@@ -1326,7 +1360,12 @@ async function cargarDatosBackup(codiPers) {
         }
 
         // Reset visibilidad secciones tipo (fuera del forEach)
-        document.querySelectorAll('.bk-tipo-section').forEach(el => { el.style.display = ''; });
+        // document.querySelectorAll('.bk-tipo-section').forEach(el => { el.style.display = ''; });
+
+        const tipoActual = document.getElementById('tipo_personal')?.value?.trim() ?? '';
+        aplicarVisibilidadBackup(tipoActual); // ← aplica DESPUÉS de que el backup ya está renderizado
+
+        activarInteractividad();
 
         // Llenar campos backup
         wrapper.querySelectorAll('.bk-val[data-field]').forEach(el => {
@@ -1518,12 +1557,27 @@ function activarInteractividad() {
     panelForm.addEventListener('focusout', panelForm._splitFocusOut);
 }
 
-function aplicarVisibilidadPorTipo(tipoCod) {
-    const esOperativo      = tipoCod === '03';
-    const esAdministrativo = tipoCod === '05';
+function aplicarVisibilidadBackup(tipoCod) {
+    const esOperativo      = tipoCod == '03' || tipoCod == '01';
+    const esAdministrativo = tipoCod == '05' || tipoCod == '02';
 
-    document.querySelectorAll('[data-tipo="operativo"]').forEach(el => { el.style.display = esAdministrativo ? 'none' : ''; });
-    document.querySelectorAll('[data-tipo="administrativo"]').forEach(el => { el.style.display = esOperativo ? 'none' : ''; });
+    document.querySelectorAll('.bk-tipo-section[data-bk-tipo="operativo"]')
+        .forEach(el => { el.style.display = esAdministrativo ? 'none' : ''; });
+    document.querySelectorAll('.bk-tipo-section[data-bk-tipo="administrativo"]')
+        .forEach(el => { el.style.display = esOperativo ? 'none' : ''; });
+}
+
+// ── La función original queda sin los querySelectorAll del backup ──
+function aplicarVisibilidadPorTipo(tipoCod) {
+    const esOperativo      = tipoCod == '03' || tipoCod == '01';
+    const esAdministrativo = tipoCod == '05' || tipoCod == '02';
+    const esEspecial       = tipoCod == '06';
+
+    // Solo afecta el panel del formulario (derecho)
+    document.querySelectorAll('[data-tipo="operativo"]')
+        .forEach(el => { el.style.display = esAdministrativo ? 'none' : ''; });
+    document.querySelectorAll('[data-tipo="administrativo"]')
+        .forEach(el => { el.style.display = esOperativo ? 'none' : ''; });
 
     let badge = document.getElementById('tipoBadgeModal');
     if (!badge) {
@@ -1534,12 +1588,9 @@ function aplicarVisibilidadPorTipo(tipoCod) {
         if (headerTitle) headerTitle.parentNode.insertBefore(badge, headerTitle.nextSibling);
     }
 
-    if (esOperativo)      { badge.textContent = 'Operativo — RH 01';    badge.style.background = '#dbeafe'; badge.style.color = '#1e40af'; }
+    if (esOperativo)           { badge.textContent = 'Operativo — RH 01';    badge.style.background = '#dbeafe'; badge.style.color = '#1e40af'; }
     else if (esAdministrativo) { badge.textContent = 'Administrativo — RH 02'; badge.style.background = '#d1fae5'; badge.style.color = '#065f46'; }
-    else { badge.textContent = ''; }
-
-    document.querySelectorAll('.bk-tipo-section[data-bk-tipo="operativo"]').forEach(el => { el.style.display = esAdministrativo ? 'none' : ''; });
-    document.querySelectorAll('.bk-tipo-section[data-bk-tipo="administrativo"]').forEach(el => { el.style.display = esOperativo ? 'none' : ''; });
+    else                       { badge.textContent = ''; }
 }
 
 function limpiarSplitView() {

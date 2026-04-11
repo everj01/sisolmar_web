@@ -1016,7 +1016,7 @@
                             </div>
 
                             {{-- Solo operativo --}}
-                            <div class="dj-section bk-tipo-section" data-bk-tipo="operativo"
+                            <div class="dj-section bk-tipo-section  bk-ope" data-bk-tipo="operativo"
                                 style="border-color:#fde68a;">
                                 <div class="dj-section-header"
                                     style="background:#fef3c7;border-color:#fde68a;color:#92400e;">

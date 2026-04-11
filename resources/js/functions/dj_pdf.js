@@ -578,8 +578,15 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             drawField("Tiempo Experiencia",              getValue('experiencia_anios'),   boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4);
             y += rowH;
             drawField("Familiar en la Empresa", getValue('familiar_empresa'),   boxX,                      boxWidth * 0.25,    y, rowH, 0.816);
-            drawField("Nombre Completo",         getValue('familiar_nombre'),    boxX + boxWidth * 0.25,    boxWidth * 0.46584, y, rowH, 0.3);
-            drawField("Parentesco",              getValue('familiar_parentesco'),boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4);
+            
+            if(getValue('familiar_empresa') != 'NO'){
+                drawField("Nombre Completo",  getValue('familiar_nombre'),    boxX + boxWidth * 0.25,    boxWidth * 0.46584, y, rowH, 0.3);
+                drawField("Parentesco",  getValue('familiar_parentesco'),boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4);
+            }else{
+                drawField("Nombre Completo",  '',   boxX + boxWidth * 0.25,   boxWidth * 0.46584, y, rowH, 0.3);
+                drawField("Parentesco", '',boxX + boxWidth * 0.71584, boxWidth * 0.28416, y, rowH, 0.4);
+            }
+
             y += rowH;
             // Anchos exactos — suman boxWidth
             const wSMO   = boxWidth * 0.08;
@@ -588,8 +595,18 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             const wClas  = boxWidth * 0.12;
             const wTipo  = boxWidth * 0.12;
             const wVeh   = boxWidth * 0.30;
-            drawField("SMO",             getValue('smo'),               boxX,                              wSMO,  y, rowH, 0.4);
-            drawField("Institución",     getValue('institucion_laboral'),boxX + wSMO,                      wInst, y, rowH, 0.35);
+            drawField("SMO",             getValue('consumo_sustancias') != 'NO' ? 'SI' : 'NO',               boxX,                              wSMO,  y, rowH, 0.4);
+            let instEjer = '';
+            if( getValue('consumo_sustancias') == 'EP'){
+                instEjer = 'EJERCITO DEL PERU'
+            }
+            if( getValue('consumo_sustancias') == 'MG'){
+                instEjer = 'MARINA DE GUERRA DEL PERU'
+            }
+            if( getValue('consumo_sustancias') == 'FA'){
+                instEjer = 'FUERZA AEREA DEL PERU'
+            }
+            drawField("Institución",     instEjer ,boxX + wSMO,                      wInst, y, rowH, 0.35);
             drawField("N° Brevete",      getValue('brevete'),            boxX + wSMO + wInst,              wBrev, y, rowH, 0.45);
             drawField("Clase",           getValue('clase_brevete'),      boxX + wSMO + wInst + wBrev,      wClas, y, rowH, 0.38);
             drawField("Tipo",            getValue('tipo_vehiculo'),      boxX + wSMO + wInst + wBrev + wClas, wTipo, y, rowH, 0.3);
