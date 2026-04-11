@@ -152,19 +152,30 @@ Route::get('/reporte-personal-sin-migracion-v2', [DjController::class, 'reporteP
 //     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
 // });
 
-Route::prefix('dj')->group(function () {
+// Route::prefix('dj')->group(function () {
+//     Route::get('/get-personal-data', [DjController::class, 'getPersonalData'])
+//         ->middleware('throttle:dj-heavy');
+
+//     Route::get('/get-catalogs', [DjController::class, 'getCatalogs'])
+//         ->middleware('throttle:dj-heavy');
+
+//     Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
+    
+//     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
+
+//     Route::get('/get-backup-data', [DjController::class, 'getBackupData']);
+    
+//     Route::get('/proxy-foto', [DjController::class, 'proxyFoto']);
+// });
+
+Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
     Route::get('/get-catalogs', [DjController::class, 'getCatalogs']);
     Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
-    
-    // ✅ ASEGÚRATE QUE ESTA RUTA EXISTA
     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
-
     Route::get('/get-backup-data', [DjController::class, 'getBackupData']);
-    
     Route::get('/proxy-foto', [DjController::class, 'proxyFoto']);
 });
-
 
 // REPORTE FOLIOS POR VENCER CON FILTROS
 Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);

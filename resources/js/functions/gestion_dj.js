@@ -802,6 +802,13 @@ document.addEventListener('DOMContentLoaded', function () {
         await _generarUnificado(filasVisibles, 'DJ_Unificado_Pendientes', 'pendiente');
     });
 
+    async function obtenerDatosPersonales(codiPers, source = 'migracion') {
+        const response = await axios.get(`${API_URL}/dj/get-personal-data`, {
+            params: { codi_pers: codiPers, source }
+        });
+        return response.data;
+    }
+
     // Helper interno para unificar PDFs
     async function _generarUnificado(filas, nombreBase, source = 'migracion') {
         const pdfBlobs = [];
@@ -812,15 +819,29 @@ document.addEventListener('DOMContentLoaded', function () {
         try { await cargarCatalogos(); } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' }); return; }
 
         for (let i = 0; i < filas.length; i++) {
-            const fila     = filas[i];
+            const fila = filas[i];
             const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
-            Swal.update({ html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.nombres || codiPers}</small>` });
+
+            Swal.update({
+                html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.nombres || codiPers}</small>`
+            });
+
             try {
-                await cargarDatosPersonales(codiPers, source);
-                await new Promise(resolve => setTimeout(resolve, 600));
+                const payload = await obtenerDatosPersonales(codiPers, source);
+                await llenarFormulario(payload.data);
+                renderFamiliares(payload.familiares);
+
                 const resultado = await generarDeclaracionJuradaPDF(true);
-                if (resultado?.blob) { pdfBlobs.push(await resultado.blob.arrayBuffer()); } else errores++;
-            } catch (err) { console.error(`Error generando PDF para ${codiPers}:`, err); errores++; }
+                if (resultado?.blob) {
+                    pdfBlobs.push(await resultado.blob.arrayBuffer());
+                } else {
+                    errores++;
+                }
+            } catch (err) {
+                console.error(`Error generando PDF para ${codiPers}:`, err);
+                errores++;
+            }
+            await new Promise(resolve => setTimeout(resolve, 250));
         }
 
         if (pdfBlobs.length === 0) { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar ningún PDF.' }); return; }
@@ -920,28 +941,71 @@ async function abrirFormularioDJ(codiPers, source = 'migracion') {
 }
 
 // ── Catálogos ────────────────────────────────────────────────
+let catalogosCache = null;
+let catalogosPromise = null;
+
 async function cargarCatalogos() {
-    try {
-        const response = await axios.get(`${API_URL}/dj/get-catalogs`);
-        const { grados, carreras, instituciones, sangre, estados_civiles, tipos_arma } = response.data;
-        populateSelect('#selGrado',          grados);
-        populateSelect('#selCarrera',        carreras);
-        populateSelect('#selInstitucion',    instituciones);
-        populateSelect('#PERS_GRUP_SANGRE',  sangre);
-        populateSelect('#PERS_ESTADO_CIVIL', estados_civiles);
-        populateSelect('#LAB_TIPO_ARMA',     tipos_arma);
-        window.allCarreras = carreras;
-    } catch (error) { console.error('Error cargando catálogos:', error); throw error; }
+    if (catalogosCache) return catalogosCache;
+    if (catalogosPromise) return catalogosPromise;
+
+    catalogosPromise = axios.get(`${API_URL}/dj/get-catalogs`)
+        .then(response => {
+            const { grados, carreras, instituciones, sangre, estados_civiles, tipos_arma } = response.data;
+
+            populateSelect('#selGrado', grados);
+            populateSelect('#selCarrera', carreras);
+            populateSelect('#selInstitucion', instituciones);
+            populateSelect('#PERS_GRUP_SANGRE', sangre);
+            populateSelect('#PERS_ESTADO_CIVIL', estados_civiles);
+            populateSelect('#LAB_TIPO_ARMA', tipos_arma);
+
+            window.allCarreras = carreras;
+            catalogosCache = response.data;
+            return response.data;
+        })
+        .finally(() => {
+            catalogosPromise = null;
+        });
+
+    return catalogosPromise;
 }
 
 // ── Datos personales ─────────────────────────────────────────
+const personalDataCache = new Map();
+const personalDataPromise = new Map();
+
 async function cargarDatosPersonales(codiPers, source = 'migracion') {
-    try {
-        const response = await axios.get(`${API_URL}/dj/get-personal-data`, { params: { codi_pers: codiPers, source } });
-        const { data, familiares } = response.data;
-        await llenarFormulario(data);
-        renderFamiliares(familiares);
-    } catch (error) { console.error('Error cargando datos personales:', error); throw error; }
+    const key = `${codiPers}_${source}`;
+
+    if (personalDataCache.has(key)) {
+        const cached = personalDataCache.get(key);
+        await llenarFormulario(cached.data);
+        renderFamiliares(cached.familiares);
+        return cached;
+    }
+
+    if (personalDataPromise.has(key)) {
+        const pending = await personalDataPromise.get(key);
+        await llenarFormulario(pending.data);
+        renderFamiliares(pending.familiares);
+        return pending;
+    }
+
+    const req = axios.get(`${API_URL}/dj/get-personal-data`, {
+        params: { codi_pers: codiPers, source }
+    }).then(response => {
+        personalDataCache.set(key, response.data);
+        return response.data;
+    }).finally(() => {
+        personalDataPromise.delete(key);
+    });
+
+    personalDataPromise.set(key, req);
+
+    const result = await req;
+    await llenarFormulario(result.data);
+    renderFamiliares(result.familiares);
+    return result;
 }
 
 // ── Llenar formulario ────────────────────────────────────────
@@ -1111,19 +1175,47 @@ function addFamiliarRow(data = {}, container = null) {
 }
 
 // ── Ubicaciones cascada ──────────────────────────────────────
+const ubicacionCache = new Map();
+const ubicacionPromise = new Map();
+
+async function getUbicacionCached(params) {
+    const key = JSON.stringify(params);
+
+    if (ubicacionCache.has(key)) return ubicacionCache.get(key);
+    if (ubicacionPromise.has(key)) return ubicacionPromise.get(key);
+
+    const req = axios.get(`${API_URL}/dj/get-ubicacion`, { params })
+        .then(res => {
+            ubicacionCache.set(key, res.data);
+            return res.data;
+        })
+        .finally(() => {
+            ubicacionPromise.delete(key);
+        });
+
+    ubicacionPromise.set(key, req);
+    return req;
+}
+
+
 async function cargarUbicaciones(tipo, dept, prov, dist) {
-     const prefix = tipo === 'actual' ? '_actual' : tipo === 'dni' ? '_dni' : '_nac';
+    const prefix = tipo === 'actual' ? '_actual' : tipo === 'dni' ? '_dni' : '_nac';
     if (!dept) return;
-    const depts = await axios.get(`${API_URL}/dj/get-ubicacion?type=dept`);
-    populateSelect(`#departamento${prefix}`, depts.data);
+
+    const depts = await getUbicacionCached({ type: 'dept' });
+    populateSelect(`#departamento${prefix}`, depts);
     setValue(`#departamento${prefix}`, dept);
+
     if (!prov) return;
-    const provs = await axios.get(`${API_URL}/dj/get-ubicacion?type=prov&dept=${dept}`);
-    populateSelect(`#provincia${prefix}`, provs.data);
+
+    const provs = await getUbicacionCached({ type: 'prov', dept });
+    populateSelect(`#provincia${prefix}`, provs);
     setValue(`#provincia${prefix}`, prov);
+
     if (!dist) return;
-    const dists = await axios.get(`${API_URL}/dj/get-ubicacion?type=dist&prov=${prov}`);
-    populateSelect(`#distrito${prefix}`, dists.data);
+
+    const dists = await getUbicacionCached({ type: 'dist', prov });
+    populateSelect(`#distrito${prefix}`, dists);
     setValue(`#distrito${prefix}`, dist);
 }
 
