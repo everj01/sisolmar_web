@@ -1503,7 +1503,7 @@
                                             <div>
                                                 <label class="dj-label">Carrera</label>
                                                 <select id="carrera" name="carrera" class="dj-select">
-                                                    <option value="" disabled>—</option>
+                                                    <option value="999999" >NO ESPECIFICA</option>
                                                     @foreach ($carreras as $carrera)
                                                         <option value="{{ $carrera->id }}">{{ $carrera->text }}</option>
                                                     @endforeach
@@ -1884,9 +1884,9 @@
                                             <div><label class="dj-label">Cargo</label><input type="text"
                                                     id="cargo_anterior" name="cargo_anterior" class="dj-input"
                                                     placeholder="Cargo" data-compare="cargo_anterior"></div>
-                                            <div><label class="dj-label">Duración (años)</label><input type="number"
+                                            <div><label class="dj-label">Duración (años)</label><input type="text"
                                                     id="duracion_anterior" name="duracion_anterior" step="0.5"
-                                                    class="dj-input" placeholder="2"></div>
+                                                    class="dj-input" placeholder=""></div>
                                         </div>
                                     </div>
                                 </div>

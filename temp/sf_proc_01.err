@@ -1,29 +1,0 @@
-Loading pages (1/6)
-[>                                                           ] 0%[======>                                                     ] 10%QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-[========>                                                   ] 14%[=========>                                                  ] 16%[===========>                                                ] 19%[============>                                               ] 21%[=============>                                              ] 23%[===============>                                            ] 26%[================>                                           ] 28%[===================>                                        ] 32%[====================>                                       ] 34%libpng warning: iCCP: known incorrect sRGB profile
-[=====================>                                      ] 36%[=======================>                                    ] 39%libpng warning: iCCP: known incorrect sRGB profile
-libpng warning: iCCP: cHRM chunk does not match sRGB
-[========================>                                   ] 41%[=========================>                                  ] 43%[===========================>                                ] 46%[============================>                               ] 48%Warning: Failed to load c:/Users/ncervera/Desktop/Pruebas/sisolmar_web/public/images/huella_digital.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Pruebas/sisolmar_web/public/images/firma_jorge.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Pruebas/sisolmar_web/public/images/foto_dni.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Pruebas/sisolmar_web/public/images/firma_digital.png (ignore)
-[==============================>                             ] 50%Warning: Failed to load https://i.ibb.co/h9qJKZ7/firma-ejemplo-1.png (ignore)
-Warning: Failed to load https://i.ibb.co/hLMLCLB/firma-ejemplo-2.png (ignore)
-[============================================================] 100%Counting pages (2/6)                                               
-[============================================================] Object 1 of 1Resolving links (4/6)                                                       
-[============================================================] Object 1 of 1Loading headers and footers (5/6)                                           
-Printing pages (6/6)
-[>                                                           ] Preparing[===>                                                        ] Page 1 of 16[=======>                                                    ] Page 2 of 16[==========>                                                 ] Page 3 of 16[===============>                                            ] Page 4 of 16[==================>                                         ] Page 5 of 16[======================>                                     ] Page 6 of 16[=========================>                                  ] Page 7 of 16[==============================>                             ] Page 8 of 16[=================================>                          ] Page 9 of 16[=====================================>                      ] Page 10 of 16[========================================>                   ] Page 11 of 16[=============================================>              ] Page 12 of 16[================================================>           ] Page 13 of 16[====================================================>       ] Page 14 of 16[=======================================================>    ] Page 15 of 16[============================================================] Page 16 of 16Done                                                                        

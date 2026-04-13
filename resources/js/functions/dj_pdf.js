@@ -207,7 +207,7 @@ function drawJustifiedText(pdf, lines, x, y, maxWidth, lineHeight) {
 
 function getValue(id) {
     const el = document.getElementById(id);
-    return el ? (el.value || '') : '';
+    return el ? (el.value || '--') : '--';
 }
 
 function getCleanSelectText(id) {
@@ -471,7 +471,7 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         // FIX: drawFieldNoRight dibuja el campo hasta colMain y cierra con línea en boxWidth
         const w1 = colMain / 4;
         drawField("DNI",          dni,                               boxX,                     w1,                                   y, rowH, 0.3,    "left", false, false);
-        drawField("Caduca",       getValue("caduca"),                boxX + w1,                boxWidth * 0.381 - w1,                y, rowH, 0.461,  "left", false, false);
+        drawField("Caduca",       formatDateToDMY(getValue("caduca")),                boxX + w1,                boxWidth * 0.381 - w1,                y, rowH, 0.461,  "left", false, false);
          const estadosCiviles = {
             '2007000001': 'SOLTERO', '2007000002': 'CASADO',
             '2007000003': 'DIVORCIADO', '2007000004': 'VIUDO', '2007000008': 'CONVIVIENTE'

@@ -896,8 +896,17 @@ class DjController extends Controller
             'PERS_DIST_DIRDNI' => $getValue('distrito_dni', 'PERS_DIST_DIRDNI'),
             'PERS_DIREC_DNI' => $getValue('direccion_dni', 'PERS_DIREC_DNI'),
             'PERS_GRADO_INSTRUCCION' => $getValue('grado_instruccion', 'PERS_GRADO_INSTRUCCION'),
-            'CARR_CODIGO' => $getValue('carrera', 'CARR_CODIGO'),
-            'IEDU_CODIGO' => $getValue('institucion', 'IEDU_CODIGO'),
+            'CARR_CODIGO' => empty($getValue('carrera', 'CARR_CODIGO')) ? null : $getValue('carrera', 'CARR_CODIGO'),
+
+// EN insertOrUpdateDJ2026Personal también (más abajo)
+            
+            'IEDU_CODIGO' => 
+            ($getValue('carrera', 'CARR_CODIGO') == '999999') ?
+                '199999999'
+                :
+                (empty($getValue('institucion', 'IEDU_CODIGO')) ? null : $getValue('institucion', 'IEDU_CODIGO')),
+            
+            
             'EGRESO_EDUCATIVO' => $getValue('anio_egreso', 'EGRESO_EDUCATIVO'),
             'PERS_CONDISCAMEC' => $getValue('curso_sucamec', 'PERS_CONDISCAMEC'),
             'PERS_NRODISCAMEC' => $getValue('sucamec_obs', 'PERS_NRODISCAMEC'),
@@ -1394,7 +1403,7 @@ class DjController extends Controller
             'PERS_DIST_DIRDNI' => $data['distrito_dni'] ?? null,
             'PERS_DIREC_DNI' => $data['direccion_dni'] ?? null,
             'PERS_GRADO_INSTRUCCION' => $data['grado_instruccion'] ?? null,
-            'CARR_CODIGO' => $data['carrera'] ?? null,
+            'CARR_CODIGO' => !empty($data['carrera']) ? $data['carrera'] : null,
             'IEDU_CODIGO' => $data['institucion'] ?? null,
             'EGRESO_EDUCATIVO' => $data['anio_egreso'] ?? null,
             'PERS_CONDISCAMEC' => $data['curso_sucamec'] ?? 'NO',

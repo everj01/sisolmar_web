@@ -1083,23 +1083,44 @@ async function llenarFormulario(data) {
     setValue('#pensionista',         data.PERS_PENSIONISTA  ? data.PERS_PENSIONISTA.trim()  : '');
 
     setValue('#grado_instruccion', data.PERS_GRADO_INSTRUCCION ? data.PERS_GRADO_INSTRUCCION.trim() : '');
-    setValue('#institucion',       data.IEDU_CODIGO            ? data.IEDU_CODIGO.trim()            : '');
-    if (data.IEDU_CODIGO && window.allCarreras) {
-        const selCarrera = document.getElementById('carrera');
-        if (selCarrera) {
-            selCarrera.innerHTML = '<option value="">—</option>';
-            window.allCarreras
-                .filter(c => c.IEDU_CODIGO === data.IEDU_CODIGO.trim())
-                .forEach(c => {
-                    const opt = document.createElement('option');
-                    opt.value = c.id;
-                    opt.textContent = c.text;
-                    selCarrera.appendChild(opt);
-                });
-            selCarrera.value = data.CARR_CODIGO ? data.CARR_CODIGO.trim() : '';
+    if(data.CARR_CODIGO  == '999999'){
+        setValue('#institucion',      '999999');
+        if (data.IEDU_CODIGO && window.allCarreras) {
+            const selCarrera = document.getElementById('carrera');
+            if (selCarrera) {
+                selCarrera.innerHTML = '<option value="">—</option>';
+                window.allCarreras
+                    .filter(c => c.IEDU_CODIGO === data.IEDU_CODIGO.trim())
+                    .forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.text;
+                        selCarrera.appendChild(opt);
+                    });
+                selCarrera.value = data.CARR_CODIGO ? data.CARR_CODIGO.trim() : '';
+            }
+        }
+
+    }else{
+        setValue('#institucion',       data.IEDU_CODIGO            ? data.IEDU_CODIGO.trim()            : '999999');
+        if (data.IEDU_CODIGO && window.allCarreras) {
+            const selCarrera = document.getElementById('carrera');
+            if (selCarrera) {
+                selCarrera.innerHTML = '<option value="">—</option>';
+                window.allCarreras
+                    .filter(c => c.IEDU_CODIGO === data.IEDU_CODIGO.trim())
+                    .forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.text;
+                        selCarrera.appendChild(opt);
+                    });
+                selCarrera.value = data.CARR_CODIGO ? data.CARR_CODIGO.trim() : '';
+            }
         }
     }
-    setValue('#carrera',           data.CARR_CODIGO            ? data.CARR_CODIGO.trim()            : '');
+    
+    setValue('#carrera',           data.CARR_CODIGO            ? data.CARR_CODIGO.trim()            : '999999');
     setValue('#anio_egreso',       data.EGRESO_EDUCATIVO       ? data.EGRESO_EDUCATIVO.trim()       : '');
 
     setValue('#embargos',          data.PERS_EMBARGO  ? data.PERS_EMBARGO.trim()  : '');
