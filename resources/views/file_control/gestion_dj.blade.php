@@ -84,9 +84,8 @@
                         <span>Nueva DJ</span>
                     </button>
                     <button type="button" id="btnExtFirmaHuella"
-                        class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white flex items-center gap-1 px-4 py-1"
-                        data-hs-overlay="#modalExtFirmaHuella">
-                        <i class='bx bx-outline'></i>
+                        class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white flex items-center gap-1 px-4 py-1">
+                                            <i class='bx bx-outline'></i>
                         <span>Extraer Firma y Huella</span>
                     </button>
                 </div>
@@ -282,6 +281,14 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+
     <script>
         window.logoUrl = "{{ asset('images/logo_sol.png') }}";
     </script>

@@ -4,7 +4,13 @@ import Swal from 'sweetalert2';
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 
-getPersonal();
+let usuarioActual = null;
+
+// Al inicio del archivo, reemplaza getPersonal() por esto:
+(async () => {
+    usuarioActual = await getUsuario();
+    getPersonal();
+})();
 window.archivosSeleccionados = [];
 let pageSizePersonas = 10;
 
@@ -52,7 +58,12 @@ const tblPersonas = new Tabulator("#tblPersonas", {
             title: "Acciones", field: "acciones", width: 160, hozAlign: "center", headerSort: false, responsive: false,
             formatter: function (cell) {
                 var docsBtn = `<button type="button" class="btn rounded-full docs-btn bg-success/25 text-success hover:bg-success hover:text-white">Folios</button>`;
-                var legajoBtn = `<button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white ">Legajos</button>`;
+
+                // Solo mostrar Legajos si el rol NO es 8
+                var legajoBtn = '';
+                if (usuarioActual?.tipo_rol != 8) {
+                    legajoBtn = `<button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white">Legajos</button>`;
+                }
 
                 return docsBtn + ' ' + legajoBtn;
             },
@@ -706,7 +717,7 @@ function limpiarModal() {
 //========================================== DATA CON AXIOS ==========================================//
 // Función para obtener los folios por persona
 function getDocsObligatorios(codigo) {
-    axios.get(`${VITE_URL_APP}/api/get-documentos/${codigo}`)
+    axios.get(`${VITE_URL_APP}/get-documentos/${codigo}`)
         .then(response => {
             tblDocs.setData(response.data);
             // Aplicar filtro "PRINCIPAL" por defecto después de cargar los datos
@@ -834,7 +845,7 @@ window.addEventListener("sidebar-toggled", () => {
     //tblCargo?.redraw(true);
 });
 
-getUsuario();
+
 async function getUsuario() {
     try {
        

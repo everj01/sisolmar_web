@@ -503,25 +503,38 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getPersonalMigracion() {
-        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
-            .then(async response => {
-                const datosTabla = response.data;
+    axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
+        .then(async response => {
+            const datosTabla = response.data;
 
-                // Cargar cache de checks antes de renderizar
-                await cargarCheckPdfCache();
+            await cargarCheckPdfCache();
 
-                // Inyectar campo check_pdf en cada fila desde el cache
-                datosTabla.forEach(fila => {
-                    const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
-                    const reg = _checkPdfCache?.[String(cod).trim()];
-                    fila._checkPdf       = reg?.check  ? 1 : 0;
-                    fila._checkPdfFecha  = reg?.fecha   || null;
-                });
-
-                tblPersonasMigrado.setData(datosTabla);
-                // ... resto igual
+            datosTabla.forEach(fila => {
+                const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+                const reg = _checkPdfCache?.[String(cod).trim()];
+                fila._checkPdf      = reg?.check ? 1 : 0;
+                fila._checkPdfFecha = reg?.fecha  || null;
             });
-    }
+
+            tblPersonasMigrado.setData(datosTabla);
+
+            // ← ESTO ES LO QUE FALTABA
+            const sucursales = [...new Map(
+                datosTabla
+                    .filter(d => d.sucursal)
+                    .map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])
+            ).values()];
+
+            const filtroSucursal = document.getElementById('filtroSucursal');
+            if (filtroSucursal) {
+                filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                sucursales
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+            }
+        })
+        .catch(error => console.error("Hubo un error:", error));
+}
 
     function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
         const codSucursal = sucursal || '00';
@@ -1949,3 +1962,317 @@ async function resetearCheckPdfDB(codigos = null) {
         console.error('Error reseteando check PDF:', e);
     }
 }
+
+
+// ============================================================
+// EXTRAER FIRMA Y HUELLA — Extracción desde PDF DJ
+// ============================================================
+(function initExtractorFirmaHuella() {
+
+    let _pdfDoc      = null;
+    let _lastPageCvs = null;
+
+    const el = id => document.getElementById(id);
+
+    // ── Conversión mm → px ────────────────────────────────────
+    // A4 = 210mm × 297mm. El canvas renderizado tiene canvas.width = 210 * mmX
+    const mmX = cvs => cvs.width  / 210;   // px por mm horizontal
+    const mmY = cvs => cvs.height / 297;   // px por mm vertical
+
+    // ── Detectar borde horizontal en el canvas por píxeles ───────
+    // Escanea filas horizontales buscando líneas oscuras (bordes del PDF).
+    // Devuelve la Y en px del ÚLTIMO borde encontrado en [fromMm, toMm].
+    // Funciona con cualquier escala de renderizado.
+    function findHorizontalBorder(cvs, fromMm, toMm) {
+        const scY = cvs.height / 297;
+        const scX = cvs.width  / 210;
+        const yS  = Math.round(fromMm * scY);
+        const yE  = Math.round(toMm   * scY);
+        // Muestrear solo la franja interior del box (interior a los márgenes)
+        const xL  = Math.round(12  * scX);
+        const xR  = Math.round(198 * scX);
+        const sw  = xR - xL;
+
+        const { data } = cvs.getContext('2d').getImageData(xL, yS, sw, yE - yS);
+        let last = -1, inBdr = false;
+
+        for (let r = 0; r < yE - yS; r++) {
+            let dark = 0;
+            for (let c = 0; c < sw; c++) {
+                const p = (r * sw + c) * 4;
+                if ((data[p] + data[p + 1] + data[p + 2]) / 3 < 80) dark++;
+            }
+            if (dark / sw > 0.14 && !inBdr) { last = yS + r; inBdr = true; }
+            else if (dark / sw <= 0.07)      { inBdr = false; }
+        }
+        return last >= 0 ? last : null;
+    }
+
+    // ── Calcular región de recorte exacta ─────────────────────
+    // Usa detección de píxeles para encontrar el borde superior de la
+    // celda firma/huella — funciona igual para PDFs de 1 o 2 páginas.
+    function getCropRegion(cvs) {
+        const scX = mmX(cvs);
+        const scY = mmY(cvs);
+        const n   = _pdfDoc?.numPages ?? 1;
+
+        let firmaTopPx;
+        if (n >= 2) {
+            // Pág 2: titulo(5.5mm) + conformidad(17-28mm) → firma entre 22mm y 52mm
+            firmaTopPx = findHorizontalBorder(cvs, 22, 52) ?? Math.round(32 * scY);
+        } else {
+            // Pág 1: firma al final — zona entre 205mm y 258mm
+            firmaTopPx = findHorizontalBorder(cvs, 205, 258) ?? Math.round(236 * scY);
+        }
+
+        // Y de recorte: saltar el grosor del borde de la celda
+        // La celda mide 45mm; excluir últimos 9mm de etiquetas → 36mm de contenido
+        const inYTop  = 2.0 * scY;   // clearance del borde (~0.3mm dibujado en PDF)
+        const inYBot  = 0.5 * scY;
+        const yTop    = firmaTopPx + inYTop;
+        const yBottom = firmaTopPx + (45 - 9) * scY - inYBot;
+
+        // X fijos (marginLeft=10, firmaW=114mm, huellaW=76mm), inset 3mm c/lado
+        const firmaX  = Math.round((10  + 3) * scX);   // → 108mm de ancho neto
+        const firmaW  = Math.round((114 - 6) * scX);
+        const huellaX = Math.round((124 + 3) * scX);   // → 70mm de ancho neto
+        const huellaW = Math.round((76  - 6) * scX);
+
+        return {
+            yTop:    Math.max(0,          Math.round(yTop)),
+            yBottom: Math.min(cvs.height, Math.round(yBottom)),
+            firmaX,
+            firmaW,
+            huellaX,
+            huellaW,
+        };
+    }
+
+    // ── Reiniciar modal ───────────────────────────────────────
+    function resetModal() {
+        el('fhStep1')?.classList.remove('hidden');
+        el('fhStep2')?.classList.add('hidden');
+        el('fhStep3')?.classList.add('hidden');
+        el('fhFileInfo')?.classList.add('hidden');
+        const inp = el('fhInputPdf');
+        if (inp) inp.value = '';
+        const cont = el('fhPagesContainer');
+        if (cont) cont.innerHTML = '';
+        _pdfDoc      = null;
+        _lastPageCvs = null;
+    }
+
+    // ── Abrir / cerrar modal ──────────────────────────────────
+    function abrirModal() {
+        resetModal();
+        const modal = document.getElementById('modalExtFirmaHuella');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cerrarModal() {
+        const modal = document.getElementById('modalExtFirmaHuella');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        resetModal();
+    }
+
+    // ── Cargar y validar PDF ──────────────────────────────────
+    async function cargarPDF(file) {
+        if (!file || file.type !== 'application/pdf') {
+            Swal.fire({ icon: 'warning', title: 'Archivo inválido', text: 'Selecciona un archivo PDF.' });
+            return;
+        }
+        if (!window.pdfjsLib) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'PDF.js no está disponible. Recarga la página.' });
+            return;
+        }
+        try {
+            const buf    = await file.arrayBuffer();
+            const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+
+            if (pdfDoc.numPages > 2) {
+                Swal.fire({
+                    icon: 'warning', title: 'Más de 2 páginas',
+                    text: `El PDF tiene ${pdfDoc.numPages} páginas. Solo se procesará la última (donde está la firma).`,
+                });
+            }
+
+            _pdfDoc = pdfDoc;
+            const pages = Math.min(pdfDoc.numPages, 2);
+            el('fhFileName').textContent  = file.name;
+            el('fhPageCount').textContent = `${pages} página${pages > 1 ? 's' : ''}`;
+            el('fhFileInfo')?.classList.remove('hidden');
+        } catch (err) {
+            console.error('Error cargando PDF:', err);
+            Swal.fire({ icon: 'error', title: 'Error al leer el PDF', text: err.message });
+        }
+    }
+
+    // ── Renderizar páginas del PDF ────────────────────────────
+    async function previsualizarPDF() {
+        if (!_pdfDoc) return;
+
+        const container = el('fhPagesContainer');
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10 text-gray-400">
+                <i class='bx bx-loader-alt bx-spin text-3xl'></i>
+                <p class="text-sm mt-2">Renderizando documento...</p>
+            </div>`;
+
+        el('fhStep2')?.classList.remove('hidden');
+        el('fhStep3')?.classList.add('hidden');
+
+        await new Promise(r => setTimeout(r, 60));
+        container.innerHTML = '';
+
+        const numPages = Math.min(_pdfDoc.numPages, 2);
+        const scale    = 1.4;
+
+        for (let i = 1; i <= numPages; i++) {
+            const page     = await _pdfDoc.getPage(i);
+            const viewport = page.getViewport({ scale });
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+
+            const label = document.createElement('div');
+            label.style.cssText = 'font-size:11px;color:#9ca3af;margin-bottom:4px;';
+            label.textContent   = `Página ${i} de ${numPages}`;
+            wrapper.appendChild(label);
+
+            const canvasBox = document.createElement('div');
+            canvasBox.style.cssText = 'position:relative;display:inline-block;max-width:100%;';
+
+            const canvas = document.createElement('canvas');
+            canvas.width  = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.cssText = 'display:block;max-width:100%;border:1px solid #d1d5db;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08);';
+
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            canvasBox.appendChild(canvas);
+
+            // Overlay solo en la última página
+            if (i === numPages) {
+                _lastPageCvs = canvas;
+                const r  = getCropRegion(canvas);
+                const cW = canvas.width;
+                const cH = canvas.height;
+
+                // Zona firma (amarillo)
+                const mkZone = (x, w, label) => {
+                    const z = document.createElement('div');
+                    z.style.cssText = `
+                        position:absolute;
+                        left:${x / cW * 100}%;
+                        width:${w / cW * 100}%;
+                        top:${r.yTop / cH * 100}%;
+                        height:${(r.yBottom - r.yTop) / cH * 100}%;
+                        border:2px dashed #f59e0b;
+                        border-radius:2px;
+                        background:rgba(245,158,11,.07);
+                        pointer-events:none;
+                        box-sizing:border-box;
+                    `;
+                    const b = document.createElement('div');
+                    b.style.cssText = 'position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9px;color:#d97706;white-space:nowrap;font-weight:700;';
+                    b.textContent = label;
+                    z.appendChild(b);
+                    return z;
+                };
+
+                canvasBox.appendChild(mkZone(r.firmaX,  r.firmaW,  '✏ Firma'));
+                canvasBox.appendChild(mkZone(r.huellaX, r.huellaW, '● Huella'));
+            }
+
+            wrapper.appendChild(canvasBox);
+            container.appendChild(wrapper);
+        }
+    }
+
+    // ── Extraer firma y huella del canvas ────────────────────
+    function extraerImagenes() {
+        if (!_lastPageCvs) {
+            Swal.fire({ icon: 'warning', title: 'Sin previsualización', text: 'Presiona "Previsualizar PDF" primero.' });
+            return;
+        }
+
+        const src = _lastPageCvs;
+        const r   = getCropRegion(src);
+        const cH  = r.yBottom - r.yTop;
+
+        // Firma
+        const cvF  = el('fhCanvasFirma');
+        cvF.width  = r.firmaW;
+        cvF.height = cH;
+        cvF.getContext('2d').drawImage(src, r.firmaX, r.yTop, r.firmaW, cH, 0, 0, r.firmaW, cH);
+
+        // Huella
+        const cvH  = el('fhCanvasHuella');
+        cvH.width  = r.huellaW;
+        cvH.height = cH;
+        cvH.getContext('2d').drawImage(src, r.huellaX, r.yTop, r.huellaW, cH, 0, 0, r.huellaW, cH);
+
+        el('fhStep2')?.classList.add('hidden');
+        el('fhStep3')?.classList.remove('hidden');
+    }
+
+    // ── Descargar canvas como PNG ─────────────────────────────
+    function descargarCanvas(canvas, nombre) {
+        if (!canvas || canvas.width === 0) return;
+        const a = document.createElement('a');
+        a.href     = canvas.toDataURL('image/png');
+        a.download = nombre + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // ── Event listeners ───────────────────────────────────────
+    const inputPdf = el('fhInputPdf');
+    const dropZone = el('fhDropZone');
+
+    inputPdf?.addEventListener('change', e => {
+        const f = e.target.files?.[0];
+        if (f) cargarPDF(f);
+    });
+
+    dropZone?.addEventListener('dragover',  e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('fh-drag-over'); });
+    dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('fh-drag-over'));
+    dropZone?.addEventListener('drop', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('fh-drag-over');
+        const f = e.dataTransfer.files?.[0];
+        if (f) cargarPDF(f);
+    });
+
+    el('fhBtnCambiar')?.addEventListener('click', e => {
+        e.stopPropagation();
+        el('fhFileInfo')?.classList.add('hidden');
+        el('fhStep2')?.classList.add('hidden');
+        el('fhStep3')?.classList.add('hidden');
+        if (inputPdf) inputPdf.value = '';
+        _pdfDoc      = null;
+        _lastPageCvs = null;
+    });
+
+    el('fhBtnPreview')?.addEventListener('click',    previsualizarPDF);
+    el('fhBtnExtract')?.addEventListener('click',    extraerImagenes);
+    el('fhBtnReintentar')?.addEventListener('click', () => {
+        el('fhStep2')?.classList.remove('hidden');
+        el('fhStep3')?.classList.add('hidden');
+    });
+
+    el('fhBtnDownloadFirma')?.addEventListener('click',  () => descargarCanvas(el('fhCanvasFirma'),  'firma_registrada'));
+    el('fhBtnDownloadHuella')?.addEventListener('click', () => descargarCanvas(el('fhCanvasHuella'), 'huella_registrada'));
+
+    el('btnExtFirmaHuella')?.addEventListener('click', abrirModal);
+    el('btnCerrarFHModal')?.addEventListener('click',  cerrarModal);
+    document.getElementById('modalExtFirmaHuella')?.addEventListener('click', function (e) {
+        if (e.target === this) cerrarModal();
+    });
+
+})();

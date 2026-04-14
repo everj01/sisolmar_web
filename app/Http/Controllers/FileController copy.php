@@ -322,47 +322,56 @@ class FileController extends Controller
     //GUARDAR DATOS
     public function saveFolioPersona(Request $request)
     {
-        // Validar los datos del formulario
+        // 1. Validar los datos del formulario
         $validated = $request->validate([
-            'fecha_emision' => 'required|date',
+            'fecha_emision'   => 'required|date',
             'fecha_caducidad' => 'nullable|date',
-            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:1024',
+            'file'            => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // max 5MB
         ]);
 
-        /* Para guardar el arcivo con la codificación del personal */
         $codPersonal = $request->input('codPersonal');
-        $nameFile = $codPersonal.'.jpg';
+        $codFolio    = $request->input('codFolio');
 
-        /* Averiguar el nombre de la carpeta o ruta donde debe de guardarse el archivo */
-        $rutaArchivo = FileControl::getRutaFolio($request->input('codFolio'));
-        
+        $rutaArchivo = FileControl::getRutaFolio($codFolio);
+
         $filePath = null;
-        // Llamar al microservicio para guardar el archivo en el servidor local
+
         if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $filePath = 'http://190.116.178.163/Biblioteca_Grafica/'.$rutaArchivo.'/$nameFile';
-            $response = Http::withToken('457862h45hj7u5126h58d2s51s2s') // Autenticación con el token
-                ->attach('archivo', file_get_contents($file), $file->getClientOriginalName()) // Adjuntar el archivo
+            $file      = $request->file('file');
+            $extension = $file->getClientOriginalExtension(); // 2. Obtener extensión real
+            $nameFile  = $codPersonal . '.' . $extension;     // 3. Nombre con extensión correcta
+
+            // 4. Comilla simple corregida (antes tenía $ sin interpretar)
+            $filePath = 'http://190.116.178.163/Biblioteca_Grafica/' . $rutaArchivo . '/' . $nameFile;
+
+            $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                ->attach('archivo', file_get_contents($file), $nameFile) // 5. Usar $nameFile no el original
                 ->post('http://190.116.178.163/apps/api/file-control/charge-file.php', [
                     'nameFile' => $nameFile,
-                    'ruta' => $rutaArchivo
+                    'ruta'     => $rutaArchivo
                 ]);
 
             if ($response->failed()) {
-                return response()->json(['error' => 'No se pudo guardar el archivo en el servidor local'], 500);
+                return response()->json([
+                    'error' => 'No se pudo guardar el archivo en el servidor local'
+                ], 500);
             }
         }
 
-        // Llamar al método saveFolioPersonal pasando los datos y el archivo
         $inserted = FileControl::saveFolioPersonal(
             $validated['fecha_emision'],
             $validated['fecha_caducidad'],
-            $request->codFolio,
-            $request->codPersonal,
-            $filePath // Pasamos la ruta del archivo
+            $codFolio,
+            $codPersonal,
+            $filePath
         );
 
-        return response()->json(['message' => 'Folios del persona guardados']);
+        // 6. Verificar si realmente se insertó
+        if (!$inserted) {
+            return response()->json(['error' => 'No se pudo guardar el folio'], 500);
+        }
+
+        return response()->json(['message' => 'Folio guardado correctamente', 'success' => true]);
     }
 
     public function saveFolio(Request $request)

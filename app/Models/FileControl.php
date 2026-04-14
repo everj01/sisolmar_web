@@ -21,9 +21,9 @@ class FileControl extends Model
         return DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]');
     }
 
-    public static function getDocsXPersona($codPersonal = '1')
+    public static function getDocsXPersona($codPersonal = '1', $usuario = '0')
     {
-        return DB::select('EXEC SW_LISTAR_FOLIOS_X_PERSONAL ?', [$codPersonal]);
+        return DB::select('EXEC SW_LISTAR_FOLIOS_X_PERSONAL ?, ?', [$codPersonal, $usuario]);
     }
 
     public static function getClientes()

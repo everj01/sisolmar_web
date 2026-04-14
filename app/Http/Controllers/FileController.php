@@ -210,7 +210,8 @@ class FileController extends Controller{
     }
 
     public function getDocumentosXPersonal($codPersonal){
-        $docs_personal = FileControl::getDocsXPersona($codPersonal);
+        $usuario = session('usuario');
+        $docs_personal = FileControl::getDocsXPersona($codPersonal, $usuario);
         return response()->json($docs_personal);
     }
 
@@ -694,15 +695,15 @@ class FileController extends Controller{
     }
 
     //GUARDAR DATOS
-    public function saveFolioPersona(Request $request){
-        //dd($request->file('imagenes'));
+     public function saveFolioPersona(Request $request){
+        dd($request->file('imagenes'));
 
 
         // Validar los datos del formulario
         $validated = $request->validate([
             'fecha_emision' => 'required|date',
             'fecha_caducidad' => 'nullable|date',
-            //'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:1024',
+            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:1024',
         ]);
 
         // Para guardar el archivo con la codificación del personal

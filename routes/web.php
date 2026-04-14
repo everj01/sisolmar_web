@@ -52,7 +52,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
 
-    Route::get('/usuario', [LoginController::class, 'getUsuario']);
+    Route::get('/usuario', [LoginController::class, 'getUsuarioSession']);
+
+    Route::get('/get-documentos/{personalId}', [FileController::class, 'getDocumentosXPersonal']);
     
     // Vistas de consulta de capacitación
     Route::get('/capacitacion/consulta-matriculas', [CapacitacionController::class, 'vistaConsultaMatriculas'])->name('capacitacion.consulta-matriculas');

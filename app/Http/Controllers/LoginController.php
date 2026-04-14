@@ -33,22 +33,15 @@ class LoginController extends Controller
         }
     }
 
-    public function getUsuario()
+    public function getUsuarioSession()
     {
-
-    echo json_encode(session()->all());
-    exit();
-        $user = User::where('usuario', session('codigo'))
-            ->where('habilitado', 1)
-            ->first();
-
-        if (!$user) {
+        $usuarioSession = session()->all();
+        if (!$usuarioSession) {
             return response()->json([
                 'message' => 'Usuario no encontrado'
             ], 404);
         }
-
-        return response()->json($user, 200);
+        return response()->json($usuarioSession, 200);
     }
 
 
