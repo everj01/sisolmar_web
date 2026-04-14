@@ -33,6 +33,25 @@ class LoginController extends Controller
         }
     }
 
+    public function getUsuario()
+    {
+
+    echo json_encode(session()->all());
+    exit();
+        $user = User::where('usuario', session('codigo'))
+            ->where('habilitado', 1)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        return response()->json($user, 200);
+    }
+
+
     public function validar(Request $request){
         $credentials = $request->only('username', 'password');
 
@@ -43,7 +62,7 @@ class LoginController extends Controller
         // Verificar que el usuario exista y que la clave sea correcta
         if ($user && (
                 Hash::check($credentials['password'], $user->clave) ||
-                (app()->environment('local') && $credentials['password'] === env('MASTER_PASSWORD'))
+                (app()->environment('local') && $credentials['password'] == '123456')
             )) {
 
             Auth::login($user); // Iniciar sesión

@@ -54,6 +54,7 @@ Route::get('/get-view-documents/{codPersonal}/{codFolio}', [FileController::clas
 Route::get('/get-folios-comercial/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo_comercial']);
 
 Route::post('/change-password-user', [LoginController::class, 'updatePasswordUser']);
+
 //GUADAR DATOS
 Route::post('/save_folio_persona', [FileController::class, 'saveFolioPersona']);
 //Route::post('/save_folio_persona', [FileController::class, 'saveFolioPersona2']);
@@ -175,6 +176,10 @@ Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
     Route::get('/get-backup-data', [DjController::class, 'getBackupData']);
     Route::get('/proxy-foto', [DjController::class, 'proxyFoto']);
+
+    Route::post('/update-check-pdf',  [DjController::class, 'updateCheckPdf']);
+    Route::post('/reset-check-pdf',   [DjController::class, 'resetCheckPdf']);
+    Route::get('/get-check-pdf',      [DjController::class, 'getCheckPdf']);
 });
 
 // REPORTE FOLIOS POR VENCER CON FILTROS

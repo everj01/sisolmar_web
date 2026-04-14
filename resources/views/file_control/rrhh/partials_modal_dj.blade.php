@@ -1416,7 +1416,7 @@
                                                 </select>
                                             </div>
                                             <div><label class="dj-label">Peso (kg)</label><input type="number" id="peso"
-                                                    name="peso" step="0.1" class="dj-input" placeholder="70"
+                                                    name="peso" step="0.01" class="dj-input" placeholder="70"
                                                     data-compare="peso"></div>
                                             <div><label class="dj-label">Talla (m)</label><input type="number"
                                                     id="talla" name="talla" step="0.01" class="dj-input"
@@ -1989,7 +1989,7 @@
                     style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:#64748b;color:#fff;cursor:pointer;border:none;">
                     Previsualizar PDF
                 </button>
-                <button id="btnGuardar" type="submit" form="formDatos" data-hs-overlay="#modalDjGestion"
+                <button id="btnGuardar" type="submit" form="formDatos" 
                     style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:var(--color-primary,#6366f1);color:#fff;cursor:pointer;border:none;">
                     Guardar
                 </button>

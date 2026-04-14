@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
 
-                    btnNuevaDJ?.click();
+                    //btnNuevaDJ?.click();
                     abrirFormularioDJ(codiPers, 'pendiente');
                 }
             },
@@ -253,6 +253,43 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `${d.cambio ?? 'Sin cambios'}`.trim();
                 }
             },
+            // ── NUEVA COLUMNA ──────────────────────────────────────
+            {
+                title: "PDF", field: "_checkPdf", hozAlign: "center", widthGrow: 1,
+                headerSort: false,
+                formatter: cell => {
+                    const d   = cell.getData();
+                    const gen = d._checkPdf === 1;
+                    const cod = d.codPersonal || d.CODI_PERS || d.id;
+                    const titulo = gen
+                        ? `Generado por ${d._checkPdfUser || '?'} — click para resetear`
+                        : 'Pendiente';
+                    const color = gen ? 'color:#16a34a;font-size:18px;cursor:pointer;'
+                                    : 'color:#d1d5db;font-size:18px;cursor:default;';
+                    return `<span title="${titulo}" style="${color}" data-pdf-cod="${cod}">
+                                ${gen ? '✅' : '○'}
+                            </span>`;
+                },
+                cellClick: async (e, cell) => {
+                    const span = e.target.closest('[data-pdf-cod]');
+                    if (!span) return;
+                    const d   = cell.getData();
+                    if (!d._checkPdf) return;
+                    const cod = span.getAttribute('data-pdf-cod');
+
+                    const { isConfirmed } = await Swal.fire({
+                        icon: 'question', title: '¿Resetear marca?',
+                        text: 'Se marcará como pendiente de generar PDF.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, resetear', cancelButtonText: 'Cancelar',
+                    });
+                    if (!isConfirmed) return;
+
+                    await resetearCheckPdfDB([cod]);
+                    cell.getRow().update({ _checkPdf: 0, _checkPdfFecha: null });
+                }
+            },
+            // ── FIN NUEVA COLUMNA ──────────────────────────────────
             {
                 title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
                 formatter: cell => {
@@ -261,17 +298,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white" data-hs-overlay="#modalDjGestion">DJ</button>`;
                 },
                 cellClick: (e, cell) => {
-                   const btn = e.target.closest('.form-btn-migrado');
+                    const btn = e.target.closest('.form-btn-migrado');
                     if (!btn) return;
-
                     const rowData  = cell.getRow().getData();
                     const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
-
-                    // Limpiar caché solo de esta persona
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
-
-                    btnNuevaDJ?.click();
                     abrirFormularioDJ(codiPers);
                 }
             },
@@ -358,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function limpiarFormulario() {
         if (form) form.reset();
-        if (tagifyLicencia) tagifyLicencia.removeAllTags();
+        //if (tagifyLicencia) tagifyLicencia.removeAllTags();
 
         limpiarPreviewFoto();
 
@@ -472,18 +504,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getPersonalMigracion() {
         axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
-            .then(response => {
+            .then(async response => {
                 const datosTabla = response.data;
+
+                // Cargar cache de checks antes de renderizar
+                await cargarCheckPdfCache();
+
+                // Inyectar campo check_pdf en cada fila desde el cache
+                datosTabla.forEach(fila => {
+                    const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+                    const reg = _checkPdfCache?.[String(cod).trim()];
+                    fila._checkPdf       = reg?.check  ? 1 : 0;
+                    fila._checkPdfFecha  = reg?.fecha   || null;
+                });
+
                 tblPersonasMigrado.setData(datosTabla);
-                const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                const filtroSucursal = document.getElementById('filtroSucursal');
-                if (filtroSucursal) {
-                    filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                    sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-                }
-                actualizarCardDesdeSP();
-            })
-            .catch(error => console.error("Hubo un error:", error));
+                // ... resto igual
+            });
     }
 
     function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
@@ -601,14 +638,40 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // BOTONES MODAL
     // ============================================================
-    btnNuevaDJ?.addEventListener('click', function () {
-        if (registroSeleccionado && registroSeleccionado.codPersonal) {
-            const source = registroSeleccionado._sinSplit ? 'pendiente' : 'migracion';
-            abrirFormularioDJ(registroSeleccionado.codPersonal, source);
-        } else {
-            document.getElementById('modalDjGestion')?.classList.remove('hidden');
+    btnNuevaDJ?.addEventListener('click', async function () {
+        // Si viene de un click de tabla, no hacer nada (la tabla ya llama abrirFormularioDJ)
+        if (registroSeleccionado) return;
+
+        const { value: tipoCod, isConfirmed } = await Swal.fire({
+            title: 'Nueva Declaración Jurada',
+            text: 'Selecciona el tipo de personal:',
+            input: 'radio',
+            inputOptions: {
+                '03': 'Operativo',
+                '05': 'Administrativo',
+            },
+            inputValidator: (value) => !value && 'Debes seleccionar un tipo.',
+            showCancelButton: true,
+            confirmButtonText: 'Continuar',
+            cancelButtonText: 'Cancelar',
+        });
+
+        if (!isConfirmed || !tipoCod) return;
+
+        limpiarFormulario();
+
+        const modal = document.getElementById('modalDjGestion');
+        if (modal) {
+            if (window.HSOverlay) HSOverlay.open(modal);
+            else modal.classList.remove('hidden');
         }
+
+        setTimeout(() => {
+            setValue('tipo_personal', tipoCod);
+            aplicarVisibilidadPorTipo(tipoCod);
+        }, 80);
     });
+
 
     cerrarModalBtn?.addEventListener('click', function () { registroSeleccionado = null; });
 
@@ -663,36 +726,48 @@ document.addEventListener('DOMContentLoaded', function () {
     // GUARDAR FORMULARIO
     // ============================================================
     if (form) {
+        console.log('✅ form encontrado, registrando listener submit');
+
         form.addEventListener('submit', async (e) => {
+            console.log('🔥 submit disparado');
             e.preventDefault();
+            e.stopPropagation(); // ← AGREGAR ESTO
 
-            // const tagifyRaw = document.getElementById('licencia_arma')?.value || '';
-
-            // let licenciaVal = 'NO';
-            // try {
-            //     const parsed = JSON.parse(tagifyRaw);
-            //     licenciaVal = parsed.length > 0 ? 'SI' : 'NO';
-            // } catch {
-            //     licenciaVal = (tagifyRaw && tagifyRaw !== '') ? 'SI' : 'NO';
-            // }
+            console.log('🔍 form element:', form);
+            console.log('🔍 form action:', form.action);
 
             const btnGuardar = document.getElementById('btnGuardar');
             if (btnGuardar) btnGuardar.disabled = true;
 
             try {
                 const formData = new FormData(form);
-                const payload  = {
-                    ...Object.fromEntries(formData.entries()),
+                
+                // Verificar que formData tiene datos
+                console.log('📋 FormData entries:');
+                for (let [key, val] of formData.entries()) {
+                    console.log(`  ${key}:`, val);
+                }
+
+                const data = Object.fromEntries(formData.entries());
+                console.log('📦 data object:', data);
+
+                const payload = {
+                    ...data,
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES:    formData.getAll('apellidosNombres[]'),
                     FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
-                    licencia_arma:   document.getElementById('licencia_arma')?.value || ''
+                    dj2026_descripcion: formData.getAll('ocupacion_alterna[]')
                 };
 
+                console.log('📤 Payload completo:', payload);
+                console.log('🌐 URL:', `${VITE_URL_APP}/api/dj/save-dj-completo`);
+
                 const response = await axios.post(`${VITE_URL_APP}/api/dj/save-dj-completo`, payload);
+                console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
                     Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
                         if (window.HSOverlay) { try { HSOverlay.close(modal); } catch (e) {} }
@@ -702,13 +777,19 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.body.classList.remove('overflow-hidden');
                         document.body.style.overflow = '';
                     }
+
                     getPersonal();
                     getPersonalMigracion();
                 }
             } catch (error) {
+                console.error('❌ Error completo:', error);
+                console.error('❌ error.response:', error.response);
+                console.error('❌ error.message:', error.message);
+
                 let msg = 'Hubo un error al guardar los datos.';
                 if (error.response?.data?.message)  msg = error.response.data.message;
                 else if (error.response?.data?.errors) msg = Object.values(error.response.data.errors).flat().join('<br>');
+
                 Swal.fire({ icon: 'error', title: 'Error', html: msg });
             } finally {
                 if (btnGuardar) btnGuardar.disabled = false;
@@ -794,22 +875,113 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     btnDJUnificadoMigrado?.addEventListener('click', async function () {
-        const filasVisibles = tblPersonasMigrado.getData("active")
-            .filter(fila => fila.migrado == 'Migrado');
-    
-        if (!filasVisibles || filasVisibles.length === 0) {
-            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles para descargar.' });
+
+        // Todas las filas migradas visibles en la tabla
+        const todasMigradas = tblPersonasMigrado.getData("active")
+            .filter(fila => fila.migrado === 'Migrado');
+
+        if (!todasMigradas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros migrados visibles.' });
+            return;
+        }
+
+        // Separar pendientes vs ya generados
+        const pendientes   = todasMigradas.filter(f => !estaGeneradoDB(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+        const yaGenerados  = todasMigradas.filter(f =>  estaGeneradoDB(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+
+        // Elegir qué generar
+        const { value: opcion, isConfirmed } = await Swal.fire({
+            title: 'DJ Unificado — Migrados',
+            html: `
+                <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
+                    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend">
+                        <input type="radio" name="djopcion" value="pendientes" ${pendientes.length ? '' : 'disabled'}
+                            style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+                        <div>
+                            <div style="font-weight:600;color:${pendientes.length ? '#111827' : '#9ca3af'};">
+                                Solo pendientes
+                                <span style="margin-left:6px;background:${pendientes.length ? '#dcfce7' : '#f3f4f6'};color:${pendientes.length ? '#16a34a' : '#9ca3af'};font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+                                    ${pendientes.length}
+                                </span>
+                            </div>
+                            <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+                                Registros sin ✅ o con cambios nuevos desde la última generación
+                            </div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-todos">
+                        <input type="radio" name="djopcion" value="todos"
+                            style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+                        <div>
+                            <div style="font-weight:600;color:#111827;">
+                                Todos los migrados
+                                <span style="margin-left:6px;background:#dbeafe;color:#1e40af;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+                                    ${todasMigradas.length}
+                                </span>
+                            </div>
+                            <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+                                Incluye los ${yaGenerados.length} ya generados anteriormente
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Generar PDF',
+            cancelButtonText: 'Cancelar',
+            didOpen: () => {
+                // Seleccionar por defecto "pendientes" si hay, sino "todos"
+                const radios = document.querySelectorAll('input[name="djopcion"]');
+                radios.forEach(r => {
+                    r.addEventListener('change', () => {
+                        document.getElementById('lbl-pend').style.borderColor  = r.value === 'pendientes' && r.checked ? '#6366f1' : '#e5e7eb';
+                        document.getElementById('lbl-todos').style.borderColor = r.value === 'todos'      && r.checked ? '#6366f1' : '#e5e7eb';
+                    });
+                });
+                const def = pendientes.length ? 'pendientes' : 'todos';
+                const defRadio = document.querySelector(`input[name="djopcion"][value="${def}"]`);
+                if (defRadio) {
+                    defRadio.checked = true;
+                    document.getElementById(def === 'pendientes' ? 'lbl-pend' : 'lbl-todos').style.borderColor = '#6366f1';
+                }
+            },
+            preConfirm: () => {
+                const sel = document.querySelector('input[name="djopcion"]:checked');
+                if (!sel) { Swal.showValidationMessage('Selecciona una opción.'); return false; }
+                return sel.value;
+            }
+        });
+
+        if (!isConfirmed) return;
+
+        const filasFinales = opcion === 'pendientes' ? pendientes : todasMigradas;
+
+        if (!filasFinales.length) {
+            Swal.fire({ icon: 'info', title: 'Sin pendientes', text: 'Todos los registros ya fueron generados. Usa "Todos" para regenerar.' });
             return;
         }
 
         const confirmacion = await Swal.fire({
-            icon: 'question', title: 'DJ Unificado',
-            html: `Se generará <b>1 PDF</b> con las <b>${filasVisibles.length}</b> declaraciones juradas.<br>¿Desea continuar?`,
-            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+            icon: 'question',
+            title: 'Confirmar generación',
+            html: `Se generará <b>1 PDF</b> con <b>${filasFinales.length}</b> declaración(es).<br>¿Desea continuar?`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar',
+            cancelButtonText: 'Cancelar'
         });
         if (!confirmacion.isConfirmed) return;
 
-        await _generarUnificado(filasVisibles, 'DJ_Unificado');
+        // Generar y marcar al terminar
+        await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
+
+        // Marcar todos los incluidos como generados
+        filasFinales.forEach(fila => {
+            const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+            marcarDJGenerado(cod, fila.cambio);
+        });
+
+        // Refrescar columna PDF en la tabla
+        tblPersonasMigrado.redraw(true);
     });
 
     // ============================================================
@@ -840,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         return response.data;
     }
+    
 
     // Helper interno para unificar PDFs
     async function _generarUnificado(filas, nombreBase, source = 'migracion') {
@@ -948,24 +1121,32 @@ document.addEventListener('DOMContentLoaded', function () {
 // ============================================================
 
 // ── Abrir modal DJ ──────────────────────────────────────────
-async function abrirFormularioDJ(codiPers, source = 'migracion') {
+async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
     try {
-        Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-        await cargarCatalogos(source);
-        await cargarDatosPersonales(codiPers, source);
-
-        Swal.close();
-
         const modal = document.getElementById('modalDjGestion');
-        if (modal) {
-            if (window.HSOverlay) HSOverlay.open(modal);
-            else modal.classList.remove('hidden');
+
+        if(codiPers == null){
+            if (modal) {
+                if (window.HSOverlay) HSOverlay.open(modal);
+                else modal.classList.remove('hidden');
+            }
+        }else{
+            Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            await cargarCatalogos(source);
+            await cargarDatosPersonales(codiPers, source);
+
+            Swal.close();
+
+            if (modal) {
+                if (window.HSOverlay) HSOverlay.open(modal);
+                else modal.classList.remove('hidden');
+            }
+
+            if (source === 'migracion') await cargarDatosBackup(codiPers);
+            else limpiarSplitView();
         }
-
-        if (source === 'migracion') await cargarDatosBackup(codiPers);
-        else limpiarSplitView();
-
+       
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el formulario: ' + error.message });
@@ -1706,3 +1887,65 @@ document.getElementById('institucion')?.addEventListener('change', function () {
         selCarrera.appendChild(opt);
     });
 });
+
+// ============================================================
+// DJ GENERADOS — API helpers (reemplaza localStorage)
+// ============================================================
+
+// Cache local para no hacer requests innecesarios
+let _checkPdfCache = null; // { CODI_PERS: { CHECK_PDF, CHECK_PDF_FECHA } }
+
+async function cargarCheckPdfCache() {
+    if (_checkPdfCache) return _checkPdfCache;
+    try {
+        const res = await axios.get(`${API_URL}/dj/get-check-pdf`);
+        _checkPdfCache = {};
+        (res.data.data || []).forEach(r => {
+            _checkPdfCache[r.CODI_PERS] = {
+                check: r.CHECK_PDF,
+                fecha: r.CHECK_PDF_FECHA,
+                user:  r.CHECK_PDF_USER,
+            };
+        });
+    } catch {
+        _checkPdfCache = {};
+    }
+    return _checkPdfCache;
+}
+
+function invalidarCheckPdfCache() {
+    _checkPdfCache = null;
+}
+
+async function estaGeneradoDB(codPersonal, fechaCambioActual) {
+    const cache = await cargarCheckPdfCache();
+    const reg   = cache[String(codPersonal).trim()];
+    if (!reg || !reg.check) return false;
+
+    // Si el campo cambio es posterior a CHECK_PDF_FECHA → ya no vale
+    if (fechaCambioActual && reg.fecha) {
+        const cambio  = new Date(fechaCambioActual);
+        const marcado = new Date(reg.fecha);
+        if (cambio > marcado) return false;
+    }
+    return true;
+}
+
+async function marcarGeneradosDB(codigos) {
+    try {
+        await axios.post(`${API_URL}/dj/update-check-pdf`, { codigos });
+        invalidarCheckPdfCache();
+    } catch (e) {
+        console.error('Error marcando generados:', e);
+    }
+}
+
+async function resetearCheckPdfDB(codigos = null) {
+    try {
+        const payload = codigos ? { codigos } : {};
+        await axios.post(`${API_URL}/dj/reset-check-pdf`, payload);
+        invalidarCheckPdfCache();
+    } catch (e) {
+        console.error('Error reseteando check PDF:', e);
+    }
+}

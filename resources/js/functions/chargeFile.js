@@ -8,6 +8,8 @@ getPersonal();
 window.archivosSeleccionados = [];
 let pageSizePersonas = 10;
 
+
+
 document.getElementById("page-size-personas")
     .addEventListener("change", function () {
 
@@ -50,7 +52,8 @@ const tblPersonas = new Tabulator("#tblPersonas", {
             title: "Acciones", field: "acciones", width: 160, hozAlign: "center", headerSort: false, responsive: false,
             formatter: function (cell) {
                 var docsBtn = `<button type="button" class="btn rounded-full docs-btn bg-success/25 text-success hover:bg-success hover:text-white">Folios</button>`;
-                var legajoBtn = `<button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white">Legajos</button>`;
+                var legajoBtn = `<button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white ">Legajos</button>`;
+
                 return docsBtn + ' ' + legajoBtn;
             },
             cellClick: function (e, cell) {
@@ -830,6 +833,30 @@ window.addEventListener("sidebar-toggled", () => {
     tblPersonas?.redraw(true);
     //tblCargo?.redraw(true);
 });
+
+getUsuario();
+async function getUsuario() {
+    try {
+       
+        const response = await axios.get(`${VITE_URL_APP}/usuario`);
+
+        return response.data;
+
+    } catch (error) {
+        if (error.response) {
+            // Error del servidor (Laravel)
+            console.error('Error:', error.response.data.message);
+        } else if (error.request) {
+            // No hubo respuesta
+            console.error('Sin respuesta del servidor');
+        } else {
+            // Error interno
+            console.error('Error:', error.message);
+        }
+
+        return null;
+    }
+}
 
 
 

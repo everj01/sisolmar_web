@@ -66,7 +66,7 @@ class DjController extends Controller
                     [$codiPers]
                 );
 
-                if (! empty($djData)) {
+                if (!empty($djData)) {
                     $data = (array) $djData[0];
                     $sourceTable = 'DJ2026_PERSONAL';
                 } else {
@@ -140,11 +140,11 @@ class DjController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error en getPersonalData: '.$e->getMessage());
+            Log::error('Error en getPersonalData: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener datos: '.$e->getMessage(),
+                'message' => 'Error al obtener datos: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -232,10 +232,12 @@ class DjController extends Controller
         // Completar campos NULL
         foreach ($camposComunes as $campo) {
             // Si el campo está NULL o vacío en $data, pero existe en $personal
-            if ((is_null($data[$campo] ?? null) || empty($data[$campo]))
+            if (
+                (is_null($data[$campo] ?? null) || empty($data[$campo]))
                 && isset($personal[$campo])
-                && ! is_null($personal[$campo])
-                && ! empty($personal[$campo])) {
+                && !is_null($personal[$campo])
+                && !empty($personal[$campo])
+            ) {
 
                 $data[$campo] = $personal[$campo];
             }
@@ -303,11 +305,11 @@ class DjController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error en getCatalogs: '.$e->getMessage());
+            Log::error('Error en getCatalogs: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cargar catálogos: '.$e->getMessage(),
+                'message' => 'Error al cargar catálogos: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -358,7 +360,7 @@ class DjController extends Controller
             return response()->json($result);
 
         } catch (\Exception $e) {
-            Log::error('Error en getUbicacion: '.$e->getMessage());
+            Log::error('Error en getUbicacion: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -392,7 +394,7 @@ class DjController extends Controller
                     'SELECT NRO_DOCU_IDEN FROM sisolm_web.dbo.sw_MIGRA_PERSONAL WHERE CODI_PERS = ?',
                     [$codiPers]
                 );
-                $dni = ! empty($personalData) ? $personalData[0]->NRO_DOCU_IDEN : null;
+                $dni = !empty($personalData) ? $personalData[0]->NRO_DOCU_IDEN : null;
             }
 
             if (empty($dni)) {
@@ -439,12 +441,12 @@ class DjController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error en saveDjCompleto: '.$e->getMessage());
-            Log::error('Stack trace: '.$e->getTraceAsString());
+            Log::error('Error en saveDjCompleto: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al guardar: '.$e->getMessage(),
+                'message' => 'Error al guardar: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -460,9 +462,9 @@ class DjController extends Controller
 
             $backup = DB::select(
                 'SELECT per.*, CO.ESCI_DESCRIPCION, SS.DESC_SIST_PENS, edu.NIED_ABREVIADO FROM si_solm.dbo.DJ2026_BACKUP_PERSONAL as per
-            INNER JOIN si_solm.dbo.ADMI_ESTADO_CIVIL AS CO ON CO.ESCI_CODIGO = per.ESCI_CODIGO
-            INNER JOIN si_solm.dbo.SISTEMA_PENSIONES AS SS ON SS.CODI_SIST_PENS = per.CODI_SIST_PENS
-            INNER JOIN si_solm.dbo.SUNAT_NIVEL_EDUCATIVO AS EDU ON EDU.NIED_CODIGO = per.PERS_GRADO_INSTRUCCION WHERE per.CODI_PERS = ?',
+            LEFT JOIN si_solm.dbo.ADMI_ESTADO_CIVIL AS CO ON CO.ESCI_CODIGO = per.ESCI_CODIGO
+            LEFT JOIN si_solm.dbo.SISTEMA_PENSIONES AS SS ON SS.CODI_SIST_PENS = per.CODI_SIST_PENS
+            LEFT JOIN si_solm.dbo.SUNAT_NIVEL_EDUCATIVO AS EDU ON EDU.NIED_CODIGO = per.PERS_GRADO_INSTRUCCION WHERE per.CODI_PERS = ?',
                 [$codiPers]
             );
 
@@ -492,7 +494,7 @@ class DjController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error en getBackupData: '.$e->getMessage());
+            Log::error('Error en getBackupData: ' . $e->getMessage());
 
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -501,7 +503,7 @@ class DjController extends Controller
     // ✅ FAMILIARES - Guardar en tabla temporal
     private function saveFamiliaresTemp($codiPers, $data)
     {
-        if (! isset($data['FAM_NOMBRES']) || ! is_array($data['FAM_NOMBRES'])) {
+        if (!isset($data['FAM_NOMBRES']) || !is_array($data['FAM_NOMBRES'])) {
             Log::info('No hay familiares para guardar');
 
             return;
@@ -557,7 +559,7 @@ class DjController extends Controller
     // ✅ OCUPACIONES - Guardar en tabla temporal
     private function saveOcupacionesTemp($dni, $data)
     {
-        if (! isset($data['dj2026_descripcion']) || ! is_array($data['dj2026_descripcion'])) {
+        if (!isset($data['dj2026_descripcion']) || !is_array($data['dj2026_descripcion'])) {
             Log::info('No hay ocupaciones para guardar');
 
             return;
@@ -601,29 +603,68 @@ class DjController extends Controller
             [$codiPers]
         );
 
-        $original = ! empty($personalOriginal) ? (array) $personalOriginal[0] : [];
+        $original = !empty($personalOriginal) ? (array) $personalOriginal[0] : [];
 
         // ✅ 3. Definir campos por tipo
         $datetimeFields = [
-            'FECH_INGRE_PLANILLA', 'FECH_INGRE', 'FECH_NACI', 'FECH_CESE',
-            'PERS_FECHEMISIONDNI', 'PERS_FECHCADUCADNI', 'VCMTO', 'FECH_INIC_AFIL',
-            'PERS_FECHAREG', 'USUA_FECHA_REG', 'USUA_FECHA_MOD', 'PERS_FECHARETIRO',
-            'Pers_fech_venc_lic_arm', 'PERS_VERIF_FECHA', 'FEC_MOD_PLAN',
-            'FECH_EXP_BREVETE', 'FECH_REVAL_BREVETE', 'SIP_fechaCreacion', 'SIP_fechaModifcacion',
+            'FECH_INGRE_PLANILLA',
+            'FECH_INGRE',
+            'FECH_NACI',
+            'FECH_CESE',
+            'PERS_FECHEMISIONDNI',
+            'PERS_FECHCADUCADNI',
+            'VCMTO',
+            'FECH_INIC_AFIL',
+            'PERS_FECHAREG',
+            'USUA_FECHA_REG',
+            'USUA_FECHA_MOD',
+            'PERS_FECHARETIRO',
+            'Pers_fech_venc_lic_arm',
+            'PERS_VERIF_FECHA',
+            'FEC_MOD_PLAN',
+            'FECH_EXP_BREVETE',
+            'FECH_REVAL_BREVETE',
+            'SIP_fechaCreacion',
+            'SIP_fechaModifcacion',
         ];
 
         $bitFields = [
-            'ESTA_ACTI', 'COMI_PESC', 'AFIL_SIND', 'CARG_FAMI', 'SEGU_VIDA_LEY',
-            'FOTO_SI_NO', 'GRAT', 'VACA', 'AFECTO_LEY', 'PERS_FLAG',
-            'apor_essa', 'apor_sena', 'apor_senc', 'apor_cona',
-            'MIGRADO', 'SIP_habilitado', 'SIP_migrado', 'SIP_activo', 'NO_CADUCA_DNI',
+            'ESTA_ACTI',
+            'COMI_PESC',
+            'AFIL_SIND',
+            'CARG_FAMI',
+            'SEGU_VIDA_LEY',
+            'FOTO_SI_NO',
+            'GRAT',
+            'VACA',
+            'AFECTO_LEY',
+            'PERS_FLAG',
+            'apor_essa',
+            'apor_sena',
+            'apor_senc',
+            'apor_cona',
+            'MIGRADO',
+            'SIP_habilitado',
+            'SIP_migrado',
+            'SIP_activo',
+            'NO_CADUCA_DNI',
         ];
 
         $numericFields = [
-            'SUEL_BASI', 'SUEL_NETO', 'MONT_PAGO_COME', 'HORA_LABO', 'UTIL03',
-            'HORA_AUTO', 'peso_kilo', 'tall_metr', 'EGRESO_EDUCATIVO',
-            'dj2026_cantprofesion', 'dj2026_experiencia_anios', 'fotocheck',
-            'horario', 'CODI_CATE_TRAB',
+            'SUEL_BASI',
+            'SUEL_NETO',
+            'MONT_PAGO_COME',
+            'HORA_LABO',
+            'UTIL03',
+            'HORA_AUTO',
+            'peso_kilo',
+            'tall_metr',
+            'EGRESO_EDUCATIVO',
+            'dj2026_cantprofesion',
+            'dj2026_experiencia_anios',
+            'fotocheck',
+            'horario',
+            'CODI_CATE_TRAB',
         ];
 
         // ✅ 4. Función helper mejorada con limpieza y validación
@@ -668,7 +709,7 @@ class DjController extends Controller
 
                     // YYYY-MM-DD
                     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawValue)) {
-                        return $rawValue.'T00:00:00.000';
+                        return $rawValue . 'T00:00:00.000';
                     }
 
                     // DD/MM/YYYY
@@ -680,7 +721,7 @@ class DjController extends Controller
 
                     // YYYY-MM-DD HH:MM:SS
                     if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/', $rawValue)) {
-                        return str_replace(' ', 'T', $rawValue).'.000';
+                        return str_replace(' ', 'T', $rawValue) . '.000';
                     }
 
                     // YYYY-MM-DD HH:MM:SS.mmm
@@ -690,7 +731,7 @@ class DjController extends Controller
 
                     // YYYY-MM-DDTHH:MM:SS
                     if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/', $rawValue)) {
-                        return $rawValue.'.000';
+                        return $rawValue . '.000';
                     }
 
                     // YYYY-MM-DDTHH:MM:SS.mmm
@@ -716,7 +757,7 @@ class DjController extends Controller
 
             // Si es un campo NUMERIC
             if (in_array($baseKey, $numericFields)) {
-                if (is_null($rawValue) || $rawValue === '' || ! is_numeric($rawValue)) {
+                if (is_null($rawValue) || $rawValue === '' || !is_numeric($rawValue)) {
                     return null;
                 }
 
@@ -773,12 +814,12 @@ class DjController extends Controller
 
                     // YYYY-MM-DD
                     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-                        return $value.'T00:00:00.000';
+                        return $value . 'T00:00:00.000';
                     }
 
                     // YYYY-MM-DD HH:MM:SS
                     if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/', $value)) {
-                        return str_replace(' ', 'T', $value).'.000';
+                        return str_replace(' ', 'T', $value) . '.000';
                     }
 
                     // YYYY-MM-DD HH:MM:SS.mmm
@@ -788,7 +829,7 @@ class DjController extends Controller
 
                     // YYYY-MM-DDTHH:MM:SS
                     if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/', $value)) {
-                        return $value.'.000';
+                        return $value . '.000';
                     }
 
                     // YYYY-MM-DDTHH:MM:SS.mmm
@@ -898,15 +939,15 @@ class DjController extends Controller
             'PERS_GRADO_INSTRUCCION' => $getValue('grado_instruccion', 'PERS_GRADO_INSTRUCCION'),
             'CARR_CODIGO' => empty($getValue('carrera', 'CARR_CODIGO')) ? null : $getValue('carrera', 'CARR_CODIGO'),
 
-// EN insertOrUpdateDJ2026Personal también (más abajo)
-            
-            'IEDU_CODIGO' => 
-            ($getValue('carrera', 'CARR_CODIGO') == '999999') ?
+            // EN insertOrUpdateDJ2026Personal también (más abajo)
+
+            'IEDU_CODIGO' =>
+                ($getValue('carrera', 'CARR_CODIGO') == '999999') ?
                 '199999999'
                 :
                 (empty($getValue('institucion', 'IEDU_CODIGO')) ? null : $getValue('institucion', 'IEDU_CODIGO')),
-            
-            
+
+
             'EGRESO_EDUCATIVO' => $getValue('anio_egreso', 'EGRESO_EDUCATIVO'),
             'PERS_CONDISCAMEC' => $getValue('curso_sucamec', 'PERS_CONDISCAMEC'),
             'PERS_NRODISCAMEC' => $getValue('sucamec_obs', 'PERS_NRODISCAMEC'),
@@ -936,12 +977,12 @@ class DjController extends Controller
             'dj2026_familiar_parentesco' => $getValue('familiar_parentesco', 'dj2026_familiar_parentesco'),
             // 'dj2026_cantprofesion' => isset($data['ocupacion_alterna']) ? count(array_filter($data['ocupacion_alterna'])) : 0,
             'dj2026_laboral_1' => $getValue('dj2026_laboral_1', 'dj2026_laboral_1')
-                              ? strtoupper(trim($getValue('dj2026_laboral_1', 'dj2026_laboral_1')))
-                              : null,
+                ? strtoupper(trim($getValue('dj2026_laboral_1', 'dj2026_laboral_1')))
+                : null,
             'dj2026_laboral_2' => $getValue('dj2026_laboral_2', 'dj2026_laboral_2')
-                                    ? strtoupper(trim($getValue('dj2026_laboral_2', 'dj2026_laboral_2')))
-                                    : null,
-            'dj2026_cantprofesion' => ((! empty($data['dj2026_laboral_1']) ? 1 : 0) + (! empty($data['dj2026_laboral_2']) ? 1 : 0)),
+                ? strtoupper(trim($getValue('dj2026_laboral_2', 'dj2026_laboral_2')))
+                : null,
+            'dj2026_cantprofesion' => ((!empty($data['dj2026_laboral_1']) ? 1 : 0) + (!empty($data['dj2026_laboral_2']) ? 1 : 0)),
 
             // ✅ TODOS LOS DEMÁS CAMPOS (con cascada: formulario → migra → original → null)
             'CODI_TIPO_DOCU' => $getValue('CODI_TIPO_DOCU', 'CODI_TIPO_DOCU'),
@@ -1097,7 +1138,7 @@ class DjController extends Controller
         );
 
         try {
-            if (! empty($exists)) {
+            if (!empty($exists)) {
                 // ✅ UPDATE
                 $updateFields = [];
                 $params = [];
@@ -1112,7 +1153,7 @@ class DjController extends Controller
 
                 $params[] = $codiPers;
 
-                $sql = 'UPDATE si_solm.dbo.DJ2026_PERSONAL SET '.implode(', ', $updateFields).' WHERE CODI_PERS = ?';
+                $sql = 'UPDATE si_solm.dbo.DJ2026_PERSONAL SET ' . implode(', ', $updateFields) . ' WHERE CODI_PERS = ?';
 
                 Log::info('✅ Ejecutando UPDATE en DJ2026_PERSONAL', ['CODI_PERS' => $codiPers]);
 
@@ -1123,9 +1164,9 @@ class DjController extends Controller
                 $insertFields = array_keys($updates);
                 $insertPlaceholders = array_fill(0, count($updates), '?');
 
-                $sqlInsert = 'INSERT INTO si_solm.dbo.DJ2026_PERSONAL ('.
-                             implode(', ', array_map(fn ($f) => "[$f]", $insertFields)).
-                             ') VALUES ('.implode(', ', $insertPlaceholders).')';
+                $sqlInsert = 'INSERT INTO si_solm.dbo.DJ2026_PERSONAL (' .
+                    implode(', ', array_map(fn($f) => "[$f]", $insertFields)) .
+                    ') VALUES (' . implode(', ', $insertPlaceholders) . ')';
 
                 //              dd([
                 //     'sql' => $sqlInsert,
@@ -1185,84 +1226,217 @@ class DjController extends Controller
 
         // 3. Campos datetime que necesitan sanitización de formato
         $datetimeFields = [
-            'FECH_INGRE_PLANILLA', 'FECH_INGRE', 'FECH_NACI', 'FECH_CESE',
-            'PERS_FECHEMISIONDNI', 'PERS_FECHCADUCADNI', 'VCMTO', 'FECH_INIC_AFIL',
-            'PERS_FECHAREG', 'USUA_FECHA_REG', 'USUA_FECHA_MOD', 'PERS_FECHARETIRO',
-            'Pers_fech_venc_lic_arm', 'PERS_VERIF_FECHA', 'FEC_MOD_PLAN',
-            'FECH_EXP_BREVETE', 'FECH_REVAL_BREVETE',
+            'FECH_INGRE_PLANILLA',
+            'FECH_INGRE',
+            'FECH_NACI',
+            'FECH_CESE',
+            'PERS_FECHEMISIONDNI',
+            'PERS_FECHCADUCADNI',
+            'VCMTO',
+            'FECH_INIC_AFIL',
+            'PERS_FECHAREG',
+            'USUA_FECHA_REG',
+            'USUA_FECHA_MOD',
+            'PERS_FECHARETIRO',
+            'Pers_fech_venc_lic_arm',
+            'PERS_VERIF_FECHA',
+            'FEC_MOD_PLAN',
+            'FECH_EXP_BREVETE',
+            'FECH_REVAL_BREVETE',
         ];
 
         // 4. Columnas que se deben sincronizar (comunes entre DJ2026_PERSONAL y PERSONAL)
         // Excluimos CODI_PERS (es la PK) y campos exclusivos de DJ2026 que no existen en PERSONAL
         $columnsToSync = [
-            'NRO_DOCU_IDEN', 'CODI_TIPO_DOCU', 'PERS_VEHICULO_PROPIO',
-            'APEL_1', 'APEL_2', 'NOMB_1', 'NOMB_2',
-            'CODI_SIST_PENS', 'SIST_PENS_TIPOCOMI',
-            'CODI_CARG', 'CODI_AREA', 'CODI_MONE_BASI',
-            'SUEL_BASI', 'FECH_INGRE_PLANILLA', 'FECH_INGRE',
-            'ESSALUD', 'CARN_ESSALUD', 'ESTA_CIVI',
-            'FECH_NACI', 'ASIG_FAMI', 'ESTA_ACTI',
-            'SCRT', 'COMI_PESC', 'NRO_CUPSS', 'AFIL_SIND',
-            'NRO_FICHA', 'TIPO_CONT', 'CODI_MONE',
-            'SUEL_NETO', 'CARG_FAMI', 'SEXO', 'NACIONALIDAD',
-            'DIRECCION', 'PERS_EMAIL', 'TIPO_SITU_LABO',
-            'SEGU_VIDA_LEY', 'PERS_CONBREVETE', 'PERS_BREVETE',
-            'FECH_CESE', 'CLAVE', 'JUBILADO', 'FORM_PAGO',
-            'CODI_ANTI', 'MONT_PAGO_COME', 'HORA_LABO',
-            'CODI_UNID_OPER', 'PERS_FECHEMISIONDNI', 'PERS_FECHCADUCADNI',
-            'CODI_RELA', 'MOTI_CESE', 'PROVINCIA', 'DISTRITO',
-            'VCMTO', 'DEPARTAMENTO', 'OBSERVACIONES',
-            'CODI_TIPO_RIES', 'UBIGEO', 'FOTO_SI_NO',
-            'FECH_INIC_AFIL', 'DIST_NACI', 'PROV_NACI',
-            'UTIL03', 'CODI_AREA_GRUP', 'CODI_SUB_AREA_GRUP',
-            'HORA_AUTO', 'GRAT', 'VACA', 'codi_luga_trab',
-            'AFECTO_LEY', 'fotocheck', 'horario',
-            'CODI_CATE_TRAB', 'ESCI_CODIGO',
-            'DEPA_CODIGO_NACI', 'PROVI_CODIGO_NACI',
-            'DEPA_CODIGO_DOMI', 'PROVI_CODIGO_DOMI',
-            'apor_essa', 'apor_sena', 'apor_senc', 'apor_cona',
-            'tipo_sangr', 'peso_kilo', 'tall_metr',
-            'PERS_LUEXPDNI', 'PERS_NRORUC', 'PERS_NROLIBM',
-            'PERS_CONYUGE', 'PERS_CONHIJOS', 'PERS_PROFESION',
-            'PERS_NROANTPOL', 'PERS_NORANTPEN',
-            'PERS_CTRABANT', 'PERS_CARGOTRABANT', 'PERS_DURACIONANT',
-            'PERS_SNADAR', 'PERS_CONSMO', 'PERS_LUGARSMO', 
-            'PERS_CONDISCAMEC', 'PERS_NRODISCAMEC',
-            'PERS_CONLICARMAS', 'PERS_NROLICENCIA',
-            'PERS_CONARMAS', 'PERS_SERIEARMA', 'PERS_TIPOARMA',
-            'PERS_ACEPTADTA', 'PERS_NROEMERGENCIA', 'PERS_NOMCONTACTO',
-            'PERS_FECHAREG', 'PERS_VIGENCIA', 'USUA_CODIGO',
-            'PERS_TELEFONO', 'PERS_MARCA', 'PERS_CALIBRE', 'PERS_MODELO',
-            'PERS_TIPOTRAB', 'PERS_CONTRATADO',
-            'EMPR_CODIGO', 'SUCU_CODIGO',
-            'USUA_CODIGO_REG', 'USUA_FECHA_REG',
-            'USUA_CODIGO_MOD', 'USUA_FECHA_MOD',
-            'PERS_FECHARETIRO', 'PERS_FLAG',
-            'cala_codigo', 'Pers_fech_venc_lic_arm',
-            'PERS_OBSERVACIONES', 'PERS_RESERVA',
-            'EMPRESA_ASOCIADA_5TA', 'MOCE_CODIGO', 'PERS_ACTUALIZAR',
-            'PERS_SEXO', 'PERS_GRADO_INSTRUCCION', 'PERS_DIREC_DNI',
+            'NRO_DOCU_IDEN',
+            'CODI_TIPO_DOCU',
+            'PERS_VEHICULO_PROPIO',
+            'APEL_1',
+            'APEL_2',
+            'NOMB_1',
+            'NOMB_2',
+            'CODI_SIST_PENS',
+            'SIST_PENS_TIPOCOMI',
+            'CODI_CARG',
+            'CODI_AREA',
+            'CODI_MONE_BASI',
+            'SUEL_BASI',
+            'FECH_INGRE_PLANILLA',
+            'FECH_INGRE',
+            'ESSALUD',
+            'CARN_ESSALUD',
+            'ESTA_CIVI',
+            'FECH_NACI',
+            'ASIG_FAMI',
+            'ESTA_ACTI',
+            'SCRT',
+            'COMI_PESC',
+            'NRO_CUPSS',
+            'AFIL_SIND',
+            'NRO_FICHA',
+            'TIPO_CONT',
+            'CODI_MONE',
+            'SUEL_NETO',
+            'CARG_FAMI',
+            'SEXO',
+            'NACIONALIDAD',
+            'DIRECCION',
+            'PERS_EMAIL',
+            'TIPO_SITU_LABO',
+            'SEGU_VIDA_LEY',
+            'PERS_CONBREVETE',
+            'PERS_BREVETE',
+            'FECH_CESE',
+            'CLAVE',
+            'JUBILADO',
+            'FORM_PAGO',
+            'CODI_ANTI',
+            'MONT_PAGO_COME',
+            'HORA_LABO',
+            'CODI_UNID_OPER',
+            'PERS_FECHEMISIONDNI',
+            'PERS_FECHCADUCADNI',
+            'CODI_RELA',
+            'MOTI_CESE',
+            'PROVINCIA',
+            'DISTRITO',
+            'VCMTO',
+            'DEPARTAMENTO',
+            'OBSERVACIONES',
+            'CODI_TIPO_RIES',
+            'UBIGEO',
+            'FOTO_SI_NO',
+            'FECH_INIC_AFIL',
+            'DIST_NACI',
+            'PROV_NACI',
+            'UTIL03',
+            'CODI_AREA_GRUP',
+            'CODI_SUB_AREA_GRUP',
+            'HORA_AUTO',
+            'GRAT',
+            'VACA',
+            'codi_luga_trab',
+            'AFECTO_LEY',
+            'fotocheck',
+            'horario',
+            'CODI_CATE_TRAB',
+            'ESCI_CODIGO',
+            'DEPA_CODIGO_NACI',
+            'PROVI_CODIGO_NACI',
+            'DEPA_CODIGO_DOMI',
+            'PROVI_CODIGO_DOMI',
+            'apor_essa',
+            'apor_sena',
+            'apor_senc',
+            'apor_cona',
+            'tipo_sangr',
+            'peso_kilo',
+            'tall_metr',
+            'PERS_LUEXPDNI',
+            'PERS_NRORUC',
+            'PERS_NROLIBM',
+            'PERS_CONYUGE',
+            'PERS_CONHIJOS',
+            'PERS_PROFESION',
+            'PERS_NROANTPOL',
+            'PERS_NORANTPEN',
+            'PERS_CTRABANT',
+            'PERS_CARGOTRABANT',
+            'PERS_DURACIONANT',
+            'PERS_SNADAR',
+            'PERS_CONSMO',
+            'PERS_LUGARSMO',
+            'PERS_CONDISCAMEC',
+            'PERS_NRODISCAMEC',
+            'PERS_CONLICARMAS',
+            'PERS_NROLICENCIA',
+            'PERS_CONARMAS',
+            'PERS_SERIEARMA',
+            'PERS_TIPOARMA',
+            'PERS_ACEPTADTA',
+            'PERS_NROEMERGENCIA',
+            'PERS_NOMCONTACTO',
+            'PERS_FECHAREG',
+            'PERS_VIGENCIA',
+            'USUA_CODIGO',
+            'PERS_TELEFONO',
+            'PERS_MARCA',
+            'PERS_CALIBRE',
+            'PERS_MODELO',
+            'PERS_TIPOTRAB',
+            'PERS_CONTRATADO',
+            'EMPR_CODIGO',
+            'SUCU_CODIGO',
+            'USUA_CODIGO_REG',
+            'USUA_FECHA_REG',
+            'USUA_CODIGO_MOD',
+            'USUA_FECHA_MOD',
+            'PERS_FECHARETIRO',
+            'PERS_FLAG',
+            'cala_codigo',
+            'Pers_fech_venc_lic_arm',
+            'PERS_OBSERVACIONES',
+            'PERS_RESERVA',
+            'EMPRESA_ASOCIADA_5TA',
+            'MOCE_CODIGO',
+            'PERS_ACTUALIZAR',
+            'PERS_SEXO',
+            'PERS_GRADO_INSTRUCCION',
+            'PERS_DIREC_DNI',
             'CONTROL_MIGRADO',
-            'PERS_PARA_FOTOCHECK', 'PERS_CON_FOTOCHECK',
-            'PERS_VERIF_RENIEC', 'PERS_VERIF_USUARIO', 'PERS_VERIF_FECHA',
-            'PERS_DPTO_DIRDNI', 'PERS_PROV_DIRDNI', 'PERS_DIST_DIRDNI',
-            'GRADO_INSTRUC_OBS', 'OBS_CESE',
-            'CONTROL_MIGRADO2', 'PERS_PENSIONISTA', 'PERS_OMISO_ONPE',
-            'USUA_MOD_PLAN', 'FEC_MOD_PLAN',
-            'CONTROL_MIGRADO_COPE', 'CONTROL_MIGRADO_AUSTRAL',
-            'CONTROL_MIGRADO_CONSORCIO', 'CONTROL_MIGRADO_CODRALUX',
-            'CONTROL_VERIF_TRANS', 'TIZO_CODIGO',
-            'PERS_ZONA_DIRDNI', 'PERS_KM_MZ_DIRDNI',
-            'PERS_LOTE_DIRDNI', 'PERS_NRO_DIRDNI',
-            'PERS_KM_DIRDNI', 'PERS_MZ_DIRDNI',
-            'IEDU_CODIGO', 'CARR_CODIGO', 'EGRESO_EDUCATIVO',
-            'PERS_TRABAJO_ANTERIOR', 'CODI_TIPO_DOCU_ANT',
-            'CLASE_BREVETE', 'CATEGORIA_BREVETE',
-            'FECH_EXP_BREVETE', 'FECH_REVAL_BREVETE', 'RESTRICCION_BREVETE',
-            'PERS_DEPT_ACT', 'PERS_PROV_ACT', 'PERS_DIST_ACT',
-            'PERS_EMBARGO', 'PERS_WHATSAPP', 'PERS_SMO', 'dj2026_familiar_empresa', 'dj2026_banco',
-            'dj2026_cantprofesion', 'dj2026_ciudad_naci', 'dj2026_ocupacion_principal', 'dj2026_experiencia_anios',
-            'dj2026_familiar_nombre', 'dj2026_familiar_parentesco', 'dj2026_laboral_1', 'dj2026_laboral_2',
+            'PERS_PARA_FOTOCHECK',
+            'PERS_CON_FOTOCHECK',
+            'PERS_VERIF_RENIEC',
+            'PERS_VERIF_USUARIO',
+            'PERS_VERIF_FECHA',
+            'PERS_DPTO_DIRDNI',
+            'PERS_PROV_DIRDNI',
+            'PERS_DIST_DIRDNI',
+            'GRADO_INSTRUC_OBS',
+            'OBS_CESE',
+            'CONTROL_MIGRADO2',
+            'PERS_PENSIONISTA',
+            'PERS_OMISO_ONPE',
+            'USUA_MOD_PLAN',
+            'FEC_MOD_PLAN',
+            'CONTROL_MIGRADO_COPE',
+            'CONTROL_MIGRADO_AUSTRAL',
+            'CONTROL_MIGRADO_CONSORCIO',
+            'CONTROL_MIGRADO_CODRALUX',
+            'CONTROL_VERIF_TRANS',
+            'TIZO_CODIGO',
+            'PERS_ZONA_DIRDNI',
+            'PERS_KM_MZ_DIRDNI',
+            'PERS_LOTE_DIRDNI',
+            'PERS_NRO_DIRDNI',
+            'PERS_KM_DIRDNI',
+            'PERS_MZ_DIRDNI',
+            'IEDU_CODIGO',
+            'CARR_CODIGO',
+            'EGRESO_EDUCATIVO',
+            'PERS_TRABAJO_ANTERIOR',
+            'CODI_TIPO_DOCU_ANT',
+            'CLASE_BREVETE',
+            'CATEGORIA_BREVETE',
+            'FECH_EXP_BREVETE',
+            'FECH_REVAL_BREVETE',
+            'RESTRICCION_BREVETE',
+            'PERS_DEPT_ACT',
+            'PERS_PROV_ACT',
+            'PERS_DIST_ACT',
+            'PERS_EMBARGO',
+            'PERS_WHATSAPP',
+            'PERS_SMO',
+            'dj2026_familiar_empresa',
+            'dj2026_banco',
+            'dj2026_cantprofesion',
+            'dj2026_ciudad_naci',
+            'dj2026_ocupacion_principal',
+            'dj2026_experiencia_anios',
+            'dj2026_familiar_nombre',
+            'dj2026_familiar_parentesco',
+            'dj2026_laboral_1',
+            'dj2026_laboral_2',
         ];
 
         // 5. Construir UPDATE dinámico: solo columnas donde DJ2026 NO es NULL
@@ -1271,7 +1445,7 @@ class DjController extends Controller
 
         foreach ($columnsToSync as $col) {
             // Solo actualizar si DJ2026_PERSONAL tiene valor (no importa si PERSONAL ya tiene dato)
-            if (array_key_exists($col, $djRecord) && ! is_null($djRecord[$col])) {
+            if (array_key_exists($col, $djRecord) && !is_null($djRecord[$col])) {
                 $value = $djRecord[$col];
 
                 // Sanitizar campos datetime para SQL Server
@@ -1295,7 +1469,7 @@ class DjController extends Controller
 
         // 6. Ejecutar UPDATE en PERSONAL
         $params[] = $codiPers;
-        $sql = 'UPDATE si_solm.dbo.PERSONAL SET '.implode(', ', $updateFields).' WHERE CODI_PERS = ?';
+        $sql = 'UPDATE si_solm.dbo.PERSONAL SET ' . implode(', ', $updateFields) . ' WHERE CODI_PERS = ?';
 
         try {
             DB::update($sql, $params);
@@ -1367,7 +1541,7 @@ class DjController extends Controller
             [$codiPers]
         );
 
-        $base = ! empty($current) ? (array) $current[0] : ['CODI_PERS' => $codiPers];
+        $base = !empty($current) ? (array) $current[0] : ['CODI_PERS' => $codiPers];
 
         // ✅ MAPEAR DESDE LOS NOMBRES DEL FORMULARIO HTML
         $updates = array_merge($base, [
@@ -1447,7 +1621,7 @@ class DjController extends Controller
 
         $params[] = $codiPers;
 
-        $sql = 'UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL SET '.implode(', ', $updateFields).' WHERE CODI_PERS = ?';
+        $sql = 'UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL SET ' . implode(', ', $updateFields) . ' WHERE CODI_PERS = ?';
 
         $affected = DB::update($sql, $params);
 
@@ -1456,9 +1630,9 @@ class DjController extends Controller
             $insertFields = array_keys($updates);
             $insertPlaceholders = array_fill(0, count($updates), '?');
 
-            $sqlInsert = 'INSERT INTO sisolm_web.dbo.sw_MIGRA_PERSONAL ('.
-                         implode(', ', array_map(fn ($f) => "[$f]", $insertFields)).
-                         ') VALUES ('.implode(', ', $insertPlaceholders).')';
+            $sqlInsert = 'INSERT INTO sisolm_web.dbo.sw_MIGRA_PERSONAL (' .
+                implode(', ', array_map(fn($f) => "[$f]", $insertFields)) .
+                ') VALUES (' . implode(', ', $insertPlaceholders) . ')';
 
             DB::insert($sqlInsert, array_values($updates));
         }
@@ -1496,7 +1670,7 @@ class DjController extends Controller
             [$codiPers]
         );
 
-        if (! empty($exists)) {
+        if (!empty($exists)) {
             // Ya existe, hacer UPDATE
             DB::statement(
                 'UPDATE si_solm.dbo.DJ2026_PERSONAL 
@@ -1541,7 +1715,7 @@ class DjController extends Controller
     private function saveFamiliares($codiPers, $data)
     {
         // ✅ Validar que existan los arrays
-        if (! isset($data['FAM_NOMBRES']) || ! is_array($data['FAM_NOMBRES'])) {
+        if (!isset($data['FAM_NOMBRES']) || !is_array($data['FAM_NOMBRES'])) {
             \Log::info('No hay familiares para guardar');
 
             return;
@@ -1790,7 +1964,7 @@ class DjController extends Controller
     private function saveOcupaciones($dni, $data)
     {
         // ✅ Cambiar el nombre del campo esperado
-        if (! isset($data['dj2026_descripcion']) || ! is_array($data['dj2026_descripcion'])) {
+        if (!isset($data['dj2026_descripcion']) || !is_array($data['dj2026_descripcion'])) {
             \Log::info('No hay ocupaciones para guardar');
 
             return;
@@ -1894,7 +2068,7 @@ class DjController extends Controller
     public function proxyFoto(Request $request)
     {
         $codiPers = $request->get('codi_pers');
-        if (! $codiPers || ! preg_match('/^[a-zA-Z0-9]+$/', $codiPers)) {
+        if (!$codiPers || !preg_match('/^[a-zA-Z0-9]+$/', $codiPers)) {
             return response()->json(['success' => false], 400);
         }
 
@@ -1914,14 +2088,14 @@ class DjController extends Controller
                 return response()->json(['success' => false, 'message' => 'Imagen no encontrada'], 404);
             }
 
-            $base64 = 'data:'.($contentType ?: 'image/jpeg').';base64,'.base64_encode($imageData);
+            $base64 = 'data:' . ($contentType ?: 'image/jpeg') . ';base64,' . base64_encode($imageData);
 
             return response()->json([
                 'success' => true,
                 'base64' => $base64,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error proxy foto: '.$e->getMessage());
+            Log::error('Error proxy foto: ' . $e->getMessage());
 
             return response()->json(['success' => false, 'message' => 'Error al obtener imagen'], 500);
         }
@@ -1944,7 +2118,7 @@ class DjController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error en reportePersonalSinMigracion: '.$e->getMessage());
+            Log::error('Error en reportePersonalSinMigracion: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -1971,12 +2145,93 @@ class DjController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error en reportePersonalSinMigracionV2: '.$e->getMessage());
+            Log::error('Error en reportePersonalSinMigracionV2: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+
+    public function updateCheckPdf(Request $request)
+    {
+        try {
+            $codigos = $request->input('codigos'); // array de CODI_PERS
+            $usuario = session('usuario') ?? 'SISTEMA';
+
+            if (empty($codigos) || !is_array($codigos)) {
+                return response()->json(['success' => false, 'message' => 'Códigos requeridos'], 400);
+            }
+
+            $placeholders = implode(',', array_fill(0, count($codigos), '?'));
+
+            DB::update(
+                "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL
+             SET CHECK_PDF = 1, CHECK_PDF_FECHA = GETDATE(), CHECK_PDF_USER = ?
+             WHERE CODI_PERS IN ({$placeholders})",
+                array_merge([$usuario], $codigos)
+            );
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en updateCheckPdf: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Resetear todos los CHECK_PDF (o solo los visibles)
+     */
+    public function resetCheckPdf(Request $request)
+    {
+        try {
+            $codigos = $request->input('codigos'); // opcional: si viene, resetea solo esos
+            $usuario = session('usuario') ?? 'SISTEMA';
+
+            if (!empty($codigos) && is_array($codigos)) {
+                $placeholders = implode(',', array_fill(0, count($codigos), '?'));
+                DB::update(
+                    "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL
+                 SET CHECK_PDF = 0, CHECK_PDF_FECHA = NULL, CHECK_PDF_USER = NULL
+                 WHERE CODI_PERS IN ({$placeholders})",
+                    $codigos
+                );
+            } else {
+                DB::update(
+                    "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL
+                 SET CHECK_PDF = 0, CHECK_PDF_FECHA = NULL, CHECK_PDF_USER = NULL
+                 WHERE SIP_migrado = 1"
+                );
+            }
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en resetCheckPdf: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Obtener estado CHECK_PDF de todos los migrados
+     */
+    public function getCheckPdf()
+    {
+        try {
+            $data = DB::select(
+                "SELECT CODI_PERS, CHECK_PDF, CHECK_PDF_FECHA, CHECK_PDF_USER
+             FROM sisolm_web.dbo.sw_MIGRA_PERSONAL
+             WHERE SIP_migrado = 1"
+            );
+
+            return response()->json(['success' => true, 'data' => $data]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en getCheckPdf: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }
