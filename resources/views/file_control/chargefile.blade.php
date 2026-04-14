@@ -247,62 +247,33 @@
                 <form id="formFolioPersonal">
                     @csrf
                     <div class="p-4 overflow-y-auto">
-                        <p class="mt-1 text-default-600">
-                            <center>Archivo de tipo <strong>IMAGEN</strong> y con peso máximo
-                                <strong>1MB</strong>.
-                            </center>
+                        <p class="mt-1 text-default-600 text-center">
+                            Solo se aceptan archivos <strong>PDF</strong>, con un peso máximo de <strong>5MB</strong>.
                         </p>
-                        <span class="mt-1 text-default-600 text-red-800">
-                            <center> <strong id="txtPeriodo"></strong></center>
-                        </span>
-                        <input type="hidden" name="meses" id="meses">
-                        <input type="hidden" name="codFolio" id="codFolio">
 
-                        <div class="mt-5" id="divEmision">
-                            <label for="example-time"
-                                class="text-default-800 text-sm font-medium inline-block mb-2">Fecha
-                                de Emision</label>
+                        <div class="mt-5">
+                            <label class="text-default-800 text-sm font-medium inline-block mb-2">Fecha de Emisión</label>
                             <input class="form-input" type="date" id="fecha_emision" required>
                         </div>
-                        <div class="mt-5" id="divCaducidad">
-                            <label for="example-time"
-                                class="text-default-800 text-sm font-medium inline-block mb-2">Fecha
-                                de Caducidad</label>
-                            <input class="form-input" type="date" id="fecha_caducidad" required>
-                        </div>
-                        <br>
-                        <hr>
-                        <center class="text-primary text-base">
-                            Este folio tiene como máximo, <strong id="txtCantHojas"></strong> hojas
-                        </center>
-                        <hr>
+
                         <div class="mt-5">
-                            <label for="example-time" class="text-default-800 text-sm font-medium inline-block mb-2">Archivo</label>
-                            <div class="cursor-pointer p-12 flex justify-center bg-white border border-dashed border-default-300 rounded-xl" id="btnSeleccionar" role="button">
+                            <label class="text-default-800 text-sm font-medium inline-block mb-2">Archivo PDF</label>
+                            <div class="cursor-pointer p-8 flex justify-center bg-white border border-dashed border-default-300 rounded-xl" id="btnSeleccionar" role="button">
                                 <div class="text-center">
-                                    <span class="inline-flex justify-center items-center size-16 bg-default-100 text-default-800 rounded-full cursor-pointer" >
-                                        <i class="i-tabler-upload size-6 shrink-0"></i>
+                                    <span class="inline-flex justify-center items-center size-16 bg-default-100 text-default-800 rounded-full cursor-pointer">
+                                        <i class="i-tabler-file-type-pdf size-6 shrink-0"></i>
                                     </span>
-
                                     <div class="mt-4 flex flex-wrap justify-center text-sm leading-6 text-default-600">
-                                        <span class="pe-1 font-medium text-default-800">
-                                            Arrastra tu archivo aquí o d
-                                        </span>
-                                        <span class="bg-white font-semibold text-primary hover:text-primary-700 rounded-lg decoration-2 hover:underline focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-600 focus-within:ring-offset-2" >SELECCIONAR</span>
+                                        <span class="pe-1 font-medium text-default-800">Arrastra tu archivo aquí o </span>
+                                        <span class="bg-white font-semibold text-primary hover:text-primary-700 rounded-lg decoration-2 hover:underline">SELECCIONAR</span>
                                     </div>
-
-                                    <p class="mt-1 text-xs text-default-400">
-                                        Peso menor a 1MB.
-                                    </p>
+                                    <p class="mt-1 text-xs text-default-400">Solo PDF · Máximo 5MB</p>
                                 </div>
-                                <input type="file" id="archivoInput" name="imagenes[]" multiple accept="image/*" class="hidden">
-                                <input type="hidden" name="cantArchivos" id="cantArchivos">
+                                <input type="file" id="archivoInput" accept=".pdf" class="hidden">
                             </div>
-
                             <div class="mt-1">
                                 <ul id="listaArchivos" class="mt-4 space-y-2"></ul>
                             </div>
-
                         </div>
 
 
@@ -469,7 +440,6 @@
                             </div>
                         </div> -->
 
-                        <div class="mt-4 space-y-2 empty:mt-0" data-hs-file-upload-previews=""></div>
                     </div>
                     <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t border-default-200">
                         <button type="submit" class="btn bg-primary text-white" href="#">

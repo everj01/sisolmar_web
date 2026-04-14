@@ -823,6 +823,62 @@ class FileController extends Controller{
         ]);
     }
 
+    public function saveDjFolio(Request $request)
+    {
+        $request->validate([
+            'fecha_emision' => 'required|date',
+            'codPersonal'   => 'required',
+            'pdf'           => 'required|file|mimes:pdf|max:5120',
+        ]);
+
+        try {
+            $codPersonal = $request->input('codPersonal');
+            $archivo     = $request->file('pdf');
+            $nameFile    = $codPersonal . '.pdf';
+
+            $dirDestino = '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026';
+            $rutaFinal  = $dirDestino . '\\' . $nameFile;
+
+            if (!is_dir($dirDestino)) {
+                if (!@mkdir($dirDestino, 0777, true)) {
+                    return response()->json([
+                        'error' => 'No se pudo crear el directorio destino',
+                        'ruta'  => $dirDestino,
+                    ], 500);
+                }
+            }
+
+            $contenido = file_get_contents($archivo->getRealPath());
+            if ($contenido === false) {
+                return response()->json(['error' => 'No se pudo leer el archivo subido'], 500);
+            }
+
+            $resultado = @file_put_contents($rutaFinal, $contenido);
+            if ($resultado === false) {
+                return response()->json([
+                    'error' => 'No se pudo guardar el archivo en el servidor de archivos',
+                    'ruta'  => $rutaFinal,
+                ], 500);
+            }
+
+            $rutaArchivo = '//190.116.178.163/Biblioteca_Grafica/DOCUMENTOS_PERS/DJ_2026/' . $codPersonal . '.pdf';
+
+            FileControl::saveDjFolioPersonal(
+                $request->input('fecha_emision'),
+                $codPersonal,
+                $rutaArchivo
+            );
+
+            return response()->json(['message' => 'DJ guardado correctamente']);
+        } catch (\Exception $e) {
+            Log::error('saveDjFolio error: ' . $e->getMessage());
+            return response()->json([
+                'error'   => 'Error interno al guardar DJ',
+                'detalle' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     // Función para validar si la URL existe
     private static function urlExiste($url)
     {

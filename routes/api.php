@@ -185,5 +185,8 @@ Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
 // REPORTE FOLIOS POR VENCER CON FILTROS
 Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
 
+// GUARDAR DJ DE PERSONA
+Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
+
 
 

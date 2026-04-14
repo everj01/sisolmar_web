@@ -108,6 +108,22 @@ class FileControl extends Model
 
         return $inserted;
     }
+
+    // GUARDAR DJ DE PERSONA (codFolio=25, sin caducidad, solo PDF)
+    public static function saveDjFolioPersonal($fecha_emision, $codPersonal, $ruta_archivo)
+    {
+        return DB::table('sw_folios_detalles')->insert([
+            'codFolio'        => 25,
+            'codPersonal'     => $codPersonal,
+            'fecha_emision'   => date('Y-m-d', strtotime($fecha_emision)),
+            'fecha_caducidad' => null,
+            'ruta_archivo'    => $ruta_archivo,
+            'creado_por'      => null,
+            'habilitado'      => 1,
+            'migra'           => null,
+            'fecha_creacion'  => DB::raw('GETDATE()'),
+        ]);
+    }
     public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma)
     {
         // Insertar directamente en la tabla 'folios' usando el Query Builder

@@ -11,7 +11,6 @@ let usuarioActual = null;
     usuarioActual = await getUsuario();
     getPersonal();
 })();
-window.archivosSeleccionados = [];
 let pageSizePersonas = 10;
 
 
@@ -322,29 +321,8 @@ const tblDocs = new Tabulator("#tblDocs", {
             cellClick: function (e, cell) {
                 if (e.target.classList.contains('charge-btn')) {
                     const documento = cell.getRow().getData().documento;
-                    const periodo = cell.getRow().getData().periodo;
-                    const cantidad_hojas = cell.getRow().getData().cantidad_hojas;
-                    const meses = cell.getRow().getData().meses;
-                    const codFolio = cell.getRow().getData().codFolio;
-                    const vencimiento = cell.getRow().getData().vencimiento;
-
                     document.querySelector('#modal-file h3.modal-title').textContent = `Documento: ${documento}`;
-                    document.querySelector('#txtPeriodo').textContent = `${periodo}`;
-                    document.querySelector('#txtCantHojas').textContent = `${cantidad_hojas}`;
-                    document.getElementById('cantArchivos').value = cantidad_hojas;
-                    document.getElementById('codFolio').value = codFolio;
-                    document.getElementById('meses').value = meses;
-
-                    // Verificar si vencimiento es 0 y ocultar el campo de caducidad
-                    if (vencimiento == 0) {
-                        document.getElementById('divCaducidad').classList.add('hidden');
-                        document.getElementById('fecha_caducidad').removeAttribute('required');
-                    } else {
-                        document.getElementById('divCaducidad').classList.remove('hidden');
-                        document.getElementById('fecha_caducidad').setAttribute('required', 'required');
-                    };
-
-                    limpiarModal();
+                    limpiarModalDj();
                     document.getElementById('btn-modal-docs').click();
                 }
 
@@ -447,29 +425,7 @@ const tblLegajos = new Tabulator("#tblDocsLegajo", {
                 return chargeBtnLeg + ' ' + viewBtn;
             },
             cellClick: function (e, cell) {
-                if (e.target.classList.contains('charge-btn-leg')) {
-                    const documento = cell.getRow().getData().documento;
-                    const periodo = cell.getRow().getData().periodo;
-                    const meses = cell.getRow().getData().meses;
-                    const codFolio = cell.getRow().getData().codFolio;
-                    const vencimiento = cell.getRow().getData().vencimiento;
-
-                    document.querySelector('#modal-file h3.modal-title').textContent = `Documento: ${documento}`;
-                    document.querySelector('#txtPeriodo').textContent = `${periodo}`;
-                    document.getElementById('codFolio').value = codFolio;
-                    document.getElementById('meses').value = meses;
-
-                    // Verificar si vencimiento es 0 y ocultar el campo de caducidad
-                    if (vencimiento == 0) {
-                        document.getElementById('divCaducidad').classList.add('hidden');  // Ocultar el div
-                        document.getElementById('fecha_caducidad').removeAttribute('required');  // Quitar el atributo required
-                    } else {
-                        document.getElementById('divCaducidad').classList.remove('hidden');  // Mostrar el div
-                        document.getElementById('fecha_caducidad').setAttribute('required', 'required');  // Asegurarse de que sea requerido
-                    };
-
-                    document.getElementById('btn-modal-docs').click();
-                }
+                // Lógica pendiente de implementar
             }
         },
     ]
@@ -526,15 +482,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    // Evento de cambio de fecha de emisión
-    document.getElementById('fecha_emision').addEventListener('change', function () {
-        const fechaEmision = document.getElementById('fecha_emision').value;
-        if (fechaEmision) {
-            // Calculamos la fecha de caducidad
-            const fechaCalculada = calcularFechaCaducidad(fechaEmision);
-            document.getElementById('fecha_caducidad').value = fechaCalculada; // Llenamos la fecha de caducidad
-        }
-    });
 });
 
 function abrirFoliosDesdeNotificacion(codPersonal, nombre) {
@@ -690,29 +637,53 @@ tblPersonas.on("renderComplete", function () {
     }
 });
 
-// Función para calcular la fecha de caducidad
-function calcularFechaCaducidad(fechaEmision) {
-    const periodoVigencia = parseInt(document.getElementById('meses').value);
-    if (periodoVigencia > 1) {
-        const fecha = new Date(fechaEmision);
-        fecha.setMonth(fecha.getMonth() + periodoVigencia);
-        const anio = fecha.getFullYear();
-        const mes = ('0' + (fecha.getMonth() + 1)).slice(-2);
-        const dia = ('0' + fecha.getDate()).slice(-2);
-        return `${anio}-${mes}-${dia}`;
-    }
-}
 
-//Función para limpia los campos del modal
-function limpiarModal() {
-    document.getElementById('fecha_emision').value = "";
-    document.getElementById('fecha_caducidad').value = "";
 
-    window.archivosSeleccionados = [];
-    //document.getElementById('cantArchivos').value="";
-    document.getElementById('listaArchivos').innerHTML = '';
+//========================================== MODAL DJ ==========================================//
+function limpiarModalDj() {
+    document.getElementById('fecha_emision').value = '';
     document.getElementById('archivoInput').value = '';
+    document.getElementById('listaArchivos').innerHTML = '';
 }
+
+document.getElementById('formFolioPersonal').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const fechaEmision = document.getElementById('fecha_emision').value;
+    const codigoPer    = document.getElementById('codPersonal').value;
+    const archivo      = document.getElementById('archivoInput').files[0];
+
+    if (!fechaEmision) {
+        Swal.fire({ title: 'Ingrese la fecha de emisión', icon: 'warning' });
+        return;
+    }
+    if (!archivo) {
+        Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('fecha_emision', fechaEmision);
+    formData.append('codPersonal', codigoPer);
+    formData.append('pdf', archivo);
+
+    axios.post(`${VITE_URL_APP}/api/save-dj-folio`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json',
+        }
+    })
+    .then(function () {
+        document.getElementById('btn-modal-docs-close').click();
+        getDocsObligatorios(codigoPer);
+        limpiarModalDj();
+        Swal.fire({ title: 'DJ guardado correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
+    })
+    .catch(function (error) {
+        const msg = error.response?.data?.error || 'Error al guardar el documento';
+        Swal.fire({ title: msg, icon: 'error' });
+    });
+});
 
 //========================================== DATA CON AXIOS ==========================================//
 // Función para obtener los folios por persona
@@ -802,43 +773,6 @@ function getCoincidencias(cliente, cargo) {
 
 
 
-//================================ GUARDAR LOS DATOS POR AXIOS ================================//
-document.getElementById('formFolioPersonal').addEventListener('submit', function (event) {
-    event.preventDefault();
-    var fechaEmision = document.getElementById('fecha_emision').value;
-    var fechaCaducidad = document.getElementById('fecha_caducidad').value;
-    var codigoPer = document.getElementById('codPersonal').value;
-    var codFolio = document.getElementById('codFolio').value;
-
-    var formData = new FormData();
-
-    formData.append('fecha_emision', fechaEmision);
-    formData.append('fecha_caducidad', fechaCaducidad);
-    formData.append('codFolio', codFolio);
-    formData.append('codPersonal', codigoPer);
-
-    for (let i = 0; i < archivosSeleccionados.length; i++) {
-        formData.append('imagenes[]', archivosSeleccionados[i]);
-    }
-
-    if (fechaEmision /*&& fechaCaducidad*/) {
-        // Enviar los datos al servidor usando Axios
-        axios.post(`${VITE_URL_APP}/api/save_folio_persona`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data' // Es necesario para enviar archivos
-            }
-        })
-            .then(function (response) {
-                document.getElementById('btn-modal-docs-close').click();
-                getDocsObligatorios(codigoPer);
-                getLegajos();
-                limpiarModal();
-            })
-            .catch(function (error) {
-                console.error('Error al guardar los datos:', error);
-            });
-    }
-});
 
 window.addEventListener("sidebar-toggled", () => {
     tblPersonas?.redraw(true);
