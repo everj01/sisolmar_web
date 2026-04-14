@@ -255,38 +255,40 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             // ── NUEVA COLUMNA ──────────────────────────────────────
             {
-                title: "PDF", field: "_checkPdf", hozAlign: "center", widthGrow: 1,
+                title: "PDF", field: "pdf_generado", hozAlign: "center", widthGrow: 1,
                 headerSort: false,
                 formatter: cell => {
-                    const d   = cell.getData();
-                    const gen = d._checkPdf === 1;
-                    const cod = d.codPersonal || d.CODI_PERS || d.id;
-                    const titulo = gen
-                        ? `Generado por ${d._checkPdfUser || '?'} — click para resetear`
-                        : 'Pendiente';
-                    const color = gen ? 'color:#16a34a;font-size:18px;cursor:pointer;'
-                                    : 'color:#d1d5db;font-size:18px;cursor:default;';
-                    return `<span title="${titulo}" style="${color}" data-pdf-cod="${cod}">
+                    const d      = cell.getData();
+                    const cod    = d.codPersonal || d.CODI_PERS || d.id;
+                    const gen    = estaGenerado(cod, d.cambio);
+                    const titulo = gen ? 'Generado — click para resetear' : 'Pendiente';
+                    const color  = gen
+                        ? 'color:#16a34a;font-size:18px;cursor:pointer;'
+                        : 'color:#d1d5db;font-size:18px;cursor:default;';
+                    return `<span title="${titulo}" style="${color}" data-pdf-cod="${cod}" data-pdf-cambio="${d.cambio || ''}">
                                 ${gen ? '✅' : '○'}
                             </span>`;
                 },
-                cellClick: async (e, cell) => {
+                cellClick: (e, cell) => {
                     const span = e.target.closest('[data-pdf-cod]');
                     if (!span) return;
-                    const d   = cell.getData();
-                    if (!d._checkPdf) return;
                     const cod = span.getAttribute('data-pdf-cod');
+                    if (!estaGenerado(cod, span.getAttribute('data-pdf-cambio'))) return;
 
-                    const { isConfirmed } = await Swal.fire({
-                        icon: 'question', title: '¿Resetear marca?',
-                        text: 'Se marcará como pendiente de generar PDF.',
+                    Swal.fire({
+                        icon: 'question',
+                        title: '¿Resetear marca?',
+                        text: 'Se marcará este registro como pendiente de generar PDF.',
                         showCancelButton: true,
-                        confirmButtonText: 'Sí, resetear', cancelButtonText: 'Cancelar',
+                        confirmButtonText: 'Sí, resetear',
+                        cancelButtonText: 'Cancelar',
+                    }).then(r => {
+                        if (!r.isConfirmed) return;
+                        desmarcarDJGenerado(cod);
+                        cell.getTable().updateOrAddData([{ ...cell.getData() }]);
+                        // Forzar re-render de la fila
+                        cell.getRow().reformat();
                     });
-                    if (!isConfirmed) return;
-
-                    await resetearCheckPdfDB([cod]);
-                    cell.getRow().update({ _checkPdf: 0, _checkPdfFecha: null });
                 }
             },
             // ── FIN NUEVA COLUMNA ──────────────────────────────────
@@ -503,38 +505,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getPersonalMigracion() {
-    axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
-        .then(async response => {
-            const datosTabla = response.data;
-
-            await cargarCheckPdfCache();
-
-            datosTabla.forEach(fila => {
-                const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
-                const reg = _checkPdfCache?.[String(cod).trim()];
-                fila._checkPdf      = reg?.check ? 1 : 0;
-                fila._checkPdfFecha = reg?.fecha  || null;
-            });
-
-            tblPersonasMigrado.setData(datosTabla);
-
-            // ← ESTO ES LO QUE FALTABA
-            const sucursales = [...new Map(
-                datosTabla
-                    .filter(d => d.sucursal)
-                    .map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])
-            ).values()];
-
-            const filtroSucursal = document.getElementById('filtroSucursal');
-            if (filtroSucursal) {
-                filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                sucursales
-                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
-                    .forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-            }
-        })
-        .catch(error => console.error("Hubo un error:", error));
-}
+        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
+            .then(response => {
+                const datosTabla = response.data;
+                tblPersonasMigrado.setData(datosTabla);
+                const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
+                const filtroSucursal = document.getElementById('filtroSucursal');
+                if (filtroSucursal) {
+                    filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                    sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+                }
+                actualizarCardDesdeSP();
+            })
+            .catch(error => console.error("Hubo un error:", error));
+    }
 
     function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
         const codSucursal = sucursal || '00';
@@ -899,8 +883,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Separar pendientes vs ya generados
-        const pendientes   = todasMigradas.filter(f => !estaGeneradoDB(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
-        const yaGenerados  = todasMigradas.filter(f =>  estaGeneradoDB(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+        const pendientes   = todasMigradas.filter(f => !estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+        const yaGenerados  = todasMigradas.filter(f =>  estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
 
         // Elegir qué generar
         const { value: opcion, isConfirmed } = await Swal.fire({
@@ -1901,68 +1885,82 @@ document.getElementById('institucion')?.addEventListener('change', function () {
     });
 });
 
-// ============================================================
-// DJ GENERADOS — API helpers (reemplaza localStorage)
-// ============================================================
 
-// Cache local para no hacer requests innecesarios
-let _checkPdfCache = null; // { CODI_PERS: { CHECK_PDF, CHECK_PDF_FECHA } }
+// ============================================================
+// DJ GENERADOS — localStorage helpers
+// ============================================================
+const DJ_STORAGE_KEY = 'dj_generados';
 
-async function cargarCheckPdfCache() {
-    if (_checkPdfCache) return _checkPdfCache;
+function getDJGenerados() {
     try {
-        const res = await axios.get(`${API_URL}/dj/get-check-pdf`);
-        _checkPdfCache = {};
-        (res.data.data || []).forEach(r => {
-            _checkPdfCache[r.CODI_PERS] = {
-                check: r.CHECK_PDF,
-                fecha: r.CHECK_PDF_FECHA,
-                user:  r.CHECK_PDF_USER,
-            };
-        });
-    } catch {
-        _checkPdfCache = {};
-    }
-    return _checkPdfCache;
+        return JSON.parse(localStorage.getItem(DJ_STORAGE_KEY) || '{}');
+    } catch { return {}; }
 }
 
-function invalidarCheckPdfCache() {
-    _checkPdfCache = null;
+function marcarDJGenerado(codPersonal, fechaCambio) {
+    const data = getDJGenerados();
+    data[codPersonal] = {
+        fechaMarcado: new Date().toISOString(),
+        fechaCambio:  fechaCambio || null,
+    };
+    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
 }
 
-async function estaGeneradoDB(codPersonal, fechaCambioActual) {
-    const cache = await cargarCheckPdfCache();
-    const reg   = cache[String(codPersonal).trim()];
-    if (!reg || !reg.check) return false;
+function desmarcarDJGenerado(codPersonal) {
+    const data = getDJGenerados();
+    delete data[codPersonal];
+    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
+}
 
-    // Si el campo cambio es posterior a CHECK_PDF_FECHA → ya no vale
-    if (fechaCambioActual && reg.fecha) {
+function estaGenerado(codPersonal, fechaCambioActual) {
+    const data = getDJGenerados();
+    const reg  = data[codPersonal];
+    if (!reg) return false;
+
+    // Si el registro tuvo cambios DESPUÉS de que se marcó → ya no vale
+    if (fechaCambioActual && reg.fechaCambio) {
         const cambio  = new Date(fechaCambioActual);
-        const marcado = new Date(reg.fecha);
+        const marcado = new Date(reg.fechaMarcado);
         if (cambio > marcado) return false;
     }
     return true;
 }
 
-async function marcarGeneradosDB(codigos) {
-    try {
-        await axios.post(`${API_URL}/dj/update-check-pdf`, { codigos });
-        invalidarCheckPdfCache();
-    } catch (e) {
-        console.error('Error marcando generados:', e);
-    }
+function limpiarDJGenerados() {
+    localStorage.removeItem(DJ_STORAGE_KEY);
+   /* tblPersonasMigrado.redraw(true);
+    Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });*/
 }
 
-async function resetearCheckPdfDB(codigos = null) {
-    try {
-        const payload = codigos ? { codigos } : {};
-        await axios.post(`${API_URL}/dj/reset-check-pdf`, payload);
-        invalidarCheckPdfCache();
-    } catch (e) {
-        console.error('Error reseteando check PDF:', e);
-    }
-}
 
+document.getElementById('btnResetearDJs')?.addEventListener('click', async function () {
+
+    const generados = getDJGenerados();
+    const totalMarcados = Object.keys(generados).length;
+
+    if (totalMarcados === 0) {
+        Swal.fire({ icon: 'info', title: 'Sin marcas', text: 'No hay registros marcados como generados.' });
+        return;
+    }
+
+    const { isConfirmed } = await Swal.fire({
+        icon: 'warning',
+        title: 'Resetear todas las marcas',
+        html: `Se eliminarán las marcas ✅ de <b>${totalMarcados}</b> registro(s).<br>
+               <span style="font-size:12px;color:#6b7280;">Todos volverán a aparecer como pendientes.</span>`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, resetear todo',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+    });
+
+    if (!isConfirmed) return;
+
+    limpiarDJGenerados();
+    tblPersonasMigrado.redraw(true);
+
+    Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });
+});
 
 // ============================================================
 // EXTRAER FIRMA Y HUELLA — Extracción desde PDF DJ
