@@ -45,6 +45,10 @@ Route::get('/test-email-caducidad', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/login',[LoginController::class, 'index'])->name('login');
     Route::post('/login/validar', [LoginController::class, 'validar']);
+
+    Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
+    Route::get('/get-personal', [FileController::class, 'getPersonal']);
+    Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
      // RUTA PARA REPORTES
     Route::get('/reportes', [FileController::class, 'ViewReportes'])->name('reportes');
        

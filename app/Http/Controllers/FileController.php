@@ -27,7 +27,9 @@ class FileController extends Controller{
         $clientes = FileControl::getClientesLegajos();
         $sucursales = FileControl::getSucursales();
 
-        return view('file_control.chargefile', compact('personal', 'clientes', 'sucursales'));
+        $tipoPerLimitar = session('limitarTipoPer');
+
+        return view('file_control.chargefile', compact('personal', 'clientes', 'sucursales', 'tipoPerLimitar'));
     }
 
     public function indexGestionDj()
@@ -165,15 +167,17 @@ class FileController extends Controller{
         $tipo_per = $request->get('tipo_per', null);
         $vigencia = $request->get('vigencia', null);
         $codSucursal = $request->get('codSucursal', '0');
+        $usuario = session('usuario');
+
 
         // SP de datos
-        $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?', [
-            $codSucursal, $page, $size, $search, $tipo_per, $vigencia
+        $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
+            $codSucursal, $page, $size, $search, $tipo_per, $vigencia, $usuario
         ]);
 
         // SP de total
-        $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia
+        $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?, ?', [
+            $codSucursal, $search, $tipo_per, $vigencia, $usuario
         ])[0]->total;
 
         return response()->json([
@@ -867,6 +871,65 @@ class FileController extends Controller{
                 $request->input('fecha_emision'),
                 $codPersonal,
                 $rutaArchivo
+            );
+
+            return response()->json(['message' => 'DJ guardado correctamente']);
+        } catch (\Exception $e) {
+            Log::error('saveDjFolio error: ' . $e->getMessage());
+            return response()->json([
+                'error'   => 'Error interno al guardar DJ',
+                'detalle' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function saveDjFolioAux(Request $request)
+    {
+        $request->validate([
+            'fecha_emision' => 'required|date',
+            'codPersonal'   => 'required',
+            'pdf'           => 'required|file|mimes:pdf|max:5120',
+        ]);
+
+        try {
+            $codPersonal = $request->input('codPersonal');
+            $usuario = session('usuario');
+            $archivo     = $request->file('pdf');
+            $nameFile    = $codPersonal. '.pdf';
+
+            $dirDestino = '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026';
+            $rutaFinal  = $dirDestino . '\\' . $nameFile;
+
+            if (!is_dir($dirDestino)) {
+                if (!@mkdir($dirDestino, 0777, true)) {
+                    return response()->json([
+                        'error' => 'No se pudo crear el directorio destino',
+                        'ruta'  => $dirDestino,
+                    ], 500);
+                }
+            }
+
+            $contenido = file_get_contents($archivo->getRealPath());
+            if ($contenido === false) {
+                return response()->json(['error' => 'No se pudo leer el archivo subido'], 500);
+            }
+
+            $resultado = @file_put_contents($rutaFinal, $contenido);
+            if ($resultado === false) {
+                return response()->json([
+                    'error' => 'No se pudo guardar el archivo en el servidor de archivos',
+                    'ruta'  => $rutaFinal,
+                ], 500);
+            }
+
+            $rutaArchivo = '//190.116.178.163/Biblioteca_Grafica/DOCUMENTOS_PERS/DJ_2026/' . $codPersonal . '.pdf';
+
+            FileControl::saveDjFolioPersonalAux(
+                $request->input('fecha_emision'),
+                $codPersonal,
+                $rutaArchivo,
+                $usuario
             );
 
             return response()->json(['message' => 'DJ guardado correctamente']);

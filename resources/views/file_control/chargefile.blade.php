@@ -40,6 +40,12 @@
     border-color: #3b82f6;
 }
 
+
+.fila-no-vigente {
+    background-color: #ffeaea !important;
+    color: #7a2222;
+}
+
 </style>
 <div class="grid lg:grid-cols-2 gap-6 mt-8">
     <div class="card overflow-hidden">
@@ -68,14 +74,26 @@
                     <input type="radio" class="form-radio text-primary" id="radioTodos" name="tipo_per" value="TODOS" checked>
                     <label for="radioTodos">Todos</label>
                 </div>
+       
+                @if($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
+                     <div class="flex items-center space-x-2">
+                        <input type="radio" class="form-radio text-primary" id="radioAdmin" name="tipo_per" value="ADMIN">
+                        <label for="radioAdmin">Administrativo</label>
+                    </div>
+                @endif
+                 @if($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
                 <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="ADMIN">
-                    <label for="radioOper">Administrativo</label>
+                    <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="OPER">
+                    <label for="radioOper">Operativo</label>
                 </div>
+                @endif
+                @if($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
                 <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioAdmin" name="tipo_per" value="OPER">
-                    <label for="radioAdmin">Operativo</label>
+                    <input type="radio" class="form-radio text-primary" id="radioEsp" name="tipo_per" value="ESPECIAL">
+                    <label for="radioEsp">Especial</label>
                 </div>
+                @endif
+                 
             </div>
 
             <!-- Vigencia del personal -->

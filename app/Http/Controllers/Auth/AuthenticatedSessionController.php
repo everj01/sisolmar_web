@@ -40,6 +40,8 @@ class AuthenticatedSessionController extends Controller
             session()->put('apellido', $user->apellido_1);
             session()->put('usuario', $user->usuario);
             session()->put('tipo_rol', $user->tipo_rol);
+            session()->put('limitarTipoPer', $user->limitarTipoPer);
+            session()->put('limitarSucursales', $user->limitarSucursal);
             session()->put('menu', $menus_per);
             $rolId = $user->tipo_rol; // o como tengas el rol en tu tabla users
             $permisos = Permisos::getPermissionsByRole($rolId);

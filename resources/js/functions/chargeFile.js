@@ -101,6 +101,21 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         last_row: "total"    // <- total remoto
     },
 
+    rowFormatter: function(row) {
+        const data = row.getData();
+        const el = row.getElement();
+
+        console.log('debug data perosnal, ', data.PERS_VIGENCIA);
+
+        // ajusta aquí el nombre real del campo que te manda el backend
+        const vigente = data.PERS_VIGENCIA;
+
+        if (vigente != 'SI') {
+            el.style.backgroundColor = "#ffe5e5"; // rojo tenue
+            el.style.color = "#7a1f1f";
+        }
+    },
+
 });
 
 tblPersonas.on("dataLoaded", function () {
@@ -129,7 +144,7 @@ function reloadTabla() {
     let tipo_per = document.querySelector('input[name="tipo_per"]:checked')?.value || "TODOS";
     let vigencia = document.querySelector('input[name="vigencia"]:checked')?.value || "";
 
-    tblPersonas.setData(`${VITE_URL_APP}/api/get-personal-total`, {
+    tblPersonas.setData(`${VITE_URL_APP}/get-personal-total`, {
         page: 1,
         size: pageSizePersonas,
         search: search,
@@ -348,16 +363,29 @@ const tblDocs = new Tabulator("#tblDocs", {
                             document.querySelector('#modal-view-docs .modal-title').textContent = `${nombre}`;
                             document.querySelector('#modal-view-docs #txtDocSelec').textContent = `${documento}`;
 
-                            const rutas = response.data.rutas; // ← tu array del backend
+                            const rutas = response.data.rutas;
                             const visor = document.getElementById('visorDocs');
-
                             visor.innerHTML = '';
 
-                            rutas.forEach(ruta => {
-                                visor.insertAdjacentHTML('beforeend', `
-                                <img src="http://${ruta}" class="w-full max-w-[700px] mb-3 rounded-md" />
-                            `);
-                            });
+                            // ✅ Si codFolio es 25, previsualizar como PDF
+                            if (parseInt(codFolio) === 25) {
+                                rutas.forEach(ruta => {
+                                    visor.insertAdjacentHTML('beforeend', `
+                                        <iframe 
+                                            src="http://${ruta}" 
+                                            class="w-full mb-3 rounded-md" 
+                                            style="height: 600px; border: none;"
+                                        ></iframe>
+                                    `);
+                                });
+                            } else {
+                                // Para los demás folios → imágenes como antes
+                                rutas.forEach(ruta => {
+                                    visor.insertAdjacentHTML('beforeend', `
+                                        <img src="http://${ruta}" class="w-full max-w-[700px] mb-3 rounded-md" />
+                                    `);
+                                });
+                            }
 
                             document.getElementById('btn-modal-view-docs').click();
                         })
@@ -667,7 +695,7 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
     formData.append('codPersonal', codigoPer);
     formData.append('pdf', archivo);
 
-    axios.post(`${VITE_URL_APP}/api/save-dj-folio`, formData, {
+    axios.post(`${VITE_URL_APP}/save-dj-folio-2`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
             'Accept': 'application/json',
