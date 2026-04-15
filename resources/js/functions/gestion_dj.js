@@ -31,7 +31,7 @@ const categoriasSe = {
     ]
 };
 
-
+const PAUSA_ENTRE_REGISTROS = 300;
 
 function actualizarCategorias() {
     const claseSel = document.getElementById('clase_brevete').value;
@@ -48,6 +48,20 @@ function actualizarCategorias() {
             catSelect.appendChild(opt);
         });
     }
+}
+
+
+function marcarDJGeneradosBatch(items) {
+    const data = getDJGenerados();
+
+    items.forEach(({ codPersonal, fechaCambio }) => {
+        data[codPersonal] = {
+            fechaMarcado: new Date().toISOString(),
+            fechaCambio: fechaCambio || null,
+        };
+    });
+
+    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
 }
 
 // ============================================================
@@ -969,13 +983,32 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!confirmacion.isConfirmed) return;
 
         // Generar y marcar al terminar
-        await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
+        // await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
 
-        // Marcar todos los incluidos como generados
-        filasFinales.forEach(fila => {
-            const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
-            marcarDJGenerado(cod, fila.cambio);
-        });
+        // // Marcar todos los incluidos como generados
+        // filasFinales.forEach(fila => {
+        //     const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+        //     marcarDJGenerado(cod, fila.cambio);
+        // });
+
+        const resultadoGen = await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
+
+        // if (resultadoGen?.ok) {
+        //     resultadoGen.generadosOk.forEach(fila => {
+        //         const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+        //         marcarDJGenerado(cod, fila.cambio);
+        //     });
+        // }
+        if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
+            marcarDJGeneradosBatch(
+                resultadoGen.generadosOk.map(fila => ({
+                    codPersonal: fila.codPersonal || fila.CODI_PERS || fila.id,
+                    fechaCambio: fila.cambio
+                }))
+            );
+        }
+
+        tblPersonasMigrado.redraw(true);
 
         // Refrescar columna PDF en la tabla
         tblPersonasMigrado.redraw(true);
@@ -1012,13 +1045,85 @@ document.addEventListener('DOMContentLoaded', function () {
     
 
     // Helper interno para unificar PDFs
+    // async function _generarUnificado(filas, nombreBase, source = 'migracion') {
+    //     const pdfBlobs = [];
+    //     let errores = 0;
+
+    //     Swal.fire({ 
+    //         title: 'Generando DJ Unificado...', 
+    //         html: `Procesando <b>0</b> de <b>${filas.length}</b>`, allowOutsideClick: false, showCloseButton: false, showConfirmButton: false,
+    //         allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+
+    //     try { await cargarCatalogos(); } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' }); return; }
+
+    //     for (let i = 0; i < filas.length; i++) {
+    //         const fila = filas[i];
+    //         const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
+
+    //         Swal.update({
+    //             html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.nombres || codiPers}</small>`
+    //         });
+
+    //         try {
+    //             const payload = await obtenerDatosPersonales(codiPers, source);
+    //             await llenarFormulario(payload.data);
+    //             renderFamiliares(payload.familiares);
+
+    //             const resultado = await generarDeclaracionJuradaPDF(true);
+    //             if (resultado?.blob) {
+    //                 pdfBlobs.push(await resultado.blob.arrayBuffer());
+    //             } else {
+    //                 errores++;
+    //             }
+    //         } catch (err) {
+    //             console.error(`Error generando PDF para ${codiPers}:`, err);
+    //             errores++;
+    //         }
+    //         await new Promise(resolve => setTimeout(resolve, 250));
+    //     }
+
+    //     if (pdfBlobs.length === 0) { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar ningún PDF.' }); return; }
+
+    //     Swal.update({ html: 'Unificando documentos...' });
+    //     try {
+    //         const { PDFDocument } = PDFLib;
+    //         const mergedPdf = await PDFDocument.create();
+    //         for (const buf of pdfBlobs) {
+    //             const donor = await PDFDocument.load(buf);
+    //             const pages = await mergedPdf.copyPages(donor, donor.getPageIndices());
+    //             pages.forEach(p => mergedPdf.addPage(p));
+    //         }
+    //         const mergedBytes = await mergedPdf.save();
+    //         const f  = new Date();
+    //         const ts = f.getFullYear() + String(f.getMonth()+1).padStart(2,'0') + String(f.getDate()).padStart(2,'0') + '_' + String(f.getHours()).padStart(2,'0') + String(f.getMinutes()).padStart(2,'0');
+    //         const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+    //         const link = document.createElement('a');
+    //         link.href = URL.createObjectURL(blob);
+    //         link.download = `${nombreBase}_${ts}.pdf`;
+    //         document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    //         URL.revokeObjectURL(link.href);
+    //         Swal.fire({ icon: 'success', title: 'DJ Unificado generado', html: `Se unificaron <b>${pdfBlobs.length}</b> declaraciones.` + (errores > 0 ? `<br><small class="text-red-500">${errores} con error.</small>` : '') });
+    //     } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al unificar los documentos.' }); }
+    // }
     async function _generarUnificado(filas, nombreBase, source = 'migracion') {
         const pdfBlobs = [];
-        let errores = 0;
+        const generadosOk = [];
+        const generadosError = [];
 
-        Swal.fire({ title: 'Generando DJ Unificado...', html: `Procesando <b>0</b> de <b>${filas.length}</b>`, allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({
+            title: 'Generando DJ Unificado...',
+            html: `Procesando <b>0</b> de <b>${filas.length}</b>`,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => Swal.showLoading()
+        });
 
-        try { await cargarCatalogos(); } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' }); return; }
+        try {
+            await cargarCatalogos();
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' });
+            return { ok: false, generadosOk, generadosError };
+        }
 
         for (let i = 0; i < filas.length; i++) {
             const fila = filas[i];
@@ -1034,40 +1139,118 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderFamiliares(payload.familiares);
 
                 const resultado = await generarDeclaracionJuradaPDF(true);
-                if (resultado?.blob) {
-                    pdfBlobs.push(await resultado.blob.arrayBuffer());
-                } else {
-                    errores++;
+
+                if (!resultado?.blob) {
+                    generadosError.push({ fila, motivo: 'No se obtuvo blob' });
+                    continue;
                 }
+
+                const buffer = await resultado.blob.arrayBuffer();
+
+                if (!buffer || buffer.byteLength === 0) {
+                    generadosError.push({ fila, motivo: 'PDF vacío' });
+                    continue;
+                }
+
+                pdfBlobs.push(buffer);
+                generadosOk.push(fila);
+
             } catch (err) {
                 console.error(`Error generando PDF para ${codiPers}:`, err);
-                errores++;
+                generadosError.push({ fila, motivo: err?.message || 'Error desconocido' });
             }
-            await new Promise(resolve => setTimeout(resolve, 250));
+
+            // await new Promise(resolve => setTimeout(resolve, 250));
+            await new Promise(r => setTimeout(r, PAUSA_ENTRE_REGISTROS));
+            
         }
 
-        if (pdfBlobs.length === 0) { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar ningún PDF.' }); return; }
+        if (pdfBlobs.length === 0) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar ningún PDF.' });
+            return { ok: false, generadosOk, generadosError };
+        }
 
         Swal.update({ html: 'Unificando documentos...' });
+
         try {
             const { PDFDocument } = PDFLib;
             const mergedPdf = await PDFDocument.create();
+
             for (const buf of pdfBlobs) {
                 const donor = await PDFDocument.load(buf);
                 const pages = await mergedPdf.copyPages(donor, donor.getPageIndices());
                 pages.forEach(p => mergedPdf.addPage(p));
             }
+
             const mergedBytes = await mergedPdf.save();
-            const f  = new Date();
-            const ts = f.getFullYear() + String(f.getMonth()+1).padStart(2,'0') + String(f.getDate()).padStart(2,'0') + '_' + String(f.getHours()).padStart(2,'0') + String(f.getMinutes()).padStart(2,'0');
+
+            if (!mergedBytes || mergedBytes.length === 0) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'El PDF unificado se generó vacío.' });
+                return { ok: false, generadosOk: [], generadosError: filas.map(f => ({ fila: f, motivo: 'PDF unificado vacío' })) };
+            }
+
+            const f = new Date();
+            const ts = f.getFullYear()
+                + String(f.getMonth() + 1).padStart(2, '0')
+                + String(f.getDate()).padStart(2, '0')
+                + '_'
+                + String(f.getHours()).padStart(2, '0')
+                + String(f.getMinutes()).padStart(2, '0');
+
             const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+
+            if (blob.size === 0) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'El archivo final quedó vacío.' });
+                return { ok: false, generadosOk: [], generadosError: filas.map(f => ({ fila: f, motivo: 'Blob final vacío' })) };
+            }
+
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `${nombreBase}_${ts}.pdf`;
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
-            Swal.fire({ icon: 'success', title: 'DJ Unificado generado', html: `Se unificaron <b>${pdfBlobs.length}</b> declaraciones.` + (errores > 0 ? `<br><small class="text-red-500">${errores} con error.</small>` : '') });
-        } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al unificar los documentos.' }); }
+
+            Swal.fire({
+                icon: generadosError.length > 0 ? 'warning' : 'success',
+                title: 'Resultado de generación',
+                html: `
+                    <div style="text-align:left; font-size:14px; line-height:1.6;">
+                        <div>
+                            <span style="font-weight:600;">Generados:</span>
+                            <span style="color:#15803d; font-weight:700;">${generadosOk.length} / ${filas.length}</span>
+                        </div>
+                        <div>
+                            <span style="font-weight:600;">Fallidos:</span>
+                            <span style="color:#b91c1c; font-weight:700;">${generadosError.length}</span>
+                        </div>
+
+                        ${
+                            generadosError.length > 0
+                                ? `
+                                <div style="margin-top:10px; font-size:12px; color:#b91c1c;">
+                                    <b>Detalle de fallas:</b><br>
+                                    ${generadosError.map(x => {
+                                        const fila = x.fila || {};
+                                        const nombre = fila.nombres || fila.CODI_PERS || fila.id || 'Registro';
+                                        return `• ${nombre}: ${x.motivo}`;
+                                    }).join('<br>')}
+                                </div>
+                                `
+                                : ''
+                        }
+                    </div>
+                `
+            });
+
+            return { ok: true, generadosOk, generadosError };
+
+        } catch (err) {
+            console.error('Error unificando documentos:', err);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al unificar los documentos.' });
+            return { ok: false, generadosOk: [], generadosError: filas.map(f => ({ fila: f, motivo: 'Fallo en unificación' })) };
+        }
     }
 
     // ============================================================
