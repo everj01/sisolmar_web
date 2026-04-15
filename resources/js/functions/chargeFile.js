@@ -692,20 +692,26 @@ function limpiarModalDj() {
     document.getElementById('archivoInput').value = '';
     document.getElementById('listaArchivos').innerHTML = '';
 }
-
 document.getElementById('formFolioPersonal').addEventListener('submit', function (event) {
     event.preventDefault();
 
     const fechaEmision = document.getElementById('fecha_emision').value;
     const codigoPer    = document.getElementById('codPersonal').value;
-    const archivo      = document.getElementById('archivoInput').files[0];
+    const inputFile    = document.getElementById('archivoInput');
+    const archivo      = inputFile?.files?.[0];
 
     if (!fechaEmision) {
         Swal.fire({ title: 'Ingrese la fecha de emisión', icon: 'warning' });
         return;
     }
+
     if (!archivo) {
         Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' });
+        return;
+    }
+
+    if (archivo.type !== 'application/pdf') {
+        Swal.fire({ title: 'El archivo debe ser PDF', icon: 'warning' });
         return;
     }
 
@@ -716,7 +722,6 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
 
     axios.post(`${VITE_URL_APP}/save-dj-folio-2`, formData, {
         headers: {
-            'Content-Type': 'multipart/form-data',
             'Accept': 'application/json',
         }
     })
@@ -724,10 +729,23 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
         document.getElementById('btn-modal-docs-close').click();
         getDocsObligatorios(codigoPer);
         limpiarModalDj();
-        Swal.fire({ title: 'DJ guardado correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
+
+        Swal.fire({
+            title: 'DJ guardado correctamente',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
     })
     .catch(function (error) {
-        const msg = error.response?.data?.error || 'Error al guardar el documento';
+        let msg = 'Error al guardar el documento';
+
+        if (error.response) {
+            msg = error.response.data?.error 
+               || error.response.data?.message 
+               || JSON.stringify(error.response.data);
+        }
+
         Swal.fire({ title: msg, icon: 'error' });
     });
 });

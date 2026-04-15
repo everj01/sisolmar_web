@@ -854,7 +854,7 @@ class FileController extends Controller{
 
             $contenido = file_get_contents($archivo->getRealPath());
             if ($contenido === false) {
-                return response()->json(['error' => 'No se pudo leer el archivo subido'], 500);
+                return response()->json(['error' => 'No se pudo leer el archivo subido'], 200);
             }
 
             $resultado = @file_put_contents($rutaFinal, $contenido);
@@ -884,47 +884,100 @@ class FileController extends Controller{
     }
 
 
+    // public function saveDjFolioAux(Request $request)
+    // {
+    //     $request->validate([
+    //         'fecha_emision' => 'required|date',
+    //         'codPersonal'   => 'required',
+    //         'pdf'           => 'required|file|mimes:pdf|max:5120',
+    //     ]);
+
+    //     try {
+    //         $codPersonal = $request->input('codPersonal');
+    //         $usuario = session('usuario');
+    //         $archivo     = $request->file('pdf');
+    //         $nameFile    = $codPersonal. '.pdf';
+
+    //         $dirDestino = '\\\\192.168.10.5\\Extranet_2024\\storage_app\\sisolmar\\DJ';
+    //         $rutaFinal  = $dirDestino . '\\' . $nameFile;
+
+    //         if (!is_dir($dirDestino)) {
+    //             if (!@mkdir($dirDestino, 0777, true)) {
+    //                 return response()->json([
+    //                     'error' => 'No se pudo crear el directorio destino',
+    //                     'ruta'  => $dirDestino,
+    //                 ], 500);
+    //             }
+    //         }
+
+    //         $contenido = file_get_contents($archivo->getRealPath());
+    //         if ($contenido === false) {
+    //             return response()->json(['error' => 'No se pudo leer el archivo subido'], 500);
+    //         }
+
+    //         $resultado = @file_put_contents($rutaFinal, $contenido);
+    //         if ($resultado === false) {
+    //             return response()->json([
+    //                 'error' => 'No se pudo guardar el archivo en el servidor de archivos',
+    //                 'ruta'  => $rutaFinal,
+    //             ], 500);
+    //         }
+
+    //         $rutaArchivo = '//190.116.178.163:86/storage_app/sisolmar/DJ/' . $codPersonal . '.pdf';
+
+    //         FileControl::saveDjFolioPersonalAux(
+    //             $request->input('fecha_emision'),
+    //             $codPersonal,
+    //             $rutaArchivo,
+    //             $usuario
+    //         );
+
+    //         return response()->json(['message' => 'DJ guardado correctamente']);
+    //     } catch (\Exception $e) {
+    //         Log::error('saveDjFolio error: ' . $e->getMessage());
+    //         return response()->json([
+    //             'error'   => 'Error interno al guardar DJ',
+    //             'detalle' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+ 
+
     public function saveDjFolioAux(Request $request)
     {
-        $request->validate([
-            'fecha_emision' => 'required|date',
-            'codPersonal'   => 'required',
-            'pdf'           => 'required|file|mimes:pdf|max:5120',
-        ]);
-
         try {
+            $request->validate([
+                'fecha_emision' => 'required|date',
+                'codPersonal'   => 'required',
+                'pdf'           => 'required|file|mimes:pdf|max:5120',
+            ]);
+
             $codPersonal = $request->input('codPersonal');
-            $usuario = session('usuario');
+            $usuario     = session('usuario');
             $archivo     = $request->file('pdf');
-            $nameFile    = $codPersonal. '.pdf';
 
-            $dirDestino = '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026';
-            $rutaFinal  = $dirDestino . '\\' . $nameFile;
-
-            if (!is_dir($dirDestino)) {
-                if (!@mkdir($dirDestino, 0777, true)) {
-                    return response()->json([
-                        'error' => 'No se pudo crear el directorio destino',
-                        'ruta'  => $dirDestino,
-                    ], 500);
-                }
-            }
-
-            $contenido = file_get_contents($archivo->getRealPath());
-            if ($contenido === false) {
-                return response()->json(['error' => 'No se pudo leer el archivo subido'], 500);
-            }
-
-            $resultado = @file_put_contents($rutaFinal, $contenido);
-            if ($resultado === false) {
+            if (!$archivo) {
                 return response()->json([
-                    'error' => 'No se pudo guardar el archivo en el servidor de archivos',
-                    'ruta'  => $rutaFinal,
-                ], 500);
+                    'error' => 'No se recibió el archivo'
+                ], 400);
             }
 
-            $rutaArchivo = '//190.116.178.163/Biblioteca_Grafica/DOCUMENTOS_PERS/DJ_2026/' . $codPersonal . '.pdf';
+            $nameFile = $codPersonal . '.pdf';
 
+            // Carpeta dentro de storage/app
+            $rutaStorage = 'dj/2026/' . $nameFile;
+
+            // Guardar archivo
+            Storage::disk('local')->putFileAs('dj/2026', $archivo, $nameFile);
+
+            // Ruta física real (opcional, por si la necesitas)
+            $rutaFisica = storage_path('app/' . $rutaStorage);
+
+            // Ruta que puedes guardar en BD (depende cómo lo consumas luego)
+            $rutaArchivo = 'file://192.168.10.5/Extranet_2024/apps/sisolmar/storage/'.$rutaStorage;
+
+            // Guardar en BD
             FileControl::saveDjFolioPersonalAux(
                 $request->input('fecha_emision'),
                 $codPersonal,
@@ -932,15 +985,222 @@ class FileController extends Controller{
                 $usuario
             );
 
-            return response()->json(['message' => 'DJ guardado correctamente']);
-        } catch (\Exception $e) {
-            Log::error('saveDjFolio error: ' . $e->getMessage());
             return response()->json([
-                'error'   => 'Error interno al guardar DJ',
-                'detalle' => $e->getMessage(),
+                'message' => 'Archivo guardado en storage correctamente',
+                'ruta_storage' => $rutaStorage,
+                'ruta_fisica' => $rutaFisica
+            ]);
+
+        } catch (\Throwable $e) {
+
+            \Log::error('Error saveDjFolioAux STORAGE', [
+                'message' => $e->getMessage(),
+                'line'    => $e->getLine(),
+                'file'    => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al guardar en storage',
+                'detalle' => $e->getMessage()
             ], 500);
         }
+    //     try {
+    //     Log::info('=== INICIO saveDjFolioAux ===', [
+    //         'ip' => $request->ip(),
+    //         'fecha_emision' => $request->input('fecha_emision'),
+    //         'codPersonal' => $request->input('codPersonal'),
+    //         'has_file_pdf' => $request->hasFile('pdf'),
+    //         'session_usuario' => session('usuario'),
+    //     ]);
+
+    //     $request->validate([
+    //         'fecha_emision' => 'required|date',
+    //         'codPersonal'   => 'required',
+    //         'pdf'           => 'required|file|mimes:pdf|max:5120',
+    //     ]);
+
+    //     $codPersonal = $request->input('codPersonal');
+    //     $usuario     = session('usuario');
+    //     $archivo     = $request->file('pdf');
+    //     $nameFile    = $codPersonal . '.pdf';
+
+    //     $dirDestino = '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026';
+    //     $rutaFinal  = $dirDestino . '\\' . $nameFile;
+
+    //     Log::info('Datos principales', [
+    //         'codPersonal' => $codPersonal,
+    //         'usuario' => $usuario,
+    //         'nameFile' => $nameFile,
+    //         'dirDestino' => $dirDestino,
+    //         'rutaFinal' => $rutaFinal,
+    //         'archivo_original' => $archivo ? $archivo->getClientOriginalName() : null,
+    //         'archivo_mime' => $archivo ? $archivo->getMimeType() : null,
+    //         'archivo_size' => $archivo ? $archivo->getSize() : null,
+    //         'archivo_tmp' => $archivo ? $archivo->getRealPath() : null,
+    //     ]);
+
+    //     if (!$archivo) {
+    //         throw new \Exception('No se recibió el archivo PDF en el request.');
+    //     }
+
+    //     $existeDir = is_dir($dirDestino);
+    //     $escribibleDir = @is_writable($dirDestino);
+
+    //     Log::info('Estado carpeta destino', [
+    //         'existeDir' => $existeDir,
+    //         'escribibleDir' => $escribibleDir,
+    //         'dirDestino' => $dirDestino,
+    //     ]);
+
+    //     if (!$existeDir) {
+    //         Log::warning('La carpeta no existe, se intentará crear', [
+    //             'dirDestino' => $dirDestino
+    //         ]);
+
+    //         if (!file_exists($dirDestino)) {
+    //             $mk = mkdir($dirDestino, 0777, true);
+
+    //             if (!$mk) {
+    //                 throw new \Exception('No se pudo crear directorio: ' . $dirDestino);
+    //                 }
+    //         }
+
+    //         Log::info('Resultado mkdir', [
+    //             'resultado' => $mk,
+    //             'dirDestino' => $dirDestino,
+    //             'error_get_last' => error_get_last(),
+    //         ]);
+
+    //         if (!$mk) {
+    //             return response()->json([
+    //                 'error' => 'No se pudo crear el directorio destino',
+    //                 'ruta'  => $dirDestino,
+    //                 'debug' => [
+    //                     'error_get_last' => error_get_last(),
+    //                     'is_dir_post' => is_dir($dirDestino),
+    //                     'is_writable_post' => @is_writable($dirDestino),
+    //                 ]
+    //             ], 500);
+    //         }
+    //     }
+
+    //     $tmpPath = $archivo->getRealPath();
+
+    //     if (!$tmpPath || !file_exists($tmpPath)) {
+    //         throw new \Exception('El archivo temporal no existe o no se puede acceder.');
+    //     }
+
+    //     Log::info('Archivo temporal OK', [
+    //         'tmpPath' => $tmpPath,
+    //         'tmp_exists' => file_exists($tmpPath),
+    //         'tmp_readable' => is_readable($tmpPath),
+    //     ]);
+
+    //     $contenido = file_get_contents($tmpPath);
+
+    //     Log::info('Resultado lectura archivo temporal', [
+    //         'contenido_false' => ($contenido === false),
+    //         'bytes_leidos' => ($contenido !== false ? strlen($contenido) : 0),
+    //         'error_get_last' => error_get_last(),
+    //     ]);
+
+    //     if ($contenido === false) {
+    //         return response()->json([
+    //             'error' => 'No se pudo leer el archivo subido',
+    //             'debug' => [
+    //                 'tmpPath' => $tmpPath,
+    //                 'error_get_last' => error_get_last(),
+    //             ]
+    //         ], 500);
+    //     }
+
+    //     $resultado = file_put_contents($rutaFinal, $contenido);
+
+    //     Log::info('Resultado file_put_contents', [
+    //         'resultado' => $resultado,
+    //         'rutaFinal' => $rutaFinal,
+    //         'archivo_existe_final' => file_exists($rutaFinal),
+    //         'error_get_last' => error_get_last(),
+    //     ]);
+
+    //     if ($resultado === false) {
+    //         return response()->json([
+    //             'error' => 'No se pudo guardar el archivo en el servidor de archivos',
+    //             'ruta'  => $rutaFinal,
+    //             'debug' => [
+    //                 'dirExiste' => is_dir($dirDestino),
+    //                 'dirEscribible' => @is_writable($dirDestino),
+    //                 'archivo_final_existe' => file_exists($rutaFinal),
+    //                 'error_get_last' => error_get_last(),
+    //             ]
+    //         ], 500);
+    //     }
+
+    //     $rutaArchivo = '//190.116.178.163/Biblioteca_Grafica/DOCUMENTOS_PERS/DJ_2026/' . $codPersonal . '.pdf';
+
+    //     Log::info('Antes de guardar en BD', [
+    //         'fecha_emision' => $request->input('fecha_emision'),
+    //         'codPersonal' => $codPersonal,
+    //         'rutaArchivo' => $rutaArchivo,
+    //         'usuario' => $usuario,
+    //     ]);
+
+    //     $resultadoBD = FileControl::saveDjFolioPersonalAux(
+    //         $request->input('fecha_emision'),
+    //         $codPersonal,
+    //         $rutaArchivo,
+    //         $usuario
+    //     );
+
+    //     Log::info('Resultado saveDjFolioPersonalAux', [
+    //         'resultadoBD' => $resultadoBD
+    //     ]);
+
+    //     Log::info('=== FIN saveDjFolioAux OK ===', [
+    //         'codPersonal' => $codPersonal,
+    //         'rutaFinal' => $rutaFinal,
+    //     ]);
+
+    //     return response()->json([
+    //         'message' => 'DJ guardado correctamente',
+    //         'debug' => [
+    //             'rutaFinal' => $rutaFinal,
+    //             'rutaArchivo' => $rutaArchivo,
+    //             'bytes_guardados' => $resultado,
+    //         ]
+    //     ]);
+    // } catch (\Illuminate\Validation\ValidationException $e) {
+    //     Log::error('VALIDATION ERROR saveDjFolioAux', [
+    //         'errors' => $e->errors(),
+    //         'request' => $request->all(),
+    //     ]);
+
+    //     return response()->json([
+    //         'error' => 'Error de validación',
+    //         'detalle' => $e->errors(),
+    //     ], 422);
+    // } catch (\Throwable $e) {
+    //     Log::error('ERROR GENERAL saveDjFolioAux', [
+    //         'message' => $e->getMessage(),
+    //         'file' => $e->getFile(),
+    //         'line' => $e->getLine(),
+    //         'trace' => $e->getTraceAsString(),
+    //         'request' => $request->all(),
+    //         'error_get_last' => error_get_last(),
+    //     ]);
+
+    //     return response()->json([
+    //         'error'   => 'Error interno al guardar DJ',
+    //         'detalle' => $e->getMessage(),
+    //         'linea'   => $e->getLine(),
+    //         'archivo' => $e->getFile(),
+    //         'debug'   => [
+    //             'error_get_last' => error_get_last(),
+    //         ]
+    //     ], 500);
+    // }
     }
+
 
     // Función para validar si la URL existe
     private static function urlExiste($url)
