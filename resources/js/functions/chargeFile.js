@@ -10,6 +10,9 @@ let usuarioActual = null;
 (async () => {
     usuarioActual = await getUsuario();
     getPersonal();
+
+    seleccionarPrimeraSucursalValida();
+    reloadTabla();
 })();
 let pageSizePersonas = 10;
 
@@ -132,13 +135,29 @@ tblPersonas.on("dataLoaded", function () {
 });
 
 
+function seleccionarPrimeraSucursalValida() {
+    const select = document.getElementById("sucursal");
+    if (!select) return;
+
+    const primeraOpcionValida = [...select.options].find(opt =>
+        opt.value &&
+        opt.value !== "00" &&
+        opt.value !== "-Seleccionar-" &&
+        !opt.disabled
+    );
+
+    if (primeraOpcionValida) {
+        select.value = primeraOpcionValida.value;
+    }
+}
+
 function reloadTabla() {
 
     let search = document.getElementById("buscarPersonal").value.trim();
     let codSucursalSelect = document.getElementById("sucursal");
     let codSucursal = codSucursalSelect.value;
 
-    if (!codSucursal || codSucursal === "-Seleccionar-" || codSucursal === "00") {
+    if (!codSucursal || codSucursal == "-Seleccionar-" || codSucursal == "00") {
         codSucursal = "0"; // fallback cuando no selecciona nada
     }
     let tipo_per = document.querySelector('input[name="tipo_per"]:checked')?.value || "TODOS";

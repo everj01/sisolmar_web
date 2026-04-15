@@ -58,7 +58,7 @@
             <div class="flex items-center space-x-2 w-80 justify-end">
                 <label for="sucursales" class="text-default-800 text-sm font-medium">Sucursal</label>
                 <select id="sucursal" class="form-select max-w-xs">
-                    <option disabled selected>-Seleccionar-</option>
+                    <!-- <option disabled selected>-Seleccionar-</option> -->
                     @foreach($sucursales as $sucursal)
                     <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
                     @endforeach
