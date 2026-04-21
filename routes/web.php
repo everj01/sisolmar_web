@@ -45,6 +45,9 @@ Route::get('/test-email-caducidad', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/login',[LoginController::class, 'index'])->name('login');
     Route::post('/login/validar', [LoginController::class, 'validar']);
+    Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
+
+    Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
 
     Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
     Route::get('/get-personal', [FileController::class, 'getPersonal']);

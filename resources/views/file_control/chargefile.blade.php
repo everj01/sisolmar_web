@@ -58,7 +58,7 @@
             <div class="flex items-center space-x-2 w-80 justify-end">
                 <label for="sucursales" class="text-default-800 text-sm font-medium">Sucursal</label>
                 <select id="sucursal" class="form-select max-w-xs">
-                    <!-- <option disabled selected>-Seleccionar-</option> -->
+                    <option disabled selected>-Seleccionar-</option>
                     @foreach($sucursales as $sucursal)
                     <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
                     @endforeach
@@ -293,8 +293,7 @@
                                 <ul id="listaArchivos" class="mt-4 space-y-2"></ul>
                             </div>
                         </div>
-
-
+                        
                         <!-- <div class="mt-5">
                             <label for="example-time"
                                 class="text-default-800 text-sm font-medium inline-block mb-2">Archivo</label>

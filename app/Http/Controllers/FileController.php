@@ -213,6 +213,19 @@ class FileController extends Controller{
         ]);
     }
 
+ public function verDjPdf($codPersonal)
+{
+    $ruta = '\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dj\\2026\\' . $codPersonal . '.pdf';
+
+    if (!file_exists($ruta)) {
+        abort(404, 'Documento no encontrado');
+    }
+
+    return response()->file($ruta, [
+        'Content-Type' => 'application/pdf',
+    ]);
+}
+
     public function getDocumentosXPersonal($codPersonal){
         $usuario = session('usuario');
         $docs_personal = FileControl::getDocsXPersona($codPersonal, $usuario);
@@ -770,62 +783,96 @@ class FileController extends Controller{
     }
 
 
-     public function getViewDocumentsPer($codPersonal, $codFolio)
-    {
-        $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
+    
+public function getViewDocumentsPer($codPersonal, $codFolio)
+{
+    $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
 
-        if (empty($result)) {
-            return response()->json(['success' => false, 'message' => 'No se encontraron rutas'], 404);
-        }
-
-        $extensiones = ['jpg', 'jpeg', 'png', 'pdf'];
-        $rutasValidas = [];
-
-        foreach ($result as $item) {
-            $rutaEncontrada = false;
-
-            // Probar primero con ruta_aux
-            if (isset($item->ruta_aux)) {
-                $rutaBase = str_replace('//', 'http://', $item->ruta_aux);
-
-                foreach ($extensiones as $ext) {
-                    $rutaConExt = $rutaBase . '.' . $ext;
-
-                    if (self::urlExiste($rutaConExt)) {
-                        $rutasValidas[] = $rutaConExt;
-                        $rutaEncontrada = true;
-                        break;
-                    }
-                }
-            }
-
-            // Si no se encontró nada en ruta_aux, probar con ruta
-            if (!$rutaEncontrada && isset($item->ruta)) {
-                $rutaBase = str_replace('//', 'http://', $item->ruta);
-
-                foreach ($extensiones as $ext) {
-                    $rutaConExt = $rutaBase . '.' . $ext;
-
-                    if (self::urlExiste($rutaConExt)) {
-                        $rutasValidas[] = $rutaConExt;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (empty($rutasValidas)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se encontraron archivos accesibles desde la red'
-            ]);
-        }
-
+    if (empty($result)) {
         return response()->json([
-            'success' => true,
-            'rutas' => $rutasValidas
-        ]);
+            'success' => false,
+            'message' => 'No se encontraron rutas'
+        ], 404);
     }
+
+    $rutas = [];
+
+    foreach ($result as $item) {
+
+        if (!empty($item->ruta_aux)) {
+            $rutas[] = $item->ruta_aux;
+        }
+
+        if (!empty($item->ruta)) {
+            $rutas[] = $item->ruta;
+        }
+    }
+
+    // limpiar nulls y duplicados
+    $rutas = array_values(array_unique(array_filter($rutas)));
+
+    return response()->json([
+        'success' => true,
+        'rutas' => $rutas
+    ]);
+}
+
+    //  public function getViewDocumentsPer($codPersonal, $codFolio)
+    // {
+    //     $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
+
+    //     if (empty($result)) {
+    //         return response()->json(['success' => false, 'message' => 'No se encontraron rutas'], 404);
+    //     }
+
+    //     $extensiones = ['jpg', 'jpeg', 'png', 'pdf'];
+    //     $rutasValidas = [];
+
+    //     foreach ($result as $item) {
+    //         $rutaEncontrada = false;
+
+    //         // Probar primero con ruta_aux
+    //         if (isset($item->ruta_aux)) {
+    //             $rutaBase = str_replace('//', 'http://', $item->ruta_aux);
+
+    //             foreach ($extensiones as $ext) {
+    //                 $rutaConExt = $rutaBase . '.' . $ext;
+
+    //                 if (self::urlExiste($rutaConExt)) {
+    //                     $rutasValidas[] = $rutaConExt;
+    //                     $rutaEncontrada = true;
+    //                     break;
+    //                 }
+    //             }
+    //         }
+
+    //         // Si no se encontró nada en ruta_aux, probar con ruta
+    //         if (!$rutaEncontrada && isset($item->ruta)) {
+    //             $rutaBase = str_replace('//', 'http://', $item->ruta);
+
+    //             foreach ($extensiones as $ext) {
+    //                 $rutaConExt = $rutaBase . '.' . $ext;
+
+    //                 if (self::urlExiste($rutaConExt)) {
+    //                     $rutasValidas[] = $rutaConExt;
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     if (empty($rutasValidas)) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'No se encontraron archivos accesibles desde la red'
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'rutas' => $rutasValidas
+    //     ]);
+    // }
 
     public function saveDjFolio(Request $request)
     {
@@ -975,7 +1022,7 @@ class FileController extends Controller{
             $rutaFisica = storage_path('app/' . $rutaStorage);
 
             // Ruta que puedes guardar en BD (depende cómo lo consumas luego)
-            $rutaArchivo = 'file://192.168.10.5/Extranet_2024/apps/sisolmar/storage/'.$rutaStorage;
+            $rutaArchivo = 'file://192.168.10.5/Extranet_2024/apps/sisolmar/storage/app/'.$rutaStorage;
 
             // Guardar en BD
             FileControl::saveDjFolioPersonalAux(

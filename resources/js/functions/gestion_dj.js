@@ -31,7 +31,48 @@ const categoriasSe = {
     ]
 };
 
-const PAUSA_ENTRE_REGISTROS = 300;
+const PAUSA_ENTRE_REGISTROS = 800;
+
+async function esperarConBackoff(intento, baseMs = 1000) {
+    const espera = baseMs * Math.pow(2, intento); // 1s, 2s, 4s, 8s...
+    const jitter  = Math.random() * 300;           // evita que todo reintente al mismo tiempo
+    await new Promise(r => setTimeout(r, espera + jitter));
+}
+
+// ③ Wrapper para obtener datos con retry ante 429
+async function obtenerDatosConRetry(codiPers, source = 'migracion', maxReintentos = 4) {
+    for (let intento = 0; intento <= maxReintentos; intento++) {
+        try {
+            const response = await axios.get(`${API_URL}/dj/get-personal-data`, {
+                params: { codi_pers: codiPers, source }
+            });
+            return response.data;
+        } catch (err) {
+            const status = err?.response?.status;
+
+            if (status === 429 && intento < maxReintentos) {
+                // Leer el header Retry-After si el servidor lo manda
+                const retryAfter = err.response?.headers?.['retry-after'];
+                const esperaMs   = retryAfter
+                    ? parseInt(retryAfter) * 1000
+                    : null;
+
+                console.warn(`[429] ${codiPers} — reintento ${intento + 1}/${maxReintentos}`);
+
+                if (esperaMs) {
+                    await new Promise(r => setTimeout(r, esperaMs + 200));
+                } else {
+                    await esperarConBackoff(intento);
+                }
+                continue;
+            }
+
+            // Si no es 429 o se agotaron reintentos, propagar el error
+            throw err;
+        }
+    }
+}
+
 
 function actualizarCategorias() {
     const claseSel = document.getElementById('clase_brevete').value;
@@ -885,134 +926,261 @@ document.addEventListener('DOMContentLoaded', function () {
         await _generarUnificado(filasVisibles, 'DJ_Unificado');
     });
 
+
     btnDJUnificadoMigrado?.addEventListener('click', async function () {
 
-        // Todas las filas migradas visibles en la tabla
-        const todasMigradas = tblPersonasMigrado.getData("active")
-            .filter(fila => fila.migrado === 'Migrado');
+    const todasMigradas = tblPersonasMigrado.getData("active")
+        .filter(fila => fila.migrado === 'Migrado');
 
-        if (!todasMigradas.length) {
-            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros migrados visibles.' });
-            return;
-        }
+    if (!todasMigradas.length) {
+        Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros migrados visibles.' });
+        return;
+    }
 
-        // Separar pendientes vs ya generados
-        const pendientes   = todasMigradas.filter(f => !estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
-        const yaGenerados  = todasMigradas.filter(f =>  estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+    const pendientes  = todasMigradas.filter(f => !estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+    const yaGenerados = todasMigradas.filter(f =>  estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
 
-        // Elegir qué generar
-        const { value: opcion, isConfirmed } = await Swal.fire({
-            title: 'DJ Unificado — Migrados',
-            html: `
-                <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
-                    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend">
-                        <input type="radio" name="djopcion" value="pendientes" ${pendientes.length ? '' : 'disabled'}
-                            style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
-                        <div>
-                            <div style="font-weight:600;color:${pendientes.length ? '#111827' : '#9ca3af'};">
-                                Solo pendientes
-                                <span style="margin-left:6px;background:${pendientes.length ? '#dcfce7' : '#f3f4f6'};color:${pendientes.length ? '#16a34a' : '#9ca3af'};font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
-                                    ${pendientes.length}
-                                </span>
-                            </div>
-                            <div style="font-size:11px;color:#6b7280;margin-top:2px;">
-                                Registros sin ✅ o con cambios nuevos desde la última generación
-                            </div>
+    const { value: opcion, isConfirmed } = await Swal.fire({
+        title: 'DJ Unificado — Migrados',
+        html: `
+            <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend">
+                    <input type="radio" name="djopcion" value="pendientes" ${pendientes.length ? '' : 'disabled'}
+                        style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+                    <div>
+                        <div style="font-weight:600;color:${pendientes.length ? '#111827' : '#9ca3af'};">
+                            Solo pendientes
+                            <span style="margin-left:6px;background:${pendientes.length ? '#dcfce7' : '#f3f4f6'};color:${pendientes.length ? '#16a34a' : '#9ca3af'};font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+                                ${pendientes.length}
+                            </span>
                         </div>
-                    </label>
-                    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-todos">
-                        <input type="radio" name="djopcion" value="todos"
-                            style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
-                        <div>
-                            <div style="font-weight:600;color:#111827;">
-                                Todos los migrados
-                                <span style="margin-left:6px;background:#dbeafe;color:#1e40af;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
-                                    ${todasMigradas.length}
-                                </span>
-                            </div>
-                            <div style="font-size:11px;color:#6b7280;margin-top:2px;">
-                                Incluye los ${yaGenerados.length} ya generados anteriormente
-                            </div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+                            Registros sin ✅ o con cambios nuevos desde la última generación
                         </div>
-                    </label>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Generar PDF',
-            cancelButtonText: 'Cancelar',
-            didOpen: () => {
-                // Seleccionar por defecto "pendientes" si hay, sino "todos"
-                const radios = document.querySelectorAll('input[name="djopcion"]');
-                radios.forEach(r => {
-                    r.addEventListener('change', () => {
-                        document.getElementById('lbl-pend').style.borderColor  = r.value === 'pendientes' && r.checked ? '#6366f1' : '#e5e7eb';
-                        document.getElementById('lbl-todos').style.borderColor = r.value === 'todos'      && r.checked ? '#6366f1' : '#e5e7eb';
-                    });
+                    </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-todos">
+                    <input type="radio" name="djopcion" value="todos"
+                        style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+                    <div>
+                        <div style="font-weight:600;color:#111827;">
+                            Todos los migrados
+                            <span style="margin-left:6px;background:#dbeafe;color:#1e40af;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+                                ${todasMigradas.length}
+                            </span>
+                        </div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+                            Incluye los ${yaGenerados.length} ya generados anteriormente
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Generar PDF',
+        cancelButtonText: 'Cancelar',
+        didOpen: () => {
+            const radios = document.querySelectorAll('input[name="djopcion"]');
+            radios.forEach(r => {
+                r.addEventListener('change', () => {
+                    document.getElementById('lbl-pend').style.borderColor  = r.value === 'pendientes' && r.checked ? '#6366f1' : '#e5e7eb';
+                    document.getElementById('lbl-todos').style.borderColor = r.value === 'todos'      && r.checked ? '#6366f1' : '#e5e7eb';
                 });
-                const def = pendientes.length ? 'pendientes' : 'todos';
-                const defRadio = document.querySelector(`input[name="djopcion"][value="${def}"]`);
-                if (defRadio) {
-                    defRadio.checked = true;
-                    document.getElementById(def === 'pendientes' ? 'lbl-pend' : 'lbl-todos').style.borderColor = '#6366f1';
-                }
-            },
-            preConfirm: () => {
-                const sel = document.querySelector('input[name="djopcion"]:checked');
-                if (!sel) { Swal.showValidationMessage('Selecciona una opción.'); return false; }
-                return sel.value;
+            });
+            const def = pendientes.length ? 'pendientes' : 'todos';
+            const defRadio = document.querySelector(`input[name="djopcion"][value="${def}"]`);
+            if (defRadio) {
+                defRadio.checked = true;
+                document.getElementById(def === 'pendientes' ? 'lbl-pend' : 'lbl-todos').style.borderColor = '#6366f1';
             }
-        });
-
-        if (!isConfirmed) return;
-
-        const filasFinales = opcion === 'pendientes' ? pendientes : todasMigradas;
-
-        if (!filasFinales.length) {
-            Swal.fire({ icon: 'info', title: 'Sin pendientes', text: 'Todos los registros ya fueron generados. Usa "Todos" para regenerar.' });
-            return;
+        },
+        preConfirm: () => {
+            const sel = document.querySelector('input[name="djopcion"]:checked');
+            if (!sel) { Swal.showValidationMessage('Selecciona una opción.'); return false; }
+            return sel.value;
         }
-
-        const confirmacion = await Swal.fire({
-            icon: 'question',
-            title: 'Confirmar generación',
-            html: `Se generará <b>1 PDF</b> con <b>${filasFinales.length}</b> declaración(es).<br>¿Desea continuar?`,
-            showCancelButton: true,
-            confirmButtonText: 'Sí, generar',
-            cancelButtonText: 'Cancelar'
-        });
-        if (!confirmacion.isConfirmed) return;
-
-        // Generar y marcar al terminar
-        // await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
-
-        // // Marcar todos los incluidos como generados
-        // filasFinales.forEach(fila => {
-        //     const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
-        //     marcarDJGenerado(cod, fila.cambio);
-        // });
-
-        const resultadoGen = await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
-
-        // if (resultadoGen?.ok) {
-        //     resultadoGen.generadosOk.forEach(fila => {
-        //         const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
-        //         marcarDJGenerado(cod, fila.cambio);
-        //     });
-        // }
-        if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
-            marcarDJGeneradosBatch(
-                resultadoGen.generadosOk.map(fila => ({
-                    codPersonal: fila.codPersonal || fila.CODI_PERS || fila.id,
-                    fechaCambio: fila.cambio
-                }))
-            );
-        }
-
-        tblPersonasMigrado.redraw(true);
-
-        // Refrescar columna PDF en la tabla
-        tblPersonasMigrado.redraw(true);
     });
+
+    if (!isConfirmed) return;
+
+    const filasSeleccionadas = opcion === 'pendientes' ? pendientes : todasMigradas;
+
+    if (!filasSeleccionadas.length) {
+        Swal.fire({ icon: 'info', title: 'Sin pendientes', text: 'Todos los registros ya fueron generados. Usa "Todos" para regenerar.' });
+        return;
+    }
+
+    // ── NUEVO: cruzar DNIs contra tblPersonas ──────────────────
+    const dnisMigrados     = filasSeleccionadas.map(f => f.dni);
+    const todasEnTabla1    = tblPersonas.getData();
+    const filasDesdeTabla1 = todasEnTabla1.filter(f => dnisMigrados.includes(f.dni));
+
+    if (!filasDesdeTabla1.length) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin coincidencias',
+            text: 'No se encontraron los registros migrados en la tabla de listos/pendientes.'
+        });
+        return;
+    }
+
+    const confirmacion = await Swal.fire({
+        icon: 'question',
+        title: 'Confirmar generación',
+        html: `Se generará <b>1 PDF</b> con <b>${filasDesdeTabla1.length}</b> declaración(es).<br>¿Desea continuar?`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, generar',
+        cancelButtonText: 'Cancelar'
+    });
+    if (!confirmacion.isConfirmed) return;
+
+    // Usar filasDesdeTabla1 y source 'pendiente' para tomar datos frescos
+    const resultadoGen = await _generarUnificado(filasDesdeTabla1, 'DJ_Unificado_Migrados', 'pendiente');
+
+    if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
+        // Marcar usando los codPersonal originales de la tabla de migrados (por DNI)
+        const marcados = resultadoGen.generadosOk.map(fila1 => {
+            const filaMig = filasSeleccionadas.find(f => f.dni === fila1.dni);
+            return {
+                codPersonal: filaMig?.codPersonal || filaMig?.CODI_PERS || filaMig?.id,
+                fechaCambio: filaMig?.cambio
+            };
+        }).filter(x => x.codPersonal);
+
+        marcarDJGeneradosBatch(marcados);
+    }
+
+    tblPersonasMigrado.redraw(true);
+});
+
+    // btnDJUnificadoMigrado?.addEventListener('click', async function () {
+
+    //     // Todas las filas migradas visibles en la tabla
+    //     const todasMigradas = tblPersonasMigrado.getData("active")
+    //         .filter(fila => fila.migrado === 'Migrado');
+
+    //     if (!todasMigradas.length) {
+    //         Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros migrados visibles.' });
+    //         return;
+    //     }
+
+    //     // Separar pendientes vs ya generados
+    //     const pendientes   = todasMigradas.filter(f => !estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+    //     const yaGenerados  = todasMigradas.filter(f =>  estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+
+    //     // Elegir qué generar
+    //     const { value: opcion, isConfirmed } = await Swal.fire({
+    //         title: 'DJ Unificado — Migrados',
+    //         html: `
+    //             <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
+    //                 <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend">
+    //                     <input type="radio" name="djopcion" value="pendientes" ${pendientes.length ? '' : 'disabled'}
+    //                         style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+    //                     <div>
+    //                         <div style="font-weight:600;color:${pendientes.length ? '#111827' : '#9ca3af'};">
+    //                             Solo pendientes
+    //                             <span style="margin-left:6px;background:${pendientes.length ? '#dcfce7' : '#f3f4f6'};color:${pendientes.length ? '#16a34a' : '#9ca3af'};font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+    //                                 ${pendientes.length}
+    //                             </span>
+    //                         </div>
+    //                         <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+    //                             Registros sin ✅ o con cambios nuevos desde la última generación
+    //                         </div>
+    //                     </div>
+    //                 </label>
+    //                 <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-todos">
+    //                     <input type="radio" name="djopcion" value="todos"
+    //                         style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+    //                     <div>
+    //                         <div style="font-weight:600;color:#111827;">
+    //                             Todos los migrados
+    //                             <span style="margin-left:6px;background:#dbeafe;color:#1e40af;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+    //                                 ${todasMigradas.length}
+    //                             </span>
+    //                         </div>
+    //                         <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+    //                             Incluye los ${yaGenerados.length} ya generados anteriormente
+    //                         </div>
+    //                     </div>
+    //                 </label>
+    //             </div>
+    //         `,
+    //         showCancelButton: true,
+    //         confirmButtonText: 'Generar PDF',
+    //         cancelButtonText: 'Cancelar',
+    //         didOpen: () => {
+    //             // Seleccionar por defecto "pendientes" si hay, sino "todos"
+    //             const radios = document.querySelectorAll('input[name="djopcion"]');
+    //             radios.forEach(r => {
+    //                 r.addEventListener('change', () => {
+    //                     document.getElementById('lbl-pend').style.borderColor  = r.value === 'pendientes' && r.checked ? '#6366f1' : '#e5e7eb';
+    //                     document.getElementById('lbl-todos').style.borderColor = r.value === 'todos'      && r.checked ? '#6366f1' : '#e5e7eb';
+    //                 });
+    //             });
+    //             const def = pendientes.length ? 'pendientes' : 'todos';
+    //             const defRadio = document.querySelector(`input[name="djopcion"][value="${def}"]`);
+    //             if (defRadio) {
+    //                 defRadio.checked = true;
+    //                 document.getElementById(def === 'pendientes' ? 'lbl-pend' : 'lbl-todos').style.borderColor = '#6366f1';
+    //             }
+    //         },
+    //         preConfirm: () => {
+    //             const sel = document.querySelector('input[name="djopcion"]:checked');
+    //             if (!sel) { Swal.showValidationMessage('Selecciona una opción.'); return false; }
+    //             return sel.value;
+    //         }
+    //     });
+
+    //     if (!isConfirmed) return;
+
+    //     const filasFinales = opcion === 'pendientes' ? pendientes : todasMigradas;
+
+    //     if (!filasFinales.length) {
+    //         Swal.fire({ icon: 'info', title: 'Sin pendientes', text: 'Todos los registros ya fueron generados. Usa "Todos" para regenerar.' });
+    //         return;
+    //     }
+
+    //     const confirmacion = await Swal.fire({
+    //         icon: 'question',
+    //         title: 'Confirmar generación',
+    //         html: `Se generará <b>1 PDF</b> con <b>${filasFinales.length}</b> declaración(es).<br>¿Desea continuar?`,
+    //         showCancelButton: true,
+    //         confirmButtonText: 'Sí, generar',
+    //         cancelButtonText: 'Cancelar'
+    //     });
+    //     if (!confirmacion.isConfirmed) return;
+
+    //     // Generar y marcar al terminar
+    //     // await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
+
+    //     // // Marcar todos los incluidos como generados
+    //     // filasFinales.forEach(fila => {
+    //     //     const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+    //     //     marcarDJGenerado(cod, fila.cambio);
+    //     // });
+
+    //     const resultadoGen = await _generarUnificado(filasFinales, 'DJ_Unificado_Migrados');
+
+    //     // if (resultadoGen?.ok) {
+    //     //     resultadoGen.generadosOk.forEach(fila => {
+    //     //         const cod = fila.codPersonal || fila.CODI_PERS || fila.id;
+    //     //         marcarDJGenerado(cod, fila.cambio);
+    //     //     });
+    //     // }
+    //     if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
+    //         marcarDJGeneradosBatch(
+    //             resultadoGen.generadosOk.map(fila => ({
+    //                 codPersonal: fila.codPersonal || fila.CODI_PERS || fila.id,
+    //                 fechaCambio: fila.cambio
+    //             }))
+    //         );
+    //     }
+
+    //     tblPersonasMigrado.redraw(true);
+
+    //     // Refrescar columna PDF en la tabla
+    //     tblPersonasMigrado.redraw(true);
+    // });
 
     // ============================================================
     // DJ UNIFICADO — Pendientes
@@ -1134,7 +1302,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             try {
-                const payload = await obtenerDatosPersonales(codiPers, source);
+                //const payload = await obtenerDatosPersonales(codiPers, source);
+                const payload = await obtenerDatosConRetry(codiPers, source);
                 await llenarFormulario(payload.data);
                 renderFamiliares(payload.familiares);
 
@@ -1161,8 +1330,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // await new Promise(resolve => setTimeout(resolve, 250));
-            await new Promise(r => setTimeout(r, PAUSA_ENTRE_REGISTROS));
-            
+           // await new Promise(r => setTimeout(r, PAUSA_ENTRE_REGISTROS));
+            const pausa = filas.length > 30
+    ? PAUSA_ENTRE_REGISTROS * 1.5
+    : PAUSA_ENTRE_REGISTROS;
+await new Promise(r => setTimeout(r, pausa));
         }
 
         if (pdfBlobs.length === 0) {
@@ -1445,7 +1617,7 @@ async function llenarFormulario(data) {
 
     setValue('#grado_instruccion', data.PERS_GRADO_INSTRUCCION ? data.PERS_GRADO_INSTRUCCION.trim() : '');
     if(data.CARR_CODIGO  == '999999'){
-        setValue('#institucion',      '999999');
+        setValue('#institucion',     data.IEDU_CODIGO   ? data.IEDU_CODIGO.trim()     :  '299999999');
         if (data.IEDU_CODIGO && window.allCarreras) {
             const selCarrera = document.getElementById('carrera');
             if (selCarrera) {

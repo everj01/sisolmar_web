@@ -8,6 +8,31 @@ import Swal from 'sweetalert2';
 const API_URL_PDF = `${VITE_URL_APP}/api`;
 const FONT_FAMILY = "helvetica";
 
+async function fetchFotoConRetry(codiPers, maxReintentos = 3) {
+    for (let intento = 0; intento <= maxReintentos; intento++) {
+        try {
+            const resp = await axios.get(`${API_URL_PDF}/dj/proxy-foto`, {
+                params: { codi_pers: codiPers }
+            });
+            if (resp.data?.success && resp.data?.base64) return resp.data.base64;
+            return null; // foto no existe, no reintentar
+        } catch (err) {
+            if (err?.response?.status === 429 && intento < maxReintentos) {
+                const retryAfter = err.response?.headers?.['retry-after'];
+                const espera = retryAfter
+                    ? parseInt(retryAfter) * 1000
+                    : 1000 * Math.pow(2, intento);
+                console.warn(`[429] proxy-foto ${codiPers} — reintento ${intento + 1}`);
+                await new Promise(r => setTimeout(r, espera));
+                continue;
+            }
+            console.warn('No se pudo obtener foto via proxy:', err);
+            return null;
+        }
+    }
+    return null;
+}
+
 function drawFotoBorder(pdf, x, y, w, h, leftWidth = 0.6, otherWidth = 0.20) {
     pdf.setDrawColor(0);
 
@@ -35,8 +60,10 @@ export async function drawFotoEnPDF(pdf, x, y, w, h) {
                     const pathParts = urlObj.pathname.split('/');
                     const filename = pathParts[pathParts.length - 1];
                     const codiPers = filename.replace('.jpg','').replace('.jpeg','').replace('.png','');
-                    const resp = await axios.get(`${API_URL_PDF}/dj/proxy-foto`, { params: { codi_pers: codiPers } });
-                    if (resp.data?.success && resp.data?.base64) imageSrc = resp.data.base64;
+                    // const resp = await axios.get(`${API_URL_PDF}/dj/proxy-foto`, { params: { codi_pers: codiPers } });
+                    // if (resp.data?.success && resp.data?.base64) imageSrc = resp.data.base64;
+                    const base64 = await fetchFotoConRetry(codiPers);
+if (base64) imageSrc = base64;
                 } catch (proxyErr) {
                     console.warn('No se pudo obtener foto via proxy:', proxyErr);
                 }

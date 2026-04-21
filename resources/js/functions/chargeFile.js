@@ -141,7 +141,7 @@ function seleccionarPrimeraSucursalValida() {
 
     const primeraOpcionValida = [...select.options].find(opt =>
         opt.value &&
-        opt.value !== "00" &&
+       // opt.value !== "00" &&
         opt.value !== "-Seleccionar-" &&
         !opt.disabled
     );
@@ -361,60 +361,64 @@ const tblDocs = new Tabulator("#tblDocs", {
                 }
 
                 if (e.target.classList.contains('viewdoc-btn')) {
-                    const dataTbl = cell.getRow().getData();
-                    const codFolio = dataTbl.codFolio;
-                    const codPersonal = dataTbl.codPersonal;
-                    const nombre = dataTbl.personal;
-                    const documento = dataTbl.documento;
+                     const dataTbl = cell.getRow().getData();
+    const codPersonal = dataTbl.codPersonal;
 
-                    axios.get(`${VITE_URL_APP}/api/get-view-documents/${codPersonal}/${codFolio}`)
-                        .then(response => {
-                            console.log(response);
+    window.open(`${VITE_URL_APP}/ver-dj/${codPersonal}`, '_blank');
+                    // const dataTbl = cell.getRow().getData();
+                    // const codFolio = dataTbl.codFolio;
+                    // const codPersonal = dataTbl.codPersonal;
+                    // const nombre = dataTbl.personal;
+                    // const documento = dataTbl.documento;
 
-                            if (response.data.success !== true) {
-                                Swal.fire({
-                                    title: "No se encontro documentos válidos",
-                                    icon: "info"
-                                });
-                                return;
-                            }
+                    // axios.get(`${VITE_URL_APP}/api/get-view-documents/${codPersonal}/${codFolio}`)
+                    //     .then(response => {
+                    //         console.log(response);
 
-                            document.querySelector('#modal-view-docs .modal-title').textContent = `${nombre}`;
-                            document.querySelector('#modal-view-docs #txtDocSelec').textContent = `${documento}`;
+                    //         if (response.data.success !== true) {
+                    //             Swal.fire({
+                    //                 title: "No se encontro documentos válidos",
+                    //                 icon: "info"
+                    //             });
+                    //             return;
+                    //         }
 
-                            const rutas = response.data.rutas;
-                            const visor = document.getElementById('visorDocs');
-                            visor.innerHTML = '';
+                    //         document.querySelector('#modal-view-docs .modal-title').textContent = `${nombre}`;
+                    //         document.querySelector('#modal-view-docs #txtDocSelec').textContent = `${documento}`;
 
-                            // ✅ Si codFolio es 25, previsualizar como PDF
-                            if (parseInt(codFolio) === 25) {
-                                rutas.forEach(ruta => {
-                                    visor.insertAdjacentHTML('beforeend', `
-                                        <iframe 
-                                            src="http://${ruta}" 
-                                            class="w-full mb-3 rounded-md" 
-                                            style="height: 600px; border: none;"
-                                        ></iframe>
-                                    `);
-                                });
-                            } else {
-                                // Para los demás folios → imágenes como antes
-                                rutas.forEach(ruta => {
-                                    visor.insertAdjacentHTML('beforeend', `
-                                        <img src="http://${ruta}" class="w-full max-w-[700px] mb-3 rounded-md" />
-                                    `);
-                                });
-                            }
+                    //         const rutas = response.data.rutas;
+                    //         const visor = document.getElementById('visorDocs');
+                    //         visor.innerHTML = '';
 
-                            document.getElementById('btn-modal-view-docs').click();
-                        })
-                        .catch(error => {
-                            console.error("Error al obtener los datos:", error);
-                            Swal.fire({
-                                title: "Problema al encontrar documentos",
-                                icon: "error"
-                            });
-                        });
+                    //         // ✅ Si codFolio es 25, previsualizar como PDF
+                    //         if (parseInt(codFolio) === 25) {
+                    //             rutas.forEach(ruta => {
+                    //                 visor.insertAdjacentHTML('beforeend', `
+                    //                     <iframe 
+                    //                         src="${ruta}" 
+                    //                         class="w-full mb-3 rounded-md" 
+                    //                         style="height: 600px; border: none;"
+                    //                     ></iframe>
+                    //                 `);
+                    //             });
+                    //         } else {
+                    //             // Para los demás folios → imágenes como antes
+                    //             rutas.forEach(ruta => {
+                    //                 visor.insertAdjacentHTML('beforeend', `
+                    //                     <img src="http://${ruta}" class="w-full max-w-[700px] mb-3 rounded-md" />
+                    //                 `);
+                    //             });
+                    //         }
+
+                    //         document.getElementById('btn-modal-view-docs').click();
+                    //     })
+                    //     .catch(error => {
+                    //         console.error("Error al obtener los datos:", error);
+                    //         Swal.fire({
+                    //             title: "Problema al encontrar documentos",
+                    //             icon: "error"
+                    //         });
+                    //     });
                 }
             },
             rowFormatter: function (row) {

@@ -98,7 +98,7 @@ class DjController extends Controller
             $familiaresTable = ($sourceTable === 'DJ2026_PERSONAL')
                 ? 'si_solm.dbo.DJ2026_DERECHO_HABIENTE'
                 : ($source === 'pendiente'
-                    ? 'si_solm.dbo.DERECHO_HABIENTE'
+                    ? 'si_solm.dbo.DJ2026_DERECHO_HABIENTE'
                     : 'sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE');
 
             $familiares = DB::select(
@@ -108,6 +108,7 @@ class DjController extends Controller
                 FECH_NACI AS FECH_NACI2
                 FROM {$familiaresTable}
                 WHERE CODI_PERS = ?
+                AND TIPO_RELA IN ('MADRE', 'PADRE', 'HIJO', 'CONYUGE')
                 ORDER BY TIPO_RELA",
                 [$codiPers]
             );
@@ -460,13 +461,27 @@ class DjController extends Controller
                 return response()->json(['success' => false, 'message' => 'Código requerido'], 400);
             }
 
-            $backup = DB::select(
-                'SELECT per.*, CO.ESCI_DESCRIPCION, SS.DESC_SIST_PENS, edu.NIED_ABREVIADO FROM si_solm.dbo.DJ2026_BACKUP_PERSONAL as per
-            LEFT JOIN si_solm.dbo.ADMI_ESTADO_CIVIL AS CO ON CO.ESCI_CODIGO = per.ESCI_CODIGO
-            LEFT JOIN si_solm.dbo.SISTEMA_PENSIONES AS SS ON SS.CODI_SIST_PENS = per.CODI_SIST_PENS
-            LEFT JOIN si_solm.dbo.SUNAT_NIVEL_EDUCATIVO AS EDU ON EDU.NIED_CODIGO = per.PERS_GRADO_INSTRUCCION WHERE per.CODI_PERS = ?',
+           $backup = DB::select(
+                'SELECT per.*, CO.ESCI_DESCRIPCION, SS.DESC_SIST_PENS, edu.NIED_ABREVIADO 
+                FROM si_solm.dbo.DJ2026_BACKUP_PERSONAL as per
+                LEFT JOIN si_solm.dbo.ADMI_ESTADO_CIVIL AS CO ON CO.ESCI_CODIGO = per.ESCI_CODIGO
+                LEFT JOIN si_solm.dbo.SISTEMA_PENSIONES AS SS ON SS.CODI_SIST_PENS = per.CODI_SIST_PENS
+                LEFT JOIN si_solm.dbo.SUNAT_NIVEL_EDUCATIVO AS EDU ON EDU.NIED_CODIGO = per.PERS_GRADO_INSTRUCCION 
+                WHERE per.CODI_PERS = ?',
                 [$codiPers]
             );
+
+            if (empty($backup)) {
+                $backup = DB::select(
+                    'SELECT per.*, CO.ESCI_DESCRIPCION, SS.DESC_SIST_PENS, edu.NIED_ABREVIADO 
+                    FROM si_solm.dbo.PERSONAL as per
+                    LEFT JOIN si_solm.dbo.ADMI_ESTADO_CIVIL AS CO ON CO.ESCI_CODIGO = per.ESCI_CODIGO
+                    LEFT JOIN si_solm.dbo.SISTEMA_PENSIONES AS SS ON SS.CODI_SIST_PENS = per.CODI_SIST_PENS
+                    LEFT JOIN si_solm.dbo.SUNAT_NIVEL_EDUCATIVO AS EDU ON EDU.NIED_CODIGO = per.PERS_GRADO_INSTRUCCION 
+                    WHERE per.CODI_PERS = ?',
+                    [$codiPers]
+                );
+            }
 
             if (empty($backup)) {
                 return response()->json(['success' => false, 'message' => 'Sin registro previo']);
