@@ -11,6 +11,7 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\BiometricoController; 
 
 /*
 |--------------------------------------------------------------------------
@@ -46,9 +47,13 @@ Route::get('/get-folios-personas', [FileController::class, 'getFoliosXPersonas']
 Route::get('/get-folios-persona_uno', [FileController::class, 'getFoliosXPersona_uno']);
 Route::get('/get-folios/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo']);
 Route::get('/get-folios-cliente-cargo', [FileController::class, 'getFoliosClienteCargo']);
+Route::get('/get-sucursales-folio', [FileController::class, 'getSucursales']);
+
 
 
 Route::get('/get-view-documents/{codPersonal}/{codFolio}', [FileController::class, 'getViewDocumentsPer']);
+
+Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
 
 
 Route::get('/get-folios-comercial/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo_comercial']);
@@ -111,7 +116,6 @@ Route::get('/get-matriculas-migra-personal/{cursoId}', [CapacitacionController::
 Route::get('/get-historial-capacitaciones/{personalId}', [CapacitacionController::class, 'getHistorialCapacitaciones']);
 Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'buscarPersonalCapacitacion']);
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
-
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 
 

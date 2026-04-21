@@ -19,7 +19,7 @@ document.getElementById("page-size-personas")
 
 const tblPersonas = new Tabulator("#tblPersonas", {
     height: "100%",
-    layout: "fitDataFill",
+    layout: "fitColumns",
     responsiveLayout: "collapse",
 
     ajaxURL: `${VITE_URL_APP}/api/get-personal-total`,
@@ -47,31 +47,59 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         { title: "Nro Doc.", field: "nroDoc", hozAlign: "center", width: '15%', responsive: false },
         { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '18%', responsive: 0 },
         {
-            title: "Acciones", field: "acciones", width: 160, hozAlign: "center", headerSort: false, responsive: false,
+            title: "Acciones", field: "acciones", width: 220, hozAlign: "center", headerSort: false, responsive: false,
             formatter: function (cell) {
                 var docsBtn = `<button type="button" class="btn rounded-full docs-btn bg-success/25 text-success hover:bg-success hover:text-white">Folios</button>`;
                 var legajoBtn = `<button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white">Legajos</button>`;
-                return docsBtn + ' ' + legajoBtn;
+                var bioBtn = `<button type="button" class="btn rounded-full bio-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-fingerprint bio-btn"></i></button>`;
+                return docsBtn + ' ' + legajoBtn + ' ' + bioBtn;
             },
-            cellClick: function (e, cell) {
-                const registro = cell.getRow().getData();
-                const codigo = registro.CODI_PERS;
-                const persona = registro.personal;
-                document.getElementById('codPersonal').value = codigo;
+           cellClick: function (e, cell) {
+    const registro = cell.getRow().getData();
+    const codigo = registro.CODI_PERS;
+    const persona = registro.personal;
+    document.getElementById('codPersonal').value = codigo;
 
-                getDocsObligatorios(codigo);
+    getDocsObligatorios(codigo);
 
-                if (e.target.classList.contains('docs-btn')) {
-                    document.getElementById('dataDocs').classList.remove('hidden');
-                    document.getElementById('dataDocsLeg').classList.add('hidden');
-                    document.getElementById('divCoincidencias').classList.add('hidden');
-                } else {
-                    document.getElementById('dataDocsLeg').classList.remove('hidden');
-                    document.getElementById('dataDocs').classList.add('hidden');
-                }
+    if (e.target.classList.contains('docs-btn')) {
+        document.getElementById('dataDocs').classList.remove('hidden');
+        document.getElementById('dataDocsLeg').classList.add('hidden');
+        document.getElementById('divCoincidencias').classList.add('hidden');
 
-                updateCardTitle(persona);
+    } else if (e.target.classList.contains('bio-btn')) {
+        Swal.fire({
+            title: persona,
+            html: `
+                <div class="flex justify-center gap-4 mt-3">
+                    <button id="btnVerHuella" class="swal2-confirm swal2-styled">
+                        <i class="fa fa-fingerprint me-1"></i> Ver Huella
+                    </button>
+                    <button id="btnVerFirma" class="swal2-confirm swal2-styled" style="background-color:#6c757d">
+                        <i class="fa fa-pen me-1"></i> Ver Firma
+                    </button>
+                </div>`,
+            showConfirmButton: false,
+            showCloseButton: true,
+            didOpen: () => {
+                document.getElementById('btnVerHuella').addEventListener('click', () => {
+                    Swal.close();
+                    verBiometrico(codigo, persona, 'huella');
+                });
+                document.getElementById('btnVerFirma').addEventListener('click', () => {
+                    Swal.close();
+                    verBiometrico(codigo, persona, 'firma');
+                });
             }
+        });
+
+    } else if (e.target.classList.contains('legajo-btn')) {
+        document.getElementById('dataDocsLeg').classList.remove('hidden');
+        document.getElementById('dataDocs').classList.add('hidden');
+    }
+
+    updateCardTitle(persona);
+}
         },
     ],
 
@@ -465,7 +493,6 @@ const tblLegajos = new Tabulator("#tblDocsLegajo", {
 //Tabla de Coincidencias
 const tblPersonasCN = new Tabulator("#tblPersonasCN", {
     height: "100%",
-    layout: "fitDataFill",
     responsiveLayout: "collapse",
     columns: [
         { title: "Código", field: "CODI_PERS", hozAlign: "center", width: '10%' },
@@ -825,6 +852,40 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
             });
     }
 });
+
+function verBiometrico(codigo, persona, tipo) {
+    // Mostrar loading
+    Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    axios.get(`${VITE_URL_APP}/api/get-biometrico/${codigo}`)
+        .then(response => {
+            Swal.close();
+
+            const data = response.data;
+            const antigua = tipo === 'huella' ? data.huella_antigua : data.firma_antigua;
+            const nueva   = tipo === 'huella' ? data.huella_nueva   : data.firma_nueva;
+
+            // Título del modal
+            document.getElementById('modal-bio-title').textContent =
+                `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} de ${persona}`;
+
+            // Imagen antigua
+            document.getElementById('bio-img-antigua').innerHTML = antigua
+                ? `<img src="${antigua}" style="width:100%; height:250px; object-fit:contain; border-radius:0.5rem;" />`
+                : `<span style="color:#9ca3af;">Sin imagen antigua</span>`;
+
+            // Imagen nueva
+            document.getElementById('bio-img-nueva').innerHTML = nueva
+                ? `<img src="${nueva}" style="width:100%; height:250px; object-fit:contain; border-radius:0.5rem;" />`
+                : `<span style="color:#9ca3af;">Sin imagen nueva</span>`;
+
+            // Abrir modal
+            document.getElementById('btn-modal-biometrico').click();
+        })
+        .catch(() => {
+            Swal.fire({ title: 'Error al obtener biométrico', icon: 'error' });
+        });
+}
 
 window.addEventListener("sidebar-toggled", () => {
     tblPersonas?.redraw(true);

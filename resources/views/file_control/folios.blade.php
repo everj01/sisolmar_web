@@ -194,6 +194,9 @@
                         </div> 
                     </div>
                     <br>
+               
+
+                    <br>
                     <div class="flex space-x-4">
                         <div class="flex items-center w-full">
                             <input type="checkbox" id="switchVencimiento" class="form-switch text-danger">
@@ -229,6 +232,24 @@
                             <label class="ms-1.5" for="radioOTROS">OTROS</label>
                         </div>  -->
                     </div>
+
+                    <!-- Campo Sucursales - va después del switch de Vencimiento -->
+<div class="mb-3">
+    <div class="tag-label">Sucursales</div>
+    <div style="position: relative;">
+        <div id="sucursalTagWrapper" class="tag-wrapper">
+            <input 
+                type="text" 
+                id="sucursalInput" 
+                class="tag-input" 
+                placeholder="Buscar sucursal..."
+                autocomplete="off"
+            />
+        </div>
+        <div id="sucursalSugerencias" class="tag-suggestions"></div>
+    </div>
+    <div class="tag-hint">⌨ Escribe para buscar · ↑↓ para navegar · Enter para agregar</div>
+</div>
 
                 </div>
                 

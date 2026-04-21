@@ -502,6 +502,37 @@
 </div>
 
 
+<!-- MODAL BIOMÉTRICO -->
+<div id="modal-biometrico"
+    class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none px-4">
+<div class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 w-full mt-32 mx-auto flex flex-col bg-white shadow-sm rounded pointer-events-auto" style="max-width: 600px;">        <div class="flex justify-between items-center py-3 px-4 border-b border-default-200">
+            <h3 class="text-lg font-medium text-default-900" id="modal-bio-title">Biométrico</h3>
+            <button type="button" data-hs-overlay="#modal-biometrico" class="text-default-600 cursor-pointer">
+                <i class="i-tabler-x text-lg"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="text-center">
+                    <p class="font-semibold text-default-700 mb-2">Antiguo / Actual</p>
+                    <div id="bio-img-antigua"
+                        style="display: flex; justify-content: center; align-items: center; min-height: 200px; background: #f3f4f6; border-radius: 0.5rem; padding: 0.5rem;">
+                        <span class="text-gray-400">Sin imagen</span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="font-semibold text-default-700 mb-2">Nuevo</p>
+                    <div id="bio-img-nueva"
+                        style="display: flex; justify-content: center; align-items: center; min-height: 200px; background: #f3f4f6; border-radius: 0.5rem; padding: 0.5rem;">
+                        <span class="text-gray-400">Sin imagen</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<button type="button" class="hidden" id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico"></button>
+
 @endsection
 
 @section('script')
