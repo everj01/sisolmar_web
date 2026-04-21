@@ -50,6 +50,9 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+         "dev": [
+            "npx concurrently \"php artisan serve\" \"npm run dev\""
         ]
     },
     "extra": {
@@ -58,6 +61,7 @@
         }
     },
     "config": {
+        "process-timeout": 0,
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,

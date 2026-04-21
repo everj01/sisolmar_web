@@ -9,42 +9,10 @@ use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\ReporteController;
 
 
-Route::get('/preview-email-caducidad', function () {
-    return new AlertaCaducidadMail([
-        'nombre_personal' => 'Juan Pérez',
-        'nombre_empresa'  => 'SISOLMAR',
-        'documentos' => [
-            [
-                'nombre' => 'Certificado Médico',
-                'tipo' => 'PRINCIPAL',
-                'fecha_caducidad' => '05/02/2026',
-                'dias_restantes' => 5
-            ],
-            [
-                'nombre' => 'Antecedentes Policiales',
-                'tipo' => 'ADICIONAL',
-                'fecha_caducidad' => '10/02/2026',
-                'dias_restantes' => 10
-            ],
-        ]
-    ]);
-});
-
-Route::get('/test-email-caducidad', function () {
-
-    Mail::to('webmaster@gruposolmar.com.pe')
-        ->send(new AlertaCaducidadMail([
-            'nombre_empresa'  => 'SISOLMAR'
-        ]));
-
-    return 'Correo enviado (si no hubo error)';
-});
-
-
+Route::get('/login',[LoginController::class, 'index'])->name('login');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/login',[LoginController::class, 'index'])->name('login');
-    Route::post('/login/validar', [LoginController::class, 'validar']);
+
     Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
 
     Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
@@ -100,11 +68,43 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/pdf_vacio', [FileController::class, 'pdf_vacio']);
     Route::post('/dash-rrhh', [FileController::class, 'dashboard']);
-    Route::post('/logout', [LoginController::class, 'logout']);
     Route::post('/generar-pdf', [FileController::class, 'generarPDF']);
     Route::post('/generar-pdf2', [FileController::class, 'generarPDF2']);
     Route::post('/save_cargo', [FileController::class, 'saveCargo']);
     Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
+});
+
+// test email - Pruebas de correos
+
+Route::get('/preview-email-caducidad', function () {
+    return new AlertaCaducidadMail([
+        'nombre_personal' => 'Juan Pérez',
+        'nombre_empresa'  => 'SISOLMAR',
+        'documentos' => [
+            [
+                'nombre' => 'Certificado Médico',
+                'tipo' => 'PRINCIPAL',
+                'fecha_caducidad' => '05/02/2026',
+                'dias_restantes' => 5
+            ],
+            [
+                'nombre' => 'Antecedentes Policiales',
+                'tipo' => 'ADICIONAL',
+                'fecha_caducidad' => '10/02/2026',
+                'dias_restantes' => 10
+            ],
+        ]
+    ]);
+});
+
+Route::get('/test-email-caducidad', function () {
+
+    Mail::to('webmaster@gruposolmar.com.pe')
+        ->send(new AlertaCaducidadMail([
+            'nombre_empresa'  => 'SISOLMAR'
+        ]));
+
+    return 'Correo enviado (si no hubo error)';
 });
 
 require __DIR__ . '/auth.php';

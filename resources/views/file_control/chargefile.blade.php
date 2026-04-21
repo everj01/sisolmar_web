@@ -1,495 +1,327 @@
 @extends('layouts.vertical', ['title' => 'Carga de archivos'])
 
-@section('css')
-
-@endsection
-
 @section('content')
 
-@include("layouts.shared/page-title", ["subtitle" => "Recursos Humanos", "title" => "File Control"])
+@include('layouts.shared/page-title', ['subtitle' => 'Recursos Humanos', 'title' => 'File Control'])
 
-<style>
-    /* Contenedor de la paginación */
-.tabulator-paginator {
-    display: flex;
-    gap: 0.5rem; /* separación entre botones */
-    justify-content: center; /* centra horizontalmente */
-    margin-top: 1rem;
-}
-
-/* Cada botón de página */
-.tabulator-page {
-    display: inline-block;
-    padding: 0.3rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    background-color: #f9f9f9;
-    transition: all 0.2s;
-}
-
-/* Hover */
-.tabulator-page:hover {
-    background-color: #e2e8f0; /* un gris claro */
-}
-
-/* Página activa */
-.tabulator-page.active {
-    background-color: #3b82f6; /* azul */
-    color: white;
-    border-color: #3b82f6;
-}
-
-
-.fila-no-vigente {
-    background-color: #ffeaea !important;
-    color: #7a2222;
-}
-
-</style>
+{{-- =====================================================================
+     PANEL PRINCIPAL: Listado de personal + Folios / Legajos
+     ===================================================================== --}}
 <div class="grid lg:grid-cols-2 gap-6 mt-8">
+
+    {{-- ── CARD: Listado de Personal ────────────────────────────────────── --}}
     <div class="card overflow-hidden">
         <div class="card-header">
             <h4 class="card-title">Listado de Personal</h4>
         </div>
 
-        <div class="w-full px-5 py-2 mt-3 flex flex-wrap justify-between items-center gap-4">
-            <input type="text" id="buscarPersonal" placeholder="Buscar..." class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm uppercase" autocomplete="off" />
-            <div class="flex items-center space-x-2 w-80 justify-end">
-                <label for="sucursales" class="text-default-800 text-sm font-medium">Sucursal</label>
-                <select id="sucursal" class="form-select max-w-xs">
-                    <option disabled selected>-Seleccionar-</option>
-                    @foreach($sucursales as $sucursal)
-                    <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
+        <div class="px-5 pt-4 pb-2 space-y-3">
 
-
-        <div class="w-full px-5 py-2 flex flex-col md:flex-row justify-center items-center gap-4">
-            <!-- Tipo de personal -->
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioTodos" name="tipo_per" value="TODOS" checked>
-                    <label for="radioTodos">Todos</label>
-                </div>
-       
-                @if($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
-                     <div class="flex items-center space-x-2">
-                        <input type="radio" class="form-radio text-primary" id="radioAdmin" name="tipo_per" value="ADMIN">
-                        <label for="radioAdmin">Administrativo</label>
-                    </div>
-                @endif
-                 @if($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
-                <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="OPER">
-                    <label for="radioOper">Operativo</label>
-                </div>
-                @endif
-                @if($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
-                <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioEsp" name="tipo_per" value="ESPECIAL">
-                    <label for="radioEsp">Especial</label>
-                </div>
-                @endif
-                 
-            </div>
-
-            <!-- Vigencia del personal -->
-            <div class="flex flex-wrap items-center gap-4">
-                <label for="vigencia" class="text-default-800 text-sm font-medium">Vigencia: </label>
-                <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioTodosV" name="vigencia" value="" checked>
-                    <label for="radioTodosV">Todos</label>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radiooSi" name="vigencia" value="SI">
-                    <label for="radiooSi">Si</label>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <input type="radio" class="form-radio text-primary" id="radioNo" name="vigencia" value="NO">
-                    <label for="radioNo">No</label>
+            {{-- Búsqueda + Sucursal --}}
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <input
+                    type="text"
+                    id="buscarPersonal"
+                    placeholder="Buscar..."
+                    autocomplete="off"
+                    class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
+                           focus:outline-none focus:border-blue-500 transition-colors"
+                />
+                <div class="flex items-center gap-2">
+                    <label for="sucursal" class="text-sm font-medium text-gray-700 whitespace-nowrap">
+                        Sucursal
+                    </label>
+                    <select id="sucursal" class="form-select text-sm">
+                        <option disabled selected>— Seleccionar —</option>
+                        @foreach ($sucursales as $sucursal)
+                            <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
-        </div>
 
+            {{-- Filtros: Tipo de personal + Vigencia en una sola fila --}}
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-2 py-1">
 
-        <!-- <div class="w-full px-5 py-2 mt-3">
-            <div id="tblPersonas" class="w-full mt-5"></div>
-        </div> -->
+                {{-- Tipo de personal --}}
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</span>
 
-        <div class="w-full px-5 py-2 mt-3">
-            <div id="tblPersonas" class="w-full mb-5"></div>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" class="form-radio text-primary" id="radioTodos" name="tipo_per" value="TODOS" checked>
+                        <span class="text-sm">Todos</span>
+                    </label>
 
-            <div class="flex justify-between items-center mb-2">
-
-                <div class="flex items-center gap-3">
-                    
-
-                    <div class="flex items-center gap-2">
-                        <label for="page-size-personas" class="text-sm text-gray-600">
-                            Mostrar
+                    @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" class="form-radio text-primary" id="radioAdmin" name="tipo_per" value="ADMIN">
+                            <span class="text-sm">Administrativo</span>
                         </label>
+                    @endif
 
-                        <select id="page-size-personas"
-                            class="w-20 px-3 py-1.5 pr-8 text-sm border border-gray-300 rounded-lg 
-                                    focus:ring-primary focus:border-primary bg-white
-                                    bg-none appearance-auto">
-                            <option value="5">5</option>
-                            <option value="10" selected>10</option>
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                        </select>
+                    @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="OPER">
+                            <span class="text-sm">Operativo</span>
+                        </label>
+                    @endif
 
-                        <span class="text-sm text-gray-600">registros</span>
+                    @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" class="form-radio text-primary" id="radioEsp" name="tipo_per" value="ESPECIAL">
+                            <span class="text-sm">Especial</span>
+                        </label>
+                    @endif
+                </div>
+
+                {{-- Separador vertical --}}
+                <div class="hidden sm:block w-px h-5 bg-gray-200"></div>
+
+                {{-- Vigencia --}}
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Vigencia</span>
+
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" class="form-radio text-primary" id="radioTodosV" name="vigencia" value="" checked>
+                        <span class="text-sm">Todos</span>
+                    </label>
+
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" class="form-radio text-primary" id="radiooSi" name="vigencia" value="SI">
+                        <span class="text-sm">Sí</span>
+                    </label>
+
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" class="form-radio text-primary" id="radioNo" name="vigencia" value="NO">
+                        <span class="text-sm">No</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        {{-- Tabla de personas --}}
+        <div class="px-5 pb-5">
+            <div id="tblPersonas" class="w-full"></div>
+
+            {{-- Footer: selector de registros + info + paginación --}}
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-3">
+                <div class="flex items-center gap-2">
+                    <label for="page-size-personas" class="text-sm text-gray-600">Mostrar</label>
+                    <select id="page-size-personas" class="form-select text-sm w-20">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                    <span class="text-sm text-gray-600">registros</span>
+                    <div id="tablaInfo" class="text-sm text-gray-500 pl-2 border-l border-gray-200">
+                        Cargando...
                     </div>
-
-                    <div id="tablaInfo" class="text-sm text-gray-700">Cargando...</div>
-
                 </div>
-
                 <div id="tablaPaginacion"></div>
-
             </div>
-
-            
-            <!-- <div class="flex justify-between items-center mb-2">
-                <div id="tablaInfo" class="text-sm text-gray-700">Cargando...</div>
-                <div id="tablaPaginacion"></div>
-            </div> -->
         </div>
-
     </div>
 
+    {{-- ── CARD: Folios del personal ────────────────────────────────────── --}}
     <div id="dataDocs" class="card hidden">
-        <div class="card-header">
+        <div class="card-header flex items-center justify-between">
             <h4 class="card-title nombrePersDocs">Folios de</h4>
-        </div>
-        <div class="w-full px-5 py-2 flex flex-col">
-            <div class="flex justify-center items-center gap-4 mb-4 mt-4">
-                <div class="form-check">
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-1.5 cursor-pointer">
                     <input type="radio" class="form-radio text-primary" id="radioPrin" name="tipo_folio" value="PRINCIPAL" checked>
-                    <label class="ms-1.5" for="radioPrin">Principal</label>
-                </div>
-                <div class="form-check">
+                    <span class="text-sm">Principal</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
                     <input type="radio" class="form-radio text-primary" id="radioAux" name="tipo_folio" value="ADICIONAL">
-                    <label class="ms-1.5" for="radioAux">Adicional</label>
-                </div>
+                    <span class="text-sm">Adicional</span>
+                </label>
             </div>
-            <div class="w-full px-5 py-2 mt-3">
-                <input type="text" id="buscarFolio" placeholder="Buscar..."
-                    class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm uppercase" autocomplete="off"/>
-                <div id="tblDocs" class="w-full flex-grow mt-3"></div>
-            </div>
+        </div>
+
+        <div class="px-5 py-4 space-y-3">
+            <input
+                type="text"
+                id="buscarFolio"
+                placeholder="Buscar..."
+                autocomplete="off"
+                class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
+                       focus:outline-none focus:border-blue-500 transition-colors"
+            />
+            <div id="tblDocs" class="w-full"></div>
         </div>
     </div>
 
+    {{-- ── CARD: Legajos del personal ───────────────────────────────────── --}}
     <div id="dataDocsLeg" class="card hidden">
         <div class="card-header">
             <h4 class="card-title nombrePersLeg">Legajos para</h4>
         </div>
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-3">
+
+        <div class="px-5 py-4 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label for="inputState"
-                        class="text-default-800 text-sm font-medium inline-block mb-2">Cliente</label>
-                    <select id="clientes" class="form-select">
-                        <option disabled selected>-Seleccionar-</option>
-                        @foreach($clientes as $cliente)
-                        <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                    <select id="clientes" class="form-select w-full">
+                        <option disabled selected>— Seleccionar —</option>
+                        @foreach ($clientes as $cliente)
+                            <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
-                    <label for="inputZip" class="text-default-800 text-sm font-medium inline-block mb-2">Cargo</label>
-                    <select id="cargos" class="form-select">
-                        <option disabled selected>-Seleccionar-</option>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                    <select id="cargos" class="form-select w-full">
+                        <option disabled selected>— Seleccionar —</option>
                     </select>
                 </div>
             </div>
 
-        </div>
-        <div class="w-full px-5 py-2">
             <input type="hidden" name="codPersonal" id="codPersonal">
             <div id="tblDocsLegajo" class="w-full hidden"></div>
         </div>
+    </div>
 
+</div>
+
+
+{{-- =====================================================================
+     MODALES
+     ===================================================================== --}}
+
+{{-- ── Trigger oculto: Visor de documentos ────────────────────────────── --}}
+<button type="button" class="hidden" id="btn-modal-view-docs" data-hs-overlay="#modal-view-docs"></button>
+
+{{-- Modal: Visor de documentos --}}
+<div id="modal-view-docs"
+     class="hs-overlay hidden fixed inset-0 z-70 overflow-y-auto transition-all duration-500 pointer-events-none">
+    <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100
+                translate-y-10 opacity-0 ease-in-out transition-all duration-500
+                max-w-3xl w-full my-8 mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto
+                border border-gray-200">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+            <h3 class="text-base font-medium text-gray-900 modal-title">Visor de documento</h3>
+            <button type="button" id="btn-modal-view-docs-close"
+                    class="text-gray-500 hover:text-gray-700 transition-colors"
+                    data-hs-overlay="#modal-view-docs">
+                <i class="i-tabler-x text-lg"></i>
+            </button>
+        </div>
+
+        {{-- Nombre del doc seleccionado --}}
+        <p id="txtDocSelec" class="text-center text-sm font-medium text-gray-700 pt-4 px-5"></p>
+
+        {{-- Contenido del visor --}}
+        <div id="visorDocs" class="flex flex-col gap-3 px-5 py-4"></div>
     </div>
 </div>
 
-<div class="card-body">
-    <!--VISOR DE DOCUMENTOS-->
-    <button type="button" class="hidden" id="btn-modal-view-docs" data-hs-overlay="#modal-view-docs">
-    </button>
 
-    <div id="modal-view-docs"
-        class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none">
-        <div
-            class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 max-w-3xl w-full my-8 mx-auto flex flex-col bg-white shadow-sm rounded">
-            <div class="flex flex-col border border-default-200 shadow-sm rounded-lg  pointer-events-auto">
-                <div class="flex justify-between items-center py-3 px-4 border-b border-default-200">
-                    <h3 class="text-lg font-medium text-default-900 modal-title">Modal title</h3>
-                    <button type="button" class="text-default-600 cursor-pointer" id="btn-modal-view-docs-close"
-                        data-hs-overlay="#modal-view-docs">
-                        <i class="i-tabler-x text-lg"></i>
-                    </button>
-                </div>
-                <div class="text-center">
-                    <h4 id="txtDocSelec" class="mt-4 mb-5 ms-2"></h4>
-                </div>
+{{-- ── Trigger oculto: Formulario de folios ────────────────────────────── --}}
+<button type="button" class="hidden" id="btn-modal-docs" data-hs-overlay="#modal-file"></button>
 
-                <div class="flex gap-2 flex-col mx-4" id="visorDocs">
+{{-- Modal: Carga de folio PDF --}}
+<div id="modal-file"
+     class="hs-overlay hidden fixed inset-0 z-70 overflow-y-auto transition-all duration-500 pointer-events-none">
+    <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100
+                translate-y-10 opacity-0 ease-in-out transition-all duration-500
+                sm:max-w-lg w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto
+                border border-gray-200">
 
-                </div>
-            </div>
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+            <h3 class="text-base font-medium text-gray-900 modal-title">Cargar documento</h3>
+            <button type="button" id="btn-modal-docs-close"
+                    class="text-gray-500 hover:text-gray-700 transition-colors"
+                    data-hs-overlay="#modal-file">
+                <i class="i-tabler-x text-lg"></i>
+            </button>
         </div>
-    </div>
 
-    <!-- Formulario FOLIOS -->
-    <button type="button" class="hidden" id="btn-modal-docs" data-hs-overlay="#modal-file">
-    </button>
+        {{-- Formulario --}}
+        <form id="formFolioPersonal">
+            @csrf
 
-    <div id="modal-file"
-        class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none">
-        <div
-            class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg sm:w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded">
-            <div class="flex flex-col border border-default-200 shadow-sm rounded-lg  pointer-events-auto">
-                <div class="flex justify-between items-center py-3 px-4 border-b border-default-200">
-                    <h3 class="text-lg font-medium text-default-900 modal-title">Modal title</h3>
-                    <button type="button" class="text-default-600 cursor-pointer" id="btn-modal-docs-close"
+            <div class="px-5 py-4 space-y-5">
+
+                <p class="text-sm text-center text-gray-600">
+                    Solo se aceptan archivos <strong>PDF</strong> con un peso máximo de <strong>5 MB</strong>.
+                </p>
+
+                {{-- Fecha de emisión --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Emisión</label>
+                    <input type="date" id="fecha_emision" required class="form-input w-full">
+                </div>
+
+                {{-- Selector de archivo --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Archivo PDF</label>
+
+                    <div id="btnSeleccionar" role="button"
+                         class="cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-8
+                                flex flex-col items-center justify-center gap-3
+                                hover:border-blue-400 hover:bg-blue-50 transition-colors">
+
+                        <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 text-gray-700">
+                            <i class="i-tabler-file-type-pdf text-2xl"></i>
+                        </span>
+
+                        <div class="text-center text-sm text-gray-600">
+                            <span class="font-medium text-gray-800">Arrastra tu archivo aquí o </span>
+                            <span class="font-semibold text-blue-600 hover:underline">SELECCIONAR</span>
+                        </div>
+
+                        <p class="text-xs text-gray-400">Solo PDF · Máximo 5 MB</p>
+
+                        <input type="file" id="archivoInput" accept=".pdf" class="hidden">
+                    </div>
+
+                    <ul id="listaArchivos" class="mt-3 space-y-2"></ul>
+                </div>
+
+            </div>
+
+            {{-- Footer del modal --}}
+            <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200">
+                <button type="submit" class="btn bg-primary text-white">
+                    <i class="i-tabler-check me-1"></i> Guardar
+                </button>
+                <button type="button" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200"
                         data-hs-overlay="#modal-file">
-                        <i class="i-tabler-x text-lg"></i>
-                    </button>
-                </div>
-                <form id="formFolioPersonal">
-                    @csrf
-                    <div class="p-4 overflow-y-auto">
-                        <p class="mt-1 text-default-600 text-center">
-                            Solo se aceptan archivos <strong>PDF</strong>, con un peso máximo de <strong>5MB</strong>.
-                        </p>
-
-                        <div class="mt-5">
-                            <label class="text-default-800 text-sm font-medium inline-block mb-2">Fecha de Emisión</label>
-                            <input class="form-input" type="date" id="fecha_emision" required>
-                        </div>
-
-                        <div class="mt-5">
-                            <label class="text-default-800 text-sm font-medium inline-block mb-2">Archivo PDF</label>
-                            <div class="cursor-pointer p-8 flex justify-center bg-white border border-dashed border-default-300 rounded-xl" id="btnSeleccionar" role="button">
-                                <div class="text-center">
-                                    <span class="inline-flex justify-center items-center size-16 bg-default-100 text-default-800 rounded-full cursor-pointer">
-                                        <i class="i-tabler-file-type-pdf size-6 shrink-0"></i>
-                                    </span>
-                                    <div class="mt-4 flex flex-wrap justify-center text-sm leading-6 text-default-600">
-                                        <span class="pe-1 font-medium text-default-800">Arrastra tu archivo aquí o </span>
-                                        <span class="bg-white font-semibold text-primary hover:text-primary-700 rounded-lg decoration-2 hover:underline">SELECCIONAR</span>
-                                    </div>
-                                    <p class="mt-1 text-xs text-default-400">Solo PDF · Máximo 5MB</p>
-                                </div>
-                                <input type="file" id="archivoInput" accept=".pdf" class="hidden">
-                            </div>
-                            <div class="mt-1">
-                                <ul id="listaArchivos" class="mt-4 space-y-2"></ul>
-                            </div>
-                        </div>
-                        
-                        <!-- <div class="mt-5">
-                            <label for="example-time"
-                                class="text-default-800 text-sm font-medium inline-block mb-2">Archivo</label>
-                            <div class="mt-1" data-hs-file-upload='{
-                                        "url": "/upload",
-                                        "extensions": {
-                                        "default": {
-                                            "class": "shrink-0 size-5"
-                                        },
-                                        "xls": {
-                                            "class": "shrink-0 size-5"
-                                        },
-                                        "zip": {
-                                            "class": "shrink-0 size-5"
-                                        },
-                                        "csv": {
-                                            "icon": "<i class=\"i-tabler-file-code\"></i>",
-                                            "class": "shrink-0 size-5"
-                                        }
-                                        }
-                                    }'>
-                                <template data-hs-file-upload-preview="">
-                                    <div class="p-3 bg-white border border-solid border-default-300 rounded-xl">
-                                        <div class="mb-1 flex justify-between items-center">
-                                            <div class="flex items-center gap-x-3">
-                                                <span
-                                                    class="size-10 flex justify-center items-center border border-default-200 text-default-500 rounded-lg"
-                                                    data-hs-file-upload-file-icon="">
-                                                    <img class="rounded-lg hidden" data-dz-thumbnail="">
-                                                </span>
-                                                <div>
-                                                    <p class="text-sm font-medium text-default-800">
-                                                        <span class="truncate inline-block max-w-[300px] align-bottom"
-                                                            data-hs-file-upload-file-name=""></span>.<span
-                                                            data-hs-file-upload-file-ext=""></span>
-                                                    </p>
-                                                    <p class="text-xs text-default-500"
-                                                        data-hs-file-upload-file-size="">
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-x-2">
-                                                <button type="button"
-                                                    class="text-default-500 hover:text-default-800 focus:outline-none focus:text-default-800"
-                                                    data-hs-file-upload-remove="">
-                                                    <i class="i-tabler-trash size-4 shrink-0"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-center gap-x-3 whitespace-nowrap">
-                                            <div class="flex w-full h-2 bg-default-200 rounded-full overflow-hidden"
-                                                role="progressbar" aria-valuenow="0" aria-valuemin="0"
-                                                aria-valuemax="100" data-hs-file-upload-progress-bar="">
-                                                <div class="flex flex-col justify-center rounded-full overflow-hidden bg-primary-600 text-xs text-white text-center whitespace-nowrap transition-all duration-500 hs-file-upload-complete:bg-green-500"
-                                                    style="width: 0" data-hs-file-upload-progress-bar-pane=""></div>
-                                            </div>
-                                            <div class="w-10 text-end">
-                                                <span class="text-sm text-default-800">
-                                                    <span data-hs-file-upload-progress-bar-value="">0</span>%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <div class="cursor-pointer p-12 flex justify-center bg-white border border-dashed border-default-300 rounded-xl"
-                                    data-hs-file-upload-trigger="">
-                                    <div class="text-center">
-                                        <span
-                                            class="inline-flex justify-center items-center size-16 bg-default-100 text-default-800 rounded-full">
-                                            <i class="i-tabler-upload size-6 shrink-0"></i>
-                                        </span>
-
-                                        <div class="mt-4 flex flex-wrap justify-center text-sm leading-6 text-default-600">
-                                            <span class="pe-1 font-medium text-default-800">
-                                                Arrastra tu archivo aquí o
-                                            </span>
-                                            <span
-                                                class="bg-white font-semibold text-primary hover:text-primary-700 rounded-lg decoration-2 hover:underline focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-600 focus-within:ring-offset-2">SELECCIONAR</span>
-                                        </div>
-
-                                        <p class="mt-1 text-xs text-default-400">
-                                            Peso menor a 1MB.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div> -->
-
-                        <!-- <div class="card">
-                            <div class="card-header">
-                                <h4 class="card-title">Gallery</h4>
-                            </div>
-                            <div class="p-6">
-                                <div data-hs-file-upload="{
-                                        &quot;url&quot;: &quot;/upload&quot;,
-                                        &quot;acceptedFiles&quot;: &quot;image/*&quot;,
-                                        &quot;autoHideTrigger&quot;: false,
-                                        &quot;extensions&quot;: {
-                                        &quot;default&quot;: {
-                                            &quot;class&quot;: &quot;shrink-0 size-5&quot;
-                                        },
-                                        &quot;xls&quot;: {
-                                            &quot;class&quot;: &quot;shrink-0 size-5&quot;
-                                        },
-                                        &quot;zip&quot;: {
-                                            &quot;class&quot;: &quot;shrink-0 size-5&quot;
-                                        },
-                                        &quot;csv&quot;: {
-                                            &quot;icon&quot;: &quot;<i class=\&quot;i-tabler-file-code\&quot;></i>&quot;,
-                                            &quot;class&quot;: &quot;shrink-0 size-5&quot;
-                                        }
-                                        }
-                                    }">
-                                    <template data-hs-file-upload-preview="">
-                                        <div class="relative mt-2 p-2 bg-white border border-default-200 rounded-xl">
-                                            <img class="mb-2 w-full object-cover rounded-lg" data-dz-thumbnail="">
-
-                                            <div class="mb-1 flex justify-between items-center gap-x-3 whitespace-nowrap">
-                                                <div class="w-10">
-                                                    <span class="text-sm text-default-800">
-                                                        <span data-hs-file-upload-progress-bar-value="">0</span>%
-                                                    </span>
-                                                </div>
-
-                                                <div class="flex items-center gap-x-2">
-                                                    <button type="button" class="text-default-500 hover:text-default-800 focus:outline-none focus:text-default-800" data-hs-file-upload-remove="">
-                                                        <i class="i-tabler-trash shrink-0 size-3.5"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div class="flex w-full h-2 bg-default-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-hs-file-upload-progress-bar="">
-                                                <div class="flex flex-col justify-center rounded-full overflow-hidden bg-primary-600 text-xs text-white text-center whitespace-nowrap transition-all duration-500 hs-file-upload-complete:bg-green-500" style="width: 0" data-hs-file-upload-progress-bar-pane=""></div>
-                                            </div>
-                                        </div>
-                                    </template>
-
-                                    <div class="cursor-pointer p-12 flex justify-center bg-white border border-dashed border-default-300 rounded-xl dz-clickable" data-hs-file-upload-trigger="">
-                                        <div class="text-center">
-                                            <span class="inline-flex justify-center items-center size-16 bg-default-100 text-default-800 rounded-full">
-                                                <i class="i-tabler-upload size-6 shrink-0"></i>
-                                            </span>
-
-                                            <div class="mt-4 flex flex-wrap justify-center text-sm leading-6 text-default-600">
-                                                <span class="pe-1 font-medium text-default-800">
-                                                    Drop your file here or
-                                                </span>
-                                                <span class="bg-white font-semibold text-primary hover:text-primary-700 rounded-lg decoration-2 hover:underline focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-600 focus-within:ring-offset-2">browse</span>
-                                            </div>
-
-                                            <p class="mt-1 text-xs text-default-400">
-                                                Pick a file up to 2MB.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div class="grid grid-cols-4 gap-x-2 empty:gap-0" data-hs-file-upload-previews=""></div>
-                                </div>
-                            </div>
-                        </div> -->
-
-                    </div>
-                    <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t border-default-200">
-                        <button type="submit" class="btn bg-primary text-white" href="#">
-                            <i class="i-tabler-check me-1"></i>
-                            Guardar
-                        </button>
-                        <button type="button" class="btn bg-primary text-white" data-hs-overlay="#modal-file">
-                            <i class="i-tabler-x me-1"></i>
-                            Cerrar
-                        </button>
-
-                    </div>
-                </form>
+                    <i class="i-tabler-x me-1"></i> Cerrar
+                </button>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
+
+{{-- =====================================================================
+     SECCIÓN DE COINCIDENCIAS (oculta por defecto)
+     ===================================================================== --}}
 <div id="divCoincidencias" class="grid lg:grid-cols-1 gap-6 mt-8 hidden">
     <div class="card overflow-hidden">
         <div class="card-header">
-            <h4 class="card-title">Listado de COINCIDENCIAS</h4>
+            <h4 class="card-title">Listado de Coincidencias</h4>
         </div>
-        <div class="w-full px-5 py-2 mt-3">
-            <input type="text" id="buscar" placeholder="Buscar..."
-                class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
-            <div id="tblPersonasCN" class="w-full mt-8"></div>
+        <div class="px-5 py-4 space-y-4">
+            <input
+                type="text"
+                id="buscar"
+                placeholder="Buscar..."
+                class="w-40 px-3 py-1.5 text-sm border border-gray-300 rounded-full
+                       focus:outline-none focus:border-blue-500 transition-colors"
+            />
+            <div id="tblPersonasCN" class="w-full"></div>
         </div>
     </div>
 </div>
 
-
 @endsection
+
 
 @section('script')
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
@@ -497,6 +329,3 @@
 
 @vite(['resources/js/functions/chargeFile.js'])
 @vite(['resources/js/functions/changeFilePers.js'])
-@section('script')
-
-@endsection

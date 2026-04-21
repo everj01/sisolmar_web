@@ -83,8 +83,8 @@
                         <i class='bx bx-plus text-base'></i>
                         <span>Nueva DJ</span>
                     </button>
-                    <button type="button" id="btnExtFirmaHuella"
-                        class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white flex items-center gap-1 px-4 py-1">
+                    <button type="button" id="btnExtFirmaHuella" hidden disabled
+                        class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white hidden items-center gap-1 px-4 py-1">
                                             <i class='bx bx-outline'></i>
                         <span>Extraer Firma y Huella</span>
                     </button>

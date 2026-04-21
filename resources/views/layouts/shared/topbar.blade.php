@@ -1,13 +1,13 @@
 <!-- Topbar Start -->
-<header class="app-header sticky top-0 z-50 min-h-topbar flex items-center bg-default-100/5 dark:bg-slate-900/95 backdrop-blur-lg transition-colors duration-300">
+<header class="app-header sticky top-0 z-50 min-h-topbar flex items-center bg-default-100/5 dark:bg-slate-900/95 backdrop-blur transition-colors duration-300">
     <div class="container flex items-center justify-between gap-4 mx-0 py-0">
         <div class="flex items-center gap-5">
             <!-- Botón escritorio -->
-            <div class="lg:flex hidden">
+            <!-- <div class="lg:flex hidden">
                 <button id="desktop-toggle-sidebar" >
                     <i class="i-ph-list-duotone text-2xl"></i>
                 </button>
-            </div>
+            </div> -->
 
             <!-- Sidenav Menu Toggle Button -->
             <div class="lg:hidden flex">
