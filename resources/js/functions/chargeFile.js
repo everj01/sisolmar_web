@@ -78,6 +78,9 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                     <button id="btnVerFirma" class="swal2-confirm swal2-styled" style="background-color:#6c757d">
                         <i class="fa fa-pen me-1"></i> Ver Firma
                     </button>
+                    <button id="btnVerDni" class="swal2-confirm swal2-styled" style="background-color:#0d6efd">
+                        <i class="fa fa-id-card me-1"></i> DNI
+                    </button>
                 </div>`,
             showConfirmButton: false,
             showCloseButton: true,
@@ -89,6 +92,10 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                 document.getElementById('btnVerFirma').addEventListener('click', () => {
                     Swal.close();
                     verBiometrico(codigo, persona, 'firma');
+                });
+                document.getElementById('btnVerDni').addEventListener('click', () => {
+                    Swal.close();
+                    verBiometrico(codigo, persona, 'dni');
                 });
             }
         });
@@ -854,7 +861,6 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
 });
 
 function verBiometrico(codigo, persona, tipo) {
-    // Mostrar loading
     Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     axios.get(`${VITE_URL_APP}/api/get-biometrico/${codigo}`)
@@ -862,22 +868,56 @@ function verBiometrico(codigo, persona, tipo) {
             Swal.close();
 
             const data = response.data;
-            const antigua = tipo === 'huella' ? data.huella_antigua : data.firma_antigua;
-            const nueva   = tipo === 'huella' ? data.huella_nueva   : data.firma_nueva;
+            let antigua, nueva, reversoAntiguo, reversoNuevo;
 
-            // Título del modal
+            if (tipo === 'huella') {
+                antigua = data.huella_antigua;
+                nueva   = data.huella_nueva;
+            }
+            else if (tipo === 'firma') {
+                antigua = data.firma_antigua;
+                nueva   = data.firma_nueva;
+            }
+           else if (tipo === 'dni') {
+                antigua       = data.dni_anverso_antigua;  // ✅
+                nueva         = data.dni_anverso_nuevo;
+                reversoAntiguo = data.dni_reverso_antigua; // ✅
+                reversoNuevo   = data.dni_reverso_nuevo;
+            }
+
+            // Título
             document.getElementById('modal-bio-title').textContent =
                 `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} de ${persona}`;
 
-            // Imagen antigua
-            document.getElementById('bio-img-antigua').innerHTML = antigua
-                ? `<img src="${antigua}" style="width:100%; height:250px; object-fit:contain; border-radius:0.5rem;" />`
-                : `<span style="color:#9ca3af;">Sin imagen antigua</span>`;
+            // 🔥 IMPORTANTE: solo usar renderImagen (elimina los innerHTML anteriores)
+            document.getElementById('bio-img-antigua').innerHTML =
+                renderImagen(antigua, tipo === 'dni');
 
-            // Imagen nueva
-            document.getElementById('bio-img-nueva').innerHTML = nueva
-                ? `<img src="${nueva}" style="width:100%; height:250px; object-fit:contain; border-radius:0.5rem;" />`
-                : `<span style="color:#9ca3af;">Sin imagen nueva</span>`;
+            document.getElementById('bio-img-nueva').innerHTML =
+                renderImagen(nueva, tipo === 'dni');
+
+            // 🔥 AQUÍ VA EL TOGGLE (después de renderizar)
+            if (tipo === 'dni') {
+                const btns = document.querySelectorAll('.btn-toggle');
+
+                btns.forEach((btn, index) => {
+                    let mostrandoReverso = false;
+
+                    btn.addEventListener('click', () => {
+                        const img = btn.parentElement.querySelector('img');
+
+                        if (!mostrandoReverso) {
+                            img.src = index === 0 ? reversoAntiguo : reversoNuevo;
+                            btn.textContent = 'Ver anverso';
+                        } else {
+                            img.src = index === 0 ? antigua : nueva;
+                            btn.textContent = 'Ver reverso';
+                        }
+
+                        mostrandoReverso = !mostrandoReverso;
+                    });
+                });
+            }
 
             // Abrir modal
             document.getElementById('btn-modal-biometrico').click();
@@ -886,6 +926,123 @@ function verBiometrico(codigo, persona, tipo) {
             Swal.fire({ title: 'Error al obtener biométrico', icon: 'error' });
         });
 }
+
+
+
+function renderImagen(img, esDni) {
+    if (!img || typeof img !== 'string' || !img.startsWith('data:')) {
+        return `
+            <div style="width:100%; height:250px; display:flex; flex-direction:column; 
+                        align-items:center; justify-content:center; 
+                        background:#f3f4f6; border-radius:0.5rem; color:#9ca3af;">
+                <i class="fa fa-image" style="font-size:2rem; margin-bottom:8px;"></i>
+                <span>Sin imagen disponible</span>
+            </div>
+        `;
+    }
+
+    const id = 'img_' + Math.random().toString(36).substr(2, 9);
+
+    return `
+        <div>
+            <div class="lupa-container" id="cont_${id}" style="position:relative; width:100%; height:250px; overflow:hidden; border-radius:0.5rem; cursor:crosshair;">
+                <img id="${id}" src="${img}" 
+                     style="width:100%; height:250px; object-fit:contain; border-radius:0.5rem; display:block;"
+                     onerror="this.parentElement.innerHTML='<div style=\'width:100%;height:250px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:0.5rem;color:#9ca3af;\'>Sin imagen disponible</div>'" />
+                
+                <!-- Lupa -->
+                <div id="lupa_${id}" style="
+                    display:none;
+                    position:absolute;
+                    width:150px;
+                    height:150px;
+                    border-radius:50%;
+                    border:3px solid #6366f1;
+                    box-shadow:0 0 10px rgba(0,0,0,0.4);
+                    pointer-events:none;
+                    background-repeat:no-repeat;
+        
+                    background-size:600% 600%;
+                    z-index:10;
+                "></div>
+
+                <!-- Botón lupa -->
+                <button onclick="toggleLupa('${id}')" style="
+                    position:absolute; bottom:8px; right:8px;
+                    background:#6366f1; color:white;
+                    border:none; border-radius:50%;
+                    width:36px; height:36px;
+                    cursor:pointer; font-size:16px;
+                    display:flex; align-items:center; justify-content:center;
+                    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+                    z-index:11;
+                " title="Activar lupa">
+                    <i class="fa fa-search"></i>
+                </button>
+            </div>
+            ${esDni ? `<button class="btn-toggle mt-2 bg-gray-200 px-2 py-1 rounded">Ver reverso</button>` : ''}
+        </div>
+    `;
+}
+
+
+window.toggleLupa = function(id) {
+    const cont  = document.getElementById('cont_' + id);
+    const lupa  = document.getElementById('lupa_' + id);
+    const img   = document.getElementById(id);
+
+    const activa = lupa.dataset.activa === '1';
+
+    if (activa) {
+        lupa.dataset.activa = '0';
+        lupa.style.display  = 'none';
+        cont.onmousemove    = null;
+        cont.onmouseleave   = null;
+        return;
+    }
+
+    lupa.dataset.activa = '1';
+    lupa.style.display  = 'block';
+
+  cont.onmousemove = function(e) {
+    const rect  = cont.getBoundingClientRect();
+    const x     = e.clientX - rect.left;
+    const y     = e.clientY - rect.top;
+    const lupaW = lupa.offsetWidth;
+    const lupaH = lupa.offsetHeight;
+
+    // ✅ Siempre toma el src actual de la imagen
+    lupa.style.backgroundImage = `url('${img.src}')`;
+
+    lupa.style.left = (x - lupaW / 2) + 'px';
+    lupa.style.top  = (y - lupaH / 2) + 'px';
+
+    const imgW = img.offsetWidth;
+    const imgH = img.offsetHeight;
+    const zoom = 3;
+
+    const bgX = -(x * zoom - lupaW / 2);
+    const bgY = -(y * zoom - lupaH / 2);
+
+    lupa.style.backgroundSize     = `${imgW * zoom}px ${imgH * zoom}px`;
+    lupa.style.backgroundPosition = `${bgX}px ${bgY}px`;
+};
+
+    cont.onmouseleave = function() {
+        lupa.style.display = 'none';
+        setTimeout(() => {
+            if (lupa.dataset.activa === '1') {
+                lupa.style.display = 'block';
+            }
+        }, 100);
+    };
+
+    cont.onmouseenter = function() {
+        if (lupa.dataset.activa === '1') {
+            lupa.style.display = 'block';
+        }
+    };
+};
 
 window.addEventListener("sidebar-toggled", () => {
     tblPersonas?.redraw(true);
