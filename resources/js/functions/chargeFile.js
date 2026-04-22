@@ -68,39 +68,8 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         document.getElementById('divCoincidencias').classList.add('hidden');
 
     } else if (e.target.classList.contains('bio-btn')) {
-        Swal.fire({
-            title: persona,
-            html: `
-                <div class="flex justify-center gap-4 mt-3">
-                    <button id="btnVerHuella" class="swal2-confirm swal2-styled">
-                        <i class="fa fa-fingerprint me-1"></i> Ver Huella
-                    </button>
-                    <button id="btnVerFirma" class="swal2-confirm swal2-styled" style="background-color:#6c757d">
-                        <i class="fa fa-pen me-1"></i> Ver Firma
-                    </button>
-                    <button id="btnVerDni" class="swal2-confirm swal2-styled" style="background-color:#0d6efd">
-                        <i class="fa fa-id-card me-1"></i> DNI
-                    </button>
-                </div>`,
-            showConfirmButton: false,
-            showCloseButton: true,
-            didOpen: () => {
-                document.getElementById('btnVerHuella').addEventListener('click', () => {
-                    Swal.close();
-                    verBiometrico(codigo, persona, 'huella');
-                });
-                document.getElementById('btnVerFirma').addEventListener('click', () => {
-                    Swal.close();
-                    verBiometrico(codigo, persona, 'firma');
-                });
-                document.getElementById('btnVerDni').addEventListener('click', () => {
-                    Swal.close();
-                    verBiometrico(codigo, persona, 'dni');
-                });
-            }
-        });
-
-    } else if (e.target.classList.contains('legajo-btn')) {
+    verBiometrico(codigo, persona); // ← directo, sin Swal de selección
+} else if (e.target.classList.contains('legajo-btn')) {
         document.getElementById('dataDocsLeg').classList.remove('hidden');
         document.getElementById('dataDocs').classList.add('hidden');
     }
@@ -860,66 +829,28 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
     }
 });
 
-function verBiometrico(codigo, persona, tipo) {
+function verBiometrico(codigo, persona) {
     Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     axios.get(`${VITE_URL_APP}/api/get-biometrico/${codigo}`)
         .then(response => {
             Swal.close();
-
             const data = response.data;
-            let antigua, nueva, reversoAntiguo, reversoNuevo;
 
-            if (tipo === 'huella') {
-                antigua = data.huella_antigua;
-                nueva   = data.huella_nueva;
-            }
-            else if (tipo === 'firma') {
-                antigua = data.firma_antigua;
-                nueva   = data.firma_nueva;
-            }
-           else if (tipo === 'dni') {
-                antigua       = data.dni_anverso_antigua;  // ✅
-                nueva         = data.dni_anverso_nuevo;
-                reversoAntiguo = data.dni_reverso_antigua; // ✅
-                reversoNuevo   = data.dni_reverso_nuevo;
-            }
+            document.getElementById('modal-bio-title').textContent = persona;
 
-            // Título
-            document.getElementById('modal-bio-title').textContent =
-                `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} de ${persona}`;
+            // Huella
+            document.getElementById('bio-huella-antigua').innerHTML = renderImagen(data.huella_antigua, false);
+            document.getElementById('bio-huella-nueva').innerHTML   = renderImagen(data.huella_nueva, false);
 
-            // 🔥 IMPORTANTE: solo usar renderImagen (elimina los innerHTML anteriores)
-            document.getElementById('bio-img-antigua').innerHTML =
-                renderImagen(antigua, tipo === 'dni');
+            // Firma
+            document.getElementById('bio-firma-antigua').innerHTML  = renderImagen(data.firma_antigua, false);
+            document.getElementById('bio-firma-nueva').innerHTML    = renderImagen(data.firma_nueva, false);
 
-            document.getElementById('bio-img-nueva').innerHTML =
-                renderImagen(nueva, tipo === 'dni');
+            // DNI
+            document.getElementById('bio-dni-antigua').innerHTML    = renderImagen(data.dni_anverso_antigua, true, data.dni_reverso_antigua);
+            document.getElementById('bio-dni-nueva').innerHTML      = renderImagen(data.dni_anverso_nuevo, true, data.dni_reverso_nuevo);
 
-            // 🔥 AQUÍ VA EL TOGGLE (después de renderizar)
-            if (tipo === 'dni') {
-                const btns = document.querySelectorAll('.btn-toggle');
-
-                btns.forEach((btn, index) => {
-                    let mostrandoReverso = false;
-
-                    btn.addEventListener('click', () => {
-                        const img = btn.parentElement.querySelector('img');
-
-                        if (!mostrandoReverso) {
-                            img.src = index === 0 ? reversoAntiguo : reversoNuevo;
-                            btn.textContent = 'Ver anverso';
-                        } else {
-                            img.src = index === 0 ? antigua : nueva;
-                            btn.textContent = 'Ver reverso';
-                        }
-
-                        mostrandoReverso = !mostrandoReverso;
-                    });
-                });
-            }
-
-            // Abrir modal
             document.getElementById('btn-modal-biometrico').click();
         })
         .catch(() => {
@@ -928,119 +859,171 @@ function verBiometrico(codigo, persona, tipo) {
 }
 
 
-
-function renderImagen(img, esDni) {
+function renderImagen(img, esDni = false, reverso = null) {
     if (!img || typeof img !== 'string' || !img.startsWith('data:')) {
         return `
-            <div style="width:100%; height:250px; display:flex; flex-direction:column; 
-                        align-items:center; justify-content:center; 
-                        background:#f3f4f6; border-radius:0.5rem; color:#9ca3af;">
-                <i class="fa fa-image" style="font-size:2rem; margin-bottom:8px;"></i>
-                <span>Sin imagen disponible</span>
-            </div>
-        `;
+            <div style="
+                ${esDni ? 'aspect-ratio:1.586/1; height:auto;' : 'height:110px;'}
+                display:flex; flex-direction:column;
+                align-items:center; justify-content:center;
+                background:#f8fafc; border:1.5px dashed #e2e8f0;
+                border-radius:12px; color:#94a3b8; gap:8px;">
+                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span style="font-size:12px; font-weight:500;">Sin imagen</span>
+            </div>`;
     }
 
     const id = 'img_' + Math.random().toString(36).substr(2, 9);
+    let mostrandoReverso = false;
+
+    const toggleBtn = esDni ? `
+        <button onclick="toggleDni_${id}()" id="toggleBtn_${id}" style="
+            width:100%; font-size:12px; padding:7px 0;
+            background:#f1f5f9; border:none;
+            border-top:1px solid #e2e8f0;
+            border-radius:0 0 12px 12px;
+            cursor:pointer; color:#475569;
+            font-weight:500; letter-spacing:0.3px;
+            transition:background .15s;">
+            <svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            Ver reverso
+        </button>` : '';
+
+    setTimeout(() => {
+        if (esDni) {
+            window[`toggleDni_${id}`] = function () {
+                const imgEl = document.getElementById(id);
+                const btnEl = document.getElementById('toggleBtn_' + id);
+                mostrandoReverso = !mostrandoReverso;
+                imgEl.src = mostrandoReverso ? (reverso || img) : img;
+                btnEl.innerHTML = mostrandoReverso
+                    ? `<svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Ver anverso`
+                    : `<svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Ver reverso`;
+                const lupa = document.getElementById('lupa_' + id);
+                if (lupa) lupa.style.backgroundImage = `url('${imgEl.src}')`;
+
+                const badge = document.getElementById('badge_' + id);
+                if (badge) badge.textContent = mostrandoReverso ? 'REVERSO' : 'ANVERSO';
+            };
+
+
+            
+        }
+
+        // hover toggle btn
+        const btn = document.getElementById('toggleBtn_' + id);
+        if (btn) {
+            btn.onmouseover = () => btn.style.background = '#e2e8f0';
+            btn.onmouseout  = () => btn.style.background = '#f1f5f9';
+        }
+    }, 0);
 
     return `
-        <div>
-            <div class="lupa-container" id="cont_${id}" style="position:relative; width:100%; height:250px; overflow:hidden; border-radius:0.5rem; cursor:crosshair;">
-                <img id="${id}" src="${img}" 
-                     style="width:100%; height:250px; object-fit:contain; border-radius:0.5rem; display:block;"
-                     onerror="this.parentElement.innerHTML='<div style=\'width:100%;height:250px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:0.5rem;color:#9ca3af;\'>Sin imagen disponible</div>'" />
-                
+        <div style="border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+            <div id="cont_${id}" style="
+    position:relative;
+    ${esDni ? 'aspect-ratio:1.586/1; height:auto;' : 'height:110px;'}
+    background:#f8fafc;
+    cursor:crosshair; overflow:hidden;">
+
+                <img id="${id}" src="${img}"
+                     style="width:100%; height:100%; object-fit:${esDni ? 'cover' : 'contain'}; display:block; transition:transform .2s;"
+                     onerror="this.parentElement.innerHTML='<div style=\'height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\'0 0 24 24\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\'m21 15-5-5L5 21\'/></svg>Sin imagen</div>'" />
+
                 <!-- Lupa -->
                 <div id="lupa_${id}" style="
-                    display:none;
-                    position:absolute;
-                    width:150px;
-                    height:150px;
+                    display:none; position:absolute;
+                    width:140px; height:140px;
                     border-radius:50%;
-                    border:3px solid #6366f1;
-                    box-shadow:0 0 10px rgba(0,0,0,0.4);
+                    border:2.5px solid #6366f1;
+                    box-shadow:0 0 0 3px rgba(99,102,241,0.15);
                     pointer-events:none;
                     background-repeat:no-repeat;
-        
-                    background-size:600% 600%;
-                    z-index:10;
-                "></div>
+                    z-index:10;"></div>
+
+                <!-- Badge lado -->
+                ${esDni ? `<span id="badge_${id}" style="
+                    position:absolute; top:8px; left:8px;
+                    background:rgba(99,102,241,0.9); color:#fff;
+                    font-size:10px; font-weight:600;
+                    padding:3px 8px; border-radius:20px;
+                    letter-spacing:0.5px; z-index:5;">ANVERSO</span>` : ''}
 
                 <!-- Botón lupa -->
-                <button onclick="toggleLupa('${id}')" style="
+                <button onclick="toggleLupa('${id}')" id="lupaBtn_${id}" style="
                     position:absolute; bottom:8px; right:8px;
-                    background:#6366f1; color:white;
+                    background:rgba(99,102,241,0.9); color:white;
                     border:none; border-radius:50%;
-                    width:36px; height:36px;
-                    cursor:pointer; font-size:16px;
+                    width:32px; height:32px;
+                    cursor:pointer; z-index:11;
                     display:flex; align-items:center; justify-content:center;
-                    box-shadow:0 2px 6px rgba(0,0,0,0.3);
-                    z-index:11;
-                " title="Activar lupa">
-                    <i class="fa fa-search"></i>
+                    box-shadow:0 2px 8px rgba(99,102,241,0.4);
+                    transition:transform .15s, background .15s;"
+                    onmouseover="this.style.transform='scale(1.1)';this.style.background='#4f46e5'"
+                    onmouseout="this.style.transform='scale(1)';this.style.background='rgba(99,102,241,0.9)'"
+                    title="Activar lupa">
+                    <svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
                 </button>
             </div>
-            ${esDni ? `<button class="btn-toggle mt-2 bg-gray-200 px-2 py-1 rounded">Ver reverso</button>` : ''}
-        </div>
-    `;
+            ${toggleBtn}
+        </div>`;
 }
 
 
 window.toggleLupa = function(id) {
-    const cont  = document.getElementById('cont_' + id);
-    const lupa  = document.getElementById('lupa_' + id);
-    const img   = document.getElementById(id);
+    const cont = document.getElementById('cont_' + id);
+    const lupa = document.getElementById('lupa_' + id);
+    const img  = document.getElementById(id);
+    const btn  = document.getElementById('lupaBtn_' + id);
 
     const activa = lupa.dataset.activa === '1';
 
     if (activa) {
         lupa.dataset.activa = '0';
         lupa.style.display  = 'none';
-        cont.onmousemove    = null;
-        cont.onmouseleave   = null;
+        cont.style.cursor   = 'default';
+        btn.style.background = 'rgba(99,102,241,0.9)';
+        cont.onmousemove = null;
+        cont.onmouseleave = null;
         return;
     }
 
     lupa.dataset.activa = '1';
     lupa.style.display  = 'block';
+    cont.style.cursor   = 'crosshair';
 
-  cont.onmousemove = function(e) {
-    const rect  = cont.getBoundingClientRect();
-    const x     = e.clientX - rect.left;
-    const y     = e.clientY - rect.top;
-    const lupaW = lupa.offsetWidth;
-    const lupaH = lupa.offsetHeight;
+    cont.onmousemove = function(e) {
+        const rect  = cont.getBoundingClientRect();
+        const x     = e.clientX - rect.left;
+        const y     = e.clientY - rect.top;
+        const lupaW = lupa.offsetWidth;
+        const lupaH = lupa.offsetHeight;
 
-    // ✅ Siempre toma el src actual de la imagen
-    lupa.style.backgroundImage = `url('${img.src}')`;
+        lupa.style.backgroundImage = `url('${img.src}')`;
+        lupa.style.left = (x - lupaW / 2) + 'px';
+        lupa.style.top  = (y - lupaH / 2) + 'px';
 
-    lupa.style.left = (x - lupaW / 2) + 'px';
-    lupa.style.top  = (y - lupaH / 2) + 'px';
+        const zoom = 2;
+        const bgX  = -(x * zoom - lupaW / 2);
+        const bgY  = -(y * zoom - lupaH / 2);
 
-    const imgW = img.offsetWidth;
-    const imgH = img.offsetHeight;
-    const zoom = 3;
-
-    const bgX = -(x * zoom - lupaW / 2);
-    const bgY = -(y * zoom - lupaH / 2);
-
-    lupa.style.backgroundSize     = `${imgW * zoom}px ${imgH * zoom}px`;
-    lupa.style.backgroundPosition = `${bgX}px ${bgY}px`;
-};
+        lupa.style.backgroundSize     = `${img.offsetWidth * zoom}px ${img.offsetHeight * zoom}px`;
+        lupa.style.backgroundPosition = `${bgX}px ${bgY}px`;
+    };
 
     cont.onmouseleave = function() {
         lupa.style.display = 'none';
-        setTimeout(() => {
-            if (lupa.dataset.activa === '1') {
-                lupa.style.display = 'block';
-            }
-        }, 100);
+        setTimeout(() => { if (lupa.dataset.activa === '1') lupa.style.display = 'block'; }, 80);
     };
 
     cont.onmouseenter = function() {
-        if (lupa.dataset.activa === '1') {
-            lupa.style.display = 'block';
-        }
+        if (lupa.dataset.activa === '1') lupa.style.display = 'block';
     };
 };
 

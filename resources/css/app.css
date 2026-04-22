@@ -6896,7 +6896,7 @@ th.fc-day-header {
   background-color: rgb(51 65 85 / var(--tw-bg-opacity)) !important;
 }
 
-/* Personalización de Paginación de vanilla-datatables */
+/* Personalizaciï¿½n de Paginaciï¿½n de vanilla-datatables */
 .dataTable-pagination li.active a {
     background-color: #10b981; /* emerald-500 equivalent */
     color: white;
@@ -6912,3 +6912,4 @@ th.fc-day-header {
     background-color: #f3f4f6; /* gray-100 */
     color: #1f2937; /* gray-800 */
 }
+

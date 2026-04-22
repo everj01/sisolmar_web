@@ -40,6 +40,35 @@
     border-color: #3b82f6;
 }
 
+    #modal-biometrico .flex.flex-col.border {
+        border-color: #e2e8f0 !important;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.10) !important;
+        border-radius: 0.75rem !important;
+    }
+
+    #modal-biometrico {
+        background: rgba(0,0,0,0.45) !important;
+    }
+
+    #modal-biometrico > div {
+        border-radius: 0.75rem !important;
+        overflow: hidden !important;
+    }
+
+    /* Header del modal */
+    #modal-biometrico .flex.justify-between.items-center {
+        background: #fff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 12px 16px !important;
+    }
+
+    /* Secciones internas */
+    #modal-biometrico [style*="background:#f8fafc"] {
+        background: #f8fafc !important;
+        border-radius: 10px !important;
+    }
+
+
 </style>
 <div class="grid lg:grid-cols-2 gap-6 mt-8">
     <div class="card overflow-hidden">
@@ -501,37 +530,86 @@
     </div>
 </div>
 
+<button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
 
-<!-- MODAL BIOMÉTRICO -->
 <div id="modal-biometrico"
-    class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none px-4">
-<div class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 w-full mt-32 mx-auto flex flex-col bg-white shadow-sm rounded pointer-events-auto" style="max-width: 600px;">        <div class="flex justify-between items-center py-3 px-4 border-b border-default-200">
-            <h3 class="text-lg font-medium text-default-900" id="modal-bio-title">Biométrico</h3>
-            <button type="button" data-hs-overlay="#modal-biometrico" class="text-default-600 cursor-pointer">
-                <i class="i-tabler-x text-lg"></i>
-            </button>
-        </div>
-        <div class="p-6">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="text-center">
-                    <p class="font-semibold text-default-700 mb-2">Antiguo / Actual</p>
-                    <div id="bio-img-antigua"
-                        style="display: flex; justify-content: center; align-items: center; min-height: 200px; background: #f3f4f6; border-radius: 0.5rem; padding: 0.5rem;">
-                        <span class="text-gray-400">Sin imagen</span>
+    class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none">
+    <div class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 w-full my-8 mx-auto flex flex-col bg-white shadow-sm rounded pointer-events-auto"
+         style="max-width: 700px;">
+                 <div class="flex flex-col border border-default-200 shadow-sm rounded-lg">
+
+            <!-- HEADER -->
+            <div class="flex justify-between items-center py-3 px-4 border-b border-default-200">
+                <div class="flex items-center gap-2">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#6366f1;"></div>
+                    <h3 class="text-sm font-medium text-default-900" id="modal-bio-title">Biométricos</h3>
+                </div>
+                <button type="button" class="text-default-400 hover:text-default-700 cursor-pointer" data-hs-overlay="#modal-biometrico">
+                    <i class="i-tabler-x text-base"></i>
+                </button>
+            </div>
+
+            <!-- BODY -->
+            <div class="px-4 py-3 overflow-y-auto" style="max-height:72vh; display:flex; flex-direction:column; gap:12px;">
+
+                <!-- HUELLA -->
+                <div style="background:#f8fafc; border-radius:10px; padding:10px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <i class="fa fa-fingerprint" style="color:#6366f1; font-size:13px;"></i>
+                        <span style="font-size:12px; font-weight:600; color:#374151; letter-spacing:0.3px;">HUELLA DIGITAL</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <p style="font-size:10px; color:#9ca3af; margin-bottom:4px; text-align:center;">Antiguo</p>
+                            <div id="bio-huella-antigua"></div>
+                        </div>
+                        <div>
+                            <p style="font-size:10px; color:#9ca3af; margin-bottom:4px; text-align:center;">Nuevo</p>
+                            <div id="bio-huella-nueva"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="text-center">
-                    <p class="font-semibold text-default-700 mb-2">Nuevo</p>
-                    <div id="bio-img-nueva"
-                        style="display: flex; justify-content: center; align-items: center; min-height: 200px; background: #f3f4f6; border-radius: 0.5rem; padding: 0.5rem;">
-                        <span class="text-gray-400">Sin imagen</span>
+
+                <!-- FIRMA -->
+                <div style="background:#f8fafc; border-radius:10px; padding:10px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <i class="fa fa-pen" style="color:#6366f1; font-size:13px;"></i>
+                        <span style="font-size:12px; font-weight:600; color:#374151; letter-spacing:0.3px;">FIRMA</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <p style="font-size:10px; color:#9ca3af; margin-bottom:4px; text-align:center;">Antiguo</p>
+                            <div id="bio-firma-antigua"></div>
+                        </div>
+                        <div>
+                            <p style="font-size:10px; color:#9ca3af; margin-bottom:4px; text-align:center;">Nuevo</p>
+                            <div id="bio-firma-nueva"></div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- DNI -->
+                <div style="background:#f8fafc; border-radius:10px; padding:10px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <i class="fa fa-id-card" style="color:#6366f1; font-size:13px;"></i>
+                        <span style="font-size:12px; font-weight:600; color:#374151; letter-spacing:0.3px;">DNI</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <p style="font-size:10px; color:#9ca3af; margin-bottom:4px; text-align:center;">Antiguo</p>
+                            <div id="bio-dni-antigua"></div>
+                        </div>
+                        <div>
+                            <p style="font-size:10px; color:#9ca3af; margin-bottom:4px; text-align:center;">Nuevo</p>
+                            <div id="bio-dni-nueva"></div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 </div>
-<button type="button" class="hidden" id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico"></button>
 
 @endsection
 
