@@ -1,6 +1,32 @@
 {{-- Partial: _modal_dj.blade.php — Split View Comparación --}}
-
+@if(session('tipo_rol') == 9 || session('tipo_rol') == 8)
+        <style>
+            #formDatos input:not([type="hidden"]),
+            #formDatos textarea {
+                pointer-events: none !important;
+                background: #f3f4f6 !important;
+                color: #6b7280 !important;
+                cursor: not-allowed !important;
+            }
+            #formDatos select {
+                pointer-events: none !important;
+                background: #f3f4f6 !important;
+                color: #6b7280 !important;
+                cursor: not-allowed !important;
+                appearance: none !important;
+                -webkit-appearance: none !important;
+            }
+            #addFamilyMember,
+            #btnSubirFoto,
+            #btnEliminarFoto,
+            .remove-family {
+                display: none !important;
+            }
+        </style>
+        @endif
 <style>
+
+    
     /* ============================================================
    ESTILOS GENERALES DEL MODAL DJ
    ============================================================ */
@@ -708,8 +734,7 @@
                 style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid #e5e7eb;background:#fff;flex-shrink:0;">
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span
-                        style="font-size:13px;font-weight:700;color:#374151;letter-spacing:.02em;text-transform:uppercase;">Declaración
-                        Jurada</span>
+                        style="font-size:13px;font-weight:700;color:#374151;letter-spacing:.02em;text-transform:uppercase;">Declaración Jurada</span>
                     {{-- <div id="splitModeBadge"
                         style="display:none;align-items:center;gap:6px;background:#fef3c7;border:1px solid #fde68a;padding:2px 10px;border-radius:20px;">
                         <span
@@ -972,7 +997,7 @@
                                                 class="bk-val" data-field="PERS_NROEMERGENCIA"></span></div>
                                         <div class="bk-field" data-bk="parentesco_emergencia">
                                             <label>Parentesco</label><span class="bk-val"
-                                                data-field="PERS_CONYUGE"></span></div>
+                                                data-field="PERS_EMERC_FAMILIAR"></span></div>
                                     </div>
                                 </div>
                             </div>
@@ -1637,13 +1662,13 @@
                                                     <option value="">—</option>
                                                     <option value="PADRE">Padre</option>
                                                     <option value="MADRE">Madre</option>
-                                                    <option value="CÓNYUGE">Cónyuge</option>
+                                                    <option value="CONYUGE">Cónyuge</option>
                                                     <option value="HIJO">Hijo(a)</option>
-                                                    <option value="HERMANO">Hermano(a)</option>
+                                                    <!-- <option value="HERMANO">Hermano(a)</option>
                                                     <option value="ABUELO">Abuelo(a)</option>
-                                                    <option value="TÍO">Tío(a)</option>
+                                                    <option value="TIO">Tío(a)</option>
                                                     <option value="PRIMO">Primo(a)</option>
-                                                    <option value="OTRO">Otro</option>
+                                                    <option value="OTRO">Otro</option> -->
                                                 </select>
                                             </div>
                                         </div>
@@ -1698,15 +1723,16 @@
                                                     
                                                         <option value="PADRE">Padre</option>
                                                         <option value="MADRE">Madre</option>
-                                                        <option value="ESPOSO">Esposo</option>
-                                                        <option value="ESPOSA">Esposa</option>
-                                                        <option value="HIJO">Hijo</option>
-                                                        <option value="HIJA">Hija</option>
-                                                        <option value="HERMANO">Hermano</option>
+                                                        <option value="CONYUGE">Conyuge</option>
+                                                        <!-- <option value="ESPOSO">Esposo</option>
+                                                        <option value="ESPOSA">Esposa</option> -->
+                                                        <option value="HIJO">Hijo(a)</option>
+                                                        <!-- <option value="HIJA">Hija</option> -->
+                                                        <!-- <option value="HERMANO">Hermano</option>
                                                         <option value="HERMANA">Hermana</option>
                                                         <option value="ABUELO">Abuelo</option>
                                                         <option value="ABUELA">Abuela</option>
-                                                        <option value="OTROS">OTROS</option>
+                                                        <option value="OTROS">OTROS</option> -->
                                                     </select>
                                                 </div>
                                             </div>
@@ -1942,15 +1968,16 @@
                                                         <option value="" disabled>—</option>
                                                         <option value="PADRE">Padre</option>
                                                         <option value="MADRE">Madre</option>
-                                                        <option value="ESPOSO">Esposo</option>
-                                                        <option value="ESPOSA">Esposa</option>
-                                                        <option value="HIJO">Hijo</option>
-                                                        <option value="HIJA">Hija</option>
+                                                        <option value="CONYUGE">Conyuge</option>
+                                                        <!-- <option value="ESPOSO">Esposo</option>
+                                                        <option value="ESPOSA">Esposa</option> -->
+                                                        <option value="HIJO">Hijo(a)</option>
+                                                        <!-- <option value="HIJA">Hija</option>
                                                         <option value="HERMANO">Hermano</option>
                                                         <option value="HERMANA">Hermana</option>
                                                         <option value="ABUELO">Abuelo</option>
                                                         <option value="ABUELA">Abuela</option>
-                                                        <option value="OTROS">OTROS</option>
+                                                        <option value="OTROS">OTROS</option> -->
                                                     </select>
                                                 </div>
                                                 <div><label class="dj-label">Apellidos y Nombres</label><input
@@ -1983,16 +2010,19 @@
                 style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #e5e7eb;background:#fafafa;flex-shrink:0;">
                 <button id="cerrarModal" type="button" data-hs-overlay="#modalDjGestion"
                     style="padding:7px 18px;font-size:12px;font-weight:600;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;cursor:pointer;">
-                    Cancelar
+                    Cerrar
                 </button>
+                
                 <button id="btnPrevisualizar" type="button"
                     style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:#64748b;color:#fff;cursor:pointer;border:none;">
                     Previsualizar PDF
                 </button>
+                @if (session('tipo_rol') != 9 && session('tipo_rol') != 8)
                 <button id="btnGuardar" type="submit" form="formDatos" 
                     style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:var(--color-primary,#6366f1);color:#fff;cursor:pointer;border:none;">
                     Guardar
                 </button>
+                @endif
             </div>
 
         </div>

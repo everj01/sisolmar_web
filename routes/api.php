@@ -11,7 +11,8 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\LoginController;
-
+use App\Http\Controllers\ReporteAvancesController;
+use App\Http\Controllers\BiometricoController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -54,6 +55,8 @@ Route::get('/get-view-documents/{codPersonal}/{codFolio}', [FileController::clas
 Route::get('/get-folios-comercial/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo_comercial']);
 
 Route::post('/change-password-user', [LoginController::class, 'updatePasswordUser']);
+
+
 
 //GUADAR DATOS
 Route::post('/save_folio_persona', [FileController::class, 'saveFolioPersona']);
@@ -115,20 +118,26 @@ Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 
-
 Route::get('/ubicacion/departamentos', [UbicacionController::class, 'departamentos']);
 Route::get('/ubicacion/provincias/{departamento_id}', [UbicacionController::class, 'provincias']);
 Route::get('/ubicacion/distritos/{provincia_id}', [UbicacionController::class, 'distritos']);
-
 
 Route::get('/get-postulantes', [FileController::class, 'getPostulantes']);
 Route::get('/get-personal-dj', [FileController::class, 'getListaDJ']);
 Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigracion']);
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
+Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
+Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
+Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
+Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
+Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
+Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
+Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
+Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
+Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
+
 // Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
-
-
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
 
 // NOTIFICACIONES
@@ -146,28 +155,7 @@ Route::get('/folios/proximos-vencer', [ConsultaController::class, 'getFoliosProx
 Route::get('/reporte-personal-sin-migracion', [DjController::class, 'reportePersonalSinMigracion']);
 Route::get('/reporte-personal-sin-migracion-v2', [DjController::class, 'reportePersonalSinMigracionV2']);
 
-// Route::prefix('dj')->group(function () {
-//     Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
-//     Route::get('/get-catalogs', [DjController::class, 'getCatalogs']);
-//     Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
-//     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
-// });
-
-// Route::prefix('dj')->group(function () {
-//     Route::get('/get-personal-data', [DjController::class, 'getPersonalData'])
-//         ->middleware('throttle:dj-heavy');
-
-//     Route::get('/get-catalogs', [DjController::class, 'getCatalogs'])
-//         ->middleware('throttle:dj-heavy');
-
-//     Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
-    
-//     Route::post('/save-dj-completo', [DjController::class, 'saveDjCompleto']);
-
-//     Route::get('/get-backup-data', [DjController::class, 'getBackupData']);
-    
-//     Route::get('/proxy-foto', [DjController::class, 'proxyFoto']);
-// });
+Route::get('rrhh/reporte-avances', [ReporteAvancesController::class, 'index']);
 
 Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
@@ -180,6 +168,7 @@ Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::post('/update-check-pdf',  [DjController::class, 'updateCheckPdf']);
     Route::post('/reset-check-pdf',   [DjController::class, 'resetCheckPdf']);
     Route::get('/get-check-pdf',      [DjController::class, 'getCheckPdf']);
+    Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
 });
 
 // REPORTE FOLIOS POR VENCER CON FILTROS
@@ -187,6 +176,9 @@ Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVe
 
 // GUARDAR DJ DE PERSONA
 Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
+
+Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
+Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
 
 
 

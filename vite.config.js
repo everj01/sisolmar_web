@@ -57,6 +57,10 @@ export default defineConfig({
                 //'resources/js/functions/capacitacion_old/historial_capacitaciones.js',
                 'resources/js/functions/gestion_dj.js',
                 'resources/js/functions/dj_pdf.js',
+                'resources/js/functions/chargefile/reporteAvancesExcel.js',
+                'resources/js/functions/chargefile/reporteAvancesPDF.js',
+                'resources/js/functions/chargefile/reporteAvances.js',
+               
             ],
             refresh: true,
         }),

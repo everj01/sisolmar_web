@@ -2,28 +2,12 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import DataTable from "vanilla-datatables";
 
-let cursosData = [];
+console.log('ESTO ES UNA PREUBA PROVAOFR');
+
+window.cursosData = [];
 window.alertasCursosData = [];
 
-window.alertasVencimientoCursos = function () {
-    return {
-        alertas: [],
-        async initAlertas() {
-            try {
-                const res = await axios.get(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`);
-                if (res.data && res.data.success) {
-                    this.alertas = res.data.alertas;
-                    window.alertasCursosData = this.alertas.map(a => a.codigo_curso);
-                    if (cursoTable) {
-                        renderTablaCursos(cursosData);
-                    }
-                }
-            } catch (e) {
-                console.error("Error cargando alertas de vencimiento:", e);
-            }
-        }
-    }
-}
+// window.alertasVencimientoCursos inyectado vía Blade para evitar race conditions con Vite
 
 const archivoInput = document.getElementById("archivoInput");
 const btnSeleccionar = document.getElementById("btnSeleccionar");
@@ -97,6 +81,20 @@ if (btnAnalizar) {
                 return;
             }
 
+            // --- AUTO-RELLENADO INTELIGENTE (PAUTA 7/11) ---
+            const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+            if (formElement && window.Alpine) {
+                const alpineData = Alpine.$data(formElement);
+                // Sincronizar el total de preguntas detectadas
+                alpineData.preguntasBalotario = data.totalQuestions || 0;
+                
+                // Si el usuario no ha puesto una cantidad de preguntas, sugerir que se tomen todas
+                if (!alpineData.cantidadPreguntas || alpineData.cantidadPreguntas == 0) {
+                    alpineData.cantidadPreguntas = data.totalQuestions || 0;
+                }
+            }
+            // -----------------------------------------------
+
             let actividadesHtml = "";
 
             resumenPlantilla.innerHTML = `
@@ -121,10 +119,6 @@ if (btnAnalizar) {
                   <div>
                       <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalActivities}</p>
                       <p class="text-sm text-slate-500">Actividades</p>
-                  </div>
-                  <div class="col-span-2 mt-4">
-                      <p class="text-3xl font-bold text-slate-500 mb-1">${data.totalQuestions}</p>
-                      <p class="text-sm text-slate-500">Preguntas</p>
                   </div>
               </div>
 
@@ -199,16 +193,23 @@ function actualizarLista() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+// document.addEventListener('DOMContentLoaded', async () => {
 
+//     await listarTipoCurso("slcTipoCurso")
+//     await listarTipoCurso("slcFiltroTipoCurso", true)
+//     // await listarAreas("slcArea") // Removed: Replaced by Alpine component
+//     await listarAreas("slcFiltroArea", true)
+//     await listarCursos()
+
+//     // DataTable will be initialized inside renderTablaCursos
+// })
+
+document.addEventListener('DOMContentLoaded', async () => {
     await listarTipoCurso("slcTipoCurso")
     await listarTipoCurso("slcFiltroTipoCurso", true)
-    // await listarAreas("slcArea") // Removed: Replaced by Alpine component
-    await listarAreas("slcFiltroArea", true)
+    await listarAreas()
     await listarCursos()
-
-    // DataTable will be initialized inside renderTablaCursos
-})
+});
 
 
 window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '') {
@@ -217,8 +218,8 @@ window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '')
             params: { filtro_area: area, filtro_tipo: tipoCurso }
         });
 
-        cursosData = res.data;
-        renderTablaCursos(cursosData);
+        window.cursosData = res.data;
+        window.renderTablaCursos(window.cursosData);
     } catch (err) {
         console.error("Error al obtener cursos", err);
         Swal.fire("Error", "No se pudieron cargar los cursos", "error");
@@ -302,16 +303,16 @@ async function listarAreas(selectId = null, esFiltro = false) {
     }
 }
 
-async function listarCursosFiltro() {
-    try {
-        const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
-        cursosData = res.data
-        renderTablaCursos(cursosData)
-    } catch (err) {
-        console.error("Error al obtener cursos", err)
-        Swal.fire("Error", "No se pudieron cargar los cursos", "error")
-    }
-}
+// async function listarCursosFiltro() {
+//     try {
+//         const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
+//         window.cursosData = res.data
+//         window.renderTablaCursos(window.cursosData)
+//     } catch (err) {
+//         console.error("Error al obtener cursos", err)
+//         Swal.fire("Error", "No se pudieron cargar los cursos", "error")
+//     }
+// }
 
 async function obtenerCursoXId(id) {
     try {
@@ -325,13 +326,13 @@ async function obtenerCursoXId(id) {
 }
 
 // Global variable to store DataTable instance
-let cursoTable = null;
+window.cursoTable = null;
 
-function renderTablaCursos(data) {
+window.renderTablaCursos = function (data) {
     // Destroy existing DataTable instance
-    if (cursoTable) {
-        cursoTable.destroy();
-        cursoTable = null;
+    if (window.cursoTable) {
+        window.cursoTable.destroy();
+        window.cursoTable = null;
     }
 
     const tblCursos = document.getElementById('tblCursos');
@@ -366,7 +367,7 @@ function renderTablaCursos(data) {
             const tr = document.createElement("tr");
             tr.style.backgroundColor = curso.habilitado == '1' ? "" : '#fff1f1';
 
-            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(curso.codigoCurso)
+            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso))
                 ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
                 : '';
 
@@ -380,26 +381,41 @@ function renderTablaCursos(data) {
         </td>
         <td>
             <div class="flex items-center gap-2">
-                <button type="button" @click="gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                <button type="button" onclick="window.gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                 class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
                     <i class="bx bxs-edit text-base"></i>
                 </button>
 
 
                 ${curso.habilitado == '1' ?
-                    `<button type="button"  @click="gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    `<button type="button" 
+                        ${curso.tiene_vigente
+                        ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
+                        : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" 
+                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}' } }))"`}>
+                        <i class="bx bx-calendar-star text-base"></i>
+                    </button>
+                    
+                    <button type="button"  onclick="window.gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
                         <i class="bx bx-trash text-base"></i>
                     </button>`
                     :
-                    `<button type="button"  @click="gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    `<button type="button"  onclick="window.gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
                         <i class='bx bx-check text-base'></i>
                     </button>
-                    <button type="button"  @click="gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    <button type="button"  onclick="window.gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                     class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
                         <i class="bx bx-trash text-base"></i>
                     </button>`
+                }
+
+                ${curso.es_demanda == '1' ?
+                    `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' } }))"
+                    class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
+                        <i class="bx bxs-file-import text-base"></i>
+                    </button>` : ''
                 }
             </div>
         </td>
@@ -419,7 +435,7 @@ function renderTablaCursos(data) {
     container.appendChild(newTable);
 
     // Initialize DataTables on the completely fresh table
-    cursoTable = new DataTable(newTable, {
+    window.cursoTable = new DataTable(newTable, {
         perPage: 10,
         perPageSelect: [10, 15, 20, 25],
         searchable: true,
@@ -450,14 +466,15 @@ window.gestionCurso = async (op, cod, nombre = '') => {
             const title = document.getElementById('txtTitleFile');
             const btnDownload = document.getElementById('btnDownloadPlantilla');
 
-            mensaje.textContent = 'Editar';
-            title.textContent = 'Actualizar plantilla';
+            if (mensaje) {
+                mensaje.textContent = 'Editar';
+                mensaje.classList.remove('bg-primary/25', 'text-primary-800');
+                mensaje.classList.add('bg-warning/25', 'text-warning-800');
+            }
 
-            mensaje.classList.remove('bg-primary/25', 'text-primary-800');
-            mensaje.classList.add('bg-warning/25', 'text-warning-800');
-
-            view.classList.remove('hidden');
-            btnDownload.classList.remove('hidden');
+            if (title) title.textContent = 'Actualizar plantilla';
+            if (view) view.classList.remove('hidden');
+            if (btnDownload) btnDownload.classList.remove('hidden');
 
             document.getElementById('codGestionEditar').value = curso.codigo;
 
@@ -469,40 +486,65 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 // Sincronizar campos principales con Alpine
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
-                alpineData.area = curso.area ?? "";
+                alpineData.areaConocimiento = curso.area_conocimiento ?? "";
+                alpineData.area = alpineData.areaConocimiento;
                 alpineData.frecuencia = curso.frecuencia ?? "";
 
+                // Responsable (NUEVO)
+                alpineData.codResponsable = curso.cod_responsable ?? "";
+                alpineData.nombreResponsable = curso.nombre_responsable ?? "";
 
+                // METADATOS DE SISTEMA
+                alpineData.sys_codigo = curso.codigo ?? "-";
+                alpineData.sys_creado_por = curso.creado_por || "-";
+                alpineData.sys_fecha_creacion = curso.fecha_creacion || "-";
+                alpineData.sys_modificado_por = curso.modificado_por || "-";
+                alpineData.sys_fecha_modificacion = curso.fecha_modificacion || curso.updated_at || "-";
 
                 // Update PAC logic
                 const esPacCurso = curso.tipo_curso?.descripcion?.toUpperCase().includes('PAC') || false;
                 alpineData.esPAC = esPacCurso;
                 alpineData.sucursalesAsignadas = curso.sucursales || [];
 
+                if (alpineData.tipoCurso == '6') {
+                    alpineData.clientesAsignados = curso.sucursales || [];
+                } else if (alpineData.tipoCurso == '7') {
+                    alpineData.areasAsignadas = curso.sucursales || [];
+                }
+
                 // Datos de Examen (Sincronizar con Alpine)
+                alpineData.aplicaEvaluacion = curso.aplica_evaluacion == 1;
+                alpineData.obligatorioAlta = true; // Siempre true por regla de negocio
+                alpineData.esDemanda = false;      // Retirado por regla de negocio
+
+                alpineData.targetGroup = curso.target_group || 'TODOS';
+
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
                 alpineData.nota = curso.examen?.nota_minima ?? 0;
                 alpineData.intentos = curso.examen?.intentos ?? 0;
+                alpineData.cantidadPreguntas = curso.examen?.cantidad_preguntas ?? 0;
+                alpineData.preguntasBalotario = curso.examen?.preguntas_balotario ?? 0;
             }
 
             // Se eliminaron asignaciones manuales por ID para usar x-model de Alpine
 
             // Lógica para el botón de descarga de plantilla
-            if (curso.examen && curso.examen.file_tiene == 1 && curso.examen.file_ruta) {
-                btnDownload.href = `${VITE_URL_APP}/storage/${curso.examen.file_ruta}`;
-                btnDownload.setAttribute('download', curso.examen.file_nombre || 'plantilla');
-                // Mostrar nombre original si existe, sino 'plantilla'
-                const nombreMostrar = curso.examen.file_nombre_original || curso.examen.file_nombre || 'plantilla';
-                btnDownload.innerHTML = `<i class='bx bxs-cloud-download'></i>&nbsp;Descargar ${nombreMostrar}`;
-                btnDownload.classList.remove('hidden');
-                btnDownload.target = "_blank";
-            } else {
-                btnDownload.classList.add('hidden');
-                btnDownload.href = '#';
+            if (btnDownload) {
+                if (curso.examen && curso.examen.file_tiene == 1 && curso.examen.file_ruta) {
+                    btnDownload.href = `${VITE_URL_APP}/storage/${curso.examen.file_ruta}`;
+                    btnDownload.setAttribute('download', curso.examen.file_nombre || 'plantilla');
+                    const nombreMostrar = curso.examen.file_nombre_original || curso.examen.file_nombre || 'plantilla';
+                    btnDownload.innerHTML = `<i class='bx bxs-cloud-download'></i>&nbsp;Descargar ${nombreMostrar}`;
+                    btnDownload.classList.remove('hidden');
+                    btnDownload.target = "_blank";
+                } else {
+                    btnDownload.classList.add('hidden');
+                    btnDownload.href = '#';
+                }
             }
 
-            btn.classList.add('hidden');
-            btnEdit.classList.remove('hidden');
+            if (btn) btn.classList.add('hidden');
+            if (btnEdit) btnEdit.classList.remove('hidden');
 
         } else {
             Swal.fire('Advertencia', 'No se encontró el curso', 'warning');
@@ -572,11 +614,19 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
 }
 
+// window.gestionListarCursos = (op) => {
+//     if (op === 1) {
+//         listarCursos();
+//     } else {
+//         listarCursosFiltro(0);
+//     }
+// }
+
 window.gestionListarCursos = (op) => {
     if (op === 1) {
-        listarCursos();
+        listarCursos(1);
     } else {
-        listarCursosFiltro(0);
+        listarCursos(0);
     }
 }
 
@@ -588,33 +638,48 @@ window.editarFormGestionCurso = (e) => {
     const alpineData = Alpine.$data(formElement);
 
     const data = {
-        codigo: document.getElementById('codGestionEditar').value,
-        nombre: document.getElementById('txtNombreCurso').value,
-        tipo_curso: document.getElementById('slcTipoCurso').value,
-        area: document.getElementById('slcArea').value,
-        tiempo: parseInt(document.getElementById('txtLimite').value) || 0,
-        nota: parseInt(document.getElementById('txtNota').value) || 0,
-        intentos: parseInt(document.getElementById('txtIntentos').value) || 0,
+        codigo: alpineData.codigo,
+        nombre: alpineData.nombre,
+        tipo_curso: alpineData.tipoCurso,
+        area_conocimiento: alpineData.areaConocimiento,
+        tiempo: alpineData.aplicaEvaluacion ? (parseInt(alpineData.limiteTiempo) || 0) : 0,
+        nota: alpineData.aplicaEvaluacion ? (parseFloat(alpineData.nota) || 0) : 0,
+        intentos: alpineData.aplicaEvaluacion ? (parseInt(alpineData.intentos) || 0) : 0,
+        cantidad_preguntas: alpineData.aplicaEvaluacion ? (parseInt(alpineData.cantidadPreguntas) || 0) : 0,
+        preguntas_balotario: alpineData.aplicaEvaluacion ? (parseInt(alpineData.preguntasBalotario) || 0) : 0,
     }
 
     const formData = new FormData();
     formData.append('codigo', data.codigo);
     formData.append('nombre', data.nombre);
     formData.append('tipo_curso', data.tipo_curso);
-    formData.append('area', data.area);
+    formData.append('area_conocimiento', data.area_conocimiento);
     formData.append('tiempo', data.tiempo);
     formData.append('nota', data.nota);
     formData.append('intentos', data.intentos);
+    formData.append('cantidad_preguntas', data.cantidad_preguntas);
+    formData.append('preguntas_balotario', data.preguntas_balotario);
     formData.append('frecuencia', alpineData.frecuencia);
+    formData.append('es_periodico', alpineData.frecuencia ? 1 : 0);
+    // NUEVO: Enviar estados de los checks
+    formData.append('aplica_evaluacion', alpineData.aplicaEvaluacion ? 1 : 0);
+    formData.append('obligatorio_alta', alpineData.obligatorioAlta ? 1 : 0);
+    formData.append('es_demanda', alpineData.esDemanda ? 1 : 0);
+    formData.append('target_group', alpineData.targetGroup || 'TODOS');
+    formData.append('cod_responsable', alpineData.codResponsable);
 
 
     //formData.append('archivo', archivoSeleccionado);
 
-    // Append Sucursales (PAC) - Read from Alpine
+    // Append Sucursales (PAC / PCU / PCI) - Read from Alpine
     if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
-        alpineData.sucursalesAsignadas.forEach(suc => {
-            formData.append('sucursales_asignadas[]', suc);
-        });
+        alpineData.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
+    }
+    if (alpineData.tipoCurso == '6' && alpineData.clientesAsignados.length > 0) {
+        alpineData.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
+    }
+    if (alpineData.tipoCurso == '7' && alpineData.areasAsignadas.length > 0) {
+        alpineData.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
     }
 
     if (archivoSeleccionado) {
@@ -673,15 +738,22 @@ window.restaurarFormCurso = () => {
         btnDownload.href = '#';
     }
 
-    mensaje.textContent = 'Nuevo';
-    title.textContent = 'Actualizar plantilla';
+    if (mensaje) {
+        mensaje.textContent = 'Nuevo';
+        mensaje.classList.add('bg-primary/25', 'text-primary-800');
+        mensaje.classList.remove('bg-warning/25', 'text-warning-800');
+    }
+    
+    if (title) {
+        title.textContent = 'Actualizar plantilla';
+    }
 
-    mensaje.classList.add('bg-primary/25', 'text-primary-800');
-    mensaje.classList.remove('bg-warning/25', 'text-warning-800');
+    if (view) {
+        view.classList.add('hidden');
+    }
 
-    view.classList.add('hidden');
-
-    document.getElementById('codGestionEditar').value = '-1';
+    const codEditar = document.getElementById('codGestionEditar');
+    if (codEditar) codEditar.value = '-1';
 
     // Al llamar a restaurarFormCurso (Crear curso), limpiamos el estado de Alpine
     const formElement = document.querySelector('[x-data="formCursoGestion()"]');
@@ -692,16 +764,25 @@ window.restaurarFormCurso = () => {
         }
     }
 
-    btn.classList.remove('hidden');
-    btnEdit.classList.add('hidden');
+    if (btn) btn.classList.remove('hidden');
+    if (btnEdit) btnEdit.classList.add('hidden');
 }
 
 window.formCursoGestion = function () {
     return {
         codigo: '-1',
+        // Información de Sistema
+        sys_codigo: '-',
+        sys_creado_por: '-',
+        sys_fecha_creacion: '-',
+        sys_modificado_por: '-',
+        sys_fecha_modificacion: '-',
+
         nombre: '',
         tipoCurso: '',
-        area: '',
+        areaConocimiento: '',
+        area: '', // 👈 NUEVO: Evitar error "area is not defined"
+        areasEncargadas: [],
         frecuencia: '',
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
@@ -709,7 +790,91 @@ window.formCursoGestion = function () {
         intentos: '',
         cantidadPreguntas: '',
         preguntasBalotario: '',
+        targetGroup: 'TODOS',
         fechaActual: new Date().toISOString().split('T')[0],
+
+        tipoResponsable: 'ADMINISTRATIVO_5',
+        codResponsable: '',
+        nombreResponsable: '',
+
+        aplicaEvaluacion: true,
+        obligatorioAlta: true, // Siempre true por regla de negocio
+        esDemanda: false,      // Retirado
+
+
+        // IA 2026
+        archivoIA: null,
+        archivoIANombre: '',
+        cargandoIA: false,
+        preguntasExamenIA: [],  // Almacena las preguntas extraídas hasta que se guarde el curso
+        iaMetrics: {
+            tokensInput: 0,
+            tokensOutput: 0,
+            tokensTotal: 0,
+            costoUSD: 0,
+            tiempoSeg: 0
+        },
+
+        async analizarConIA() {
+            if (!this.archivoIA) return;
+            this.cargandoIA = true;
+            try {
+                const formData = new FormData();
+                formData.append('archivo', this.archivoIA);
+
+                const res = await axios.post(`${VITE_URL_APP}/api/capacitacion/procesar-examen-ia`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                if (res.data.success) {
+                    // Guardamos las preguntas en estado Alpine (no guardamos en BD aún)
+                    this.preguntasExamenIA = res.data.preguntas;
+                    
+                    // Almacenar métricas de consumo y costo
+                    if (res.data.metrics) {
+                        this.iaMetrics = {
+                            tokensInput: res.data.metrics.tokens_input,
+                            tokensOutput: res.data.metrics.tokens_output,
+                            tokensTotal: res.data.metrics.tokens_total,
+                            costoUSD: res.data.metrics.costo_usd,
+                            tiempoSeg: res.data.metrics.tiempo_seg
+                        };
+                    }
+
+                    // Autocompletado automático de la cantidad de preguntas (Pauta 2026)
+                    const count = res.data.preguntas.length;
+                    this.cantidadPreguntas = count;
+                    this.preguntasBalotario = count;
+
+                    // Abrimos el modal de previsualización automáticamente
+                    this.verVistaPrevia();
+                } else {
+                    Swal.fire('Error', res.data.message, 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'No se pudo procesar el archivo con IA', 'error');
+            } finally {
+                this.cargandoIA = false;
+            }
+        },
+
+        // Abrir el modal de previsualización con las preguntas ya cargadas
+        verVistaPrevia() {
+            if (this.preguntasExamenIA.length === 0) {
+                Swal.fire('Sin preguntas', 'Primero debe analizar un archivo con IA.', 'info');
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('abrir-modal-ia', {
+                detail: {
+                    preguntas: this.preguntasExamenIA,
+                    cursoId: this.codigo,
+                    examenId: document.getElementById('codGestionEditar')?.value || -1,
+                    nombreArc: this.archivoIANombre,
+                    metrics: this.iaMetrics // 👈 Pasar métricas al modal si es necesario
+                }
+            }));
+        },
 
         // Lógica PAC
         esPAC: false,
@@ -725,6 +890,41 @@ window.formCursoGestion = function () {
             );
         },
 
+        clientesDisponibles: [],
+        clientesAsignados: [],
+        empresasDisponibles: [], // Sin uso actualmente para PCI (migrado a áreas)
+        areasAsignadas: [],
+        busquedaCliente: '',
+        busquedaEmpresa: '',
+        busquedaAreaPCI: '',
+
+        get areasPCIFiltradas() {
+            if (!this.busquedaAreaPCI) return this.areasEncargadas;
+            const search = this.busquedaAreaPCI.toLowerCase();
+            return this.areasEncargadas.filter(ar =>
+                (ar.descripcion || '').toLowerCase().includes(search) ||
+                (ar.codigo || '').toLowerCase().includes(search)
+            );
+        },
+
+        get clientesFiltrados() {
+            if (!this.busquedaCliente) return this.clientesDisponibles;
+            const search = this.busquedaCliente.toLowerCase();
+            return this.clientesDisponibles.filter(clie =>
+                (clie.descripcion || '').toLowerCase().includes(search) ||
+                (clie.codigo || '').toLowerCase().includes(search)
+            );
+        },
+
+        get empresasFiltradas() {
+            if (!this.busquedaEmpresa) return this.empresasDisponibles;
+            const search = this.busquedaEmpresa.toLowerCase();
+            return this.empresasDisponibles.filter(emp =>
+                (emp.descripcion || '').toLowerCase().includes(search) ||
+                (emp.codigo || '').toLowerCase().includes(search)
+            );
+        },
+
         init() {
             // Cargar sucursales dinámicamente al iniciar
             axios.get(`${VITE_URL_APP}/api/get-sucursales`)
@@ -737,16 +937,46 @@ window.formCursoGestion = function () {
                 .catch(err => {
                     console.error("Error al cargar sucursales para gestión", err);
                 });
+
+            // Cargar áreas encargadas (AV_AREA)
+            axios.get(`${VITE_URL_APP}/api/get-areas-encargadas`)
+                .then(res => {
+                    this.areasEncargadas = res.data;
+                    window.dispatchEvent(new CustomEvent('areas-encargadas-loaded', { detail: res.data }));
+                })
+                .catch(err => {
+                    console.error("Error al cargar áreas encargadas", err);
+                });
+
+            // Cargar Clientes para PCU
+            axios.get(`${VITE_URL_APP}/api/get-clientes-pac`)
+                .then(res => {
+                    this.clientesDisponibles = res.data || [];
+                });
+
+            // Cargar Empresas para PCI
+            axios.get(`${VITE_URL_APP}/api/get-empresas`)
+                .then(res => {
+                    this.empresasDisponibles = res.data || [];
+                });
+
+            // Eliminado el bloque de exclusión mutua ($watch) entre obligatorioAlta y esDemanda,
+            // ya que ahora obligatorioAlta siempre es true y esDemanda siempre es false por requerimiento.
+
+            this.$watch('frecuencia', (val) => {
+                // Mantenemos otras lógicas de frecuencia si existen
+            });
         },
 
-        checkEsPAC() {
-            const select = document.getElementById('slcTipoCurso');
-            if (select && select.selectedIndex >= 0) {
-                const text = select.options[select.selectedIndex].text;
-                this.esPAC = text.includes('PAC');
-                if (!this.esPAC) {
-                    this.sucursalesAsignadas = [];
-                }
+        // checkEsPAC() {
+        //     // Depurado: Esto funcionaba con el select, pero ahora preferimos checkEsPACByText para radios
+        // },
+
+        checkEsPACByText(text) {
+            if (!text) return;
+            this.esPAC = text.toUpperCase().includes('PAC');
+            if (!this.esPAC) {
+                this.sucursalesAsignadas = [];
             }
         },
 
@@ -754,7 +984,11 @@ window.formCursoGestion = function () {
             this.codigo = '-1';
             this.nombre = '';
             this.tipoCurso = '';
+            this.areaConocimiento = '';
             this.area = '';
+            this.tipoResponsable = 'ADMINISTRATIVO_5';
+            this.codResponsable = '';
+            this.nombreResponsable = '';
             this.frecuencia = '';
             this.limiteTiempo = '0';
             this.nota = '0';
@@ -764,6 +998,22 @@ window.formCursoGestion = function () {
             this.esPAC = false;
             this.sucursalesAsignadas = [];
             this.busquedaSucursal = '';
+            this.clientesAsignados = [];
+            this.areasAsignadas = [];
+            this.busquedaCliente = '';
+            this.busquedaAreaPCI = '';
+            this.busquedaEmpresa = '';
+
+            // IA 2026: limpiar preguntas cargadas
+            this.archivoIA = null;
+            this.archivoIANombre = '';
+            this.preguntasExamenIA = [];
+
+            this.aplicaEvaluacion = true;
+            this.obligatorioAlta = true; // Forzado a true por requerimiento
+            this.esDemanda = false;
+
+            this.targetGroup = 'TODOS';
 
             // Forzar limpieza de inputs de archivos y estados visuales
             const archivoInput = document.getElementById('archivoInput');
@@ -777,54 +1027,108 @@ window.formCursoGestion = function () {
         registrar(e) {
             e?.preventDefault();
 
-            // Validación PAC
+            // Validación PAC General
             if (this.esPAC && this.sucursalesAsignadas.length === 0) {
                 Swal.fire('Atención', 'Debe asignar al menos una sucursal para cursos PAC', 'warning');
                 return;
             }
 
-            const camposObligatorios = [
-                'nombre', 'limiteTiempo', 'nota', 'intentos'
-            ];
+            // Validaciones específicas PCU (6) y PCI (7)
+            if (this.tipoCurso == '6' && this.clientesAsignados.length === 0) {
+                Swal.fire('Atención', 'Debe asignar al menos un cliente para cursos PCU', 'warning');
+                return;
+            }
+            if (this.tipoCurso == '7' && this.areasAsignadas.length === 0) {
+                Swal.fire('Atención', 'Debe asignar al menos un área operativa para cursos PCI', 'warning');
+                return;
+            }
 
-            const vacio = camposObligatorios.some(campo => !this[campo]);
+            const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
+
+            const vacio = camposObligatorios.some(campo => {
+                const valor = this[campo];
+                return valor === null || valor === undefined || valor === '';
+            });
 
             if (vacio) {
-                Swal.fire('Atención', 'Completar los campos obligatorios', 'warning')
+                Swal.fire('Atención', 'Completar los campos obligatorios (*)', 'warning')
                 return
             }
 
-            if (!archivoSeleccionado) {
-                Swal.fire('Atención', 'Debe importar la plantilla', 'warning')
-                return
+            // Validación separada para campos del examen (deben ser > 0 cuando aplica evaluación)
+            if (this.aplicaEvaluacion) {
+                const tiempoOk = parseInt(this.limiteTiempo) > 0;
+                const notaOk = parseFloat(this.nota) > 0;
+                const intentosOk = parseInt(this.intentos) > 0;
+                if (!tiempoOk || !notaOk || !intentosOk) {
+                    Swal.fire('Atención', 'Debe completar los datos del examen (Tiempo, Nota mínima e Intentos deben ser mayores a 0)', 'warning');
+                    return;
+                }
+            }
+
+            // Validación opcional de plantilla, ahora validamos si existe archivoIA (el word)
+            if (this.aplicaEvaluacion && !this.archivoIA && this.preguntasExamenIA.length === 0) {
+                // Ya no es estrictamente obligatorio pero avisamos
+                console.info('No se subió archivo de examen. Continuando sin archivo adjunto.');
             }
 
             const formData = new FormData();
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
+            formData.append('area_conocimiento', this.areaConocimiento);
             formData.append('area', this.area);
             formData.append('frecuencia', this.frecuencia);
+            formData.append('es_periodico', this.frecuencia ? 1 : 0);
+            formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
+            formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
+            formData.append('es_demanda', this.esDemanda ? 1 : 0);
+            formData.append('target_group', this.targetGroup || 'TODOS');
 
-
-
-            // Removed: nombre_exa, descripcion
-            formData.append('tiempo', this.limiteTiempo);
-            formData.append('nota', this.nota);
-            formData.append('intentos', this.intentos);
-            formData.append('archivo', archivoSeleccionado);
-
-            // Append Sucursales (PAC)
+            // Campos del examen solo cuando aplica evaluación
+            if (this.aplicaEvaluacion) {
+                formData.append('tiempo', this.limiteTiempo);
+                formData.append('nota', this.nota);
+                formData.append('intentos', this.intentos);
+                formData.append('cantidad_preguntas', this.cantidadPreguntas);
+                formData.append('preguntas_balotario', this.preguntasBalotario);
+            }
+            // Recolección PAC, PCU, PCI compartiendo el mismo campo en Backend
             if (this.esPAC && this.sucursalesAsignadas.length > 0) {
-                this.sucursalesAsignadas.forEach(suc => {
-                    formData.append('sucursales_asignadas[]', suc);
-                });
+                this.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
+            }
+            if (this.tipoCurso == '6' && this.clientesAsignados.length > 0) {
+                this.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
+            }
+            if (this.tipoCurso == '7' && this.areasAsignadas.length > 0) {
+                this.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
+            }
+
+            formData.append('cod_responsable', this.codResponsable);
+            
+            if (this.archivoIA) {
+                formData.append('archivo', this.archivoIA);
             }
 
             axios.post(`${VITE_URL_APP}/api/save-cursos`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
-                .then(async (res) => {
+                    .then(async (res) => {
                     if (res.status === 200 && res.data.success) {
+
+                        // Si hay preguntas de IA cargadas, guardarlas en el banco 2026
+                        if (this.preguntasExamenIA.length > 0 && res.data.codigo) {
+                            try {
+                                await axios.post(`${VITE_URL_APP}/api/capacitacion/guardar-examen-ia`, {
+                                    cod_curso: res.data.codigo,
+                                    cod_examen: -1,
+                                    preguntas: this.preguntasExamenIA,
+                                    tiempo: 60
+                                });
+                            } catch (iaErr) {
+                                console.warn('Banco IA: no se pudo guardar automáticamente', iaErr);
+                            }
+                        }
+
                         Swal.fire('Éxito', res.data.message || 'Curso registrado correctamente', 'success')
 
                         const valoresPorDefecto = {
@@ -1219,3 +1523,49 @@ window.abrirModalRegistro = function () {
         }
     }
 }
+
+window.searchablePersonnel = function () {
+    return {
+        open: false,
+        query: '',
+        results: [],
+        loading: false,
+        error: null,
+        toggle() {
+            this.open = !this.open;
+            if (this.open && (this.results.length === 0 || this.query.length > 0)) {
+                this.search();
+            }
+        },
+        search() {
+            this.loading = true;
+            this.error = null;
+            const params = {
+                tipo_responsable: 'ADMINISTRATIVO_5'
+            };
+            if (this.query.length > 0) {
+                params.q = this.query;
+            }
+
+            axios.get(`${VITE_URL_APP}/api/buscar-personal-capacitacion`, { params })
+                .then(res => {
+                    this.results = res.data.personal || [];
+                })
+                .catch(err => {
+                    console.error(err);
+                    this.error = 'Error al cargar la lista. Verifique la consola.';
+                })
+                .finally(() => this.loading = false);
+        },
+        select(p) {
+            const formElement = document.querySelector('[x-data^="formCursoGestion"]');
+            if (formElement && window.Alpine) {
+                const alpineData = Alpine.$data(formElement);
+                alpineData.codResponsable = p.codigo;
+                alpineData.nombreResponsable = p.nombre_completo;
+            }
+            this.open = false;
+        }
+    }
+}
+

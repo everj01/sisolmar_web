@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const d = cell.getData();
                     const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">DJ</button>`;
                     const btnPDF = `<button type="button" class="btn rounded-full form-btn bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar"><i class='bx bxs-file-pdf'></i></button>`;
-                    return d.estado === 'pendiente' ? btnDJ : btnDJ + btnPDF;
+                    return d.estado === 'pendiente' ? btnDJ : btnDJ /*+ btnPDF*/;
                 },
                 cellClick: (e, cell) => {
                     const btn = e.target.closest('.form-btn');
@@ -425,10 +425,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <select name="parentesco[]" class="form-select w-full">
                     <option value="">Seleccionar</option>
                     <option value="PADRE">Padre</option>    <option value="MADRE">Madre</option>
-                    <option value="ESPOSO">Esposo</option>  <option value="ESPOSA">Esposa</option>
-                    <option value="HIJO">Hijo</option>      <option value="HIJA">Hija</option>
-                    <option value="HERMANO">Hermano</option><option value="HERMANA">Hermana</option>
-                    <option value="ABUELO">Abuelo</option>  <option value="ABUELA">Abuela</option>
+                    <option value="CONYUGE">Conyuge</option>  
+                    <option value="HIJO">Hijo(a)</option>     
+                  
+                   
                 </select>
             </div>
             <div>
@@ -443,6 +443,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 <button type="button" class="remove-family self-end px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">Eliminar</button>
             </div>
         </div>`;
+        // return `
+        // <div class="family-row grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg relative" data-familia-row>
+        //     <div>
+        //         <label class="text-sm font-medium inline-block mb-2">Parentesco</label>
+        //         <select name="parentesco[]" class="form-select w-full">
+        //             <option value="">Seleccionar</option>
+        //             <option value="PADRE">Padre</option>    <option value="MADRE">Madre</option>
+        //             <option value="ESPOSO">Esposo</option>  <option value="ESPOSA">Esposa</option>
+        //             <option value="HIJO">Hijo</option>      <option value="HIJA">Hija</option>
+        //             <option value="HERMANO">Hermano</option><option value="HERMANA">Hermana</option>
+        //             <option value="ABUELO">Abuelo</option>  <option value="ABUELA">Abuela</option>
+        //         </select>
+        //     </div>
+        //     <div>
+        //         <label class="text-sm font-medium inline-block mb-2">Apellidos y Nombres</label>
+        //         <input type="text" name="apellidosNombres[]" class="form-input w-full" placeholder="Apellidos y nombres completos">
+        //     </div>
+        //     <div class="flex gap-2 items-end">
+        //         <div class="flex-1">
+        //             <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
+        //             <input type="date" name="fechaNacimiento[]" class="form-input w-full">
+        //         </div>
+        //         <button type="button" class="remove-family self-end px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">Eliminar</button>
+        //     </div>
+        // </div>`;
     }
 
     function limpiarFormulario() {
@@ -545,16 +570,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // CARGA DE DATOS (API)
     // ============================================================
     function getPersonal() {
-        axios.get(`${VITE_URL_APP}/api/get-personal-dj`)
+        axios.get(`${VITE_URL_APP}/get-personal-dj`)
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
-                const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                const filtroSucursal = document.getElementById('filtroSucursalPEN');
-                if (filtroSucursal) {
-                    filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                    sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-                }
+                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
+                // const filtroSucursal = document.getElementById('filtroSucursalPEN');
+                // if (filtroSucursal) {
+                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+                // }
+                aplicarFiltrosPEN();
             })
             .catch(error => console.error("Hubo un error:", error));
     }
@@ -564,12 +590,13 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonasMigrado.setData(datosTabla);
-                const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                const filtroSucursal = document.getElementById('filtroSucursal');
-                if (filtroSucursal) {
-                    filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                    sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-                }
+                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
+                // const filtroSucursal = document.getElementById('filtroSucursal');
+                // if (filtroSucursal) {
+                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+                // }
+                aplicarFiltrosMigracion();  // ← agrega esta línea al final
                 actualizarCardDesdeSP();
             })
             .catch(error => console.error("Hubo un error:", error));
@@ -1692,7 +1719,7 @@ async function llenarFormulario(data) {
 
     setValue('#contacto_emergencia',   data.PERS_NOMCONTACTO  ? data.PERS_NOMCONTACTO.trim()  : '');
     setValue('#celular_emergencia',    data.PERS_NROEMERGENCIA? data.PERS_NROEMERGENCIA.trim(): '');
-    setValue('#parentesco_emergencia', data.PERS_CONYUGE      ? data.PERS_CONYUGE.trim()      : '');
+    setValue('#parentesco_emergencia', data.PERS_EMERC_FAMILIAR      ? data.PERS_EMERC_FAMILIAR.trim()      : '');
 
     if (data.FOTO_PATH) {
         const img = document.getElementById('previewFoto');
@@ -1743,7 +1770,7 @@ function addFamiliarRow(data = {}, container = null) {
             <label class="dj-label">Parentesco</label>
             <select name="parentesco[]" class="dj-select">
                 <option value="">—</option>
-                ${['PADRE','MADRE','ESPOSO','ESPOSA','CONYUGE','HIJO','HIJA','HERMANO','HERMANA','ABUELO','ABUELA']
+                ${['PADRE','MADRE','CONYUGE','HIJO']
                     .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
             </select>
         </div>
@@ -1758,6 +1785,26 @@ function addFamiliarRow(data = {}, container = null) {
         <div>
             <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
         </div>`;
+        // row.innerHTML = `
+        // <div>
+        //     <label class="dj-label">Parentesco</label>
+        //     <select name="parentesco[]" class="dj-select">
+        //         <option value="">—</option>
+        //         ${['PADRE','MADRE','ESPOSO','ESPOSA','CONYUGE','HIJO','HIJA','HERMANO','HERMANA','ABUELO','ABUELA']
+        //             .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
+        //     </select>
+        // </div>
+        // <div>
+        //     <label class="dj-label">Apellidos y Nombres</label>
+        //     <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres||''}" placeholder="Apellidos y nombres completos">
+        // </div>
+        // <div>
+        //     <label class="dj-label">Fecha de Nacimiento</label>
+        //     <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
+        // </div>
+        // <div>
+        //     <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
+        // </div>`;
 
     container.appendChild(row);
     row.querySelector('.remove-family')?.addEventListener('click', () => row.remove());
@@ -1871,7 +1918,7 @@ const CAMPO_MAP = {
     'embargos':             'PERS_EMBARGO',    'consumo_sustancias':  'PERS_SMO',
     'direccion_actual':     'DIRECCION',       'direccion_dni':       'PERS_DIREC_DNI',
     'contacto_emergencia':  'PERS_NOMCONTACTO','celular_emergencia':  'PERS_NROEMERGENCIA',
-    'parentesco_emergencia':'PERS_CONYUGE',    'ocupacion_principal': 'PERS_PROFESION',
+    'parentesco_emergencia':'PERS_EMERC_FAMILIAR',    'ocupacion_principal': 'PERS_PROFESION',
     'curso_sucamec':        'PERS_CONDISCAMEC','licencia_arma':       'PERS_NROLICENCIA',
     'tipo_arma':            'PERS_TIPOARMA',   'arma_propia':         'PERS_CONARMAS',
     'brevete':              'PERS_BREVETE',    'clase_brevete':       'CLASE_BREVETE',

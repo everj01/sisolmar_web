@@ -9,6 +9,7 @@ class CapacitacionTipoCurso extends Model
 {
     use HasFactory;
 
+    protected $connection = 'sqlsrv';
     protected $table = 'sw_capacitacion_tipo_curso';
 
     protected $primaryKey = 'codigo';

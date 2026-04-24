@@ -28,8 +28,10 @@ class FileController extends Controller{
         $sucursales = FileControl::getSucursales();
 
         $tipoPerLimitar = session('limitarTipoPer');
+        $tipoUsuario = session('tipo_rol');
 
-        return view('file_control.chargefile', compact('personal', 'clientes', 'sucursales', 'tipoPerLimitar'));
+
+        return view('file_control.chargefile', compact('personal', 'clientes', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
     public function indexGestionDj()
@@ -38,8 +40,17 @@ class FileController extends Controller{
         $carreras = FileControl::getCarrerasDJ();
         $instituciones = FileControl::getInstitucionesDJ();
 
-        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones'));
+        // NUevos
+         $sucursales = FileControl::getSucursales();
+
+        $tipoPerLimitar = session('limitarTipoPer');
+        $tipoUsuario = session('tipo_rol');
+        // -------------------------------------
+
+        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
     }
+
+    
 
     public function ViewReportes()
 {
@@ -621,6 +632,12 @@ class FileController extends Controller{
 
     public function getListaDJ(){
         $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]");
+        return response()->json($DJ);
+    }
+
+    public function getListaDJXusuario(){
+        $usuario = session('usuario');
+        $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ] ?", [$usuario]);
         return response()->json($DJ);
     }
 

@@ -122,6 +122,43 @@ table.datatable tbody tr:hover {
   margin-bottom: 12px;
 }
 
+.tabulator-paginator {
+    display: flex;
+    gap: 0.5rem; /* separación entre botones */
+    justify-content: center; /* centra horizontalmente */
+    margin-top: 1rem;
+}
+
+/* Cada botón de página */
+.tabulator-page {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    background-color: #f9f9f9;
+    transition: all 0.2s;
+}
+
+/* Hover */
+.tabulator-page:hover {
+    background-color: #e2e8f0; /* un gris claro */
+}
+
+/* Página activa */
+.tabulator-page.active {
+    background-color: #3b82f6; /* azul */
+    color: white;
+    border-color: #3b82f6;
+}
+
+
+.fila-no-vigente {
+    background-color: #ffeaea !important;
+    color: #7a2222;
+}
+
+
 /* Selector de cantidad */
 .dataTable-selector {
   appearance: none;           /* Elimina estilos nativos */

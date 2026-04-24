@@ -41,12 +41,15 @@
                         data-tab="pendiente">
                         Listos
                     </button>
-                    <button id="tabBtnMigrado" type="button"
-                        class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
-                            bg-gray-50 text-gray-500 border-transparent hover:text-gray-700"
-                        data-tab="migrado">
-                        Migración (SIP)
-                    </button>
+
+                    @if($tipoUsuario != 9 && $tipoUsuario != 8) 
+                        <button id="tabBtnMigrado" type="button"
+                            class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
+                                bg-gray-50 text-gray-500 border-transparent hover:text-gray-700"
+                            data-tab="migrado">
+                            Migración (SIP)
+                        </button>
+                    @endif
                 </div>
                 {{-- Título dinámico --}}
                 <p id="tituloTabActiva" class="text text-gray-400 mt-2 ml-1 flex items-center content-center justify-center gap-1">
@@ -78,11 +81,15 @@
                         <i class='bx bx-plus text-base'></i>
                         <span>Nueva DJ</span>
                     </button> -->
-                    <button type="button" id="btnNuevaDJ"
-                        class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white flex items-center gap-1 px-4 py-1">
-                        <i class='bx bx-plus text-base'></i>
-                        <span>Nueva DJ</span>
-                    </button>
+
+                     @if($tipoUsuario != 9 && $tipoUsuario != 8) 
+                        <button type="button" id="btnNuevaDJ"
+                            class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white flex items-center gap-1 px-4 py-1">
+                            <i class='bx bx-plus text-base'></i>
+                            <span>Nueva DJ</span>
+                        </button>
+                    @endif
+                    
                     <button type="button" id="btnExtFirmaHuella" hidden disabled
                         class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white hidden items-center gap-1 px-4 py-1">
                                             <i class='bx bx-outline'></i>
@@ -98,19 +105,55 @@
                     <div class="flex gap-3 mb-3 flex-wrap items-center">
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Sucursal:</label>
-                            <select id="filtroSucursalPEN"
+                            <!-- <select id="filtroSucursalPEN"
                                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 <option value="">Todas</option>
+                            </select> -->
+                            <!-- <select id="filtroSucursalPEN" class="...">
+                                <option value="">Todas</option>
+                                @foreach ($sucursales as $sucursal)
+                                    @if (!$loop->first)
+                                        <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                                    @endif
+                                @endforeach
+                            </select> -->
+                            @php
+                                $sucursalesFiltradas = array_slice($sucursales, 1);
+                            @endphp
+
+                            <select id="filtroSucursalPEN" class="...">
+
+                                @if(count($sucursalesFiltradas) > 1)
+                                    <option value="">Todas</option>
+                                @endif
+
+                                @foreach ($sucursalesFiltradas as $sucursal)
+                                    <option value="{{ $sucursal->codigo }}">
+                                        {{ $sucursal->abreviatura }}
+                                    </option>
+                                @endforeach
+
                             </select>
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Tipo:</label>
-                            <select id="filtroTipoPerPEN"
+                            <!-- <select id="filtroTipoPerPEN"
                                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 <option value="">Todos</option>
                                 <option value="OPERATIVO">Operativo</option>
                                 <option value="ADMINISTRATIVO">Administrativo</option>
-                                <option value="ESPECIAL">Especial</option>
+                               <option value="ESPECIAL">Especial</option> 
+                            </select> -->
+                            <select id="filtroTipoPerPEN" class="...">
+                                @if($tipoPerLimitar == 0)
+                                    <option value="">Todos</option>
+                                    <option value="OPERATIVO">Operativo</option>
+                                    <option value="ADMINISTRATIVO">Administrativo</option>
+                                @elseif($tipoPerLimitar == 1)
+                                    <option value="ADMINISTRATIVO" selected>Administrativo</option>
+                                @elseif($tipoPerLimitar == 2)
+                                    <option value="OPERATIVO" selected>Operativo</option>
+                                @endif
                             </select>
                         </div>
                          {{-- <button type="button" id="btnDescargarDJs_PEN"
@@ -204,19 +247,51 @@
         <div class="flex items-center gap-3 flex-wrap">
             <div class="flex items-center gap-2">
                 <label class="text-sm text-gray-600">Sucursal:</label>
-                <select id="filtroSucursal"
+                <!-- <select id="filtroSucursal"
                     class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     <option value="">Todas</option>
+                </select> -->
+                
+                @php
+                    $sucursalesFiltradas = array_slice($sucursales, 1);
+                @endphp
+
+                <select id="filtroSucursal" class="...">
+                    
+                    @if(count($sucursalesFiltradas) > 1)
+                        <option value="">Todas</option>
+                    @endif
+
+                    @foreach ($sucursalesFiltradas as $sucursal)
+                        <option value="{{ $sucursal->codigo }}">
+                            {{ $sucursal->abreviatura }}
+                        </option>
+                    @endforeach
+
+ 
+
                 </select>
             </div>
             <div class="flex items-center gap-2">
                 <label class="text-sm text-gray-600">Tipo:</label>
-                <select id="filtroTipoPer"
+                <!-- <select id="filtroTipoPer"
                     class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     <option value="">Todos</option>
                     <option value="OPERATIVO">Operativo</option>
                     <option value="ADMINISTRATIVO">Administrativo</option>
                     <option value="ESPECIAL">Especial</option>
+                </select> -->
+                <select id="filtroTipoPer" class="...">
+                    @if($tipoPerLimitar == 0)
+                        <option value="">Todos</option>
+                        <option value="OPERATIVO">Operativo</option>
+                        <option value="ADMINISTRATIVO">Administrativo</option>
+                        <!-- <option value="ESPECIAL">Especial</option> -->
+                    @elseif($tipoPerLimitar == 1)
+                        <option value="ADMINISTRATIVO" selected>Administrativo</option>
+                    @elseif($tipoPerLimitar == 2)
+                        <option value="OPERATIVO" selected>Operativo</option>
+                    @endif
                 </select>
             </div>
         </div>
@@ -268,6 +343,7 @@
             </div>
         </div>
     </div>
+    <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
 
     @include('file_control.rrhh.partials_modal_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')

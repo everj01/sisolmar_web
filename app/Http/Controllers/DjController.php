@@ -23,6 +23,58 @@ class DjController extends Controller
             ->header('Content-Disposition', 'inline; filename="previsualizacion_dj.pdf"');
     }
 
+    public function saveReporteAvanceDj(Request $request)
+    {
+        $data = $request->validate([
+            'codPersonal' => [
+                'required',
+                'string',
+                'size:5', 
+            ],
+            'estFirma'  => [
+                'required',
+                'boolean',
+            ],
+            'estHuella' => [
+                'required',
+                'boolean',
+            ],
+            'observacion' => [
+                'required',
+                'string',
+                'max:500'
+            ],
+        ]);
+
+        try {
+            DB::table('sw_log_migracion_huella_firma')->updateOrInsert(
+                [
+                    'codiPers' => $data['codPersonal'],
+                ],
+                [
+                    'estFirma'          => $data['estFirma'],
+                    'estHuella'         => $data['estHuella'],
+                    'creadoPor'         => 'MIGRACION',
+                    'observacion'       => $data['observacion'],
+                    'fechaModificacion' => DB::raw('GETDATE()'),
+                ]
+            );
+        }  catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Error al guardar el registro',
+                'detail'  => $e->getMessage(), 
+                'line'    => $e->getLine(),     
+                'file'    => $e->getFile(),   
+            ], 500);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Proceso realizado correctamente'
+        ], 200);
+    }
+
     public function saveDeclaracionJurada(SaveDeclaracionJuradaRequest $request)
     {
 
@@ -34,6 +86,56 @@ class DjController extends Controller
             'message' => 'Declaración Jurada guardada correctamente',
             'data' => $saved,
         ], 200);
+    }
+
+    private function getTelefonos($codiPers, $source = 'migracion')
+    {
+        // 1. Definir tabla según source
+        $tablaTel = ($source === 'pendiente')
+            ? 'si_solm.dbo.TELEFONO'
+            : 'sisolm_web.dbo.sw_MIGRA_TELEFONO';
+
+        // 2. Obtener teléfonos desde la tabla correspondiente
+        $telefonos = DB::select(
+            "SELECT * FROM {$tablaTel} WHERE CODI_PERS = ?",
+            [$codiPers]
+        );
+
+        $result = [
+            'PERS_TELEFONO'      => null,
+            'PERS_WHATSAPP'      => null,
+            'PERS_NROEMERGENCIA' => null,
+            'PERS_NOMCONTACTO'   => null,
+            'PERS_EMERC_FAMILIAR'=> null,
+        ];
+
+        if (!empty($telefonos)) {
+            foreach ($telefonos as $tel) {
+                $tel = (array) $tel;
+
+                // Emergencia
+                if ($tel['TELE_EMERGENCIA'] == '1') {
+                    $result['PERS_NROEMERGENCIA']  = $tel['NRO_TELE']          ?? null;
+                    $result['PERS_NOMCONTACTO']    = $tel['TELE_CONTACTO']     ?? null;
+                    $result['PERS_EMERC_FAMILIAR'] = $tel['VINCULO_FAMILIAR']  ?? null;
+                    continue;
+                }
+
+                // WSP y personal
+                if ($tel['NRO_WSP'] == 1) {
+                    $result['PERS_WHATSAPP'] = $tel['NRO_TELE'] ?? null;
+                    // Si solo hay un registro con NRO_WSP=1 
+                    // significa que personal == whatsapp
+                    if (empty($result['PERS_TELEFONO'])) {
+                        $result['PERS_TELEFONO'] = $tel['NRO_TELE'] ?? null;
+                    }
+                } else {
+                    $result['PERS_TELEFONO'] = $tel['NRO_TELE'] ?? null;
+                }
+            }
+        }
+
+        return $result;
     }
 
     public function getPersonalData(Request $request)
@@ -92,13 +194,22 @@ class DjController extends Controller
                 $data = $this->completarCamposNull($data, $codiPers);
             }
 
+            $telefonos = $this->getTelefonos($codiPers, $source);
+
+            $data['PERS_TELEFONO']       = $telefonos['PERS_TELEFONO']       ?? $data['PERS_TELEFONO']       ?? null;
+            $data['PERS_WHATSAPP']       = $telefonos['PERS_WHATSAPP']       ?? $data['PERS_WHATSAPP']       ?? null;
+            $data['PERS_NROEMERGENCIA']  = $telefonos['PERS_NROEMERGENCIA']  ?? $data['PERS_NROEMERGENCIA']  ?? null;
+            $data['PERS_NOMCONTACTO']    = $telefonos['PERS_NOMCONTACTO']    ?? $data['PERS_NOMCONTACTO']    ?? null;
+            $data['PERS_EMERC_FAMILIAR'] = $telefonos['PERS_EMERC_FAMILIAR'] ?? $data['PERS_EMERC_FAMILIAR'] ?? null;
+
+
             $dni = $data['NRO_DOCU_IDEN'] ?? '';
 
             // Familiares — pendiente usa DERECHO_HABIENTE directamente
             $familiaresTable = ($sourceTable === 'DJ2026_PERSONAL')
-                ? 'si_solm.dbo.DJ2026_DERECHO_HABIENTE'
+                ? 'si_solm.dbo.DERECHO_HABIENTE'
                 : ($source === 'pendiente'
-                    ? 'si_solm.dbo.DJ2026_DERECHO_HABIENTE'
+                    ? 'si_solm.dbo.DERECHO_HABIENTE'
                     : 'sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE');
 
             $familiares = DB::select(
@@ -123,8 +234,15 @@ class DjController extends Controller
                 [$dni]
             );
 
+      
+     
+            
+
             // 6. Formatear fechas para HTML inputs
             $data = $this->formatDatesForInput($data);
+            
+
+            
 
             // 7. Agregar foto path
             $data['FOTO_PATH'] = "http://190.116.178.163//Biblioteca_Grafica//Fotos//{$codiPers}.jpg";
@@ -206,7 +324,8 @@ class DjController extends Controller
             'PERS_VEHICULO_PROPIO',
             'PERS_NOMCONTACTO',
             'PERS_NROEMERGENCIA',
-            'PERS_CONYUGE',
+            //'PERS_CONYUGE',
+            'PERS_EMERC_FAMILIAR',
             'PERS_CTRABANT',
             'PERS_CARGOTRABANT',
             'PERS_DURACIONANT',
@@ -432,6 +551,12 @@ class DjController extends Controller
 
             // ✅ 6. COPIAR OCUPACIONES a DJ2026_OCUPACIONES_PER
             //$this->migrarOcupaciones($dni);
+
+            // ✅ 6. GUARDAR TELÉFONOS EN sw_MIGRA_TELEFONO
+            $this->saveTelefonosTemp($codiPers, $data);
+
+            // ✅ 7. MIGRAR TELÉFONOS → si_solm.dbo.TELEFONO
+            $this->migrarTelefonos($codiPers);
 
             DB::commit();
 
@@ -979,7 +1104,8 @@ class DjController extends Controller
             'PERS_VEHICULO_PROPIO' => $getValue('vehiculo_propio', 'PERS_VEHICULO_PROPIO'),
             'PERS_NOMCONTACTO' => $getValue('contacto_emergencia', 'PERS_NOMCONTACTO'),
             'PERS_NROEMERGENCIA' => $getValue('celular_emergencia', 'PERS_NROEMERGENCIA'),
-            'PERS_CONYUGE' => $getValue('parentesco_emergencia', 'PERS_CONYUGE'),
+            //'PERS_CONYUGE' => $getValue('parentesco_emergencia', 'PERS_CONYUGE'),
+            'PERS_EMERC_FAMILIAR' => $getValue('parentesco_emergencia', 'PERS_EMERC_FAMILIAR'),
             'PERS_CTRABANT' => $getValue('empresa_anterior', 'PERS_CTRABANT'),
             'PERS_CARGOTRABANT' => $getValue('cargo_anterior', 'PERS_CARGOTRABANT'),
             'PERS_DURACIONANT' => $getValue('duracion_anterior', 'PERS_DURACIONANT'),
@@ -1350,7 +1476,8 @@ class DjController extends Controller
             'PERS_LUEXPDNI',
             'PERS_NRORUC',
             'PERS_NROLIBM',
-            'PERS_CONYUGE',
+            //'PERS_CONYUGE',
+            'PERS_EMERC_FAMILIAR',
             'PERS_CONHIJOS',
             'PERS_PROFESION',
             'PERS_NROANTPOL',
@@ -1608,7 +1735,8 @@ class DjController extends Controller
             'PERS_VEHICULO_PROPIO' => $data['vehiculo_propio'] ?? 'NO',
             'PERS_NOMCONTACTO' => $data['contacto_emergencia'] ?? '',
             'PERS_NROEMERGENCIA' => $data['celular_emergencia'] ?? '',
-            'PERS_CONYUGE' => $data['parentesco_emergencia'] ?? null,
+            //'PERS_CONYUGE' => $data['parentesco_emergencia'] ?? null,
+            'PERS_EMERC_FAMILIAR' => $data['parentesco_emergencia'] ?? null,
             'PERS_CTRABANT' => $data['empresa_anterior'] ?? null,
             'PERS_CARGOTRABANT' => $data['cargo_anterior'] ?? null,
             'PERS_DURACIONANT' => $data['duracion_anterior'] ?? null,
@@ -1706,7 +1834,10 @@ class DjController extends Controller
                     PERS_BREVETE = s.PERS_BREVETE, CLASE_BREVETE = s.CLASE_BREVETE,
                     PERS_TIPO_VEHICULO = s.PERS_TIPO_VEHICULO, PERS_VEHICULO_PROPIO = s.PERS_VEHICULO_PROPIO,
                     PERS_NOMCONTACTO = s.PERS_NOMCONTACTO, PERS_NROEMERGENCIA = s.PERS_NROEMERGENCIA,
-                    PERS_CONYUGE = s.PERS_CONYUGE, PERS_CTRABANT = s.PERS_CTRABANT,
+                    PERS_EMERC_FAMILIAR = s.PERS_EMERC_FAMILIAR, 
+                 
+                    
+                    PERS_CTRABANT = s.PERS_CTRABANT,
                     PERS_CARGOTRABANT = s.PERS_CARGOTRABANT, PERS_DURACIONANT = s.PERS_DURACIONANT,
                     dj2026_banco = s.dj2026_banco, dj2026_ciudad_naci = s.dj2026_ciudad_naci,
                     dj2026_ocupacion_principal = s.dj2026_ocupacion_principal, dj2026_experiencia_anios = s.dj2026_experiencia_anios,
@@ -1797,16 +1928,16 @@ class DjController extends Controller
     {
         // Eliminar todos los familiares existentes del trabajador en DJ2026_DERECHO_HABIENTE
         DB::delete(
-            'DELETE FROM si_solm.dbo.DJ2026_DERECHO_HABIENTE
+            'DELETE FROM si_solm.dbo.DERECHO_HABIENTE
          WHERE CODI_PERS = ?',
             [$codiPers]
         );
 
         // Insertar familiares en DJ2026_DERECHO_HABIENTE excluyendo la columna identity CODI_DERE_HABI
         DB::statement(
-            'INSERT INTO si_solm.dbo.DJ2026_DERECHO_HABIENTE
+            'INSERT INTO si_solm.dbo.DERECHO_HABIENTE
         (
-        CODI_DERE_HABI,
+        
             CODI_PERS,
             TIPO_RELA,
             NOMB_1,
@@ -1839,7 +1970,7 @@ class DjController extends Controller
             TIDV_CODIGO
         )
         SELECT
-        CODI_DERE_HABI,
+       
             CODI_PERS,
             TIPO_RELA,
             NOMB_1,
@@ -2228,6 +2359,151 @@ class DjController extends Controller
             Log::error('Error en resetCheckPdf: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+
+    private function saveTelefonosTemp($codiPers, $data)
+    {
+        $telPersonal   = isset($data['celular'])           ? trim($data['celular'])           : '';
+        $telWsp        = isset($data['whatsapp'])          ? trim($data['whatsapp'])          : '';
+        $telEmergencia = isset($data['celular_emergencia']) ? trim($data['celular_emergencia']) : '';
+
+        // $observNombre = trim(
+        //     (isset($data['APEL_1']) ? $data['APEL_1'].' ' : '').
+        //     (isset($data['APEL_2']) ? $data['APEL_2'].' ' : '').
+        //     (isset($data['NOMB_1']) ? $data['NOMB_1'].' ' : '').
+        //     (isset($data['NOMB_2']) ? $data['NOMB_2']      : '')
+        // );
+        $observNombre = trim(
+            (isset($data['apellido_paterno']) ? $data['apellido_paterno'].' ' : '').
+            (isset($data['apellido_materno']) ? $data['apellido_materno'].' ' : '').
+            (isset($data['nombre1'])          ? $data['nombre1'].' '          : '').
+            (isset($data['nombre2'])          ? $data['nombre2']              : '')
+        );
+
+        // 1. Borrar registros previos
+        DB::delete(
+            'DELETE FROM sisolm_web.dbo.sw_MIGRA_TELEFONO WHERE CODI_PERS = ?',
+            [$codiPers]
+        );
+
+        $telefonos = [];
+
+        // 2. Lógica personal vs whatsapp
+        if ($telPersonal === $telWsp) {
+            // Son iguales → un solo registro con NRO_WSP = 1
+            if (!empty($telPersonal) && strlen($telPersonal) <= 12) {
+                $telefonos[] = [
+                    'NRO_TELE'         => $telPersonal,
+                    'TIPO_TELE'        => 'MOVIL',
+                    'TELE_EMERGENCIA'  => '0',
+                    'NRO_WSP'         => 1,
+                    'TELE_CONTACTO'    => null,
+                    'VINCULO_FAMILIAR' => null,
+                    'OBSERVACION'      => $observNombre,
+                ];
+            }
+        } else {
+            // Son diferentes → dos registros
+            if (!empty($telPersonal) && strlen($telPersonal) <= 12) {
+                $telefonos[] = [
+                    'NRO_TELE'         => $telPersonal,
+                    'TIPO_TELE'        => 'MOVIL',
+                    'TELE_EMERGENCIA'  => '0',
+                    'NRO_WSP'         => 0,
+                    'TELE_CONTACTO'    => null,
+                    'VINCULO_FAMILIAR' => null,
+                    'OBSERVACION'      => $observNombre,
+                ];
+            }
+            if (!empty($telWsp) && strlen($telWsp) <= 12) {
+                $telefonos[] = [
+                    'NRO_TELE'         => $telWsp,
+                    'TIPO_TELE'        => 'MOVIL',
+                    'TELE_EMERGENCIA'  => '0',
+                    'NRO_WSP'         => 1,
+                    'TELE_CONTACTO'    => null,
+                    'VINCULO_FAMILIAR' => null,
+                    'OBSERVACION'      => $observNombre,
+                ];
+            }
+        }
+
+        // Emergencia
+        if (!empty($telEmergencia) && strlen($telEmergencia) <= 12) {
+            $telefonos[] = [
+                'NRO_TELE'         => $telEmergencia,
+                'TIPO_TELE'        => 'MOVIL',
+                'TELE_EMERGENCIA'  => '1',
+                'NRO_WSP'         => 0,
+                'TELE_CONTACTO'    => isset($data['contacto_emergencia']) ? trim($data['contacto_emergencia']) : null,
+                'VINCULO_FAMILIAR' => isset($data['parentesco_emergencia']) ? trim($data['parentesco_emergencia']) : null,
+                'OBSERVACION'      => isset($data['contacto_emergencia']) ? trim($data['contacto_emergencia']) : null,
+            ];
+        }
+
+        // 3. Insertar
+        foreach ($telefonos as $tel) {
+            DB::insert(
+                'INSERT INTO sisolm_web.dbo.sw_MIGRA_TELEFONO
+                (CODI_PERS, NRO_TELE, TIPO_TELE, OBSERVACION,
+                TELE_VIGENCIA, TELE_RESERVADO, TELE_EMERGENCIA,
+                NRO_WSP, TELE_CONTACTO, VINCULO_FAMILIAR)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $codiPers,
+                    substr($tel['NRO_TELE'], 0, 12),
+                    $tel['TIPO_TELE'],
+                    $tel['OBSERVACION'],
+                    'SI',
+                    '0',
+                    $tel['TELE_EMERGENCIA'],
+                    $tel['NRO_WSP'],
+                    $tel['TELE_CONTACTO'],
+                    $tel['VINCULO_FAMILIAR'],
+                ]
+            );
+        }
+
+        Log::info('saveTelefonosTemp: teléfonos guardados en sw_MIGRA_TELEFONO', [
+            'CODI_PERS' => $codiPers,
+            'total'     => count($telefonos),
+        ]);
+    }
+
+    private function migrarTelefonos($codiPers)
+    {
+        // 1. Borrar teléfonos existentes en tabla original
+        DB::delete(
+            'DELETE FROM si_solm.dbo.TELEFONO WHERE CODI_PERS = ?',
+            [$codiPers]
+        );
+
+        // 2. Insertar desde sw_MIGRA_TELEFONO a TELEFONO
+        DB::statement(
+            'INSERT INTO si_solm.dbo.TELEFONO
+            (CODI_PERS, NRO_TELE, TIPO_TELE, OBSERVACION,
+            TELE_VIGENCIA, TELE_RESERVADO, TELE_EMERGENCIA,
+            NRO_WSP, TELE_CONTACTO, VINCULO_FAMILIAR)
+            SELECT
+                CODI_PERS,
+                NRO_TELE,
+                TIPO_TELE,
+                OBSERVACION,
+                TELE_VIGENCIA,
+                TELE_RESERVADO,
+                TELE_EMERGENCIA,
+                NRO_WSP,
+                TELE_CONTACTO,
+                VINCULO_FAMILIAR
+            FROM sisolm_web.dbo.sw_MIGRA_TELEFONO
+            WHERE CODI_PERS = ?',
+            [$codiPers]
+        );
+
+        Log::info('migrarTelefonos: teléfonos migrados a si_solm.dbo.TELEFONO', [
+            'CODI_PERS' => $codiPers,
+        ]);
     }
 
     /**

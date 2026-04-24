@@ -1,26 +1,84 @@
 @extends('layouts.vertical', ['title' => 'Consulta de Matrículas'])
 @section('css')
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+    }
+    /* Tabulator Masterpiece Tweaks */
+    .tabulator {
+        border: none !important;
+        background: transparent !important;
+    }
+    .tabulator-header {
+        background-color: rgba(249, 250, 251, 0.8) !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        font-size: 10px !important;
+    }
+    .tabulator-row {
+        border-bottom: 1px solid #f9fafb !important;
+        background: transparent !important;
+        transition: all 0.2s ease !important;
+    }
+    .tabulator-row:hover {
+        background-color: rgba(var(--tw-color-primary), 0.03) !important;
+        transform: translateX(4px);
+    }
+</style>
 @endsection
 @section('content')
     @include("layouts.shared/page-title", ["subtitle" => "Capacitación", "title" => "Consulta de Matrículas"])
 
     <div class="grid lg:grid-cols-3 grid-cols-1 gap-6">
         <!-- Panel de selección de curso -->
-        <div class="card lg:col-span-1">
-            <div class="card-header flex items-center justify-between">
-                <h4 class="card-title">Seleccionar Curso</h4>
+        <div class="card lg:col-span-1 backdrop-blur-md bg-white/90 border border-white/20 shadow-xl rounded-2xl overflow-hidden">
+            <div class="card-header flex items-center justify-between bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 py-4 px-5">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <i class="i-tabler-book-2 text-xl"></i>
+                    </div>
+                    <h4 class="card-title font-bold text-gray-800">Cursos Disponibles</h4>
+                </div>
             </div>
 
-            <div class="card-body">
+            <div class="card-body p-5">
                 <div x-data="{ soloEliminados: false, filtroArea: '', filtroTipoCurso: '' }" class="space-y-4">
                     
-                    <!-- Filtros -->
-                    <div class="flex items-center">
-                        <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
-                            x-model="soloEliminados">
-                        <label class="ms-1.5 font-medium text-sm text-gray-700" for="chkEliminados">
-                            Solo eliminados
-                        </label>
+                    <!-- Filtros Rápidos -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100">
+                        <div class="flex items-center">
+                            <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
+                                x-model="soloEliminados">
+                            <label class="ms-2 font-medium text-xs text-gray-600 uppercase tracking-wider" for="chkEliminados">
+                                Ver Eliminados
+                            </label>
+                        </div>
+                        <i class="i-tabler-filter text-gray-400"></i>
                     </div>
 
                     <div class="flex flex-col">
@@ -131,16 +189,16 @@
                     <div x-effect="listarCursosConsulta( soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso )"></div>
                 </div>
 
-                <div class="mt-5 overflow-y-auto max-h-[400px]">
+                <div class="mt-5 border border-gray-100 rounded-xl overflow-hidden bg-white/50">
                     <table id="tblCursos" class="min-w-full text-sm">
-                        <thead class="bg-gray-50 sticky top-0">
+                        <thead class="bg-gray-50/80 sticky top-0 backdrop-blur-sm">
                             <tr>
-                                <th class="px-3 py-2 text-left">Código</th>
-                                <th class="px-3 py-2 text-left">Nombre</th>
-                                <th class="px-3 py-2 text-center">Ver</th>
+                                <th class="px-3 py-3 text-left font-bold text-gray-700 uppercase text-[10px] tracking-widest">Cód.</th>
+                                <th class="px-3 py-3 text-left font-bold text-gray-700 uppercase text-[10px] tracking-widest">Curso</th>
+                                <th class="px-3 py-3 text-center font-bold text-gray-700 uppercase text-[10px] tracking-widest">Ver</th>
                             </tr>
                         </thead>
-                        <tbody id="tbodyCursos">
+                        <tbody id="tbodyCursos" class="divide-y divide-gray-50">
                         </tbody>
                     </table>
                 </div>
@@ -148,22 +206,22 @@
         </div>
 
         <!-- Panel Derecho: Tabs de Historial vs Matrícula -->
-        <div class="card lg:col-span-2" x-data="{ tabActivo: 'personal' }" @cambiar-tab-curso.window="tabActivo = 'curso'">
+        <div class="card lg:col-span-2 backdrop-blur-md bg-white/90 border border-white/20 shadow-xl rounded-2xl overflow-hidden" x-data="{ tabActivo: 'personal' }" @cambiar-tab-curso.window="tabActivo = 'curso'">
             <!-- Tab Navigation -->
-            <div class="border-b border-gray-200">
-                <nav class="flex space-x-2 px-4 pt-2" aria-label="Tabs">
+            <div class="border-b border-gray-100 bg-gray-50/30">
+                <nav class="flex space-x-1 px-4 pt-2" aria-label="Tabs">
                     <button @click="tabActivo = 'personal'" 
-                        :class="tabActivo === 'personal' ? 'bg-white border-gray-200 border-b-white text-primary' : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                        class="whitespace-nowrap py-3 px-4 border-l border-t border-r rounded-t-lg font-medium text-sm transition-colors mt-1 relative z-10"
+                        :class="tabActivo === 'personal' ? 'bg-white border-gray-200 border-b-white text-primary shadow-sm' : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'"
+                        class="whitespace-nowrap py-3 px-5 border-l border-t border-r rounded-t-xl font-bold text-sm transition-all mt-1 relative z-10 flex items-center gap-2"
                         style="margin-bottom: -1px;">
-                        <i class="i-tabler-id-badge mr-1"></i> Directorio y Kardex
+                        <i class="i-tabler-users-group text-lg"></i> Directorio
                     </button>
                     <button @click="tabActivo = 'curso'" 
-                        :class="tabActivo === 'curso' ? 'bg-white border-gray-200 border-b-white text-primary' : 'bg-gray-50 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                        class="whitespace-nowrap py-3 px-4 border-l border-t border-r rounded-t-lg font-medium text-sm transition-colors mt-1 relative z-10"
+                        :class="tabActivo === 'curso' ? 'bg-white border-gray-200 border-b-white text-primary shadow-sm' : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'"
+                        class="whitespace-nowrap py-3 px-5 border-l border-t border-r rounded-t-xl font-bold text-sm transition-all mt-1 relative z-10 flex items-center gap-2"
                         style="margin-bottom: -1px;" id="btnTabCurso">
-                        <i class="i-tabler-users mr-1"></i> Matrículas del Curso
-                        <span id="badgeCurrentCourse" class="hidden ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">0</span>
+                        <i class="i-tabler-chart-bar text-lg"></i> Matrículas
+                        <span id="badgeCurrentCourse" class="hidden ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-white shadow-sm">0</span>
                     </button>
                 </nav>
             </div>
@@ -212,36 +270,62 @@
                 </div>
 
                 <!-- Estadísticas rápidas -->
-                <div class="grid grid-cols-4 gap-4 mb-4" id="estadisticasMatriculas" style="display: none;">
-                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                        <p class="text-xs text-gray-600">Matriculados</p>
-                        <p class="text-xl font-bold text-blue-600" id="countMatriculados">0</p>
+                <div class="grid grid-cols-4 gap-2 mb-4" id="estadisticasMatriculas" style="display: none;">
+                    <div class="px-3 py-2 bg-primary rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
+                        <div>
+                            <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">En Rol</p>
+                            <p class="text-lg font-black mt-0.5 leading-none" id="countMatriculados">0</p>
+                        </div>
+                        <i class="i-tabler-users text-lg opacity-50"></i>
                     </div>
-                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-                        <p class="text-xs text-gray-600">En Progreso</p>
-                        <p class="text-xl font-bold text-yellow-600" id="countEnProgreso">0</p>
+                    <div class="px-3 py-2 bg-warning rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
+                        <div>
+                            <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">Cursando</p>
+                            <p class="text-lg font-black mt-0.5 leading-none" id="countEnProgreso">0</p>
+                        </div>
+                        <i class="i-tabler-hourglass text-lg opacity-50"></i>
                     </div>
-                    <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-                        <p class="text-xs text-gray-600">Aprobados</p>
-                        <p class="text-xl font-bold text-green-600" id="countAprobados">0</p>
+                    <div class="px-3 py-2 bg-success rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
+                        <div>
+                            <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">Logrado</p>
+                            <p class="text-lg font-black mt-0.5 leading-none" id="countAprobados">0</p>
+                        </div>
+                        <i class="i-tabler-award text-lg opacity-50"></i>
                     </div>
-                    <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
-                        <p class="text-xs text-gray-600">Reprobados</p>
-                        <p class="text-xl font-bold text-red-600" id="countReprobados">0</p>
+                    <div class="px-3 py-2 bg-danger rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
+                        <div>
+                            <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">Fallo</p>
+                            <p class="text-lg font-black mt-0.5 leading-none" id="countReprobados">0</p>
+                        </div>
+                        <i class="i-tabler-square-x text-lg opacity-50"></i>
                     </div>
                 </div>
 
-                <!-- Buscador y Filtros -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" id="filtrosMatriculaContainer" style="display: none;">
-                    <div class="relative">
-                        <i class="i-tabler-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="buscarMatricula" class="form-input w-full pl-10"
-                            placeholder="Buscar alumno por nombre, DNI..." />
+                <!-- Buscador y Filtros Avanzados -->
+                <div class="space-y-4 mb-6" id="filtrosMatriculaContainer" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <div class="col-span-1 md:col-span-2 relative">
+                            <i class="i-tabler-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="buscarMatricula" class="form-input w-full pl-11 py-2.5 rounded-xl border-gray-200 shadow-sm focus:ring-primary/20"
+                                placeholder="Buscar por Nombre o DNI..." />
+                        </div>
+                        <div class="relative">
+                            <select id="slcFiltroProgramacion" class="form-select w-full py-2.5 rounded-xl border-gray-200 shadow-sm focus:ring-primary/20">
+                                <option value="">📅 Todas las Fechas</option>
+                            </select>
+                        </div>
+                        <div class="relative">
+                            <select id="slcFiltroSede" class="form-select w-full py-2.5 rounded-xl border-gray-200 shadow-sm focus:ring-primary/20">
+                                <option value="">🏢 Todas las Sedes</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <select id="slcFiltroProgramacion" class="form-select w-full">
-                            <option value="">-- Todas las programaciones --</option>
-                        </select>
+                    
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">Filtros Activos:</span>
+                        <div id="activeFiltersContainer" class="flex flex-wrap gap-2">
+                            <span class="text-[10px] text-gray-500 italic">Ninguno</span>
+                        </div>
                     </div>
                 </div>
 
@@ -345,48 +429,41 @@
         </div>
     </div>
 
-    <!-- Modal Historial -->
-    <div id="modal-historial"
-        class="hs-overlay hidden w-full h-full fixed top-0 start-0 z-[80] overflow-x-hidden overflow-y-auto pointer-events-none">
-        <div
-            class="hs-overlay-open:opacity-100 hs-overlay-open:duration-500 opacity-0 transition-all sm:max-w-4xl sm:w-full m-3 sm:mx-auto min-h-[calc(100%-3.5rem)] flex items-center justify-center">
-            <div
-                class="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7] w-full pointer-events-auto">
-                <div class="flex justify-between items-center py-3 px-4 border-b dark:border-gray-700">
-                    <h3 class="font-bold text-gray-800 dark:text-gray-200" id="modal-title">
-                        Historial de Capacitaciones
-                    </h3>
-                    <button type="button"
-                        class="flex justify-center items-center w-7 h-7 text-sm font-semibold rounded-lg border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                        data-hs-overlay="#modal-historial">
-                        <span class="sr-only">Cerrar</span>
-                        <i class="i-tabler-x text-xl"></i>
+    <!-- Modal Historial (Kardex Masterpiece) -->
+    <div id="modal-historial" class="hs-overlay hidden w-full h-full fixed top-0 start-0 z-[80] overflow-x-hidden overflow-y-auto pointer-events-none">
+        <div class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 mt-0 opacity-0 ease-out transition-all sm:max-w-2xl sm:w-full m-3 sm:mx-auto min-h-[calc(100%-3.5rem)] flex items-center">
+            <div class="flex flex-col glass-card shadow-2xl rounded-3xl pointer-events-auto overflow-hidden w-full border border-white/40">
+                <div class="flex justify-between items-center py-5 px-6 bg-gradient-to-r from-primary/10 to-transparent border-b border-gray-100">
+                    <div class="flex items-center gap-4">
+                        <div id="avatarPersonal" class="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-lg shadow-primary/20">
+                            --
+                        </div>
+                        <div>
+                            <h3 id="nombrePersonal" class="font-black text-gray-800 text-lg leading-tight uppercase tracking-tight">Cargando...</h3>
+                            <p class="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5">Kardex de Capacitación</p>
+                        </div>
+                    </div>
+                    <button type="button" class="hs-dropdown-toggle w-8 h-8 inline-flex justify-center items-center gap-2 rounded-full border font-medium bg-white text-gray-700 shadow-sm align-middle hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-primary transition-all text-sm" data-hs-overlay="#modal-historial">
+                        <i class="i-tabler-x text-lg"></i>
                     </button>
                 </div>
-                <div class="p-4 overflow-y-auto">
-                     <div class="flex flex-col items-center justify-center mb-6">
-                        <div class="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-3 text-2xl font-bold text-gray-600 uppercase" id="avatarPersonal">
-                            <!-- Initials here -->
+                <div class="p-8 custom-scrollbar max-h-[500px] overflow-y-auto bg-gray-50/30">
+                    <!-- Timeline Container -->
+                    <div id="historialContainer" class="space-y-8 relative before:absolute before:inset-0 before:ml-3 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/20 before:via-gray-100 before:to-transparent">
+                        <!-- Items se insertan vía JS -->
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="noDataMessage" class="hidden text-center py-10 animate-fade-in">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-inner">
+                            <i class="i-tabler-school-off text-3xl text-gray-300"></i>
                         </div>
-                        <h4 class="text-xl font-bold text-gray-800" id="nombrePersonal"></h4>
-                        <p class="text-sm text-gray-500" id="cargoPersonal"></p>
-                        <p class="text-xs text-gray-400" id="areaPersonal"></p>
-                     </div>
-
-                     <!-- Timeline -->
-                     <div id="historialContainer" class="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-6">
-                         <!-- Items injected via JS -->
-                     </div>
-                     
-                     <div id="noDataMessage" class="hidden flex flex-col items-center justify-center py-8 text-gray-500">
-                            <i class='bx bx-file-blank text-4xl mb-2'></i>
-                            <p>No se encontraron registros de capacitación para este colaborador.</p>
-                     </div>
+                        <h4 class="text-gray-400 font-bold uppercase text-xs tracking-widest">Sin registros encontrados</h4>
+                        <p class="text-gray-400 text-[11px] mt-1">Este colaborador aún no cuenta con capacitaciones registradas.</p>
+                    </div>
                 </div>
-                <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t dark:border-gray-700">
-                    <button type="button"
-                        class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                        data-hs-overlay="#modal-historial">
+                <div class="flex justify-end items-center gap-x-2 py-4 px-6 border-t border-gray-100 bg-white/50">
+                    <button type="button" class="py-2.5 px-6 inline-flex justify-center items-center gap-2 rounded-xl border border-transparent font-black bg-gray-100 text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all text-xs uppercase tracking-widest" data-hs-overlay="#modal-historial">
                         Cerrar
                     </button>
                 </div>

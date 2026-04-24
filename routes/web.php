@@ -9,6 +9,7 @@ use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\ReporteController;
 
 
+
 Route::get('/login',[LoginController::class, 'index'])->name('login');
 
 Route::middleware(['auth'])->group(function () {
@@ -16,6 +17,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
 
     Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
+
+    Route::get('/get-personal-dj', [FileController::class, 'getListaDJXusuario']);
 
     Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
     Route::get('/get-personal', [FileController::class, 'getPersonal']);
@@ -42,7 +45,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('{first}/{second}/{third}', [RoutingController::class, 'thirdLevel'])->name('third');
         Route::get('{first}/{second}', [RoutingController::class, 'secondLevel'])->name('second');
         Route::get('{any}', [RoutingController::class, 'root'])->name('any');
-
     });
 
     Route::get('/debug-notificaciones', function() {
@@ -71,7 +73,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/generar-pdf', [FileController::class, 'generarPDF']);
     Route::post('/generar-pdf2', [FileController::class, 'generarPDF2']);
     Route::post('/save_cargo', [FileController::class, 'saveCargo']);
-    Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
+    //Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
+
+
 });
 
 // test email - Pruebas de correos

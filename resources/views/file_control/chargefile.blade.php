@@ -12,7 +12,17 @@
     {{-- ── CARD: Listado de Personal ────────────────────────────────────── --}}
     <div class="card overflow-hidden">
         <div class="card-header">
-            <h4 class="card-title">Listado de Personal</h4>
+            <div class="flex flex-row items-center justify-between w-full">
+                <h4 class="card-title">Listado de Personal</h4>
+                @if ($tipoUsuario == 5 || $tipoUsuario == 2)
+                    <button type="button"
+                            class="btn bg-info text-white"
+                            data-accion="abrir-reporte-avances">
+                        Reporte de avances
+                    </button>
+                @endif
+            </div>
+            
         </div>
 
         <div class="px-5 pt-4 pb-2 space-y-3">
@@ -47,10 +57,13 @@
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</span>
 
-                    <label class="flex items-center gap-1.5 cursor-pointer">
+                    @if ($tipoPerLimitar != 1 && $tipoPerLimitar != 2 && $tipoPerLimitar != 3 && $tipoPerLimitar == 0)
+                          <label class="flex items-center gap-1.5 cursor-pointer">
                         <input type="radio" class="form-radio text-primary" id="radioTodos" name="tipo_per" value="TODOS" checked>
                         <span class="text-sm">Todos</span>
                     </label>
+                    @endif
+                  
 
                     @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
                         <label class="flex items-center gap-1.5 cursor-pointer">
@@ -61,7 +74,7 @@
 
                     @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
                         <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="OPER">
+                            <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="OPER" checked>
                             <span class="text-sm">Operativo</span>
                         </label>
                     @endif
@@ -320,12 +333,24 @@
     </div>
 </div>
 
+<button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
+
+@include('file_control.rrhh.partials_modal_comparacion_huellafirma_dni')
+
 @endsection
 
 
 @section('script')
+
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
 @endsection
 
 @vite(['resources/js/functions/chargeFile.js'])
 @vite(['resources/js/functions/changeFilePers.js'])
+
+@vite(['resources/js/functions/chargefile/reporteAvances.js'])
