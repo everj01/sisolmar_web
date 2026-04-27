@@ -718,9 +718,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // BOTONES MODAL
     // ============================================================
     btnNuevaDJ?.addEventListener('click', async function () {
-        // Si viene de un click de tabla, no hacer nada (la tabla ya llama abrirFormularioDJ)
-        if (registroSeleccionado) return;
-
         const { value: tipoCod, isConfirmed } = await Swal.fire({
             title: 'Nueva Declaración Jurada',
             text: 'Selecciona el tipo de personal:',
@@ -737,18 +734,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!isConfirmed || !tipoCod) return;
 
-        limpiarFormulario();
+        // Abrir modal con catálogos cargados
+        await abrirFormularioDJ(null);
 
-        const modal = document.getElementById('modalDjGestion');
-        if (modal) {
-            if (window.HSOverlay) HSOverlay.open(modal);
-            else modal.classList.remove('hidden');
-        }
-
+        // Setear tipo DESPUÉS de que el modal esté abierto
         setTimeout(() => {
             setValue('tipo_personal', tipoCod);
             aplicarVisibilidadPorTipo(tipoCod);
-        }, 80);
+        }, 150);
     });
 
 
@@ -841,7 +834,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('📤 Payload completo:', payload);
                 console.log('🌐 URL:', `${VITE_URL_APP}/api/dj/save-dj-completo`);
 
-                const response = await axios.post(`${VITE_URL_APP}/api/dj/save-dj-completo`, payload);
+                const esNuevaDJ = !payload.cod_postulante || String(payload.cod_postulante).trim() === '';
+
+                const url = esNuevaDJ
+                    ? `${VITE_URL_APP}/api/dj/save-nueva-dj`      // ← endpoint para nueva
+                    : `${VITE_URL_APP}/api/dj/save-dj-completo`;  // ← endpoint para existente
+
+                console.log(esNuevaDJ ? '🆕 Nueva DJ' : '✏️ DJ Existente', payload);
+
+
+                 const response = await axios.post(url, payload);
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
@@ -1504,12 +1506,36 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
     try {
         const modal = document.getElementById('modalDjGestion');
 
-        if(codiPers == null){
+       if (codiPers == null) {
+            Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            // En lugar de limpiarFormulario() — reset manual con lo que sí es global
+            limpiarSplitView();
+            setValue('cod_postulante', '');
+            setValue('tipo_personal', '');
+
+            await cargarCatalogos();
+
+            // Cargar departamentos para los 3 ubigeos
+            const depts = await getUbicacionCached({ type: 'dept' });
+            populateSelect('#departamento_actual', depts);
+            populateSelect('#departamento_dni',    depts);
+            populateSelect('#departamento_nac',    depts);
+
+            Swal.close();
+
             if (modal) {
                 if (window.HSOverlay) HSOverlay.open(modal);
                 else modal.classList.remove('hidden');
             }
-        }else{
+
+            setTimeout(() => {
+                const tipo = document.getElementById('tipo_personal')?.value?.trim() ?? '';
+                aplicarVisibilidadPorTipo(tipo);
+            }, 80);
+
+        } else {
+            // ← DJ existente: flujo normal sin cambios
             Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             await cargarCatalogos(source);
@@ -1525,7 +1551,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             if (source === 'migracion') await cargarDatosBackup(codiPers);
             else limpiarSplitView();
         }
-       
+
     } catch (error) {
         console.error('Error:', error);
         Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el formulario: ' + error.message });

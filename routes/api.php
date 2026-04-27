@@ -169,6 +169,9 @@ Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::post('/reset-check-pdf',   [DjController::class, 'resetCheckPdf']);
     Route::get('/get-check-pdf',      [DjController::class, 'getCheckPdf']);
     Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
+
+
+    Route::post('/save-nueva-dj', [DjController::class, 'saveNuevaDj']);
 });
 
 // REPORTE FOLIOS POR VENCER CON FILTROS

@@ -75,6 +75,304 @@ class DjController extends Controller
         ], 200);
     }
 
+    /**
+     * GUARDAR NUEVA DJ — Personal nuevo sin registro previo en sw_MIGRA_PERSONAL
+     */
+    public function saveNuevaDj(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            $data    = $request->all();
+            $dni     = trim($request->input('dni', ''));
+            $tipoPer = trim($request->input('tipo_personal', '')); // '03' o '05'
+
+            // Validaciones básicas
+            if (empty($dni)) {
+                return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
+            }
+
+            // Verificar que no exista ya en PERSONAL por DNI
+            $existente = DB::selectOne(
+                'SELECT CODI_PERS FROM si_solm.dbo.PERSONAL WHERE NRO_DOCU_IDEN = ?',
+                [$dni]
+            );
+            if ($existente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Ya existe un registro con el DNI {$dni} (Cód: {$existente->CODI_PERS})."
+                ], 422);
+            }
+
+            // Generar CODI_PERS incremental char(5) numérico
+            $maxCod = DB::selectOne(
+                "SELECT MAX(CAST(CODI_PERS AS INT)) AS max_cod 
+                FROM si_solm.dbo.PERSONAL 
+                WHERE ISNUMERIC(CODI_PERS) = 1 
+                AND LEN(LTRIM(RTRIM(CODI_PERS))) = 5"
+            );
+            $siguiente = (int)($maxCod->max_cod ?? 0) + 1;
+            if ($siguiente > 99999) {
+                return response()->json(['success' => false, 'message' => 'Límite máximo de códigos alcanzado.'], 500);
+            }
+            $nuevoCod = str_pad($siguiente, 5, '0', STR_PAD_LEFT);
+
+            // Double-check que no exista
+            $codExiste = DB::selectOne('SELECT 1 FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?', [$nuevoCod]);
+            if ($codExiste) {
+                return response()->json(['success' => false, 'message' => "Conflicto al generar código {$nuevoCod}."], 500);
+            }
+
+            // ── Mapeos de campos con restricciones de largo ──────────────────
+
+            // ESTA_CIVI char(1): S=Soltero, C=Casado, D=Divorciado, V=Viudo/Conviviente
+            $estadoCivilMap = [
+                '2007000001' => 'S',
+                '2007000002' => 'C',
+                '2007000003' => 'D',
+                '2007000004' => 'V',
+                '2007000008' => 'V',
+            ];
+            $estadoCivil      = $data['estado_civil'] ?? null; // código largo → ESCI_CODIGO varchar(10) ✓
+            $estadoCivilCorto = $estadoCivilMap[$estadoCivil] ?? null; // → ESTA_CIVI char(1)
+
+            // PERS_TIPOTRAB char(2): OP=Operativo, AD=Administrativo
+            $tipoTrabMap = [
+                '03' => 'OP',
+                '01' => 'OP',
+                '05' => 'AD',
+                '02' => 'AD',
+            ];
+            $tipotrab = $tipoTrabMap[$tipoPer] ?? 'OP';
+
+            // SEXO char(1), PERS_SEXO char(1) — solo 1 caracter
+            $sexo = strtoupper(substr($data['sexo'] ?? 'M', 0, 1));
+
+            // ESSALUD char(2), PERS_PENSIONISTA char(2), PERS_EMBARGO varchar(2), etc — SI/NO máx 2
+            $essalud     = strtoupper(substr($data['essalud']    ?? 'NO', 0, 2));
+            $pensionista = strtoupper(substr($data['pensionista'] ?? 'NO', 0, 2));
+            $embargo     = strtoupper(substr($data['embargos']   ?? 'NO', 0, 2));
+            $snadar      = 'NO'; // no está en el formulario nuevo, default NO
+
+            // PERS_CONDISCAMEC char(2), PERS_CONARMAS char(2), PERS_CONSMO char(2)
+            $condiscamec = strtoupper(substr($data['curso_sucamec']  ?? 'NO', 0, 2));
+            $conarmas    = strtoupper(substr($data['arma_propia']    ?? 'NO', 0, 2));
+            $consmo      = ($data['consumo_sustancias'] ?? 'NO') !== 'NO' ? 'SI' : 'NO';
+            $smo         = strtoupper(substr($data['consumo_sustancias'] ?? 'NO', 0, 2));
+            $lugarsmo    = ($data['consumo_sustancias'] ?? 'NO') !== 'NO' ? substr($data['consumo_sustancias'], 0, 50) : null;
+
+            // PERS_VEHICULO_PROPIO varchar(2), dj2026_familiar_empresa varchar(2)
+            $vehiculoPropio   = strtoupper(substr($data['vehiculo_propio']   ?? 'NO', 0, 2));
+            $familiarEmpresa  = strtoupper(substr($data['familiar_empresa']  ?? 'NO', 0, 2));
+
+            // PERS_VIGENCIA char(2)
+            $vigencia = 'SI';
+
+            // CODI_TIPO_DOCU char(4)
+            $codiTipoDocu = '0001';
+
+            // CLASE_BREVETE varchar(1) — solo A o B
+            $claseBrevete = !empty($data['clase_brevete']) ? strtoupper(substr($data['clase_brevete'], 0, 1)) : null;
+
+            // CARR_CODIGO + IEDU_CODIGO — FK constraint, si carrera es 999999 ambos van null
+            $carrCodigo = null;
+            $ieduCodigo = null;
+            if (!empty($data['carrera']) && $data['carrera'] !== '999999') {
+                // Verificar que exista en SUNAT_CARRERAS
+                $carreraExiste = DB::selectOne(
+                    'SELECT 1 FROM si_solm.dbo.SUNAT_CARRERAS WHERE CARR_CODIGO = ? AND IEDU_CODIGO = ?',
+                    [$data['carrera'], $data['institucion'] ?? null]
+                );
+                if ($carreraExiste) {
+                    $carrCodigo = $data['carrera'];
+                    $ieduCodigo = $data['institucion'] ?? null;
+                }
+            }
+
+            // Fechas
+            $fechaNaci   = $this->sanitizeDatetimeForPersonal($data['fecha_nacimiento'] ?? null);
+            $fechaCaduca = $this->sanitizeDatetimeForPersonal($data['caduca'] ?? null);
+
+            // Numéricos
+            $peso           = is_numeric($data['peso']  ?? '')           ? $data['peso']  : null;
+            $talla          = is_numeric($data['talla'] ?? '')           ? $data['talla'] : null;
+            $anioEgreso     = is_numeric($data['anio_egreso'] ?? '')     ? (int)$data['anio_egreso'] : null;
+            $experienciaAnios = is_numeric($data['experiencia_anios'] ?? '') ? (int)$data['experiencia_anios'] : null;
+
+            // Laborales alternas
+            $laboral1 = !empty(trim($data['dj2026_laboral_1'] ?? '')) ? strtoupper(trim($data['dj2026_laboral_1'])) : null;
+            $laboral2 = !empty(trim($data['dj2026_laboral_2'] ?? '')) ? strtoupper(trim($data['dj2026_laboral_2'])) : null;
+            $cantProfesion = ($laboral1 ? 1 : 0) + ($laboral2 ? 1 : 0);
+
+            // ── INSERT EN PERSONAL ────────────────────────────────────────────
+            DB::insert(
+                "INSERT INTO si_solm.dbo.PERSONAL (
+                    CODI_PERS, CODI_TIPO_DOCU, NRO_DOCU_IDEN,
+                    NOMB_1, NOMB_2, APEL_1, APEL_2,
+                    FECH_NACI, PERS_FECHCADUCADNI,
+                    SEXO, PERS_SEXO,
+                    ESCI_CODIGO, ESTA_CIVI,
+                    PERS_EMAIL, PERS_TELEFONO, PERS_WHATSAPP,
+                    DIRECCION, PERS_DIREC_DNI,
+                    PERS_DEPT_ACT, PERS_PROV_ACT, PERS_DIST_ACT,
+                    PERS_DPTO_DIRDNI, PERS_PROV_DIRDNI, PERS_DIST_DIRDNI,
+                    tipo_sangr, peso_kilo, tall_metr,
+                    CODI_SIST_PENS, ESSALUD, PERS_PENSIONISTA, PERS_EMBARGO,
+                    PERS_GRADO_INSTRUCCION, CARR_CODIGO, IEDU_CODIGO, EGRESO_EDUCATIVO,
+                    PERS_CONDISCAMEC, PERS_NRODISCAMEC,
+                    PERS_SMO, PERS_LUGARSMO, PERS_CONSMO,
+                    PERS_NROLICENCIA, PERS_CONARMAS,
+                    PERS_BREVETE, CLASE_BREVETE, CATEGORIA_BREVETE, PERS_VEHICULO_PROPIO,
+                    PERS_NOMCONTACTO, PERS_NROEMERGENCIA, PERS_EMERC_FAMILIAR,
+                    PERS_CTRABANT, PERS_CARGOTRABANT, PERS_DURACIONANT,
+                    dj2026_banco, dj2026_ciudad_naci, dj2026_ocupacion_principal,
+                    dj2026_experiencia_anios, dj2026_familiar_empresa,
+                    dj2026_familiar_nombre, dj2026_familiar_parentesco,
+                    dj2026_laboral_1, dj2026_laboral_2, dj2026_cantprofesion,
+                    PERS_TIPOTRAB, PERS_VIGENCIA,
+                    PERS_SNADAR, SIP_migrado, SIP_activo, SIP_habilitado,
+                    USUA_FECHA_REG, USUA_FECHA_MOD
+                ) VALUES (
+                    ?,?,?,
+                    ?,?,?,?,
+                    ?,?,
+                    ?,?,
+                    ?,?,
+                    ?,?,?,
+                    ?,?,
+                    ?,?,?,
+                    ?,?,?,
+                    ?,?,?,
+                    ?,?,?,?,
+                    ?,?,?,?,
+                    ?,?,
+                    ?,?,?,
+                    ?,?,
+                    ?,?,?,?,
+                    ?,?,?,
+                    ?,?,?,
+                    ?,?,?,
+                    ?,?,
+                    ?,?,
+                    ?,?,?,
+                    ?,?,?,
+                    1,1,0,
+                    GETDATE(), GETDATE()
+                )",
+                [
+                    $nuevoCod, $codiTipoDocu, $dni,
+
+                    strtoupper(trim($data['nombre1']          ?? '')),
+                    strtoupper(trim($data['nombre2']          ?? '')),
+                    strtoupper(trim($data['apellido_paterno'] ?? '')),
+                    strtoupper(trim($data['apellido_materno'] ?? '')),
+
+                    $fechaNaci, $fechaCaduca,
+
+                    $sexo, $sexo,
+
+                    $estadoCivil, $estadoCivilCorto,
+
+                    $data['correo']   ?? null,
+                    $data['celular']  ?? null,
+                    $data['whatsapp'] ?? null,
+
+                    $data['direccion_actual'] ?? null,
+                    $data['direccion_dni']    ?? null,
+
+                    $data['departamento_actual'] ?? null,
+                    $data['provincia_actual']    ?? null,
+                    $data['distrito_actual']     ?? null,
+                    $data['departamento_dni']    ?? null,
+                    $data['provincia_dni']       ?? null,
+                    $data['distrito_dni']        ?? null,
+
+                    $data['tipo_sangre'] ?? null,
+                    $peso,
+                    $talla,
+
+                    $data['sistema_previsional'] ?? '07',
+                    $essalud,
+                    $pensionista,
+                    $embargo,
+
+                    $data['grado_instruccion'] ?? null,
+                    $carrCodigo,
+                    $ieduCodigo,
+                    $anioEgreso,
+
+                    $condiscamec,
+                    $data['sucamec_obs'] ?? null,
+
+                    $smo,
+                    $lugarsmo,
+                    $consmo,
+
+                    $data['licencia_arma'] ?? null,
+                    $conarmas,
+
+                    $data['brevete']       ?? null,
+                    $claseBrevete,
+                    $data['tipo_vehiculo'] ?? null,
+                    $vehiculoPropio,
+
+                    $data['contacto_emergencia']   ?? null,
+                    $data['celular_emergencia']    ?? null,
+                    $data['parentesco_emergencia'] ?? null,
+
+                    $data['empresa_anterior']  ?? null,
+                    $data['cargo_anterior']    ?? null,
+                    $data['duracion_anterior'] ?? null,
+
+                    $data['cuenta_banco']        ?? null,
+                    $data['ciudad_nacimiento']   ?? null,
+                    $data['ocupacion_principal'] ?? null,
+
+                    $experienciaAnios,
+                    $familiarEmpresa,
+
+                    $data['familiar_nombre']     ?? null,
+                    $data['familiar_parentesco'] ?? null,
+
+                    $laboral1,
+                    $laboral2,
+                    $cantProfesion,
+
+                    $tipotrab,
+                    $vigencia,
+
+                    $snadar,
+                ]
+            );
+
+            // ── FAMILIARES ────────────────────────────────────────────────────
+            $this->saveFamiliaresTemp($nuevoCod, $data);
+            $this->migrarFamiliares($nuevoCod);
+
+            // ── TELÉFONOS ─────────────────────────────────────────────────────
+            $this->saveTelefonosTemp($nuevoCod, $data);
+            $this->migrarTelefonos($nuevoCod);
+
+            DB::commit();
+
+            Log::info('saveNuevaDj: Personal nuevo creado', ['CODI_PERS' => $nuevoCod, 'DNI' => $dni]);
+
+            return response()->json([
+                'success'   => true,
+                'message'   => 'Declaración Jurada guardada correctamente.',
+                'codi_pers' => $nuevoCod,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error en saveNuevaDj: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function saveDeclaracionJurada(SaveDeclaracionJuradaRequest $request)
     {
 

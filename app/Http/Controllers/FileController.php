@@ -776,7 +776,7 @@ class FileController extends Controller{
 
             $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
                 ->attach('archivo', file_get_contents($archivo), $archivo->getClientOriginalName())
-                ->post('http://190.116.178.163/apps/api/file-control/charge-file_fin.php', [
+                ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
                     'nameFile' => $nameFile,
                     'ruta'     => $rutaArchivo
                 ]);
