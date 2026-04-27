@@ -10,12 +10,16 @@ class BiometricoController extends Controller
     {
         // ── RUTAS BASE ──────────────────────────────────────────────
         $rutaHuellaAntigua = "\\\\192.168.10.2\\Biblioteca_Grafica\\HUELLAS_DIGITALES\\PERSONAL\\";
-        $rutaHuellaNueva   = "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\huella\\";
+        //$rutaHuellaNueva   = "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\huella\\";
+        $rutaHuellaNueva   = "\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026\\huella\\";
 
         $rutaFirmaAntigua  = "\\\\192.168.10.2\\Biblioteca_Grafica\\FIRMAS\\PERSONAL\\";
-        $rutaFirmaNueva    = "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\firma\\";
+        //$rutaFirmaNueva    = "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\firma\\";
+        $rutaFirmaNueva    = "\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026\\firma\\";
+
         $rutaDNIanversoAntigua  = "\\\\192.168.10.2\\Biblioteca_Grafica\\DNI1_1\\";
         $rutaDNIreversoAntigua    = "\\\\192.168.10.2\\Biblioteca_Grafica\\DNI2_1\\";
+
         $rutaDNIanversoNueva  = "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dni\\anverso\\";
         $rutaDNIreversoNueva    = "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dni\\reverso\\";
         

@@ -729,110 +729,173 @@ class FileController extends Controller{
     }
 
     //GUARDAR DATOS
-     public function saveFolioPersona(Request $request){
-        dd($request->file('imagenes'));
-
-
+     public function saveFolioPersona(Request $request)
+    {
+     
         // Validar los datos del formulario
         $validated = $request->validate([
-            'fecha_emision' => 'required|date',
+            'fecha_emision'  => 'required|date',
             'fecha_caducidad' => 'nullable|date',
-            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:1024',
+            'imagenes.*'     => 'required|file|mimes:jpg,jpeg|max:1228', // 1.2 MB
+            'codPersonal'    => 'required|string',
+            'codFolio'       => 'required|string',
         ]);
 
-        // Para guardar el archivo con la codificación del personal
+        $codPersonal  = $request->input('codPersonal');
+        $codFolio     = $request->input('codFolio');
+        $rutas        = FileControl::getRutaFolio($codFolio); // siempre array
+        $archivos     = $request->file('imagenes');
 
-        $codPersonal = $request->input('codPersonal');
-        $rutas = FileControl::getRutaFolio($request->input('codFolio')); // Siempre array
-        $archivos = $request->file('imagenes');
-
-        $totalArchivos = count($archivos);
-        $totalRutas = count($rutas);
-
-        // Validación
-        if ($totalRutas !== 1 && $totalRutas !== $totalArchivos) {
-            return response()->json(['error' => 'La cantidad de rutas no coincide con la cantidad de archivos.'], 400);
+        if (!$archivos || count($archivos) === 0) {
+            return response()->json(['error' => 'No se recibieron archivos.'], 400);
         }
 
-        // Recorrer archivos
+        $totalArchivos = count($archivos);
+        $totalRutas    = count($rutas);
+
+        // Validar que la cantidad de rutas sea 1 o coincida con archivos
+        if ($totalRutas !== 1 && $totalRutas !== $totalArchivos) {
+            return response()->json([
+                'error' => 'La cantidad de rutas no coincide con la cantidad de archivos.'
+            ], 400);
+        }
+
+        // Recorrer y enviar cada archivo al microservicio
         foreach ($archivos as $index => $archivo) {
-            // Determinar nombre según el caso
             if ($totalRutas === $totalArchivos) {
-                // Caso: un archivo por ruta → nombre sin sufijo
-                $nameFile = $codPersonal . '.jpg';
+                // Un archivo por ruta → sin sufijo
+                $nameFile    = $codPersonal . '.jpg';
                 $rutaArchivo = $rutas[$index];
             } else {
-                // Caso: múltiples archivos para una sola ruta → nombre con sufijo
-                $nameFile = $codPersonal . '_' . ($index + 1) . '.jpg';
+                // Múltiples archivos para una sola ruta → con sufijo
+                $nameFile    = $totalArchivos === 1
+                    ? $codPersonal . '.jpg'
+                    : $codPersonal . '_' . ($index + 1) . '.jpg';
                 $rutaArchivo = $rutas[0];
             }
 
-            // Enviar al microservicio
             $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
                 ->attach('archivo', file_get_contents($archivo), $archivo->getClientOriginalName())
                 ->post('http://190.116.178.163/apps/api/file-control/charge-file_fin.php', [
                     'nameFile' => $nameFile,
-                    'ruta' => $rutaArchivo
+                    'ruta'     => $rutaArchivo
                 ]);
 
             if ($response->failed()) {
                 return response()->json([
-                    'error' => 'No se pudo guardar el archivo en el servidor remoto',
+                    'error'   => 'No se pudo guardar el archivo en el servidor remoto.',
                     'detalle' => $response->body()
                 ], 500);
             }
-
-            // Opcional: guardar localmente
-            $archivo->storeAs('uploads/folios', $nameFile);
         }
-        
-        // Llamar al método saveFolioPersonal pasando los datos y el archivo
+
+        // Guardar en BD
         $inserted = FileControl::saveFolioPersonal(
             $validated['fecha_emision'],
             $validated['fecha_caducidad'],
-            $request->codFolio,
-            $request->codPersonal,
-            //$filePath // Pasamos la ruta del archivo
+            $codFolio,
+            $codPersonal
         );
 
-        return response()->json(['message' => 'Folios del persona guardados']);
+        if (!$inserted) {
+            return response()->json(['error' => 'No se pudo guardar en base de datos.'], 500);
+        }
 
+        return response()->json(['message' => 'Folios guardados correctamente.']);
     }
 
 
     
-public function getViewDocumentsPer($codPersonal, $codFolio)
-{
-    $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
+// public function getViewDocumentsPer($codPersonal, $codFolio)
+// {
+//     $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
 
-    if (empty($result)) {
+//     if (empty($result)) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'No se encontraron rutas'
+//         ], 404);
+//     }
+
+//     $rutas = [];
+
+//     foreach ($result as $item) {
+
+//         if (!empty($item->ruta_aux)) {
+//             $rutas[] = $item->ruta_aux;
+//         }
+
+//         if (!empty($item->ruta)) {
+//             $rutas[] = $item->ruta;
+//         }
+//     }
+
+//     // limpiar nulls y duplicados
+//     $rutas = array_values(array_unique(array_filter($rutas)));
+
+//     return response()->json([
+//         'success' => true,
+//         'rutas' => $rutas
+//     ]);
+// }
+
+
+ public function getViewDocumentsPer($codPersonal, $codFolio)
+    {
+        $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
+
+        if (empty($result)) {
+            return response()->json(['success' => false, 'message' => 'No se encontraron rutas'], 404);
+        }
+
+        $extensiones = ['jpg', 'jpeg', 'png', 'pdf'];
+        $rutasValidas = [];
+
+        foreach ($result as $item) {
+            $rutaEncontrada = false;
+
+            // Probar primero con ruta_aux
+            if (isset($item->ruta_aux)) {
+                $rutaBase = str_replace('//', 'http://', $item->ruta_aux);
+
+                foreach ($extensiones as $ext) {
+                    $rutaConExt = $rutaBase . '.' . $ext;
+
+                    if (self::urlExiste($rutaConExt)) {
+                        $rutasValidas[] = $rutaConExt;
+                        $rutaEncontrada = true;
+                        break;
+                    }
+                }
+            }
+
+            // Si no se encontró nada en ruta_aux, probar con ruta
+            if (!$rutaEncontrada && isset($item->ruta)) {
+                $rutaBase = str_replace('//', 'http://', $item->ruta);
+
+                foreach ($extensiones as $ext) {
+                    $rutaConExt = $rutaBase . '.' . $ext;
+
+                    if (self::urlExiste($rutaConExt)) {
+                        $rutasValidas[] = $rutaConExt;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (empty($rutasValidas)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontraron archivos accesibles desde la red'
+            ]);
+        }
+
         return response()->json([
-            'success' => false,
-            'message' => 'No se encontraron rutas'
-        ], 404);
+            'success' => true,
+            'rutas' => $rutasValidas
+        ]);
     }
-
-    $rutas = [];
-
-    foreach ($result as $item) {
-
-        if (!empty($item->ruta_aux)) {
-            $rutas[] = $item->ruta_aux;
-        }
-
-        if (!empty($item->ruta)) {
-            $rutas[] = $item->ruta;
-        }
-    }
-
-    // limpiar nulls y duplicados
-    $rutas = array_values(array_unique(array_filter($rutas)));
-
-    return response()->json([
-        'success' => true,
-        'rutas' => $rutas
-    ]);
-}
 
     //  public function getViewDocumentsPer($codPersonal, $codFolio)
     // {

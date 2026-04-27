@@ -256,17 +256,34 @@
         {{-- Formulario --}}
         <form id="formFolioPersonal">
             @csrf
+            <input type="hidden" id="codFolioActual" value="">
+
+            <input type="hidden" id="codFolio" value="">
+            <input type="hidden" id="meses" value="">
+            <input type="hidden" id="cantArchivos" value="">
+            <span id="txtPeriodo" class="hidden"></span>
+            <span id="txtCantHojas" class="hidden"></span>
+
+            {{-- Caducidad — solo visible para folios normales --}}
+            
 
             <div class="px-5 py-4 space-y-5">
 
-                <p class="text-sm text-center text-gray-600">
-                    Solo se aceptan archivos <strong>PDF</strong> con un peso máximo de <strong>5 MB</strong>.
+                
+                
+                <p class="text-sm text-center text-gray-600" id="aviso-tipo-archivo">
+                    Solo se aceptan archivos <strong>PDF</strong> con un peso máximo de <strong>1 MB</strong>.
                 </p>
 
                 {{-- Fecha de emisión --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Emisión</label>
                     <input type="date" id="fecha_emision" required class="form-input w-full">
+                </div>
+
+                <div id="divCaducidad" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Caducidad</label>
+                    <input type="date" id="fecha_caducidad" class="form-input w-full">
                 </div>
 
                 {{-- Selector de archivo --}}
@@ -283,11 +300,11 @@
                         </span>
 
                         <div class="text-center text-sm text-gray-600">
-                            <span class="font-medium text-gray-800">Arrastra tu archivo aquí o </span>
+                            <span class="font-medium text-gray-800">Haz click aqui </span>
                             <span class="font-semibold text-blue-600 hover:underline">SELECCIONAR</span>
                         </div>
 
-                        <p class="text-xs text-gray-400">Solo PDF · Máximo 5 MB</p>
+                        <p class="text-xs text-gray-400">Máximo 1 MB</p>
 
                         <input type="file" id="archivoInput" accept=".pdf" class="hidden">
                     </div>
@@ -299,7 +316,7 @@
 
             {{-- Footer del modal --}}
             <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200">
-                <button type="submit" class="btn bg-primary text-white">
+                <button type="submit" class="btn bg-primary text-white"  id="btn-guardar-folio">
                     <i class="i-tabler-check me-1"></i> Guardar
                 </button>
                 <button type="button" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -351,6 +368,5 @@
 @endsection
 
 @vite(['resources/js/functions/chargeFile.js'])
-@vite(['resources/js/functions/changeFilePers.js'])
 
 @vite(['resources/js/functions/chargefile/reporteAvances.js'])
