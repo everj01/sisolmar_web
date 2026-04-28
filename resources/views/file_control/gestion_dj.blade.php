@@ -346,6 +346,7 @@
     <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
 
     @include('file_control.rrhh.partials_modal_dj')
+    @include('file_control.rrhh.partials_modal_nueva_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')
 
 @endsection
@@ -370,4 +371,7 @@
     </script>
 @endsection
 
-@vite(['resources/js/functions/gestion_dj.js'])
+ @vite([
+        'resources/js/functions/gestion_dj.js',
+       'resources/js/functions/nueva_dj.js', 
+    ])

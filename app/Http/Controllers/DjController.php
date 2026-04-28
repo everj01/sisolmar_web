@@ -683,9 +683,29 @@ class DjController extends Controller
             );
 
             $instituciones = DB::select(
-                "SELECT IEDU_CODIGO AS id, '' AS text 
+                "SELECT IEDU_CODIGO AS id, IEDU_DESCRIPCION AS text 
                 FROM si_solm.dbo.SUNAT_IEDUCATIVA 
                 ORDER BY IEDU_DESCRIPCION"
+            );
+
+            $sistemasPrev = DB::select(
+                "SELECT 
+                    CODI_SIST_PENS AS id, 
+                    CASE
+                        WHEN CODI_SIST_PENS = '01' THEN 'ONP' ELSE DESC_SIST_PENS
+                    END AS text
+                FROM si_solm.dbo.SISTEMA_PENSIONES
+                WHERE SIPE_VIGENCIA = 'SI'
+                ORDER BY 
+                    CASE CODI_SIST_PENS
+                        WHEN '03' THEN 1 -- AFP PROFUTURO
+                        WHEN '01' THEN 2 -- ONP
+                        WHEN '02' THEN 3 -- AFP INTEGRA
+                        WHEN '10' THEN 4 -- AFP PRIMA
+                        WHEN '27' THEN 5 -- AFP HABITAT
+                        WHEN '07' THEN 6 -- NO APORTACION
+                        ELSE 99
+                    END;"
             );
 
             $sangre = [
@@ -720,6 +740,7 @@ class DjController extends Controller
                 'sangre' => $sangre,
                 'estados_civiles' => $estadosCiviles,
                 'tipos_arma' => $tiposArma,
+                'sistemas_previsionales' => $sistemasPrev, 
             ]);
 
         } catch (\Exception $e) {
@@ -2820,6 +2841,130 @@ class DjController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error en getCheckPdf: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function buscarCoincidencias(Request $request)
+    {
+        $nomb1 = $request->input('nomb1');
+        $nomb2 = $request->input('nomb2');
+        $apel1 = $request->input('apel1');
+        $apel2 = $request->input('apel2');
+
+        $coincidencias = DB::table('si_solm.dbo.PERSONAL')
+            ->select('NOMB_1', 'NOMB_2', 'APEL_1', 'APEL_2', 'NRO_DOCU_IDEN', 'PERS_VIGENCIA')
+            ->where(function($q) use ($nomb1, $nomb2, $apel1, $apel2) {
+                if ($nomb1) $q->where('NOMB_1', 'like', "%$nomb1%");
+                //if ($nomb2) $q->where('NOMB_2', 'like', "%$nomb2%");
+                if ($apel1) $q->where('APEL_1', 'like', "%$apel1%");
+                if ($apel2) $q->where('APEL_2', 'like', "%$apel2%");
+            })
+            ->limit(10)
+            ->get();
+
+        return response()->json(['data' => $coincidencias]);
+    }
+
+  
+    public function validarDocumentoDj(Request $request)
+    {
+        try {
+            $nro = $request->get('numero');
+            $tipo = $request->get('tipo');
+            $data = DB::select(
+                "SELECT TOP 1 PERS_VIGENCIA as vigencia, CODI_PERS as codigo , NOMB_1, NOMB_2, APEL_1, APEL_2 
+                FROM si_solm.dbo.PERSONAL WHERE NRO_DOCU_IDEN = ? AND CODI_TIPO_DOCU = ?", [$nro, $tipo]
+            );
+
+            return response()->json(['success' => true, 'data' => $data]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en getTipoDoc: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+
+                    
+    /**
+     * Obtener tipode documento de forma generar para el DJ
+     */
+    public function getTipoDoc()
+    {
+        try {
+            $data = DB::select(
+                "SELECT CODI_TIPO_DOCU AS codigo, UPPER(DESC_TIPO_DOCU) AS nombre 
+                FROM si_solm.dbo.TIPO_DOCUMENTO WITH (NOLOCK) WHERE CODI_TIPO_DOCU IN ('0034', '0035', '0037', '0216', '0215', '0038')"
+            );
+
+            return response()->json(['success' => true, 'data' => $data]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en getTipoDoc: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+
+    public function getEstadoCivil()
+    {
+        try {
+            $data = DB::select(
+                "SELECT ESCI_CODIGO AS codigo, ESCI_DESCRIPCION AS nombre FROM si_solm.dbo.ADMI_ESTADO_CIVIL WHERE ESCI_VIGENCIA = 'SI'"
+            );
+
+            return response()->json(['success' => true, 'data' => $data]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en getTipoDoc: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+
+     public function getSistemaPrev()
+    {
+        try {
+            $data = DB::select(
+                "SELECT 
+                    CODI_SIST_PENS AS codigo, 
+                    CASE
+                        WHEN CODI_SIST_PENS = '01' THEN 'ONP' ELSE DESC_SIST_PENS
+                    END AS nombre
+                FROM si_solm.dbo.SISTEMA_PENSIONES
+                WHERE SIPE_VIGENCIA = 'SI'
+                ORDER BY 
+                    CASE CODI_SIST_PENS
+                        WHEN '03' THEN 1 -- AFP PROFUTURO
+                        WHEN '01' THEN 2 -- ONP
+                        WHEN '02' THEN 3 -- AFP INTEGRA
+                        WHEN '10' THEN 4 -- AFP PRIMA
+                        WHEN '27' THEN 5 -- AFP HABITAT
+                        WHEN '07' THEN 6 -- NO APORTACION
+                        ELSE 99
+                    END;"
+            );
+
+            return response()->json(['success' => true, 'data' => $data]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en getTipoDoc: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+     public function getTipoPer()
+    {
+        try {
+            $data = DB::select(
+                "SELECT TIPE_CODIGO AS codigo, TIPE_DESCRIPCION AS nombre FROM si_solm.dbo.ADMI_TIPO_PERSONAL"
+            );
+
+            return response()->json(['success' => true, 'data' => $data]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en getTipoDoc: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

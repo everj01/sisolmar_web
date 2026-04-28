@@ -717,31 +717,36 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // BOTONES MODAL
     // ============================================================
-    btnNuevaDJ?.addEventListener('click', async function () {
-        const { value: tipoCod, isConfirmed } = await Swal.fire({
-            title: 'Nueva Declaración Jurada',
-            text: 'Selecciona el tipo de personal:',
-            input: 'radio',
-            inputOptions: {
-                '03': 'Operativo',
-                '05': 'Administrativo',
-            },
-            inputValidator: (value) => !value && 'Debes seleccionar un tipo.',
-            showCancelButton: true,
-            confirmButtonText: 'Continuar',
-            cancelButtonText: 'Cancelar',
-        });
+    // btnNuevaDJ?.addEventListener('click', async function () {
+    //     const { value: tipoCod, isConfirmed } = await Swal.fire({
+    //         title: 'Nueva Declaración Jurada',
+    //         text: 'Selecciona el tipo de personal:',
+    //         input: 'radio',
+    //         inputOptions: {
+    //             '03': 'Operativo',
+    //             '05': 'Administrativo',
+    //         },
+    //         inputValidator: (value) => !value && 'Debes seleccionar un tipo.',
+    //         showCancelButton: true,
+    //         confirmButtonText: 'Continuar',
+    //         cancelButtonText: 'Cancelar',
+    //     });
 
-        if (!isConfirmed || !tipoCod) return;
+    //     if (!isConfirmed || !tipoCod) return;
 
-        // Abrir modal con catálogos cargados
-        await abrirFormularioDJ(null);
+    //     // Abrir modal con catálogos cargados
+    //     await abrirFormularioDJ(null);
 
-        // Setear tipo DESPUÉS de que el modal esté abierto
-        setTimeout(() => {
-            setValue('tipo_personal', tipoCod);
-            aplicarVisibilidadPorTipo(tipoCod);
-        }, 150);
+    //     // Setear tipo DESPUÉS de que el modal esté abierto
+    //     setTimeout(() => {
+    //         setValue('tipo_personal', tipoCod);
+    //         aplicarVisibilidadPorTipo(tipoCod);
+    //     }, 150);
+    // });
+
+    btnNuevaDJ?.addEventListener('click', function () {
+        if (window.NuevaDJ) window.NuevaDJ.abrir();
+       
     });
 
 
@@ -1576,6 +1581,11 @@ async function cargarCatalogos(source = 'migracion') {
             populateSelect('#PERS_GRUP_SANGRE', sangre);
             populateSelect('#PERS_ESTADO_CIVIL', estados_civiles);
             populateSelect('#LAB_TIPO_ARMA', tipos_arma);
+            // Poblar estado civil del modal original
+            populateSelect('#estado_civil', response.data.estados_civiles ?? []);
+
+            // Poblar sistema previsional del modal original
+            populateSelect('#sistema_previsional', response.data.sistemas_previsionales ?? []);
 
             window.allCarreras = carreras;
             catalogosCache = response.data;

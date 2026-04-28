@@ -169,10 +169,21 @@ Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::post('/reset-check-pdf',   [DjController::class, 'resetCheckPdf']);
     Route::get('/get-check-pdf',      [DjController::class, 'getCheckPdf']);
     Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
-
-
+    Route::get('/validar-documento', [DjController::class, 'validarDocumentoDj']);
     Route::post('/save-nueva-dj', [DjController::class, 'saveNuevaDj']);
+    Route::get('/buscar-coincidencias', [DjController::class, 'buscarCoincidencias']);
+
+
+
+    //nuevos
+    Route::get('get-tipo-doc/', [DjController::class, 'getTipoDoc']);
+    Route::get('get-tipo-per/', [DjController::class, 'getTipoPer']);
+    Route::get('get-estado-civil/', [DjController::class, 'getEstadoCivil']);
+    Route::get('get-sistema-prev/', [DjController::class, 'getSistemaPrev']);
+    
 });
+
+
 
 // REPORTE FOLIOS POR VENCER CON FILTROS
 Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);

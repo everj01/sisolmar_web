@@ -1,23 +1,0 @@
-Loading pages (1/6)
-[>                                                           ] 0%[======>                                                     ] 10%QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-[=========>                                                  ] 15%[==========>                                                 ] 17%[============>                                               ] 20%[=============>                                              ] 23%[===============>                                            ] 26%[=================>                                          ] 29%[===================>                                        ] 32%[=====================>                                      ] 36%[======================>                                     ] 38%libpng warning: iCCP: known incorrect sRGB profile
-[========================>                                   ] 40%[=========================>                                  ] 43%libpng warning: iCCP: known incorrect sRGB profile
-libpng warning: iCCP: cHRM chunk does not match sRGB
-[===========================>                                ] 45%Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/huella_digital.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/firma_jorge.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/foto_dni.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/firma_digital.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/temp_legajos/HUELLAS_DIGITALES/PERSONAL/15205.jpg (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/temp_legajos/FIRMAS/PERSONAL/15205.jpg (ignore)
-Warning: Failed to load https://i.ibb.co/h9qJKZ7/firma-ejemplo-1.png (ignore)
-Warning: Failed to load https://i.ibb.co/hLMLCLB/firma-ejemplo-2.png (ignore)
-[============================================================] 100%Counting pages (2/6)                                               
-[============================================================] Object 1 of 1Resolving links (4/6)                                                       
-[============================================================] Object 1 of 1Loading headers and footers (5/6)                                           
-Printing pages (6/6)
-[>                                                           ] Preparing[======>                                                     ] Page 1 of 10[============>                                               ] Page 2 of 10[==================>                                         ] Page 3 of 10[========================>                                   ] Page 4 of 10[==============================>                             ] Page 5 of 10[====================================>                       ] Page 6 of 10[==========================================>                 ] Page 7 of 10[================================================>           ] Page 8 of 10[======================================================>     ] Page 9 of 10[============================================================] Page 10 of 10Done                                                                        
