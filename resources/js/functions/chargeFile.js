@@ -52,8 +52,21 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     formatter: function (cell) {
         const data = cell.getRow().getData();
         const nombre = cell.getValue();
-        const icono = data.tiene_folio_25 == 1
-               ? `<img src="/images/prueba.png" title="Folio 25 activo" style="width:16px; height:16px; object-fit:contain; margin-left:5px;">`
+    const icono = data.tiene_folio_25 == 1
+    ? `<span title="DJ disponible" style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:24px; height:24px;
+            border-radius:6px;
+            background:#f3f4f6;
+            border:1px solid #f0fdf4 ;
+            margin-left:5px;
+            cursor:default;
+            pointer-events:none;
+            vertical-align:middle;">
+            <img src="/images/prueba.png" style="width:14px; height:14px; object-fit:contain; display:block;">
+        </span>`
     : '';
         return `<span style="display:flex; justify-content:space-between; align-items:center;">
                     <span>${nombre}</span>
