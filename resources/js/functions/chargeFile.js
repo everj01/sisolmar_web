@@ -43,7 +43,24 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     },
     columns: [
         { title: "Cód.", field: "CODI_PERS", hozAlign: "center", width: '10%', responsive: false },
-        { title: "Personal", field: "personal", hozAlign: "left", width: '30%', responsive: false },
+        {
+    title: "Personal",
+    field: "personal",
+    hozAlign: "left",
+    width: '30%',
+    responsive: false,
+    formatter: function (cell) {
+        const data = cell.getRow().getData();
+        const nombre = cell.getValue();
+        const icono = data.tiene_folio_25 == 1
+               ? `<img src="/images/prueba.png" title="Folio 25 activo" style="width:16px; height:16px; object-fit:contain; margin-left:5px;">`
+    : '';
+        return `<span style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>${nombre}</span>
+                    ${icono}
+                </span>`;
+    }
+},
         { title: "Nro Doc.", field: "nroDoc", hozAlign: "center", width: '15%', responsive: false },
         { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '18%', responsive: 0 },
         {

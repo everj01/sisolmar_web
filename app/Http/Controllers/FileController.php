@@ -116,27 +116,40 @@ class FileController extends Controller{
     }
 
     public function getPersonalTotal(Request $request)
-    {
-        $page = $request->get('page', 1);
-        $size = $request->get('size', 50);
-        $search = $request->get('search', null);
-        $tipo_per = $request->get('tipo_per', null);
-        $vigencia = $request->get('vigencia', null);
-        $codSucursal = $request->get('codSucursal', '0');
+{
+    $page = $request->get('page', 1);
+    $size = $request->get('size', 50);
+    $search = $request->get('search', null);
+    $tipo_per = $request->get('tipo_per', null);
+    $vigencia = $request->get('vigencia', null);
+    $codSucursal = $request->get('codSucursal', '0');
 
-        $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?', [
-            $codSucursal, $page, $size, $search, $tipo_per, $vigencia
-        ]);
-        $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia
-        ])[0]->total;
+    $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?', [
+        $codSucursal, $page, $size, $search, $tipo_per, $vigencia
+    ]);
 
-        return response()->json([
-            'data' => $data,
-            'last_page' => ceil($total / $size),
-            'total' => (int) $total,
-        ]);
+    $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
+        $codSucursal, $search, $tipo_per, $vigencia
+    ])[0]->total;
+
+    // ─── Obtener los códigos que tienen folio 25 activo ───
+    $conFolio25 = DB::table('sw_folios_detalles')
+        ->where('codFolio', '25')
+        ->where('habilitado', '1')
+        ->pluck('codPersonal')
+        ->toArray();
+
+    // ─── Agregar el campo a cada persona ───
+    foreach ($data as $persona) {
+        $persona->tiene_folio_25 = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
     }
+
+    return response()->json([
+        'data' => $data,
+        'last_page' => ceil($total / $size),
+        'total' => (int) $total,
+    ]);
+}
 
     public function getPersonalTotalPrueba(Request $request)
     {
