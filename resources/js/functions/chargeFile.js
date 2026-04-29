@@ -72,7 +72,13 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         params.tipo_per    = document.querySelector('input[name="tipo_per"]:checked')?.value || "TODOS";
         params.vigencia    = document.querySelector('input[name="vigencia"]:checked')?.value || "";
 
-        return `${url}?${new URLSearchParams(params).toString()}`;
+        const filtroDJ = document.getElementById("filtroDJ")?.value || "TODOS";
+        if (filtroDJ === "SI") params.tiene_folio_25 = "1";
+        else if (filtroDJ === "NO") params.tiene_folio_25 = "0";
+
+        const url_final = `${url}?${new URLSearchParams(params).toString()}`;
+        console.log('URL generada:', url_final); // ← abre la consola y filtra DJ
+        return url_final;
     },
 
     rowFormatter: function (row) {
@@ -85,7 +91,34 @@ const tblPersonas = new Tabulator("#tblPersonas", {
 
     columns: [
         { title: "Cód.",     field: "CODI_PERS", hozAlign: "center", width: '10%', responsive: false },
-        { title: "Personal", field: "personal",  hozAlign: "left",   width: '30%', responsive: false },
+        // { title: "Personal", field: "personal",  hozAlign: "left",   width: '30%', responsive: false },
+        { title: "Apellidos", field: "apellidos",  hozAlign: "left",   width: '17%', responsive: false },
+        { title: "Nombres", field: "nombres",  hozAlign: "left",   width: '22%', responsive: false, 
+            formatter: function (cell) {
+                const data = cell.getRow().getData();
+                const nombre = cell.getValue();
+            const icono = data.tiene_folio_25 == 1
+            ? `<span title="DJ disponible" style="
+                    display:inline-flex;
+                    align-items:center;
+                    justify-content:center;
+                    width:24px; height:24px;
+                    border-radius:6px;
+                    background:#f3f4f6;
+                    border:1px solid #f0fdf4 ;
+                    margin-left:5px;
+                    cursor:default;
+                    pointer-events:none;
+                    vertical-align:middle;">
+                    <img src="/images/prueba.png" style="width:14px; height:14px; object-fit:contain; display:block;">
+                </span>`
+            : '';
+                return `<span style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>${nombre}</span>
+                            ${icono}
+                        </span>`;
+            }
+        },
         { title: "Nro Doc.", field: "nroDoc",     hozAlign: "center", width: '15%', responsive: false },
         { title: "Sucursal", field: "sucursal",   hozAlign: "center", width: '18%', responsive: 0 },
         {
@@ -611,7 +644,7 @@ document.getElementById("buscarPersonal").addEventListener("keyup", () => reload
 document.getElementById("sucursal").addEventListener("change", () => reloadTabla());
 document.querySelectorAll('input[name="tipo_per"]').forEach(r => r.addEventListener("change", () => reloadTabla()));
 document.querySelectorAll('input[name="vigencia"]').forEach(r => r.addEventListener("change", () => reloadTabla()));
-
+document.getElementById("filtroDJ").addEventListener("change", () => reloadTabla());
 // Filtro de tipo de folio (Principal / Adicional)
 document.querySelectorAll('input[name="tipo_folio"]').forEach(radio => {
     radio.addEventListener('change', filterTableByTipoFolio);

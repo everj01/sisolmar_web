@@ -1,12 +1,17 @@
-    import Swal from 'sweetalert2';
+import Swal from 'sweetalert2';
 (function () {
     'use strict';
 
-     const $ = id => document.getElementById(id);
+    const $ = id => document.getElementById(id);
 
     const docInput = $('ndj_nro_documento');
     const tipoDocInput = $('ndj_tipo_documento');
     const btnGuardar = $('ndj_btnGuardar');
+
+    let dniValido = false;
+    let coincidenciasValidadas = false;
+    let hayCoincidencias = false;
+
 
     const nombre1 = $('ndj_nombre1');
     const nombre2 = $('ndj_nombre2');
@@ -24,40 +29,40 @@
     docInput.parentNode.appendChild(docErrorMsg);
 
     const alertTipoPersonal = $('ndj_alert_tipo_personal');
-const tipoPersonalSelect = $('ndj_sel_tipo_personal');
- 
+    const tipoPersonalSelect = $('ndj_sel_tipo_personal');
+
     // ── Categorías brevete ───────────────────────────────────
     const NDJ_CAT = {
         'A': [
-            { val:'A-I',    text:'A-I: Particulares' },
-            { val:'A-IIa',  text:'A-IIa: Taxi / Ambulancia' },
-            { val:'A-IIb',  text:'A-IIb: Microbús / Pickup' },
-            { val:'A-IIIa', text:'A-IIIa: Ómnibus' },
-            { val:'A-IIIb', text:'A-IIIb: Camiones' },
-            { val:'A-IIIc', text:'A-IIIc: Todos los anteriores' },
+            { val: 'A-I', text: 'A-I: Particulares' },
+            { val: 'A-IIa', text: 'A-IIa: Taxi / Ambulancia' },
+            { val: 'A-IIb', text: 'A-IIb: Microbús / Pickup' },
+            { val: 'A-IIIa', text: 'A-IIIa: Ómnibus' },
+            { val: 'A-IIIb', text: 'A-IIIb: Camiones' },
+            { val: 'A-IIIc', text: 'A-IIIc: Todos los anteriores' },
         ],
         'B': [
-            { val:'B-IIa', text:'B-IIa: Bicimotos' },
-            { val:'B-IIb', text:'B-IIb: Motocicletas' },
-            { val:'B-IIc', text:'B-IIc: Mototaxis' },
+            { val: 'B-IIa', text: 'B-IIa: Bicimotos' },
+            { val: 'B-IIb', text: 'B-IIb: Motocicletas' },
+            { val: 'B-IIc', text: 'B-IIc: Mototaxis' },
         ],
     };
- 
-   
- 
+
+
+
     // ── Caché local de educación ─────────────────────────────
     // grados e instituciones son independientes entre sí.
     // carreras se filtra por institución (IEDU_CODIGO === institucion.id)
-    let ndj_allGrados       = [];
+    let ndj_allGrados = [];
     let ndj_allInstituciones = [];
-    let ndj_allCarreras     = [];
-    let ndj_catalogoListo   = false;
+    let ndj_allCarreras = [];
+    let ndj_catalogoListo = false;
 
     let ndj_abriendo = false;
- 
+
     // ── Caché ubigeos ─────────────────────────────────────────
     const ndj_ubigeoCache = new Map();
- 
+
     // ============================================================
     // ABRIR
     // ============================================================
@@ -68,15 +73,11 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         const modal = $('modalNuevaDJ');
         if (!modal) { ndj_abriendo = false; return; }
 
-        // Asegurarse que el modal esté limpio antes de abrir
-        modal.classList.remove('hs-overlay-open');
-        document.querySelectorAll('.hs-overlay-backdrop').forEach(el => el.remove());
-        document.body.style.overflow = '';
-
+        // Limpia el modal antes de abrir
         ndj_reset();
 
+        // Solo carga catálogos si no están listos
         const necesitaCarga = !ndj_catalogoListo;
-
         if (necesitaCarga && typeof Swal !== 'undefined') {
             Swal.fire({
                 title: 'Preparando formulario...',
@@ -89,15 +90,17 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         }
 
         try {
-            await Promise.all([
-                ndj_cargarTipoDoc(),
-                ndj_cargarTipoPer(),
-                ndj_cargarEstadoCivil(),
-                ndj_cargarSistemaPrev(),
-                ndj_cargarDepartamentos(),
-                ndj_cargarEducacion(),
-            ]);
-        } catch(e) {
+            if (necesitaCarga) {
+                await Promise.all([
+                    ndj_cargarTipoDoc(),
+                    ndj_cargarTipoPer(),
+                    ndj_cargarEstadoCivil(),
+                    ndj_cargarSistemaPrev(),
+                    ndj_cargarDepartamentos(),
+                    ndj_cargarEducacion(),
+                ]);
+            }
+        } catch (e) {
             console.error('[NuevaDJ] Error al cargar catálogos:', e);
         } finally {
             if (necesitaCarga && typeof Swal !== 'undefined') {
@@ -111,6 +114,16 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         else modal.classList.remove('hidden');
     }
 
+    function actualizarEstadoGuardar() {
+        if (dniValido && (coincidenciasValidadas || !hayCoincidencias)) {
+            btnGuardar.disabled = false;
+            btnGuardar.style.display = 'block';
+        } else {
+            btnGuardar.disabled = true;
+            btnGuardar.style.display = 'none';
+        }
+    }
+
     async function buscarCoincidencias() {
         const n1 = nombre1.value.trim();
         const n2 = nombre2.value.trim();
@@ -119,29 +132,57 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
 
         if ((!n1 && !n2 && !a1 && !a2) || (n1.length == 0 || a1.length == 0)) {
             coincidenciasDiv.innerHTML = '';
+            hayCoincidencias = false;
+            coincidenciasValidadas = true;
+            actualizarEstadoGuardar();
             return;
         }
 
         try {
             const res = await fetch(`${VITE_URL_APP}/api/dj/buscar-coincidencias?nomb1=${encodeURIComponent(n1)}&nomb2=${encodeURIComponent(n2)}&apel1=${encodeURIComponent(a1)}&apel2=${encodeURIComponent(a2)}`);
             const data = await res.json();
-            if(data.data.length == 0){
-                btnGuardar.disabled = false;
-                btnGuardar.style.display = 'block';
+
+            if (data.data.length === 0) {
+                hayCoincidencias = false;
+                coincidenciasValidadas = true;
+                coincidenciasDiv.innerHTML = '';
+                actualizarEstadoGuardar();
                 return;
             }
 
-            btnGuardar.disabled = true;
-            btnGuardar.style.display = 'none';
-            if (data.data.length) {
-                coincidenciasDiv.innerHTML = '<b>Coincidencias encontradas:</b><ul>' +
-                    data.data.map(p => `<li>${p.NOMB_1} ${p.NOMB_2} ${p.APEL_1} ${p.APEL_2} - ${p.NRO_DOCU_IDEN} <br><span class="text-danger">${p.PERS_VIGENCIA != 'SI' ? '(NO VIGENTE)'  : ''}<span></li>`).join('') +
-                    '</ul>';
-            } else {
+            // Mostrar coincidencias y botón "Entendido"
+            hayCoincidencias = true;
+            coincidenciasValidadas = false;
+            coincidenciasDiv.innerHTML = `
+                <b>Coincidencias encontradas:</b>
+                <ul style="list-style:none;padding:0;">
+                    ${data.data.map((p, idx) => `
+                        <li style="padding-bottom:8px;">
+                            ${p.NOMB_1} ${p.NOMB_2} ${p.APEL_1} ${p.APEL_2} - ${p.NRO_DOCU_IDEN}
+                            <br>
+                            <span class="text-danger">${p.PERS_VIGENCIA != 'SI' ? '(NO VIGENTE)' : ''}</span>
+                            ${idx < data.data.length - 1 ? '<hr style="margin:8px 0;border:0;border-top:1px solid #e5e7eb;">' : ''}
+                        </li>
+                    `).join('')}
+                </ul>
+                <button id="ndj_btnEntendido" type="button" style="margin-top:8px;padding:6px 18px;font-size:13px;font-weight:600;border-radius:6px;background:#fbbf24;color:#fff;cursor:pointer;border:none;">
+                    Entendido, deseo continuar
+                </button>
+            `;
+
+            document.getElementById('ndj_btnEntendido')?.addEventListener('click', function () {
+                coincidenciasValidadas = true;
                 coincidenciasDiv.innerHTML = '';
-            }
+                actualizarEstadoGuardar();
+            });
+
+            actualizarEstadoGuardar();
+
         } catch (e) {
             coincidenciasDiv.innerHTML = 'Error buscando coincidencias.';
+            hayCoincidencias = false;
+            coincidenciasValidadas = false;
+            actualizarEstadoGuardar();
         }
     }
 
@@ -153,7 +194,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         btnGuardar.disabled = bloquear;
         if (bloquear) btnGuardar.style.display = 'none';
     }
- 
+
     // ============================================================
     // CERRAR
     // ============================================================
@@ -164,7 +205,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
 
         // Dejar que HSOverlay maneje su propio estado
         if (window.HSOverlay) {
-            try { HSOverlay.close(modal); } catch(e) {}
+            try { HSOverlay.close(modal); } catch (e) { }
         }
 
         // Limpiar después de un tick, no inmediatamente
@@ -177,37 +218,37 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             ndj_reset();
         }, 300); // coincidir con la duración de la transición del modal (duration-500 → usa 300 mínimo)
     }
- 
+
     // ============================================================
     // RESET
     // ============================================================
     function ndj_reset() {
         $('formNuevaDJ')?.reset();
- 
+
         const badge = $('ndj_tipo_badge');
         if (badge) badge.style.display = 'none';
- 
+
         document.querySelectorAll('#modalNuevaDJ [data-ndj-tipo]')
             .forEach(el => { el.style.display = ''; });
- 
+
         $('ndj_div_familiar_interno')?.classList.add('hidden');
         $('ndj_div_sucamec_obs')?.classList.add('hidden');
- 
+
         ndj_limpiarFoto();
- 
+
         // Limpiar selects dependientes de ubigeo
-        ['ndj_provincia_actual','ndj_distrito_actual',
-         'ndj_provincia_dni',   'ndj_distrito_dni',
-         'ndj_provincia_nac',   'ndj_distrito_nac'].forEach(id => {
-            const s = $(id);
-            if (s) s.innerHTML = '<option value="">—</option>';
-        });
- 
+        ['ndj_provincia_actual', 'ndj_distrito_actual',
+            'ndj_provincia_dni', 'ndj_distrito_dni',
+            'ndj_provincia_nac', 'ndj_distrito_nac'].forEach(id => {
+                const s = $(id);
+                if (s) s.innerHTML = '<option value="">—</option>';
+            });
+
         // Familiares: una fila vacía
         const fc = $('ndj_familyContainer');
         if (fc) { fc.innerHTML = ''; fc.appendChild(ndj_crearFila()); }
     }
- 
+
     // ============================================================
     // HELPER — puebla un select desde una URL
     // Soporta respuesta directa [] o { data: [] }
@@ -216,10 +257,10 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         const sel = $(selectId);
         if (!sel) return;
         sel.innerHTML = `<option value="">Cargando...</option>`;
-        sel.disabled  = true;
+        sel.disabled = true;
         try {
-            const res   = await fetch(url);
-            const json  = await res.json();
+            const res = await fetch(url);
+            const json = await res.json();
             const items = Array.isArray(json) ? json : (json.data ?? []);
             sel.innerHTML = `<option value="">${placeholder}</option>`;
             items.forEach(item => {
@@ -227,18 +268,18 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
                 o.value = item[valorKey]; o.textContent = item[textoKey];
                 sel.appendChild(o);
             });
-        } catch(err) {
+        } catch (err) {
             console.error(`[NuevaDJ] Error cargando ${selectId}:`, err);
             sel.innerHTML = `<option value="">Error al cargar</option>`;
         } finally {
             sel.disabled = false;
         }
     }
- 
+
     // ============================================================
     // CATÁLOGOS DESDE API
     // ============================================================
- 
+
     function ndj_cargarTipoDoc() {
         return ndj_fetchSelect('ndj_tipo_documento',
             `${VITE_URL_APP}/api/dj/get-tipo-doc/`, 'codigo', 'nombre');
@@ -260,18 +301,18 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
                 el.addEventListener('focus', function handler(e) {
                     if (el.disabled) {
                         alertaTipoPersonal();
-                 
+
                         el.blur();
                     }
                 });
             });
     }
-    
+
     function ndj_cargarTipoPer() {
         return ndj_fetchSelect('ndj_sel_tipo_personal',
             `${VITE_URL_APP}/api/dj/get-tipo-per/`, 'codigo', 'nombre');
     }
- 
+
     // Endpoint sugerido: GET /api/dj/get-estado-civil/
     // Controlador: DjController@getEstadoCivil
     // Estructura: { data: [{ codigo, nombre }] }
@@ -279,7 +320,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         return ndj_fetchSelect('ndj_estado_civil',
             `${VITE_URL_APP}/api/dj/get-estado-civil/`, 'codigo', 'nombre');
     }
- 
+
     // Endpoint sugerido: GET /api/dj/get-sistema-prev/
     // Controlador: DjController@getSistemaPrev
     // Estructura: { data: [{ codigo, nombre }] }
@@ -287,7 +328,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         return ndj_fetchSelect('ndj_sistema_previsional',
             `${VITE_URL_APP}/api/dj/get-sistema-prev/`, 'codigo', 'nombre');
     }
- 
+
     // ============================================================
     // EDUCACIÓN
     // Estructura de /api/dj/get-catalogs:
@@ -308,24 +349,24 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             return;
         }
         try {
-            const res  = await fetch(`${VITE_URL_APP}/api/dj/get-catalogs`);
+            const res = await fetch(`${VITE_URL_APP}/api/dj/get-catalogs`);
             const data = await res.json();
- 
-            ndj_allGrados        = data.grados        || [];
-            ndj_allInstituciones = data.instituciones  || [];
-            ndj_allCarreras      = data.carreras       || [];
- 
+
+            ndj_allGrados = data.grados || [];
+            ndj_allInstituciones = data.instituciones || [];
+            ndj_allCarreras = data.carreras || [];
+
             ndj_poblarGrados();
             ndj_poblarInstituciones();
             ndj_poblarCarreras(''); // todas sin filtro al inicio
- 
+
             ndj_catalogoListo = true;
- 
-        } catch(e) {
+
+        } catch (e) {
             console.error('[NuevaDJ] Error cargando catálogos educación:', e);
         }
     }
- 
+
     // Pobla el select de grado
     function ndj_poblarGrados() {
         const sel = $('ndj_grado_instruccion');
@@ -337,7 +378,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             sel.appendChild(o);
         });
     }
- 
+
     // Pobla el select de institución (lista completa, independiente del grado)
     function ndj_poblarInstituciones() {
         const sel = $('ndj_institucion');
@@ -350,7 +391,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             sel.appendChild(o);
         });
     }
- 
+
     // Pobla el select de carrera filtrando por IEDU_CODIGO === ieduCodigo
     // Si ieduCodigo está vacío, muestra todas
     function ndj_poblarCarreras(ieduCodigo) {
@@ -366,7 +407,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             sel.appendChild(o);
         });
     }
- 
+
     // ============================================================
     // UBIGEOS
     // Mismos endpoints que usa gestion_dj.js:
@@ -375,15 +416,15 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
     //   GET /api/ubicacion/distritos/:p   → [{ dist_codigo, dist_descripcion }]
     // ============================================================
     const NDJ_UBI = `${VITE_URL_APP}/api/ubicacion`;
- 
+
     async function ndj_fetchUbi(url) {
         if (ndj_ubigeoCache.has(url)) return ndj_ubigeoCache.get(url);
-        const res  = await fetch(url);
+        const res = await fetch(url);
         const data = await res.json();
         ndj_ubigeoCache.set(url, data);
         return data;
     }
- 
+
     function ndj_poblarUbiSelect(id, items, valKey, txtKey, ph = '—') {
         const sel = $(id);
         if (!sel) return;
@@ -394,16 +435,16 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             sel.appendChild(o);
         });
     }
- 
+
     async function ndj_cargarDepartamentos() {
         try {
             const data = await ndj_fetchUbi(`${NDJ_UBI}/departamentos`);
-            ['ndj_departamento_actual','ndj_departamento_dni','ndj_departamento_nac']
+            ['ndj_departamento_actual', 'ndj_departamento_dni', 'ndj_departamento_nac']
                 .forEach(id => ndj_poblarUbiSelect(id, data, 'depa_codigo', 'depa_descripcion', '— Departamento —'));
-        } catch(e) { console.error('[NuevaDJ] Error departamentos:', e); }
+        } catch (e) { console.error('[NuevaDJ] Error departamentos:', e); }
         // Ya es async, el return implícito es una promesa resuelta ✓
     }
-    
+
     async function ndj_cargarProvincias(deptCod, provId, distId) {
         const sp = $(provId), sd = $(distId);
         if (sp) sp.innerHTML = '<option value="">— Provincia —</option>';
@@ -412,9 +453,9 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         try {
             const data = await ndj_fetchUbi(`${NDJ_UBI}/provincias/${deptCod}`);
             ndj_poblarUbiSelect(provId, data, 'provi_codigo', 'provi_descripcion', '— Provincia —');
-        } catch(e) { console.error('[NuevaDJ] Error provincias:', e); }
+        } catch (e) { console.error('[NuevaDJ] Error provincias:', e); }
     }
- 
+
     async function ndj_cargarDistritos(provCod, distId) {
         const sd = $(distId);
         if (sd) sd.innerHTML = '<option value="">— Distrito —</option>';
@@ -422,32 +463,32 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         try {
             const data = await ndj_fetchUbi(`${NDJ_UBI}/distritos/${provCod}`);
             ndj_poblarUbiSelect(distId, data, 'dist_codigo', 'dist_descripcion', '— Distrito —');
-        } catch(e) { console.error('[NuevaDJ] Error distritos:', e); }
+        } catch (e) { console.error('[NuevaDJ] Error distritos:', e); }
     }
- 
+
     // ============================================================
     // VISIBILIDAD POR TIPO DE PERSONAL
     // ============================================================
     function ndj_aplicarTipo(tipoCod) {
         const el = $('ndj_tipo_personal');
         if (el) el.value = tipoCod;
- 
-        const esOpe = ['01','03'].includes(tipoCod);
-        const esAdm = ['02','05','06'].includes(tipoCod);
- 
+
+        const esOpe = ['01', '03'].includes(tipoCod);
+        const esAdm = ['02', '05', '06'].includes(tipoCod);
+
         document.querySelectorAll('#modalNuevaDJ [data-ndj-tipo="operativo"]')
             .forEach(s => { s.style.display = esAdm ? 'none' : ''; });
         document.querySelectorAll('#modalNuevaDJ [data-ndj-tipo="administrativo"]')
             .forEach(s => { s.style.display = esOpe ? 'none' : ''; });
- 
+
         const badge = $('ndj_tipo_badge');
         if (!badge) return;
         const cfg = {
-            '01':{ texto:'Operativo 4°',      bg:'#dbeafe', color:'#1e40af' },
-            '03':{ texto:'Operativo 5°',       bg:'#dbeafe', color:'#1e40af' },
-            '02':{ texto:'Administrativo 4°',  bg:'#d1fae5', color:'#065f46' },
-            '05':{ texto:'Administrativo 5°',  bg:'#d1fae5', color:'#065f46' },
-            '06':{ texto:'Especial',           bg:'#fef3c7', color:'#92400e' },
+            '01': { texto: 'Operativo 4°', bg: '#dbeafe', color: '#1e40af' },
+            '03': { texto: 'Operativo 5°', bg: '#dbeafe', color: '#1e40af' },
+            '02': { texto: 'Administrativo 4°', bg: '#d1fae5', color: '#065f46' },
+            '05': { texto: 'Administrativo 5°', bg: '#d1fae5', color: '#065f46' },
+            '06': { texto: 'Especial', bg: '#fef3c7', color: '#92400e' },
         };
         const c = cfg[tipoCod];
         if (c) {
@@ -457,7 +498,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             badge.style.display = 'none';
         }
     }
- 
+
     // ============================================================
     // FOTO
     // ============================================================
@@ -467,7 +508,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         if (prv) { prv.src = ''; prv.classList.add('hidden'); }
         if (btn) btn.classList.add('hidden');
     }
- 
+
     // ============================================================
     // FILA FAMILIAR
     // ============================================================
@@ -532,23 +573,41 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             const res = await fetch(`${VITE_URL_APP}/api/dj/validar-documento?tipo=${tipo}&numero=${numero}`);
             const data = await res.json();
             const dataper = data.data;
- 
+
             if (dataper.length !== 0 && dataper) {
-                docErrorMsg.textContent = 'El documento ya está registrado.';
+                const p = dataper[0];
+                const vigenciaTxt = p.PERS_VIGENCIA === 'SI'
+                    ? '<span style="color:#16a34a;font-weight:600;">(VIGENTE)</span>'
+                    : '<span style="color:#dc2626;font-weight:600;">(NO VIGENTE)</span>';
+                docErrorMsg.innerHTML = `
+                    <span style="font-weight:600;">El documento ya está registrado:</span><br>
+                    <span style="color:#1d4ed8;">${p.NOMB_1} ${p.NOMB_2} ${p.APEL_1} ${p.APEL_2}</span>
+                    <span style="color:#64748b;">(${p.NRO_DOCU_IDEN})</span> ${vigenciaTxt}
+                `;
                 btnGuardar.disabled = true;
                 btnGuardar.style.display = 'none';
+                dniValido = false;
             } else {
                 docErrorMsg.textContent = '';
                 btnGuardar.disabled = false;
                 btnGuardar.style.display = 'block';
+                dniValido = true;
             }
+
+            if (dataper.length !== 0 && dataper) {
+                dniValido = false;
+            } else {
+                dniValido = true;
+            }
+            actualizarEstadoGuardar();
+            
         } catch (e) {
             docErrorMsg.textContent = 'Error validando documento.';
             btnGuardar.disabled = true;
             btnGuardar.style.display = 'none';
         }
     }
- 
+
     // ============================================================
     // BIND DE EVENTOS
     // ============================================================
@@ -574,32 +633,32 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
                 ndj_bloquearCampos(true);
             }
         });
- 
+
         // Cerrar
-        $('ndj_btnCerrar') ?.addEventListener('click', ndj_cerrar);
+        $('ndj_btnCerrar')?.addEventListener('click', ndj_cerrar);
         $('ndj_btnCerrarX')?.addEventListener('click', ndj_cerrar);
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && !$('modalNuevaDJ')?.classList.contains('hidden'))
                 ndj_cerrar();
         });
- 
+
         // ── Tipo de documento ────────────────────────────────
         $('ndj_tipo_documento')?.addEventListener('change', function () {
             const inp = $('ndj_nro_documento');
             if (!inp) return;
             inp.value = '';
             const map = {
-                '0034':{ max:8,  ph:'Ej: 12345678',             mode:'numeric' },
-                '0035':{ max:12, ph:'Ej: 000123456',            mode:'text' },
-                '0037':{ max:12, ph:'Ej: A1234567',             mode:'text' },
-                '0038':{ max:12, ph:'Ingrese doc. provisional', mode:'text' },
-                '0215':{ max:12, ph:'Ingrese cédula',           mode:'text' },
-                '0216':{ max:12, ph:'Ingrese carnet temporal',  mode:'text' },
+                '0034': { max: 8, ph: 'Ej: 12345678', mode: 'numeric' },
+                '0035': { max: 12, ph: 'Ej: 000123456', mode: 'text' },
+                '0037': { max: 12, ph: 'Ej: A1234567', mode: 'text' },
+                '0038': { max: 12, ph: 'Ingrese doc. provisional', mode: 'text' },
+                '0215': { max: 12, ph: 'Ingrese cédula', mode: 'text' },
+                '0216': { max: 12, ph: 'Ingrese carnet temporal', mode: 'text' },
             };
-            const c = map[this.value] ?? { max:20, ph:'Ingrese el número', mode:'text' };
+            const c = map[this.value] ?? { max: 20, ph: 'Ingrese el número', mode: 'text' };
             inp.maxLength = c.max; inp.placeholder = c.ph; inp.inputMode = c.mode;
         });
- 
+
         // Solo dígitos para DNI
         $('ndj_nro_documento')?.addEventListener('input', function () {
             if ($('ndj_tipo_documento')?.value === '0034')
@@ -607,19 +666,19 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             else
                 this.value = this.value.toUpperCase();
         });
- 
+
         // ── Tipo de personal ─────────────────────────────────
         $('ndj_sel_tipo_personal')?.addEventListener('change', function () {
             ndj_aplicarTipo(this.value);
         });
- 
+
         // ── Educación: cascada Institución → Carrera ─────────
         // El grado NO filtra institución (son independientes según la estructura del API)
         // La institución SÍ filtra carrera por IEDU_CODIGO
         $('ndj_institucion')?.addEventListener('change', function () {
             ndj_poblarCarreras(this.value);
         });
- 
+
         // ── Ubigeos: Dirección Actual ────────────────────────
         $('ndj_departamento_actual')?.addEventListener('change', function () {
             ndj_cargarProvincias(this.value, 'ndj_provincia_actual', 'ndj_distrito_actual');
@@ -627,7 +686,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         $('ndj_provincia_actual')?.addEventListener('change', function () {
             ndj_cargarDistritos(this.value, 'ndj_distrito_actual');
         });
- 
+
         // ── Ubigeos: Dirección DNI ───────────────────────────
         $('ndj_departamento_dni')?.addEventListener('change', function () {
             ndj_cargarProvincias(this.value, 'ndj_provincia_dni', 'ndj_distrito_dni');
@@ -635,7 +694,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         $('ndj_provincia_dni')?.addEventListener('change', function () {
             ndj_cargarDistritos(this.value, 'ndj_distrito_dni');
         });
- 
+
         // ── Ubigeos: Ciudad Nacimiento ───────────────────────
         $('ndj_departamento_nac')?.addEventListener('change', function () {
             ndj_cargarProvincias(this.value, 'ndj_provincia_nac', 'ndj_distrito_nac');
@@ -643,17 +702,17 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         $('ndj_provincia_nac')?.addEventListener('change', function () {
             ndj_cargarDistritos(this.value, 'ndj_distrito_nac');
         });
- 
+
         // ── Familiar en empresa ──────────────────────────────
         $('ndj_familiar_empresa')?.addEventListener('change', function () {
             $('ndj_div_familiar_interno')?.classList.toggle('hidden', this.value !== 'SI');
         });
- 
+
         // ── SUCAMEC ──────────────────────────────────────────
         $('ndj_curso_sucamec')?.addEventListener('change', function () {
             $('ndj_div_sucamec_obs')?.classList.toggle('hidden', this.value !== 'SI');
         });
- 
+
         // ── Clase brevete → tipo vehículo ────────────────────
         $('ndj_clase_brevete')?.addEventListener('change', function () {
             const sel = $('ndj_tipo_vehiculo');
@@ -665,7 +724,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
                 sel.appendChild(o);
             });
         });
- 
+
         // ── Foto ─────────────────────────────────────────────
         $('ndj_btnSubirFoto')?.addEventListener('click', () => $('ndj_inputFoto')?.click());
         $('ndj_inputFoto')?.addEventListener('change', function () {
@@ -680,7 +739,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             r.readAsDataURL(file);
         });
         $('ndj_btnEliminarFoto')?.addEventListener('click', ndj_limpiarFoto);
- 
+
         // ── Familiares ───────────────────────────────────────
         $('ndj_addFamilyMember')?.addEventListener('click', () => {
             $('ndj_familyContainer')?.appendChild(ndj_crearFila());
@@ -689,7 +748,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             const btn = e.target.closest('.ndj-remove-family');
             if (btn) btn.closest('.ndj-family-row')?.remove();
         });
- 
+
         // ── Guardar ──────────────────────────────────────────
         $('ndj_btnGuardar')?.addEventListener('click', function () {
             // const fd = new FormData($('formNuevaDJ'));
@@ -711,7 +770,7 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
         // Escuchar cambios en tipo y número de documento
         tipoDocInput?.addEventListener('change', validarDocumento);
         docInput?.addEventListener('input', validarDocumento);
- 
+
         // ── API pública ───────────────────────────────────────
         window.NuevaDJ = { abrir: ndj_abrir, cerrar: ndj_cerrar };
 
@@ -719,9 +778,9 @@ const tipoPersonalSelect = $('ndj_sel_tipo_personal');
             input?.addEventListener('input', buscarCoincidencias);
         });
     });
- 
-    
 
- 
- 
+
+
+
+
 })();

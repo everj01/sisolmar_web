@@ -171,32 +171,68 @@ class FileController extends Controller{
     }
 
     public function getPersonalTotal(Request $request)
-    {
-        $page = $request->get('page', 1);
-        $size = $request->get('size', 50);
-        $search = $request->get('search', null);
-        $tipo_per = $request->get('tipo_per', null);
-        $vigencia = $request->get('vigencia', null);
-        $codSucursal = $request->get('codSucursal', '0');
-        $usuario = session('usuario');
+{
+    $page        = $request->get('page', 1);
+    $size        = $request->get('size', 50);
+    $search      = $request->get('search', null);
+    $tipo_per    = $request->get('tipo_per', null);
+    $vigencia    = $request->get('vigencia', null);
+    $codSucursal = $request->get('codSucursal', '0');
+    $tieneFolio  = $request->get('tiene_folio_25', null); // null = TODOS
+    $usuario     = session('usuario');
 
+    // ─── Códigos con folio 25 ───
+    $conFolio25 = DB::table('sw_folios_detalles')
+        ->where('codFolio', '25')
+        ->where('habilitado', '1')
+        ->pluck('codPersonal')
+        ->toArray();
 
-        // SP de datos
+    // ─── Traer TODOS sin paginar para poder filtrar ───
+    // Solo si hay filtro activo de DJ, traemos todo y filtramos
+    if ($tieneFolio !== null) {
+        $todosDatos = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
+            $codSucursal, 1, 99999, $search, $tipo_per, $vigencia, $usuario
+        ]);
+
+        // Filtrar por tiene_folio_25
+        $todosDatos = array_filter($todosDatos, function ($persona) use ($conFolio25, $tieneFolio) {
+            $tiene = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
+            return $tiene == $tieneFolio;
+        });
+        $todosDatos = array_values($todosDatos);
+
+        // Paginar manualmente
+        $total  = count($todosDatos);
+        $offset = ($page - 1) * $size;
+        $data   = array_slice($todosDatos, $offset, $size);
+
+        // Agregar campo
+        foreach ($data as $persona) {
+            $persona->tiene_folio_25 = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
+        }
+
+    } else {
+        // Sin filtro DJ — flujo normal con SP de conteo
         $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
             $codSucursal, $page, $size, $search, $tipo_per, $vigencia, $usuario
         ]);
 
-        // SP de total
         $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?, ?', [
             $codSucursal, $search, $tipo_per, $vigencia, $usuario
         ])[0]->total;
 
-        return response()->json([
-            'data' => $data,
-            'last_page' => ceil($total / $size),
-            'total' => (int) $total,
-        ]);
+        foreach ($data as $persona) {
+            $persona->tiene_folio_25 = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
+        }
     }
+
+    return response()->json([
+        'data'      => $data,
+        'last_page' => ceil($total / $size),
+        'total'     => (int) $total,
+    ]);
+}
 
     public function getPersonalTotalPrueba(Request $request)
     {

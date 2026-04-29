@@ -2873,7 +2873,7 @@ class DjController extends Controller
             $nro = $request->get('numero');
             $tipo = $request->get('tipo');
             $data = DB::select(
-                "SELECT TOP 1 PERS_VIGENCIA as vigencia, CODI_PERS as codigo , NOMB_1, NOMB_2, APEL_1, APEL_2 
+                "SELECT TOP 1 PERS_VIGENCIA, CODI_PERS as codigo , NOMB_1, NOMB_2, APEL_1, APEL_2, NRO_DOCU_IDEN
                 FROM si_solm.dbo.PERSONAL WHERE NRO_DOCU_IDEN = ? AND CODI_TIPO_DOCU = ?", [$nro, $tipo]
             );
 

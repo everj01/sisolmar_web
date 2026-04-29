@@ -13,6 +13,7 @@ use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ReporteAvancesController;
 use App\Http\Controllers\BiometricoController;
+use App\Http\Controllers\ReportePersonalController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -172,8 +173,8 @@ Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
     Route::get('/validar-documento', [DjController::class, 'validarDocumentoDj']);
     Route::post('/save-nueva-dj', [DjController::class, 'saveNuevaDj']);
     Route::get('/buscar-coincidencias', [DjController::class, 'buscarCoincidencias']);
-
-
+    Route::get('/reporte-personal-datos-generales', [ReportePersonalController::class, 'datosGenerales']);
+    Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);
 
     //nuevos
     Route::get('get-tipo-doc/', [DjController::class, 'getTipoDoc']);

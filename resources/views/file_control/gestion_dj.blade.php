@@ -31,6 +31,7 @@
             <div class="card-header">
                 <h4 class="card-title">Registro de personal (DJ)</h4>
             </div>
+       
 
             {{-- PESTAÑAS --}}
             <div class="px-5 pt-4">
@@ -41,6 +42,8 @@
                         data-tab="pendiente">
                         Listos
                     </button>
+
+                 
 
                     @if($tipoUsuario != 9 && $tipoUsuario != 8) 
                         <button id="tabBtnMigrado" type="button"
@@ -83,11 +86,17 @@
                     </button> -->
 
                      @if($tipoUsuario != 9 && $tipoUsuario != 8) 
-                        <button type="button" id="btnNuevaDJ"
+                     <div class="flex items-center justify-center gap-2">
+                            <button type="button" id="btnNuevaDJ"
                             class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white flex items-center gap-1 px-4 py-1">
                             <i class='bx bx-plus text-base'></i>
                             <span>Nueva DJ</span>
                         </button>
+                         <button type="button" id="btnAbrirReporte" class="btn rounded-full  bg-dark/25 text-dark hover:bg-dark hover:text-white flex items-center gap-1 px-4 py-1">
+                            <i class='bx bx-file-find'></i> Reporte General
+                        </button>
+                     </div>
+                        
                     @endif
                     
                     <button type="button" id="btnExtFirmaHuella" hidden disabled
@@ -348,6 +357,7 @@
     @include('file_control.rrhh.partials_modal_dj')
     @include('file_control.rrhh.partials_modal_nueva_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')
+    @include('file_control.rrhh.partials_modal_reporte')
 
 @endsection
 
@@ -359,6 +369,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -374,4 +385,5 @@
  @vite([
         'resources/js/functions/gestion_dj.js',
        'resources/js/functions/nueva_dj.js', 
+       'resources/js/functions/modal_reporte.js'
     ])
