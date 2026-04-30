@@ -34,7 +34,10 @@
                     <input type="hidden" id="ndj_tipo_personal"  name="ndj_tipo_personal">
                     <input type="hidden" id="ndj_cod_postulante" name="ndj_cod_postulante" value="">
 
-                    <div id="ndj_alert_tipo_personal" style="display:block;background:#fef3c7;color:#92400e;padding:10px 16px;border-radius:6px;margin-bottom:12px;font-size:14px;font-weight:500;">
+                    <input type="hidden" name="ndj_usuario" id="ndj_usuario" value="{{ session('usuario') }}">
+
+                    <div id="ndj_alert_tipo_personal"
+                        style="display:block;background:#fef3c7;color:#92400e;padding:10px 16px;border-radius:6px;margin-bottom:12px;font-size:14px;font-weight:500;">
                         ⚠️ Debe seleccionar el tipo de personal antes de completar el formulario.
                     </div>
 
@@ -42,47 +45,46 @@
                          ⓪ DOCUMENTO Y TIPO DE PERSONAL
                          ══════════════════════════════════════ --}}
                     <div class="dj-group">
-                        
                         <div class="dj-group-body">
+                            <div class="dj-grid-4">
+                                <div>
+                                    <label class="dj-label">Tipo de Personal <span style="color:#ef4444">*</span></label>
+                                    <select id="ndj_sel_tipo_personal" name="ndj_sel_tipo_personal" class="dj-select">
+                                        <option value="">— Seleccionar —</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="dj-label">Tipo de Documento <span style="color:#ef4444">*</span></label>
+                                    <select id="ndj_tipo_documento" name="ndj_tipo_documento" class="dj-select">
+                                        <option value="">cargando...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="dj-label">Número de Documento <span style="color:#ef4444">*</span></label>
+                                    <input type="text" id="ndj_nro_documento" name="ndj_nro_documento"
+                                        class="dj-input" placeholder="Ingrese el número"
+                                        maxlength="20" style="text-transform:uppercase;">
+                                </div>
+                                <div>
+                                    <label class="dj-label">Sucursal <span style="color:#ef4444">*</span></label>
 
-                            <div class="dj-grid-3">
-                                
-                                        <div>
-                                <label class="dj-label">Tipo de Personal <span style="color:#ef4444">*</span></label>
-                                <select id="ndj_sel_tipo_personal" name="ndj_sel_tipo_personal" class="dj-select">
-                                    <option value="">— Seleccionar —</option>
-                                   
-                                </select>
+                                    <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
+
+                                        @foreach ($sucursalesFiltradas as $sucursal)
+                                            <option value="{{ $sucursal->codigo }}">
+                                                {{ $sucursal->abreviatura }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </div>
                             </div>
-                                        <div>
-                                            <label class="dj-label">Tipo de Documento <span style="color:#ef4444">*</span></label>
-                                            <select id="ndj_tipo_documento" name="ndj_tipo_documento" class="dj-select">
-                                                <option value="">cargando...</option>
-                                                
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">Número de Documento <span style="color:#ef4444">*</span></label>
-                                            <input type="text" id="ndj_nro_documento" name="ndj_nro_documento"
-                                                class="dj-input" placeholder="Ingrese el número"
-                                                maxlength="20" style="text-transform:uppercase;">
-                                        </div>
-
-                                      
-                                        
-                                    </div>
-                                    
-                                    <div>
-                                        <a href="https://eldni.com/pe/buscar-datos-por-dni" target="_blank"
-                                            style="display:inline-block;margin-top:6px;font-size:11px;color:var(--color-primary,#6366f1);border:1px solid var(--color-primary,#6366f1);padding:3px 10px;border-radius:5px;text-decoration:none;">
-                                            Consultar DNI
-                                        </a>
-                                    </div>
-                                 
-
-                        
-                            
-                           
+                            <div style="margin-top:6px;">
+                                <a href="https://eldni.com/pe/buscar-datos-por-dni" target="_blank"
+                                    style="display:inline-block;font-size:11px;color:var(--color-primary,#6366f1);border:1px solid var(--color-primary,#6366f1);padding:3px 10px;border-radius:5px;text-decoration:none;">
+                                    Consultar DNI
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -99,7 +101,6 @@
                                     <i class='bx bx-user-circle'></i>
                                     Identidad y Datos Personales
                                 </div>
-                                
                                 <div class="dj-section-body">
                                     <div style="display:flex;gap:14px;align-items:flex-start;">
                                         <div style="flex:1;">
@@ -130,7 +131,6 @@
                                                         style="text-transform:uppercase;">
                                                 </div>
                                             </div>
-                                            
                                         </div>
                                         {{-- Foto --}}
                                         <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
@@ -151,12 +151,7 @@
                                         </div>
                                     </div>
                                     <hr class="dj-divider">
-                              
-                            
-                                    
-                                    
                                     <div class="dj-grid-4">
-                                        
                                         <div>
                                             <label class="dj-label">Caduca Documento</label>
                                             <input type="date" id="ndj_caduca" name="ndj_caduca" class="dj-input">
@@ -165,7 +160,6 @@
                                             <label class="dj-label">Estado Civil</label>
                                             <select id="ndj_estado_civil" name="ndj_estado_civil" class="dj-select">
                                                 <option value="" disabled selected>—</option>
-                                              
                                             </select>
                                         </div>
                                         <div>
@@ -191,7 +185,8 @@
                                     Ciudad de Nacimiento
                                 </div>
                                 <div class="dj-section-body">
-                                    <div class="dj-grid-3">
+                                    {{-- ✅ CORREGIDO: Agregado campo ciudad_naci --}}
+                                    <div class="dj-grid-4" style="margin-bottom:8px;">
                                         <div>
                                             <label class="dj-label">Departamento</label>
                                             <select id="ndj_departamento_nac" name="ndj_departamento_nac" class="dj-select">
@@ -210,6 +205,12 @@
                                                 <option value="" disabled selected>—</option>
                                             </select>
                                         </div>
+                                        <div>
+                                            <label class="dj-label">Ciudad / Localidad</label>
+                                            <input type="text" id="ndj_ciudad_naci" name="ndj_ciudad_naci"
+                                                class="dj-input" placeholder="Ej. Trujillo"
+                                                style="text-transform:uppercase;">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -224,15 +225,18 @@
                                     <div class="dj-grid-3">
                                         <div>
                                             <label class="dj-label">Celular</label>
-                                            <input type="text" id="ndj_celular" name="ndj_celular" class="dj-input" placeholder="999 999 999">
+                                            <input type="text" id="ndj_celular" name="ndj_celular"
+                                                class="dj-input" placeholder="999 999 999">
                                         </div>
                                         <div>
                                             <label class="dj-label">Correo electrónico</label>
-                                            <input type="email" id="ndj_correo" name="ndj_correo" class="dj-input" placeholder="ejemplo@correo.com">
+                                            <input type="email" id="ndj_correo" name="ndj_correo"
+                                                class="dj-input" placeholder="ejemplo@correo.com">
                                         </div>
                                         <div>
                                             <label class="dj-label">WhatsApp</label>
-                                            <input type="text" id="ndj_whatsapp" name="ndj_whatsapp" class="dj-input" placeholder="999 999 999">
+                                            <input type="text" id="ndj_whatsapp" name="ndj_whatsapp"
+                                                class="dj-input" placeholder="999 999 999">
                                         </div>
                                     </div>
                                 </div>
@@ -259,11 +263,13 @@
                                         </div>
                                         <div>
                                             <label class="dj-label">Peso (kg)</label>
-                                            <input type="number" id="ndj_peso" name="ndj_peso" step="0.01" class="dj-input" placeholder="70">
+                                            <input type="number" id="ndj_peso" name="ndj_peso"
+                                                step="0.01" class="dj-input" placeholder="70">
                                         </div>
                                         <div>
                                             <label class="dj-label">Talla (m)</label>
-                                            <input type="number" id="ndj_talla" name="ndj_talla" step="0.01" class="dj-input" placeholder="1.75">
+                                            <input type="number" id="ndj_talla" name="ndj_talla"
+                                                step="0.01" class="dj-input" placeholder="1.75">
                                         </div>
                                     </div>
                                 </div>
@@ -281,7 +287,6 @@
                                             <label class="dj-label">Sistema Previsional</label>
                                             <select id="ndj_sistema_previsional" name="ndj_sistema_previsional" class="dj-select">
                                                 <option value="" disabled selected>—</option>
-                                            
                                             </select>
                                         </div>
                                         <div>
@@ -341,7 +346,8 @@
                                         </div>
                                         <div>
                                             <label class="dj-label">Año de egreso</label>
-                                            <input type="number" id="ndj_anio_egreso" name="ndj_anio_egreso" class="dj-input" placeholder="2020">
+                                            <input type="number" id="ndj_anio_egreso" name="ndj_anio_egreso"
+                                                class="dj-input" placeholder="2020">
                                         </div>
                                     </div>
                                 </div>
@@ -476,8 +482,6 @@
 
                     {{-- ══════════════════════════════════════
                          ② DATOS LABORALES
-                         Secciones con data-ndj-tipo se muestran
-                         u ocultan según el tipo elegido.
                          ══════════════════════════════════════ --}}
                     <div class="dj-group">
                         <div class="dj-group-header">② Datos Laborales</div>
@@ -548,9 +552,9 @@
                                                 <option value="SI">Sí</option>
                                             </select>
                                             <div id="ndj_div_sucamec_obs" class="hidden" style="margin-top:6px;">
-                                                <label class="dj-label">Observación</label>
+                                                <label class="dj-label">Observación / N° Certificado</label>
                                                 <input type="text" id="ndj_sucamec_obs" name="ndj_sucamec_obs"
-                                                    class="dj-input" placeholder="Institución o curso...">
+                                                    class="dj-input" placeholder="Institución o certificado...">
                                             </div>
                                         </div>
                                     </div>
@@ -567,6 +571,7 @@
                                     <div class="dj-grid-3">
                                         <div>
                                             <label class="dj-label">S.M.O.</label>
+                                            {{-- name=ndj_consumo_sustancias para compatibilidad con backend --}}
                                             <select id="ndj_smo" name="ndj_consumo_sustancias" class="dj-select">
                                                 <option value="" disabled selected>Seleccionar...</option>
                                                 <option value="NO">NO</option>
@@ -614,19 +619,22 @@
                                     <div class="dj-grid-4">
                                         <div>
                                             <label class="dj-label">N° Brevete</label>
-                                            <input type="text" id="ndj_brevete" name="ndj_brevete" class="dj-input" placeholder="Número de brevete">
+                                            <input type="text" id="ndj_brevete" name="ndj_brevete"
+                                                class="dj-input" placeholder="Número de brevete">
                                         </div>
                                         <div>
                                             <label class="dj-label">Clase</label>
-                                            <select id="ndj_clase_brevete" name="ndj_clase_brevete" class="dj-input">
+                                            <select id="ndj_clase_brevete" name="ndj_clase_brevete" class="dj-select">
                                                 <option value="">Seleccionar...</option>
                                                 <option value="A">A</option>
                                                 <option value="B">B</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="dj-label">Tipo</label>
-                                            <select id="ndj_tipo_vehiculo" name="ndj_tipo_vehiculo" class="dj-input"></select>
+                                            <label class="dj-label">Categoría</label>
+                                            <select id="ndj_tipo_vehiculo" name="ndj_tipo_vehiculo" class="dj-select">
+                                                <option value="">— Seleccionar clase primero —</option>
+                                            </select>
                                         </div>
                                         <div>
                                             <label class="dj-label">Vehículo Propio</label>
@@ -644,7 +652,7 @@
                             <div class="dj-section">
                                 <div class="dj-section-header">
                                     <i class='bx bx-buildings'></i>
-                                    Experiencia Laboral
+                                    Experiencia Laboral Anterior
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
@@ -656,11 +664,12 @@
                                         <div>
                                             <label class="dj-label">Cargo</label>
                                             <input type="text" id="ndj_cargo_anterior" name="ndj_cargo_anterior"
-                                                class="dj-input" placeholder="Cargo">
+                                                class="dj-input" placeholder="Cargo desempeñado">
                                         </div>
                                         <div>
-                                            <label class="dj-label">Duración (años)</label>
-                                            <input type="text" id="ndj_duracion_anterior" name="ndj_duracion_anterior" class="dj-input">
+                                            <label class="dj-label">Duración</label>
+                                            <input type="text" id="ndj_duracion_anterior" name="ndj_duracion_anterior"
+                                                class="dj-input" placeholder="Ej. 2 años">
                                         </div>
                                     </div>
                                 </div>
@@ -756,7 +765,7 @@
                 </button>
                 @if(session('tipo_rol') != 9 && session('tipo_rol') != 8)
                 <button id="ndj_btnGuardar" type="button"
-                    style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:var(--color-primary,#6366f1);color:#fff;cursor:pointer;border:none;">
+                    style="padding:7px 18px;font-size:12px;font-weight:600;border-radius:6px;background:var(--color-primary,#6366f1);color:#fff;cursor:pointer;border:none;display:none;">
                     Guardar
                 </button>
                 @endif
@@ -765,6 +774,3 @@
         </div>
     </div>
 </div>
-
-
-

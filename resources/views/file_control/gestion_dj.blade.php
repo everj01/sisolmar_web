@@ -114,23 +114,13 @@
                     <div class="flex gap-3 mb-3 flex-wrap items-center">
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Sucursal:</label>
-                            <!-- <select id="filtroSucursalPEN"
-                                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="">Todas</option>
-                            </select> -->
-                            <!-- <select id="filtroSucursalPEN" class="...">
-                                <option value="">Todas</option>
-                                @foreach ($sucursales as $sucursal)
-                                    @if (!$loop->first)
-                                        <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                                    @endif
-                                @endforeach
-                            </select> -->
+                            
                             @php
                                 $sucursalesFiltradas = array_slice($sucursales, 1);
                             @endphp
 
-                            <select id="filtroSucursalPEN" class="...">
+                            <select id="filtroSucursalPEN" 
+                            class=" px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
 
                                 @if(count($sucursalesFiltradas) > 1)
                                     <option value="">Todas</option>
@@ -146,14 +136,8 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Tipo:</label>
-                            <!-- <select id="filtroTipoPerPEN"
-                                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="">Todos</option>
-                                <option value="OPERATIVO">Operativo</option>
-                                <option value="ADMINISTRATIVO">Administrativo</option>
-                               <option value="ESPECIAL">Especial</option> 
-                            </select> -->
-                            <select id="filtroTipoPerPEN" class="...">
+                          
+                            <select id="filtroTipoPerPEN" class=" px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 @if($tipoPerLimitar == 0)
                                     <option value="">Todos</option>
                                     <option value="OPERATIVO">Operativo</option>
@@ -265,7 +249,7 @@
                     $sucursalesFiltradas = array_slice($sucursales, 1);
                 @endphp
 
-                <select id="filtroSucursal" class="...">
+                <select id="filtroSucursal" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     
                     @if(count($sucursalesFiltradas) > 1)
                         <option value="">Todas</option>
@@ -290,7 +274,7 @@
                     <option value="ADMINISTRATIVO">Administrativo</option>
                     <option value="ESPECIAL">Especial</option>
                 </select> -->
-                <select id="filtroTipoPer" class="...">
+                <select id="filtroTipoPer" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     @if($tipoPerLimitar == 0)
                         <option value="">Todos</option>
                         <option value="OPERATIVO">Operativo</option>
@@ -323,7 +307,7 @@
 
     <div class="flex items-center gap-2 mt-3">
         <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
-        <select id="page-size-migrado"
+        <select id="page-size-migrado" 
             class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
             <option value="5">5</option>
             <option value="10" selected>10</option>

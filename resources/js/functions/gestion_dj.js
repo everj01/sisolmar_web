@@ -191,9 +191,14 @@ document.addEventListener('DOMContentLoaded', function () {
         columns: [
             { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 3,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres??''} ${d.apellido1??''} ${d.apellido2??''}`.trim(); }
+                title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.apellido1??''} ${d.apellido2??''}`.trim(); }
             },
+            {
+                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.nombres??''} `.trim(); }
+            },
+            
             { title: "DNI",      field: "dni",      hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
             {
@@ -274,8 +279,12 @@ document.addEventListener('DOMContentLoaded', function () {
         columns: [
             { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 3,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres??''} ${d.apellido1??''} ${d.apellido2??''}`.trim(); }
+                title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.apellido1??''} ${d.apellido2??''}`.trim(); }
+            },
+            {
+                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.nombres??''} `.trim(); }
             },
             { title: "DNI",      field: "dni",      hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
@@ -570,6 +579,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // CARGA DE DATOS (API)
     // ============================================================
     function getPersonal() {
+  
         axios.get(`${VITE_URL_APP}/get-personal-dj`)
             .then(response => {
                 const datosTabla = response.data;
@@ -584,6 +594,17 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => console.error("Hubo un error:", error));
     }
+
+
+    window.getPersonalSoloDJ = function() {
+
+        axios.get(`${VITE_URL_APP}/get-personal-dj`)
+            .then(response => {
+                return tblPersonas.setData(response.data);
+            })
+            .then(() => aplicarFiltrosPEN())
+            .catch(console.error);
+    };
 
     function getPersonalMigracion() {
         axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
@@ -601,6 +622,26 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => console.error("Hubo un error:", error));
     }
+
+
+      window.getPersonalSoloDJMigracion = function() {
+
+        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
+            .then(response => {
+                const datosTabla = response.data;
+                tblPersonasMigrado.setData(datosTabla);
+                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
+                // const filtroSucursal = document.getElementById('filtroSucursal');
+                // if (filtroSucursal) {
+                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+                // }
+                aplicarFiltrosMigracion();  // ← agrega esta línea al final
+                actualizarCardDesdeSP();
+            })
+            .catch(error => console.error("Hubo un error:", error));
+    }
+       
 
     function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
         const codSucursal = sucursal || '00';
@@ -1761,7 +1802,7 @@ async function llenarFormulario(data) {
         const img = document.getElementById('previewFoto');
         const placeholderEl = document.getElementById('placeholderFoto');
         if (img) {
-            img.src = data.FOTO_PATH;
+            img.src = data.FOTO_PATH + '?v=' + (Math.floor(Math.random() * 900) + 100);
             img.classList.remove('hidden');
             if (placeholderEl) placeholderEl.classList.add('hidden');
             document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
