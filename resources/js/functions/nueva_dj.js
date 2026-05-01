@@ -895,9 +895,14 @@ import Swal from 'sweetalert2';
 
         // Caduca: desde mañana
         $('ndj_caduca')?.addEventListener('change', function () {
+            console.log('Fecha caduca AQUI');
             if (!this.value) return;
             const hoy = new Date(); hoy.setHours(0,0,0,0);
             const man = new Date(hoy); man.setDate(hoy.getDate() + 1);
+            console.log(new Date(this.value + 'T00:00:00') < man);
+            console.log(this.value);
+            console.log(man);
+            console.log(new Date(this.value + 'T00:00:00'));
             if (new Date(this.value + 'T00:00:00') < man) {
                 Swal.fire({ icon:'warning', title:'Fecha inválida', text:'La fecha de caducidad debe ser desde mañana en adelante.', confirmButtonText:'Entendido' });
                 this.value = '';

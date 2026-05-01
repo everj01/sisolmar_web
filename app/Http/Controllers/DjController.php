@@ -191,6 +191,11 @@ class DjController extends Controller
             // Ciudad nacimiento (campo ndj_ciudad_naci del blade)
             $ciudadNaci = !empty(trim($data['ciudad_nacimiento'] ?? ''))
                 ? strtoupper(trim($data['ciudad_nacimiento'])) : null;
+
+
+            $distrito_nac = !empty(trim($data['distrito_nac'] ?? '')) ? strtoupper(trim($data['distrito_nac'])) : null;
+            $provincia_nac = !empty(trim($data['provincia_nac'] ?? '')) ? strtoupper(trim($data['provincia_nac'])) : null;
+            $departamento_nac = !empty(trim($data['departamento_nac'] ?? '')) ? strtoupper(trim($data['departamento_nac'])) : null;
  
             // ── INSERT EN PERSONAL ──────────────────────────────────────────────
             DB::insert(
@@ -220,7 +225,8 @@ class DjController extends Controller
                     PERS_TIPOTRAB, PERS_VIGENCIA,
                     PERS_SNADAR, SIP_migrado, SIP_activo, SIP_habilitado,
                     USUA_FECHA_REG, USUA_FECHA_MOD
-                    , SUCU_CODIGO, USUA_CODIGO_REG,  EMPR_CODIGO 
+                    , SUCU_CODIGO, USUA_CODIGO_REG, EMPR_CODIGO,
+                    DEPA_CODIGO_NACI, PROVI_CODIGO_NACI, DIST_NACI
                 ) VALUES (
                     ?,?,?,
                     ?,?,?,?,
@@ -247,7 +253,7 @@ class DjController extends Controller
                     ?,?,?,
                     1,1,0,
                     GETDATE(), NULL,
-                    ?, ?, '01'
+                    ?, ?, '01', ?, ?, ?
                 )",
                 [
                     $nuevoCod, $codiTipoDocu, $dni,
@@ -312,7 +318,10 @@ class DjController extends Controller
                     $vigencia,
                     $snadar,
                     $sucursal,
-                    $usuario
+                    $usuario,
+                    $departamento_nac,
+                    $provincia_nac,
+                    $distrito_nac
                 ]
             );
  
@@ -1558,7 +1567,7 @@ class DjController extends Controller
             'PERS_SERIEARMA' => $getValue('PERS_SERIEARMA', 'PERS_SERIEARMA'),
             'PERS_ACEPTADTA' => $getValue('PERS_ACEPTADTA', 'PERS_ACEPTADTA'),
             'PERS_FECHAREG' => $getValue('PERS_FECHAREG', 'PERS_FECHAREG'),
-            'PERS_VIGENCIA' => $getValue('PERS_VIGENCIA', 'PERS_VIGENCIA'),
+            //'PERS_VIGENCIA' => $getValue('PERS_VIGENCIA', 'PERS_VIGENCIA'),
             'USUA_CODIGO' => $getValue('USUA_CODIGO', 'USUA_CODIGO'),
             'PERS_MARCA' => $getValue('PERS_MARCA', 'PERS_MARCA'),
             'PERS_CALIBRE' => $getValue('PERS_CALIBRE', 'PERS_CALIBRE'),
@@ -2939,7 +2948,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
     }
 
 
-                    public function saveRecontratacion(Request $request)
+    public function saveRecontratacion(Request $request)
     {
         DB::beginTransaction();
  
@@ -3043,8 +3052,8 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     $trim($data['correo']   ?? null), $trim($data['celular'] ?? null), $trim($data['whatsapp'] ?? null),
                     $trim($data['direccion_actual'] ?? null), $trim($data['direccion_dni'] ?? null),
                     $trim($data['departamento_actual'] ?? null), $trim($data['provincia_actual'] ?? null), $trim($data['distrito_actual'] ?? null),
-                    $trim($data['departamento_dni']    ?? null), $trim($data['provincia_dni']    ?? null), $trim($data['distrito_dni']    ?? null),
-                    $trim($data['departamento_nac']    ?? null), $trim($data['provincia_nac']    ?? null), $trim($data['distrito_nac']    ?? null),
+                    $trim($data['departamento_dni']  ?? null), $trim($data['provincia_dni']    ?? null), $trim($data['distrito_dni']    ?? null),
+                    $trim($data['departamento_nac']  ?? null), $trim($data['provincia_nac']    ?? null), $trim($data['distrito_nac']    ?? null),
                     $trim($data['tipo_sangre'] ?? null), $num($data['peso'] ?? null), $num($data['talla'] ?? null),
                     $trim($data['sistema_previsional'] ?? null), $essalud, $pensionista, $embargo,
                     $trim($data['grado_instruccion'] ?? null), $carrCodigo, $ieduCodigo, $intv($data['anio_egreso'] ?? null),

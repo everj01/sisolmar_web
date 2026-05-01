@@ -843,7 +843,7 @@ window.bioSwitchTab = function (tab) {
 function renderImagen(img, esDni = false, reverso = null) {
     if (!img || typeof img !== 'string' || !img.startsWith('data:')) {
         return `
-            <div style="width:100%;${esDni ? 'height:280px;' : 'height:130px;'}
+            <div style="width:100%;${esDni ? 'height:420px;' : 'height:180px;'}
                 display:flex;flex-direction:column;align-items:center;justify-content:center;
                 background:#f8fafc;border:1.5px dashed #e2e8f0;border-radius:12px;color:#94a3b8;gap:8px;">
                 <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -919,13 +919,13 @@ function renderImagen(img, esDni = false, reverso = null) {
 
     return `
         <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
-            <div id="cont_${id}" style="position:relative;width:100%;
-                ${esDni ? 'height:280px;' : 'height:130px;'}
+            <div id="cont_${id}" class="m-0 p-0" style="position:relative;width:100%;
+                ${esDni ? 'height:420px;' : 'height:180px;'}
                 background:#f8fafc;overflow:hidden;
                 display:flex;align-items:center;justify-content:center;
                 ${!esDni ? 'cursor:crosshair;' : ''}">
                 <img id="${id}" src="${img}"
-                     style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;cursor:${esDni ? 'zoom-in' : 'crosshair'};"
+                     style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:${esDni ? 'zoom-in' : 'crosshair'};"
                      ${esDni ? `onclick="abrirLightbox('${id}')"` : ''}
                      onerror="this.parentElement.innerHTML='<div style=\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\'0 0 24 24\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\'m21 15-5-5L5 21\'/></svg>Sin imagen</div>'" />
                 ${lupaDiv}

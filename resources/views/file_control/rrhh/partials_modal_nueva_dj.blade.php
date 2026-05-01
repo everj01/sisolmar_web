@@ -284,7 +284,7 @@
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
                                         <div>
-                                            <label class="dj-label">Sistema Previsional</label>
+                                            <label class="dj-label">Sistema Provisional</label>
                                             <select id="ndj_sistema_previsional" name="ndj_sistema_previsional" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
