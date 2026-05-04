@@ -110,7 +110,7 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                     cursor:default;
                     pointer-events:none;
                     vertical-align:middle;">
-                    <img src="/images/prueba.png" style="width:14px; height:14px; object-fit:contain; display:block;">
+                    <img src="${VITE_URL_APP}/images/prueba.png" style="width:14px; height:14px; object-fit:contain; display:block;">
                 </span>`
             : '';
                 return `<span style="display:flex; justify-content:space-between; align-items:center;">

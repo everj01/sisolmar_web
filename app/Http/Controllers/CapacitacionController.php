@@ -1594,17 +1594,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Obtener lista de sucursales
-                'message' => 'Error al cargar sucursales',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 
-    /**
-     * Vista de consulta de matrículas
-     */
     public function vistaConsultaMatriculas()
     {
         return view('capacitacion.consulta_matriculas');
