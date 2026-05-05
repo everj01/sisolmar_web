@@ -2,33 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\MatriculaNotificacion;
-use App\Models\Areas;
 use App\Models\CapacitacionAreas;
 use App\Models\CapacitacionTipoCurso;
-use App\Models\Cargo;
 use App\Models\CursoProgramacion;
 use App\Models\Cursos;
-use App\Models\FileControl;
-use App\Models\TipoCurso;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use App\Models\ExamenCurso;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Mail;
-use Psy\Readline\Hoa\Console;
 use App\Jobs\DispatchMatriculaBatchJob;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Artisan;
-use App\Models\Personal;
 use App\Models\Matricula;
-use Illuminate\Support\Str;
+use App\Models\Consulta;
 
 class CapacitacionController extends Controller
 {
@@ -57,7 +49,7 @@ class CapacitacionController extends Controller
         }
 
         // Validar qué cursos tienen periodos vigentes para ocultar botón mágico
-        $cursosVigentes = \Illuminate\Support\Facades\DB::table('sw_cursos_programacion')
+        $cursosVigentes = DB::table('sw_cursos_programacion')
             ->where('estado_periodo', 'VIGENTE')
             ->where('habilitado', 1)
             ->pluck('cod_cursos')
@@ -273,7 +265,7 @@ class CapacitacionController extends Controller
                 $tienePlantilla = true;
 
                 $anio = date('Y');
-                $mes = ucfirst(\Carbon\Carbon::now()->translatedFormat('F'));
+                $mes = ucfirst(Carbon::now()->translatedFormat('F'));
 
                 $tipoArchivo = $archivo->getClientMimeType();
                 $extensionArchivo = $archivo->getClientOriginalExtension();
@@ -529,7 +521,7 @@ class CapacitacionController extends Controller
                 $tienePlantilla = true;
 
                 $anio = date('Y');
-                $mes = ucfirst(\Carbon\Carbon::now()->translatedFormat('F'));
+                $mes = ucfirst(Carbon::now()->translatedFormat('F'));
 
                 $tipoArchivo = $archivo->getClientMimeType();
                 $extensionArchivo = $archivo->getClientOriginalExtension();
@@ -928,8 +920,8 @@ class CapacitacionController extends Controller
                 'cod_cursos' => $prog->cod_cursos,
                 'fecha_inicio' => $prog->fecha_inicio,
                 'fecha_final' => $prog->fecha_final,
-                'fecha_inicio_texto' => \Carbon\Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
-                'fecha_final_texto' => \Carbon\Carbon::parse($prog->fecha_final)->format('d/m/Y'),
+                'fecha_inicio_texto' => Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
+                'fecha_final_texto' => Carbon::parse($prog->fecha_final)->format('d/m/Y'),
                 'periodo' => $prog->periodo,
                 'tipo' => $prog->tipo,
                 'habilitado' => $prog->habilitado,
@@ -951,7 +943,7 @@ class CapacitacionController extends Controller
 
     public function getClientesForPAC(): JsonResponse
     {
-        $raw = \Illuminate\Support\Facades\DB::select('EXEC SW_LISTAR_CLIENTES');
+        $raw = DB::select('EXEC SW_LISTAR_CLIENTES');
         $clientes = collect($raw)->map(function ($row) {
             return [
                 'codigo'      => $row->codigo,
@@ -963,7 +955,7 @@ class CapacitacionController extends Controller
 
     public function getEmpresasList(): JsonResponse
     {
-        $empresas = \Illuminate\Support\Facades\DB::table('sw_MIGRA_EMPRESA')
+        $empresas = DB::table('sw_MIGRA_EMPRESA')
             ->select('EMPR_CODIGO as codigo', 'Razon_Social as descripcion')
             ->whereIn('EMPR_CODIGO', ['01', '02', '03', '04', '05', '06'])
             ->orderBy('EMPR_CODIGO')
@@ -1586,14 +1578,12 @@ class CapacitacionController extends Controller
                 return response()->json(['success' => true, 'matriculas' => [], 'total' => 0]);
             }
 
-            // 2. Extraer códigos de personal únicos (Normalizados)
             $codigosPersonal = $matriculas->pluck('cod_personal')
                 ->map(fn($id) => str_pad(trim((string)$id), 5, '0', STR_PAD_LEFT))
                 ->unique()
                 ->values()
                 ->toArray();
 
-            // 3. Obtener info personal en bloque (Optimizado: WhereIn usa índices)
             $personalData = collect();
 
             $chunks = array_chunk($codigosPersonal, 2000);
@@ -1620,7 +1610,6 @@ class CapacitacionController extends Controller
 
             $personalData = $personalData->keyBy('cod_personal');
 
-            // 4. Obtener sucursales únicas de los trabajadores encontrados
             $codigosSucursal = $personalData->pluck('SUCU_CODIGO')
                 ->filter()
                 ->unique()
@@ -1628,7 +1617,7 @@ class CapacitacionController extends Controller
                 ->toArray();
 
             $sucursalesMap = [];
-            $sucursalClienteMap = []; // SUCU_CODIGO → EMPR_CODIGO (for PCU)
+            $sucursalClienteMap = [];
             if (!empty($codigosSucursal)) {
                 $sucChunks = array_chunk($codigosSucursal, 2000);
                 $sucRows = collect();
@@ -1646,12 +1635,7 @@ class CapacitacionController extends Controller
                 }
             }
 
-            // 5a. Obtener tipo de curso via description text (PCU/PCI) — more reliable than hardcoded IDs
-            $curso = DB::table('sw_cursos as c')
-                ->join('sw_capacitacion_tipo_curso as tc', 'c.tipo_curso', '=', 'tc.codigo')
-                ->where('c.codigo', $cursoId)
-                ->select('c.tipo_curso', 'tc.descripcion as tipo_descripcion')
-                ->first();
+            $curso = Consulta::obtenerTipoDeCurso($cursoId);
 
             $tipoDesc = $curso ? strtoupper($curso->tipo_descripcion ?? '') : '';
             $esPCU = str_contains($tipoDesc, 'PCU');
@@ -1659,7 +1643,6 @@ class CapacitacionController extends Controller
             $esPCE = str_contains($tipoDesc, 'PCE');
             Log::info("[ClienteEmpresa] cursoId={$cursoId} tipoDesc={$tipoDesc} esPCU=" . ($esPCU ? 'SI' : 'NO') . " esPCI=" . ($esPCI ? 'SI' : 'NO') . " esPCE=" . ($esPCE ? 'SI' : 'NO'));
 
-            // 5b. Para PCU: cargar mapa sucursal -> nombre_cliente desde base externa
             $sucursalClienteNameMap = [];
             if ($esPCU) {
                 $assignedClients = DB::table('sw_curso_sucursales')
@@ -1753,18 +1736,10 @@ class CapacitacionController extends Controller
     public function getAlertasVencimiento(): JsonResponse
     {
         try {
-            $hoy = \Carbon\Carbon::now()->startOfDay();
+            $hoy = Carbon::now()->startOfDay();
             $limite = $hoy->copy()->addDays(15)->endOfDay();
 
-            // Usar JOIN explícito para garantizar compatibilidad con SQL Server al buscar cursos periódicos ($c->es_periodico = 1)
-            $programacionesVigentes = DB::table('sw_cursos_programacion as cp')
-                ->join('sw_cursos as c', 'c.codigo', '=', 'cp.cod_cursos')
-                ->select('cp.*', 'c.codigo_curso', 'c.nombre as curso_nombre', 'c.frecuencia', 'c.es_periodico')
-                ->where('cp.habilitado', 1)
-                ->where('cp.estado_periodo', 'VIGENTE')
-                ->where('c.habilitado', 1)
-                ->where('c.es_periodico', 1)
-                ->get();
+            $programacionesVigentes = Consulta::obtenerProgramacionesVigentes();
 
             $alertas = [];
 
@@ -1773,7 +1748,7 @@ class CapacitacionController extends Controller
                     continue;
                 }
 
-                $fechaInicioProgramacion = \Carbon\Carbon::parse($programacion->fecha_inicio)->startOfDay();
+                $fechaInicioProgramacion = Carbon::parse($programacion->fecha_inicio)->startOfDay();
                 $fechaProximaClonacion = $fechaInicioProgramacion->copy();
 
                 // Quitar espacios extra en la base de datos SQL Server e identificar tipo
@@ -1833,11 +1808,7 @@ class CapacitacionController extends Controller
     public function getSucursales(): JsonResponse
     {
         try {
-            $sucursales = DB::connection('sqlsrv')->table('sw_MIGRA_SISO_SUCURSAL')
-                ->select('SUCU_CODIGO as codigo', 'SUCU_ABREVIATURA as sucursal')
-                ->whereNotNull('SUCU_ABREVIATURA')
-                ->orderBy('SUCU_ABREVIATURA')
-                ->get();
+            $sucursales = Consulta::obtenerSucursales();
             return response()->json(['success' => true, 'sucursales' => $sucursales]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error.'], 500);
@@ -1847,10 +1818,11 @@ class CapacitacionController extends Controller
     public function getAreasEncargadas(): JsonResponse
     {
         try {
-            // Usamos 1 directamente para evitar errores de conversión si la columna es bit
-            // También incluimos el esquema si_solm.dbo de forma explícita
-            $areas = DB::connection('sqlsrv')->select("SELECT AVAR_ID as codigo, AVAR_DESCRIPCION as descripcion FROM si_solm.dbo.AV_AREA WHERE AVAR_VIGENCIA = 1");
-            return response()->json($areas);
+            $areas = Consulta::obtenerAreasEncargadas();
+            return response()->json([
+                'success' => true,
+                'areas' => $areas,
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -1862,10 +1834,10 @@ class CapacitacionController extends Controller
     public function getAreasPorSistema(int $sistemaId): JsonResponse
     {
         try {
-            $areas = DB::connection('sqlsrv')->select("EXEC SW_LISTAR_AREAS_POR_SISTEMA ?", [$sistemaId]);
+            $areas = Consulta::obtenerAreasPorSistema($sistemaId);
             return response()->json([
                 'success' => true,
-                'areas' => $areas
+                'areas' => $areas,
             ]);
         } catch (\Exception $e) {
             return response()->json([

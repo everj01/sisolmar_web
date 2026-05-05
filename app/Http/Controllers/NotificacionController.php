@@ -2,19 +2,10 @@
 
 namespace App\Http\Controllers;
 
-
-use App\Helpers\PdfHelper;
-use App\Helpers\ImagenHelper;
 use App\Mail\AlertaCaducidadMail;
-use Barryvdh\Snappy\Facades\SnappyPdf;
 use Illuminate\Http\Request;
 use App\Models\NotificacionModel;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
-use Mail;
-use ZipArchive;
+use Illuminate\Support\Facades\Mail;
 
 
 class NotificacionController extends Controller{

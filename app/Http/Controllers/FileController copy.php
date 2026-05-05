@@ -6,6 +6,7 @@ use App\Helpers\PdfHelper;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use Illuminate\Http\Request;
 use App\Models\FileControl;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class FileController extends Controller
@@ -26,7 +27,7 @@ class FileController extends Controller
         return response()->json($personal);
     }
 
-    public function getDocumentosXPersonal($codPersonal)
+    public function getDocumentosXPersonal(string $codPersonal)
     {
         $docs_personal = FileControl::getDocsXPersona($codPersonal);
         return response()->json($docs_personal);
@@ -216,7 +217,7 @@ class FileController extends Controller
         return response()->json($legajos);
     }
 
-    public function getFoliosXLegajo_comercial($codCliente, $codCargo){
+    public function getFoliosXLegajo_comercial(string $codCliente, string $codCargo){
         $folios = FileControl::getFoliosXLegajo_comercial($codCliente, $codCargo);
         return response()->json($folios);
     }
@@ -238,14 +239,14 @@ class FileController extends Controller
 
     public function ViewCargo()
     {
-        $todos = \DB::table('sw_cargos')
+        $todos = DB::table('sw_cargos')
                     ->where('habilitado', 1)
                     ->count();
-        $operativo = \DB::table('sw_cargos')
+        $operativo = DB::table('sw_cargos')
                     ->where('cod_tipo', 1)
                     ->where('habilitado', 1)
                     ->count();
-        $administrativo = \DB::table('sw_cargos')
+        $administrativo = DB::table('sw_cargos')
                     ->where('cod_tipo', 2)
                     ->where('habilitado', 1)
                     ->count();
@@ -260,26 +261,26 @@ class FileController extends Controller
     public function ViewFolios()
     {
         $periodos = FileControl::getPeriodos();
-        $todos = \DB::table('sw_folios')
+        $todos = DB::table('sw_folios')
                     ->where('habilitado', 1)
                     ->count();
-        $principal = \DB::table('sw_folios')
+        $principal = DB::table('sw_folios')
                     ->where('obligatorio', 1)
                     ->where('habilitado', 1)
                     ->count();
-        $adicional = \DB::table('sw_folios')
+        $adicional = DB::table('sw_folios')
                     ->where('obligatorio', 0)
                     ->where('habilitado', 1)
                     ->count();
-        $documento = \DB::table('sw_folios')
+        $documento = DB::table('sw_folios')
                     ->where('tipo', 1)
                     ->where('habilitado', 1)
                     ->count();
-        $formato = \DB::table('sw_folios')
+        $formato = DB::table('sw_folios')
                     ->where('tipo', 2)
                     ->where('habilitado', 1)
                     ->count();
-        $certificado = \DB::table('sw_folios')
+        $certificado = DB::table('sw_folios')
                     ->where('tipo', 3)
                     ->where('habilitado', 1)
                     ->count();
@@ -425,7 +426,7 @@ class FileController extends Controller
 
     //-----------------
 
-    public function getFoliosXLegajo($codCliente, $codCargo){
+    public function getFoliosXLegajo(string $codCliente, string $codCargo){
         $folios = FileControl::getFoliosXLegajo($codCliente, $codCargo);
         return response()->json($folios);
     }
@@ -445,7 +446,7 @@ class FileController extends Controller
         return response()->json($data);
     }
 
-    public function getGrupoId($codigo){
+    public function getGrupoId(string $codigo){
         //$codigo = $request->input('codigo');
         $data = FileControl::getGrupoId($codigo);
         return response()->json($data);
@@ -542,7 +543,7 @@ class FileController extends Controller
     }
 
     
-    public function getCargosXCodigo($codigo){
+    public function getCargosXCodigo(string $codigo){
         $data = FileControl::getCargosXCodigo($codigo);
         return response()->json($data);
     }

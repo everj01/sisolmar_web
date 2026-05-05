@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SaveDeclaracionJuradaRequest;
 use App\Services\DjService;
 use App\Services\PdfService;
-use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DjController extends Controller
@@ -2158,9 +2158,8 @@ class DjController extends Controller
 
     private function saveFamiliares($codiPers, $data)
     {
-        // ✅ Validar que existan los arrays
         if (!isset($data['FAM_NOMBRES']) || !is_array($data['FAM_NOMBRES'])) {
-            \Log::info('No hay familiares para guardar');
+            Log::info('No hay familiares para guardar');
 
             return;
         }
@@ -2407,9 +2406,8 @@ class DjController extends Controller
 
     private function saveOcupaciones($dni, $data)
     {
-        // ✅ Cambiar el nombre del campo esperado
         if (!isset($data['dj2026_descripcion']) || !is_array($data['dj2026_descripcion'])) {
-            \Log::info('No hay ocupaciones para guardar');
+            Log::info('No hay ocupaciones para guardar');
 
             return;
         }

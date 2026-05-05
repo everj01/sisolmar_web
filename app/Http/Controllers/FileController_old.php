@@ -7,13 +7,9 @@ use App\Helpers\ImagenHelper;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use Illuminate\Http\Request;
 use App\Models\FileControl;
-use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
-use ZipArchive;
 
 class FileController extends Controller{
     public function index(){
@@ -431,14 +427,14 @@ class FileController extends Controller{
 
     public function ViewCargo()
     {
-        $todos = \DB::table('sw_cargos')
+        $todos = DB::table('sw_cargos')
                     ->where('habilitado', 1)
                     ->count();
-        $operativo = \DB::table('sw_cargos')
+        $operativo = DB::table('sw_cargos')
                     ->where('cod_tipo', 1)
                     ->where('habilitado', 1)
                     ->count();
-        $administrativo = \DB::table('sw_cargos')
+        $administrativo = DB::table('sw_cargos')
                     ->where('cod_tipo', 2)
                     ->where('habilitado', 1)
                     ->count();
@@ -456,26 +452,26 @@ class FileController extends Controller{
     public function ViewFolios()
     {
         $periodos = FileControl::getPeriodos();
-        $todos = \DB::table('sw_folios')
+        $todos = DB::table('sw_folios')
                     ->where('habilitado', 1)
                     ->count();
-        $principal = \DB::table('sw_folios')
+        $principal = DB::table('sw_folios')
                     ->where('obligatorio', 1)
                     ->where('habilitado', 1)
                     ->count();
-        $adicional = \DB::table('sw_folios')
+        $adicional = DB::table('sw_folios')
                     ->where('obligatorio', 0)
                     ->where('habilitado', 1)
                     ->count();
-        $documento = \DB::table('sw_folios')
+        $documento = DB::table('sw_folios')
                     ->where('tipo', 1)
                     ->where('habilitado', 1)
                     ->count();
-        $formato = \DB::table('sw_folios')
+        $formato = DB::table('sw_folios')
                     ->where('tipo', 2)
                     ->where('habilitado', 1)
                     ->count();
-        $certificado = \DB::table('sw_folios')
+        $certificado = DB::table('sw_folios')
                     ->where('tipo', 3)
                     ->where('habilitado', 1)
                     ->count();

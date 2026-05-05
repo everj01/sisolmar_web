@@ -5,23 +5,20 @@ namespace App\Http\Controllers;
 use App\Helpers\PdfHelper;
 use App\Helpers\ImagenHelper;
 use Barryvdh\Snappy\Facades\SnappyPdf;
-use DB;
 use Illuminate\Http\Request;
 use App\Models\FileControl;
 use App\Models\Matricula;
 use App\Models\Cargo;
-use App\Models\Personal;
 use App\Models\Folio;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\File;
-use ZipArchive;
 use Illuminate\Support\Facades\Storage;
 
-class FileController extends Controller{
-    public function index(){
+class FileController extends Controller
+{
+    public function index()
+    {
         $personal = FileControl::getPersonal();
         //$cargos = FileControl::getCargos();
         $clientes = FileControl::getClientesLegajos();
@@ -41,7 +38,7 @@ class FileController extends Controller{
         $instituciones = FileControl::getInstitucionesDJ();
 
         // NUevos
-         $sucursales = FileControl::getSucursales();
+        $sucursales = FileControl::getSucursales();
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
@@ -50,26 +47,28 @@ class FileController extends Controller{
         return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
-    
+
 
     public function ViewReportes()
-{
-    $clientes = FileControl::getClientes();
-    $sucursales = FileControl::getSucursales();
-    $cargos = FileControl::getCargos();
+    {
+        $clientes = FileControl::getClientes();
+        $sucursales = FileControl::getSucursales();
+        $cargos = FileControl::getCargos();
 
-    return view('file_control.reportes', compact('clientes', 'sucursales', 'cargos'));
-}
+        return view('file_control.reportes', compact('clientes', 'sucursales', 'cargos'));
+    }
 
 
 
-    public function getCargosXCliente(Request $request){
+    public function getCargosXCliente(Request $request)
+    {
         $cliente = $request->input('cliente');
         $cargos = FileControl::getCargosXCliente($cliente);
         return response()->json($cargos);
     }
 
-    public function ViewDashboard(){
+    public function ViewDashboard()
+    {
         /*$personal = FileControl::getPersonal();
         $cargos = FileControl::getCargos();
         $clientes = FileControl::getClientes();
@@ -78,11 +77,12 @@ class FileController extends Controller{
         return view('file_control.dashboard'/*, compact('personal', 'cargos', 'clientes', 'sucursales')*/);
     }
 
-    public function getPersonal(Request $request){
+    public function getPersonal(Request $request)
+    {
         try {
             // Usar el stored procedure original que ya tiene la lógica correcta
             $allPersonal = FileControl::getPersonal();
-            
+
             $cursoId = $request->input('cursoId');
 
             // MODO: Paginación LOCAL vs REMOTA
@@ -90,15 +90,15 @@ class FileController extends Controller{
             $paginationMode = $request->input('pagination');
 
             if ($paginationMode === 'off') {
-                 // Si se especificó un curso, verificar quién ya está matriculado (Lógica compartida)
+                // Si se especificó un curso, verificar quién ya está matriculado (Lógica compartida)
                 if ($cursoId) {
                     if (!is_numeric($cursoId)) throw new \Exception("El ID del curso no es válido.");
 
                     $matriculados = Matricula::where('cod_curso', $cursoId)
                         ->pluck('cod_personal')
                         ->toArray();
-                    
-                    $allPersonal = array_map(function($persona) use ($matriculados) {
+
+                    $allPersonal = array_map(function ($persona) use ($matriculados) {
                         $persona->matriculado = in_array($persona->CODI_PERS, $matriculados);
                         return $persona;
                     }, $allPersonal);
@@ -106,48 +106,48 @@ class FileController extends Controller{
 
                 return response()->json(array_values($allPersonal));
             }
-            
+
             // --- LOGICA ANTIGUA (Paginación Remota) SOLO SI NO ES LOCAL ---
             $page = (int) $request->input('page', 1);
             $size = (int) $request->input('size', 50);
-            
+
             // Filtrar por búsqueda si existe (paginación remota con filtro)
             $search = $request->input('filter', '');
             if (!empty($search)) {
                 $searchLower = strtolower($search);
-                $allPersonal = array_filter($allPersonal, function($persona) use ($searchLower) {
+                $allPersonal = array_filter($allPersonal, function ($persona) use ($searchLower) {
                     $nombre = strtolower($persona->personal ?? '');
                     $doc = strtolower($persona->nroDoc ?? '');
                     return str_contains($nombre, $searchLower) || str_contains($doc, $searchLower);
                 });
                 $allPersonal = array_values($allPersonal); // Reindexar
             }
-            
+
             $total = count($allPersonal);
-            
+
             // Aplicar paginación en PHP
             $offset = ($page - 1) * $size;
             $personalPaginado = array_slice($allPersonal, $offset, $size);
-            
+
             // Si se especificó un curso, verificar quién ya está matriculado
             if ($cursoId) {
                 // Validación manual para evitar que falle el validate() con un 422 JSON que rompa Tabulator
                 // O usamos un try-catch anidado, pero el try general ya lo cubre.
                 if (!is_numeric($cursoId)) {
-                     throw new \Exception("El ID del curso no es válido.");
+                    throw new \Exception("El ID del curso no es válido.");
                 }
 
                 $matriculados = Matricula::where('cod_curso', $cursoId)
                     ->pluck('cod_personal')
                     ->toArray();
-                
+
                 // Agregar campo 'matriculado' a cada registro
-                $personalPaginado = array_map(function($persona) use ($matriculados) {
+                $personalPaginado = array_map(function ($persona) use ($matriculados) {
                     $persona->matriculado = in_array($persona->CODI_PERS, $matriculados);
                     return $persona;
                 }, $personalPaginado);
             }
-            
+
             // Formato de respuesta compatible con Tabulator paginación remota
             return response()->json([
                 'data' => $personalPaginado,
@@ -155,10 +155,9 @@ class FileController extends Controller{
                 'total' => $total,
                 'status' => 'success'
             ]);
-
         } catch (\Exception $e) {
             Log::error("Error en FileController@getPersonal: " . $e->getMessage());
-            
+
             // Retornar estructura válida para Tabulator pero vacía y con error
             return response()->json([
                 'data' => [],
@@ -183,12 +182,22 @@ class FileController extends Controller{
 
         // SP de datos
         $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
-            $codSucursal, $page, $size, $search, $tipo_per, $vigencia, $usuario
+            $codSucursal,
+            $page,
+            $size,
+            $search,
+            $tipo_per,
+            $vigencia,
+            $usuario
         ]);
 
         // SP de total
         $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia, $usuario
+            $codSucursal,
+            $search,
+            $tipo_per,
+            $vigencia,
+            $usuario
         ])[0]->total;
 
         return response()->json([
@@ -209,12 +218,20 @@ class FileController extends Controller{
 
         // SP de datos
         $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_PRUEBA ?, ?, ?, ?, ?, ?', [
-            $codSucursal, $page, $size, $search, $tipo_per, $vigencia
+            $codSucursal,
+            $page,
+            $size,
+            $search,
+            $tipo_per,
+            $vigencia
         ]);
 
         // SP de total
         $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?', [
-            $codSucursal, $search, $tipo_per, $vigencia
+            $codSucursal,
+            $search,
+            $tipo_per,
+            $vigencia
         ])[0]->total;
 
         return response()->json([
@@ -224,32 +241,34 @@ class FileController extends Controller{
         ]);
     }
 
- public function verDjPdf($codPersonal)
-{
-    $ruta = '\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dj\\2026\\' . $codPersonal . '.pdf';
+    public function verDjPdf(string $codPersonal)
+    {
+        $ruta = '\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dj\\2026\\' . $codPersonal . '.pdf';
 
-    if (!file_exists($ruta)) {
-        abort(404, 'Documento no encontrado');
+        if (!file_exists($ruta)) {
+            abort(404, 'Documento no encontrado');
+        }
+
+        return response()->file($ruta, [
+            'Content-Type' => 'application/pdf',
+        ]);
     }
 
-    return response()->file($ruta, [
-        'Content-Type' => 'application/pdf',
-    ]);
-}
-
-    public function getDocumentosXPersonal($codPersonal){
+    public function getDocumentosXPersonal(string $codPersonal)
+    {
         $usuario = session('usuario');
         $docs_personal = FileControl::getDocsXPersona($codPersonal, $usuario);
         return response()->json($docs_personal);
     }
 
-    public function getFoliosXPersonas(Request $request){
+    public function getFoliosXPersonas(Request $request)
+    {
         $personas = $request->personas;
         $folios = $request->folios;
         $resultados = [];
         //Averiguando la sucursal de la persona
 
- 
+
         foreach ($personas as $persona) {
             $sucursal = FileControl::getSucursalXPersona($persona['CODI_PERS']);
             foreach ($folios as $folio) {
@@ -280,7 +299,8 @@ class FileController extends Controller{
         return response()->json($resultados);
     }
 
-    public function getFoliosXPersona_uno(Request $request){
+    public function getFoliosXPersona_uno(Request $request)
+    {
         $persona = $request->input('codPersona');
         $folios = $request->folios;
         $resultados = [];
@@ -412,7 +432,8 @@ class FileController extends Controller{
     //     return response()->download($zipPath)->deleteFileAfterSend(true);
     // }
 
-    public function generarPDF_env(Request $request){
+    public function generarPDF_env(Request $request)
+    {
         echo "Hola";
     }
 
@@ -426,7 +447,8 @@ class FileController extends Controller{
     }
 
 
-    public function generarPDF(Request $request){
+    public function generarPDF(Request $request)
+    {
         $resultados = $request->input('resultados');
         //dd($resultados);
         //exit;
@@ -437,18 +459,16 @@ class FileController extends Controller{
 
         foreach ($resultados as $item) {
             $clave = $item['persona'] . '|' . $item['sucursal'] . '|' . $item['codPersonal'] . '|' . $item['cargo'];
-            if(!isset($unicos[$clave])) {
+            if (!isset($unicos[$clave])) {
                 $unicos[$clave] = [
                     'persona' => $item['persona'],
                     'codPersonal' => $item['codPersonal'],
                     'sucursal' => $item['sucursal'],
                     'cargo' => $item['cargo'],
                 ];
-
-
             }
 
-             $nombreNuevo = $item['codPersonal'].'_'.$item['persona'] . '_' . date('Ymd_Hi');
+            $nombreNuevo = $item['codPersonal'] . '_' . $item['persona'] . '_' . date('Ymd_Hi');
         }
 
         $personasUnicas = array_values($unicos);
@@ -498,8 +518,8 @@ class FileController extends Controller{
                     'documento' => $resultado['documento'],
                     'nombre_vista' => $this->obtenerNombreVista($resultado), // Función que defines
                     'datos' => $resultado,
-                    'firma' => public_path('temp_legajos').'/FIRMAS/PERSONAL/'.$resultado['codPersonal'].'.jpg',
-                    'huella' => public_path('temp_legajos').'/HUELLAS_DIGITALES/PERSONAL/'.$resultado['codPersonal'].'.jpg',
+                    'firma' => public_path('temp_legajos') . '/FIRMAS/PERSONAL/' . $resultado['codPersonal'] . '.jpg',
+                    'huella' => public_path('temp_legajos') . '/HUELLAS_DIGITALES/PERSONAL/' . $resultado['codPersonal'] . '.jpg',
                 ];
                 //Hacer la copia local de la FIRMA y HUELLA DIGITAL
                 $rutasLocalesFormato = ImagenHelper::descargarImagenesFormato($resultado['codPersonal']);
@@ -522,7 +542,8 @@ class FileController extends Controller{
         ]);
     }
 
-    public function obtenerNombreVista($resultado) {
+    public function obtenerNombreVista(array $resultado)
+    {
         $mapa = [
             'ACTA DE COMPROMISO' => 'file_control.pdf.acta_compromiso',
             'DECLARACION JURADA DE CUMPLIMIENTO DE DISPOSICIONES' => 'file_control.pdf.declaracion_jurada',
@@ -536,14 +557,16 @@ class FileController extends Controller{
         return $mapa[$resultado['documento']] ?? null;
     }
 
-    public function generarReporteConsulta(Request $request){
+    public function generarReporteConsulta(Request $request)
+    {
         $codigo =  $request->input('valor');
         $data = FileControl::getReporteFiltro($codigo);
         return response()->json($data);
     }
 
 
-    public function generarPDF2(Request $request) {
+    public function generarPDF2(Request $request)
+    {
         $resultados = $request->input('resultados');
         $html = '';
 
@@ -579,17 +602,19 @@ class FileController extends Controller{
         return response()->json($data);
     }
 
-    public function getClientes(){
+    public function getClientes()
+    {
         $data = FileControl::getClientes();
         return response()->json($data);
     }
 
-    public function getClientesLegajos(){
+    public function getClientesLegajos()
+    {
         $data = FileControl::getClientesLegajos();
         return response()->json($data);
     }
 
-   
+
 
     public function getLegajos(Request $request)
     {
@@ -601,7 +626,8 @@ class FileController extends Controller{
         return response()->json($legajos);
     }
 
-    public function getFoliosClienteCargo(Request $request){
+    public function getFoliosClienteCargo(Request $request)
+    {
         $cliente = $request->input('cliente');
         $cargo = $request->input('cargo');
 
@@ -609,39 +635,45 @@ class FileController extends Controller{
         return response()->json($legajos);
     }
 
-    public function getFoliosXLegajo_comercial($codCliente, $codCargo){
+    public function getFoliosXLegajo_comercial(string $codCliente, string $codCargo)
+    {
         $folios = FileControl::getFoliosXLegajo_comercial($codCliente, $codCargo);
         return response()->json($folios);
     }
 
-    public function getCargos(){
+    public function getCargos()
+    {
         $cargos = FileControl::getCargos();
         return response()->json($cargos);
     }
 
-    public function getFolios(){
+    public function getFolios()
+    {
         $folios = DB::select("EXEC SW_LISTAR_FOLIOS");
         $encargados = DB::table('sw_folio_encargado')->get()->keyBy('cod_folio');
-        
+
         foreach ($folios as $folio) {
             $folio->cod_responsable = $encargados->get($folio->codigo)->cod_rol ?? null;
         }
-        
+
         return response()->json($folios);
     }
 
-    public function getListaDJ(){
+    public function getListaDJ()
+    {
         $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]");
         return response()->json($DJ);
     }
 
-    public function getListaDJXusuario(){
+    public function getListaDJXusuario()
+    {
         $usuario = session('usuario');
         $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ] ?", [$usuario]);
         return response()->json($DJ);
     }
 
-    public function getListaDJMigracion(){
+    public function getListaDJMigracion()
+    {
         $DJ = DB::select("EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_MIGRACION]");
         return response()->json($DJ);
     }
@@ -654,13 +686,13 @@ class FileController extends Controller{
         $todos = Cargo::habilitado()->count();
         $operativo = Cargo::operativo()->habilitado()->count();
         $administrativo = Cargo::administrativo()->habilitado()->count();
-        
-        return view('file_control.cargo',compact('todos', 'operativo', 'administrativo'));
+
+        return view('file_control.cargo', compact('todos', 'operativo', 'administrativo'));
     }
 
     public function ViewLegajo()
     {
-         $notif = FileControl::listarNotificaciones();
+        $notif = FileControl::listarNotificaciones();
         return view('file_control.legajos', [
             'notify' => $notif
         ]);
@@ -669,26 +701,26 @@ class FileController extends Controller{
     public function ViewFolios()
     {
         $periodos = FileControl::getPeriodos();
-        
+
         // MIGRACIÓN A ELOQUENT: Reemplacé todas las queries DB::table('sw_folios') por modelo Folio
         // Beneficios: type safety, prepared statements automáticos, código más mantenible
         // Uso scope habilitado() para evitar repetir where('habilitado', 1) en cada query
         $todos = Folio::habilitado()->count();
         $principal = Folio::habilitado()
-                    ->where('obligatorio', 1)
-                    ->count();
+            ->where('obligatorio', 1)
+            ->count();
         $adicional = Folio::habilitado()
-                    ->where('obligatorio', 0)
-                    ->count();
+            ->where('obligatorio', 0)
+            ->count();
         $documento = Folio::habilitado()
-                    ->where('tipo', 1)
-                    ->count();
+            ->where('tipo', 1)
+            ->count();
         $formato = Folio::habilitado()
-                    ->where('tipo', 2)
-                    ->count();
+            ->where('tipo', 2)
+            ->count();
         $certificado = Folio::habilitado()
-                    ->where('tipo', 3)
-                    ->count();
+            ->where('tipo', 3)
+            ->count();
 
         $roles = FileControl::getRoles();
 
@@ -710,7 +742,7 @@ class FileController extends Controller{
         $sucursales = FileControl::getSucursales();
         $cargos = FileControl::getCargos();
         $clientes = FileControl::getClientes();
-        return view('file_control.legajos_pdf', compact('sucursales','cargos','clientes'));
+        return view('file_control.legajos_pdf', compact('sucursales', 'cargos', 'clientes'));
     }
 
     public function getPersonalLegajos(Request $request)
@@ -729,9 +761,9 @@ class FileController extends Controller{
     }
 
     //GUARDAR DATOS
-     public function saveFolioPersona(Request $request)
+    public function saveFolioPersona(Request $request)
     {
-     
+
         // Validar los datos del formulario
         $validated = $request->validate([
             'fecha_emision'  => 'required|date',
@@ -805,42 +837,42 @@ class FileController extends Controller{
     }
 
 
-    
-// public function getViewDocumentsPer($codPersonal, $codFolio)
-// {
-//     $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
 
-//     if (empty($result)) {
-//         return response()->json([
-//             'success' => false,
-//             'message' => 'No se encontraron rutas'
-//         ], 404);
-//     }
+    // public function getViewDocumentsPer($codPersonal, $codFolio)
+    // {
+    //     $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
 
-//     $rutas = [];
+    //     if (empty($result)) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'No se encontraron rutas'
+    //         ], 404);
+    //     }
 
-//     foreach ($result as $item) {
+    //     $rutas = [];
 
-//         if (!empty($item->ruta_aux)) {
-//             $rutas[] = $item->ruta_aux;
-//         }
+    //     foreach ($result as $item) {
 
-//         if (!empty($item->ruta)) {
-//             $rutas[] = $item->ruta;
-//         }
-//     }
+    //         if (!empty($item->ruta_aux)) {
+    //             $rutas[] = $item->ruta_aux;
+    //         }
 
-//     // limpiar nulls y duplicados
-//     $rutas = array_values(array_unique(array_filter($rutas)));
+    //         if (!empty($item->ruta)) {
+    //             $rutas[] = $item->ruta;
+    //         }
+    //     }
 
-//     return response()->json([
-//         'success' => true,
-//         'rutas' => $rutas
-//     ]);
-// }
+    //     // limpiar nulls y duplicados
+    //     $rutas = array_values(array_unique(array_filter($rutas)));
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'rutas' => $rutas
+    //     ]);
+    // }
 
 
- public function getViewDocumentsPer($codPersonal, $codFolio)
+    public function getViewDocumentsPer(string $codPersonal, string $codFolio)
     {
         $result = FileControl::getViewPerDocs($codPersonal, $codFolio);
 
@@ -1069,7 +1101,7 @@ class FileController extends Controller{
     //     }
     // }
 
- 
+
 
     public function saveDjFolioAux(Request $request)
     {
@@ -1102,7 +1134,7 @@ class FileController extends Controller{
             $rutaFisica = storage_path('app/' . $rutaStorage);
 
             // Ruta que puedes guardar en BD (depende cómo lo consumas luego)
-            $rutaArchivo = 'file://192.168.10.5/Extranet_2024/apps/sisolmar/storage/app/'.$rutaStorage;
+            $rutaArchivo = 'file://192.168.10.5/Extranet_2024/apps/sisolmar/storage/app/' . $rutaStorage;
 
             // Guardar en BD
             FileControl::saveDjFolioPersonalAux(
@@ -1117,10 +1149,9 @@ class FileController extends Controller{
                 'ruta_storage' => $rutaStorage,
                 'ruta_fisica' => $rutaFisica
             ]);
-
         } catch (\Throwable $e) {
 
-            \Log::error('Error saveDjFolioAux STORAGE', [
+            Log::error('Error saveDjFolioAux STORAGE', [
                 'message' => $e->getMessage(),
                 'line'    => $e->getLine(),
                 'file'    => $e->getFile(),
@@ -1131,206 +1162,206 @@ class FileController extends Controller{
                 'detalle' => $e->getMessage()
             ], 500);
         }
-    //     try {
-    //     Log::info('=== INICIO saveDjFolioAux ===', [
-    //         'ip' => $request->ip(),
-    //         'fecha_emision' => $request->input('fecha_emision'),
-    //         'codPersonal' => $request->input('codPersonal'),
-    //         'has_file_pdf' => $request->hasFile('pdf'),
-    //         'session_usuario' => session('usuario'),
-    //     ]);
+        //     try {
+        //     Log::info('=== INICIO saveDjFolioAux ===', [
+        //         'ip' => $request->ip(),
+        //         'fecha_emision' => $request->input('fecha_emision'),
+        //         'codPersonal' => $request->input('codPersonal'),
+        //         'has_file_pdf' => $request->hasFile('pdf'),
+        //         'session_usuario' => session('usuario'),
+        //     ]);
 
-    //     $request->validate([
-    //         'fecha_emision' => 'required|date',
-    //         'codPersonal'   => 'required',
-    //         'pdf'           => 'required|file|mimes:pdf|max:5120',
-    //     ]);
+        //     $request->validate([
+        //         'fecha_emision' => 'required|date',
+        //         'codPersonal'   => 'required',
+        //         'pdf'           => 'required|file|mimes:pdf|max:5120',
+        //     ]);
 
-    //     $codPersonal = $request->input('codPersonal');
-    //     $usuario     = session('usuario');
-    //     $archivo     = $request->file('pdf');
-    //     $nameFile    = $codPersonal . '.pdf';
+        //     $codPersonal = $request->input('codPersonal');
+        //     $usuario     = session('usuario');
+        //     $archivo     = $request->file('pdf');
+        //     $nameFile    = $codPersonal . '.pdf';
 
-    //     $dirDestino = '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026';
-    //     $rutaFinal  = $dirDestino . '\\' . $nameFile;
+        //     $dirDestino = '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026';
+        //     $rutaFinal  = $dirDestino . '\\' . $nameFile;
 
-    //     Log::info('Datos principales', [
-    //         'codPersonal' => $codPersonal,
-    //         'usuario' => $usuario,
-    //         'nameFile' => $nameFile,
-    //         'dirDestino' => $dirDestino,
-    //         'rutaFinal' => $rutaFinal,
-    //         'archivo_original' => $archivo ? $archivo->getClientOriginalName() : null,
-    //         'archivo_mime' => $archivo ? $archivo->getMimeType() : null,
-    //         'archivo_size' => $archivo ? $archivo->getSize() : null,
-    //         'archivo_tmp' => $archivo ? $archivo->getRealPath() : null,
-    //     ]);
+        //     Log::info('Datos principales', [
+        //         'codPersonal' => $codPersonal,
+        //         'usuario' => $usuario,
+        //         'nameFile' => $nameFile,
+        //         'dirDestino' => $dirDestino,
+        //         'rutaFinal' => $rutaFinal,
+        //         'archivo_original' => $archivo ? $archivo->getClientOriginalName() : null,
+        //         'archivo_mime' => $archivo ? $archivo->getMimeType() : null,
+        //         'archivo_size' => $archivo ? $archivo->getSize() : null,
+        //         'archivo_tmp' => $archivo ? $archivo->getRealPath() : null,
+        //     ]);
 
-    //     if (!$archivo) {
-    //         throw new \Exception('No se recibió el archivo PDF en el request.');
-    //     }
+        //     if (!$archivo) {
+        //         throw new \Exception('No se recibió el archivo PDF en el request.');
+        //     }
 
-    //     $existeDir = is_dir($dirDestino);
-    //     $escribibleDir = @is_writable($dirDestino);
+        //     $existeDir = is_dir($dirDestino);
+        //     $escribibleDir = @is_writable($dirDestino);
 
-    //     Log::info('Estado carpeta destino', [
-    //         'existeDir' => $existeDir,
-    //         'escribibleDir' => $escribibleDir,
-    //         'dirDestino' => $dirDestino,
-    //     ]);
+        //     Log::info('Estado carpeta destino', [
+        //         'existeDir' => $existeDir,
+        //         'escribibleDir' => $escribibleDir,
+        //         'dirDestino' => $dirDestino,
+        //     ]);
 
-    //     if (!$existeDir) {
-    //         Log::warning('La carpeta no existe, se intentará crear', [
-    //             'dirDestino' => $dirDestino
-    //         ]);
+        //     if (!$existeDir) {
+        //         Log::warning('La carpeta no existe, se intentará crear', [
+        //             'dirDestino' => $dirDestino
+        //         ]);
 
-    //         if (!file_exists($dirDestino)) {
-    //             $mk = mkdir($dirDestino, 0777, true);
+        //         if (!file_exists($dirDestino)) {
+        //             $mk = mkdir($dirDestino, 0777, true);
 
-    //             if (!$mk) {
-    //                 throw new \Exception('No se pudo crear directorio: ' . $dirDestino);
-    //                 }
-    //         }
+        //             if (!$mk) {
+        //                 throw new \Exception('No se pudo crear directorio: ' . $dirDestino);
+        //                 }
+        //         }
 
-    //         Log::info('Resultado mkdir', [
-    //             'resultado' => $mk,
-    //             'dirDestino' => $dirDestino,
-    //             'error_get_last' => error_get_last(),
-    //         ]);
+        //         Log::info('Resultado mkdir', [
+        //             'resultado' => $mk,
+        //             'dirDestino' => $dirDestino,
+        //             'error_get_last' => error_get_last(),
+        //         ]);
 
-    //         if (!$mk) {
-    //             return response()->json([
-    //                 'error' => 'No se pudo crear el directorio destino',
-    //                 'ruta'  => $dirDestino,
-    //                 'debug' => [
-    //                     'error_get_last' => error_get_last(),
-    //                     'is_dir_post' => is_dir($dirDestino),
-    //                     'is_writable_post' => @is_writable($dirDestino),
-    //                 ]
-    //             ], 500);
-    //         }
-    //     }
+        //         if (!$mk) {
+        //             return response()->json([
+        //                 'error' => 'No se pudo crear el directorio destino',
+        //                 'ruta'  => $dirDestino,
+        //                 'debug' => [
+        //                     'error_get_last' => error_get_last(),
+        //                     'is_dir_post' => is_dir($dirDestino),
+        //                     'is_writable_post' => @is_writable($dirDestino),
+        //                 ]
+        //             ], 500);
+        //         }
+        //     }
 
-    //     $tmpPath = $archivo->getRealPath();
+        //     $tmpPath = $archivo->getRealPath();
 
-    //     if (!$tmpPath || !file_exists($tmpPath)) {
-    //         throw new \Exception('El archivo temporal no existe o no se puede acceder.');
-    //     }
+        //     if (!$tmpPath || !file_exists($tmpPath)) {
+        //         throw new \Exception('El archivo temporal no existe o no se puede acceder.');
+        //     }
 
-    //     Log::info('Archivo temporal OK', [
-    //         'tmpPath' => $tmpPath,
-    //         'tmp_exists' => file_exists($tmpPath),
-    //         'tmp_readable' => is_readable($tmpPath),
-    //     ]);
+        //     Log::info('Archivo temporal OK', [
+        //         'tmpPath' => $tmpPath,
+        //         'tmp_exists' => file_exists($tmpPath),
+        //         'tmp_readable' => is_readable($tmpPath),
+        //     ]);
 
-    //     $contenido = file_get_contents($tmpPath);
+        //     $contenido = file_get_contents($tmpPath);
 
-    //     Log::info('Resultado lectura archivo temporal', [
-    //         'contenido_false' => ($contenido === false),
-    //         'bytes_leidos' => ($contenido !== false ? strlen($contenido) : 0),
-    //         'error_get_last' => error_get_last(),
-    //     ]);
+        //     Log::info('Resultado lectura archivo temporal', [
+        //         'contenido_false' => ($contenido === false),
+        //         'bytes_leidos' => ($contenido !== false ? strlen($contenido) : 0),
+        //         'error_get_last' => error_get_last(),
+        //     ]);
 
-    //     if ($contenido === false) {
-    //         return response()->json([
-    //             'error' => 'No se pudo leer el archivo subido',
-    //             'debug' => [
-    //                 'tmpPath' => $tmpPath,
-    //                 'error_get_last' => error_get_last(),
-    //             ]
-    //         ], 500);
-    //     }
+        //     if ($contenido === false) {
+        //         return response()->json([
+        //             'error' => 'No se pudo leer el archivo subido',
+        //             'debug' => [
+        //                 'tmpPath' => $tmpPath,
+        //                 'error_get_last' => error_get_last(),
+        //             ]
+        //         ], 500);
+        //     }
 
-    //     $resultado = file_put_contents($rutaFinal, $contenido);
+        //     $resultado = file_put_contents($rutaFinal, $contenido);
 
-    //     Log::info('Resultado file_put_contents', [
-    //         'resultado' => $resultado,
-    //         'rutaFinal' => $rutaFinal,
-    //         'archivo_existe_final' => file_exists($rutaFinal),
-    //         'error_get_last' => error_get_last(),
-    //     ]);
+        //     Log::info('Resultado file_put_contents', [
+        //         'resultado' => $resultado,
+        //         'rutaFinal' => $rutaFinal,
+        //         'archivo_existe_final' => file_exists($rutaFinal),
+        //         'error_get_last' => error_get_last(),
+        //     ]);
 
-    //     if ($resultado === false) {
-    //         return response()->json([
-    //             'error' => 'No se pudo guardar el archivo en el servidor de archivos',
-    //             'ruta'  => $rutaFinal,
-    //             'debug' => [
-    //                 'dirExiste' => is_dir($dirDestino),
-    //                 'dirEscribible' => @is_writable($dirDestino),
-    //                 'archivo_final_existe' => file_exists($rutaFinal),
-    //                 'error_get_last' => error_get_last(),
-    //             ]
-    //         ], 500);
-    //     }
+        //     if ($resultado === false) {
+        //         return response()->json([
+        //             'error' => 'No se pudo guardar el archivo en el servidor de archivos',
+        //             'ruta'  => $rutaFinal,
+        //             'debug' => [
+        //                 'dirExiste' => is_dir($dirDestino),
+        //                 'dirEscribible' => @is_writable($dirDestino),
+        //                 'archivo_final_existe' => file_exists($rutaFinal),
+        //                 'error_get_last' => error_get_last(),
+        //             ]
+        //         ], 500);
+        //     }
 
-    //     $rutaArchivo = '//190.116.178.163/Biblioteca_Grafica/DOCUMENTOS_PERS/DJ_2026/' . $codPersonal . '.pdf';
+        //     $rutaArchivo = '//190.116.178.163/Biblioteca_Grafica/DOCUMENTOS_PERS/DJ_2026/' . $codPersonal . '.pdf';
 
-    //     Log::info('Antes de guardar en BD', [
-    //         'fecha_emision' => $request->input('fecha_emision'),
-    //         'codPersonal' => $codPersonal,
-    //         'rutaArchivo' => $rutaArchivo,
-    //         'usuario' => $usuario,
-    //     ]);
+        //     Log::info('Antes de guardar en BD', [
+        //         'fecha_emision' => $request->input('fecha_emision'),
+        //         'codPersonal' => $codPersonal,
+        //         'rutaArchivo' => $rutaArchivo,
+        //         'usuario' => $usuario,
+        //     ]);
 
-    //     $resultadoBD = FileControl::saveDjFolioPersonalAux(
-    //         $request->input('fecha_emision'),
-    //         $codPersonal,
-    //         $rutaArchivo,
-    //         $usuario
-    //     );
+        //     $resultadoBD = FileControl::saveDjFolioPersonalAux(
+        //         $request->input('fecha_emision'),
+        //         $codPersonal,
+        //         $rutaArchivo,
+        //         $usuario
+        //     );
 
-    //     Log::info('Resultado saveDjFolioPersonalAux', [
-    //         'resultadoBD' => $resultadoBD
-    //     ]);
+        //     Log::info('Resultado saveDjFolioPersonalAux', [
+        //         'resultadoBD' => $resultadoBD
+        //     ]);
 
-    //     Log::info('=== FIN saveDjFolioAux OK ===', [
-    //         'codPersonal' => $codPersonal,
-    //         'rutaFinal' => $rutaFinal,
-    //     ]);
+        //     Log::info('=== FIN saveDjFolioAux OK ===', [
+        //         'codPersonal' => $codPersonal,
+        //         'rutaFinal' => $rutaFinal,
+        //     ]);
 
-    //     return response()->json([
-    //         'message' => 'DJ guardado correctamente',
-    //         'debug' => [
-    //             'rutaFinal' => $rutaFinal,
-    //             'rutaArchivo' => $rutaArchivo,
-    //             'bytes_guardados' => $resultado,
-    //         ]
-    //     ]);
-    // } catch (\Illuminate\Validation\ValidationException $e) {
-    //     Log::error('VALIDATION ERROR saveDjFolioAux', [
-    //         'errors' => $e->errors(),
-    //         'request' => $request->all(),
-    //     ]);
+        //     return response()->json([
+        //         'message' => 'DJ guardado correctamente',
+        //         'debug' => [
+        //             'rutaFinal' => $rutaFinal,
+        //             'rutaArchivo' => $rutaArchivo,
+        //             'bytes_guardados' => $resultado,
+        //         ]
+        //     ]);
+        // } catch (\Illuminate\Validation\ValidationException $e) {
+        //     Log::error('VALIDATION ERROR saveDjFolioAux', [
+        //         'errors' => $e->errors(),
+        //         'request' => $request->all(),
+        //     ]);
 
-    //     return response()->json([
-    //         'error' => 'Error de validación',
-    //         'detalle' => $e->errors(),
-    //     ], 422);
-    // } catch (\Throwable $e) {
-    //     Log::error('ERROR GENERAL saveDjFolioAux', [
-    //         'message' => $e->getMessage(),
-    //         'file' => $e->getFile(),
-    //         'line' => $e->getLine(),
-    //         'trace' => $e->getTraceAsString(),
-    //         'request' => $request->all(),
-    //         'error_get_last' => error_get_last(),
-    //     ]);
+        //     return response()->json([
+        //         'error' => 'Error de validación',
+        //         'detalle' => $e->errors(),
+        //     ], 422);
+        // } catch (\Throwable $e) {
+        //     Log::error('ERROR GENERAL saveDjFolioAux', [
+        //         'message' => $e->getMessage(),
+        //         'file' => $e->getFile(),
+        //         'line' => $e->getLine(),
+        //         'trace' => $e->getTraceAsString(),
+        //         'request' => $request->all(),
+        //         'error_get_last' => error_get_last(),
+        //     ]);
 
-    //     return response()->json([
-    //         'error'   => 'Error interno al guardar DJ',
-    //         'detalle' => $e->getMessage(),
-    //         'linea'   => $e->getLine(),
-    //         'archivo' => $e->getFile(),
-    //         'debug'   => [
-    //             'error_get_last' => error_get_last(),
-    //         ]
-    //     ], 500);
-    // }
+        //     return response()->json([
+        //         'error'   => 'Error interno al guardar DJ',
+        //         'detalle' => $e->getMessage(),
+        //         'linea'   => $e->getLine(),
+        //         'archivo' => $e->getFile(),
+        //         'debug'   => [
+        //             'error_get_last' => error_get_last(),
+        //         ]
+        //     ], 500);
+        // }
     }
 
 
     // Función para validar si la URL existe
-    private static function urlExiste($url)
+    private static function urlExiste(string $url)
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_NOBODY, true);
@@ -1405,13 +1436,13 @@ class FileController extends Controller{
     // }
 
     public function saveFolioPersona3(Request $request)
-{
-    \Log::info('TEMP DIR: ' . sys_get_temp_dir());
-    \Log::info('_FILES', $_FILES);
-    \Log::info('REQUEST', $request->all());
+    {
+        Log::info('TEMP DIR: ' . sys_get_temp_dir());
+        Log::info('_FILES', $_FILES);
+        Log::info('REQUEST', $request->all());
 
-    return response()->json(['message' => 'Revisado en log.'], 200);
-}
+        return response()->json(['message' => 'Revisado en log.'], 200);
+    }
     public function saveFolioPersona2(Request $request)
     {
         /*$fechaEmision = $request->input('fecha_emision');
@@ -1426,7 +1457,7 @@ class FileController extends Controller{
         } else {
             return response()->json(['success' => false, 'message' => 'Error al guardar el folio'], 500);
         }*/
-        
+
         $cant = 0;
         if ($request->hasFile('imagenes')) {
             foreach ($request->file('imagenes') as $archivo) {
@@ -1435,9 +1466,8 @@ class FileController extends Controller{
                 $cant = $cant + 1;
             }
         }
-    
-        return response()->json("hay ".$cant." archivos");
-        
+
+        return response()->json("hay " . $cant . " archivos");
     }
 
     //GUARDAR EN PUBLIC
@@ -1461,7 +1491,7 @@ class FileController extends Controller{
         // Obtiene las rutas de carpeta según el folio
         $subCarpetas = FileControl::getRutaFolio($codFolio); // devuelve un array de rutas
 
-       
+
         if (count($subCarpetas) !== count($imagenes)) {
             return response()->json([
                 'error' => 'El número de imágenes no coincide con el número de rutas esperadas para el folio.'
@@ -1494,7 +1524,6 @@ class FileController extends Controller{
         return response()->json([
             'message' => 'Folio guardado exitosamente.',
         ]);
-        
     }
 
 
@@ -1572,7 +1601,7 @@ class FileController extends Controller{
         if (empty($codigo)) {
             $inserted = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma);
             if ($inserted) {
-                $lastId = DB::getPdo()->lastInsertId(); 
+                $lastId = DB::getPdo()->lastInsertId();
                 if ($responsable) {
                     DB::table('sw_folio_encargado')->insert([
                         'cod_folio' => $lastId,
@@ -1600,7 +1629,8 @@ class FileController extends Controller{
         //return response()->json(['message' => 'Folios creados']);
     }
 
-    public function disabledFolio(Request $request){
+    public function disabledFolio(Request $request)
+    {
         $codigo = $request->codigo;
         $result = FileControl::disabledFolio($codigo);
 
@@ -1611,7 +1641,8 @@ class FileController extends Controller{
         }
     }
 
-     public function activarFolio(Request $request){
+    public function activarFolio(Request $request)
+    {
         $codigo = $request->codigo;
         $result = FileControl::activarFolio($codigo);
 
@@ -1622,7 +1653,8 @@ class FileController extends Controller{
         }
     }
 
-    public function saveCargo(Request $request){
+    public function saveCargo(Request $request)
+    {
         $descripcion = $request->input('descripcion');
         $nombre = $request->input('nombre');
         $cod_tipo = $request->input('tipoCargo');
@@ -1645,33 +1677,39 @@ class FileController extends Controller{
 
     //-----------------
 
-    public function getFoliosXLegajo($codCliente, $codCargo){
+    public function getFoliosXLegajo($codCliente, $codCargo)
+    {
         $folios = FileControl::getFoliosXLegajo($codCliente, $codCargo);
         return response()->json($folios);
     }
 
-    public function getAreas(){
+    public function getAreas()
+    {
         $areas = FileControl::getAreas();
         return response()->json($areas);
     }
 
-    public function getPosicion(){
+    public function getPosicion()
+    {
         $data = FileControl::getPosicion();
         return response()->json($data);
     }
 
-    public function getGrupo(){
+    public function getGrupo()
+    {
         $data = FileControl::getGrupo();
         return response()->json($data);
     }
 
-    public function getGrupoId($codigo){
+    public function getGrupoId($codigo)
+    {
         //$codigo = $request->input('codigo');
         $data = FileControl::getGrupoId($codigo);
         return response()->json($data);
     }
 
-    public function saveLegajo(Request $request){
+    public function saveLegajo(Request $request)
+    {
         $folios = $request->input('folios');
         $codCliente = $request->input('codCliente');
         $codCargo = $request->input('codCargo');
@@ -1680,7 +1718,7 @@ class FileController extends Controller{
 
         $usuario = session('usuario');
 
-        if($codLegajo != '0'){//MODIFICAR LEGAJO
+        if ($codLegajo != '0') { //MODIFICAR LEGAJO
             $codigos = FileControl::QuitarTodosLegajos($codLegajo, $usuario);
 
             for ($i = 0; $i < count($codigos); $i++) {
@@ -1689,28 +1727,27 @@ class FileController extends Controller{
                 }
             }
 
-            for($i = 0; $i < count($folios); $i++){
+            for ($i = 0; $i < count($folios); $i++) {
                 $folio = $folios[$i];
                 $validar = FileControl::validarLegajo($folio, $codCliente, $codCargo, $codLegajo);
                 FileControl::actualizarNotificacion($folio, $codCliente, $codCargo);
 
-                if(empty($validar)){
+                if (empty($validar)) {
                     FileControl::saveLegajo($folio, $codCliente, $codCargo, $codLegajo, $usuario);
-                }else{
+                } else {
                     FileControl::updateLegajo($folio, $codCliente, $codCargo, $codLegajo, $usuario);
                 }
             }
-        }else{//CREAR NUEVO LEGAJO
+        } else { //CREAR NUEVO LEGAJO
             $legajo = FileControl::saveLegajoMain($nombre);
 
-            for($i = 0; $i < count($folios); $i++){
+            for ($i = 0; $i < count($folios); $i++) {
                 $folio = $folios[$i];
                 $validar = FileControl::validarLegajo($folio, $codCliente, $codCargo, $legajo);
                 FileControl::actualizarNotificacion($folio, $codCliente, $codCargo);
-                if(empty($validar)){
+                if (empty($validar)) {
                     FileControl::saveLegajo($folio, $codCliente, $codCargo, $legajo, $usuario);
                 }
-
             }
         }
     }
@@ -1777,32 +1814,37 @@ class FileController extends Controller{
     }
 
 
-    public function getCargosXCodigo($codigo){
+    public function getCargosXCodigo($codigo)
+    {
         $data = FileControl::getCargosXCodigo($codigo);
         return response()->json($data);
     }
 
 
-    public function eliminarCargo(Request $request){
+    public function eliminarCargo(Request $request)
+    {
         $codigo = $request->input('codigo');
         $data = 0;
         $inserted = FileControl::activarCargo($codigo, $data);
         return response()->json(['message' => 'Cargo modificdo']);
     }
 
-    public function activarCargo(Request $request){
+    public function activarCargo(Request $request)
+    {
         $codigo = $request->input('codigo');
         $data = 1;
         $inserted = FileControl::activarCargo($codigo, $data);
         return response()->json(['message' => 'Cargo modificdo']);
     }
 
-    public function ViewLegajo_comercial(){
+    public function ViewLegajo_comercial()
+    {
 
         return view('file_control.legajos_comercial');
     }
 
-    public function saveSolicitud(Request $request){
+    public function saveSolicitud(Request $request)
+    {
         $codigo = $request->input('codigo');
         $tiene = $request->input('tiene');
         $cargo = $request->input('cargo');
@@ -1846,7 +1888,7 @@ class FileController extends Controller{
                     $p->direccion = $saved->DIRECCION ?? $p->direccion;
                     $p->correo = $saved->PERS_EMAIL ?? $p->correo;
                     $p->fecha_nacimiento = $saved->FECH_NACI ?? $p->fecha_nacimiento;
-                    
+
                     // Campos adicionales que no vienen de reclusol original pero se necesitan en el form
                     $p->departamento = $saved->DEPARTAMENTO;
                     $p->provincia = $saved->PROVINCIA;
@@ -1854,7 +1896,7 @@ class FileController extends Controller{
                     $p->sucamec = $saved->PERS_CONDISCAMEC;
                     $p->licencia_arma = $saved->PERS_NROLICENCIA;
                     $p->grado_instruccion = $saved->PERS_GRADO_INSTRUCCION;
-                    
+
                     // Para depuración
                     $p->source = 'sisolm_web';
                 } else {
@@ -1865,9 +1907,8 @@ class FileController extends Controller{
 
             return response()->json($data);
         } catch (\Exception $e) {
-            \Log::error("Error en getPostulantes: " . $e->getMessage());
+            Log::error("Error en getPostulantes: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
 }
