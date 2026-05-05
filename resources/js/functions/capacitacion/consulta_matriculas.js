@@ -56,12 +56,13 @@ async function cargarFiltros() {
         const selectTipo = document.getElementById('slcFiltroTipoCurso');
 
         if (resTipos.data && Array.isArray(resTipos.data)) {
-            resTipos.data.forEach(tipo => {
-                const option = document.createElement('option');
-                option.value = tipo.codigo;
-                option.textContent = tipo.descripcion;
-                selectTipo.appendChild(option);
-            });
+            // Poblar global para Alpine
+            window.opcionesTipoCurso = resTipos.data.map(tipo => ({
+                codigo: tipo.codigo,
+                descripcion: tipo.descripcion
+            }));
+            // Despachar evento
+            window.dispatchEvent(new CustomEvent('tipos-cursos-loaded', { detail: window.opcionesTipoCurso }));
         }
 
         if (resAreas.data && Array.isArray(resAreas.data)) {
@@ -85,8 +86,19 @@ async function cargarSucursales() {
     try {
         const response = await axios.get('/api/get-sucursales');
         if (response.data.success) {
+            // Poblar global para Alpine
+            window.opcionesSucursales = response.data.sucursales.map(suc => ({
+                codigo: suc.sucursal,
+                descripcion: suc.sucursal
+            }));
+
+            // Despachar evento para Alpine
+            window.dispatchEvent(new CustomEvent('sucursales-loaded', { detail: window.opcionesSucursales }));
+
             const select = document.getElementById('filtroSucursalPersonal');
             if (select) {
+                // Limpiar opciones previas excepto la primera
+                select.innerHTML = '<option value="">Todas las sucursales</option>';
                 response.data.sucursales.forEach((suc) => {
                     const option = document.createElement('option');
                     option.value = suc.sucursal;
@@ -99,6 +111,24 @@ async function cargarSucursales() {
         console.error('Error al cargar sucursales:', error);
     }
 }
+
+/**
+ * Funciones globales para que Alpine.js pueda disparar los filtros
+ */
+window.aplicarFiltroSucursalPersonal = function (sucursal) {
+    const txtBusquedaPersonal = document.getElementById('txtBusquedaPersonal');
+    const termino = txtBusquedaPersonal ? txtBusquedaPersonal.value.trim() : '';
+    buscarPersonal(termino, 100, sucursal);
+};
+
+window.aplicarFiltroSedeMatricula = function (sede) {
+    const select = document.getElementById('slcFiltroSede');
+    if (select) {
+        select.value = sede;
+        // Disparar evento change manualmente para que el listener de JS reaccione
+        select.dispatchEvent(new Event('change'));
+    }
+};
 
 /**
  * Buscar personal (Tab 1)
@@ -137,7 +167,24 @@ function inicializarTablaPersonal() {
         height: "450px",
         langs: {
             "default": {
-                "pagination": { "counter": { "showing": "Mostrando", "of": "de", "rows": "filas", "pages": "páginas" } }
+                "pagination": {
+                    "first": "Primero",
+                    "first_title": "Primera página",
+                    "last": "Último",
+                    "last_title": "Última página",
+                    "prev": "Anterior",
+                    "prev_title": "Página anterior",
+                    "next": "Siguiente",
+                    "next_title": "Página siguiente",
+                    "all": "Todos",
+                    "counter": {
+                        "showing": "Mostrando",
+                        "of": "de",
+                        "rows": "filas",
+                        "pages": "páginas",
+                    },
+                    "page_size": "Filas por página",
+                }
             }
         },
         columns: [
@@ -229,7 +276,7 @@ async function cargarHistorial(personalId, nombrePersonal) {
 function mostrarModalHistorial(nombre, solicitudes) {
     const avatarContainer = document.getElementById('avatarPersonal');
     const nameEl = document.getElementById('nombrePersonal');
-    
+
     // Initials for avatar
     const initials = nombre.split(' ').map(n => n[0]).join('').substring(0, 2);
     if (avatarContainer) avatarContainer.textContent = initials;
@@ -243,44 +290,105 @@ function mostrarModalHistorial(nombre, solicitudes) {
         emptyMsg.classList.remove('hidden');
     } else {
         emptyMsg.classList.add('hidden');
-        
-        container.innerHTML = solicitudes.map(s => {
+
+        container.innerHTML = solicitudes.map((s, index) => {
             const statusFull = s.estado || 'MATRICULADO';
             const colors = {
-                'APROBADO': { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'i-tabler-check', border: 'border-emerald-200' },
-                'COMPLETADO': { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'i-tabler-check', border: 'border-emerald-200' },
-                'REPROBADO': { bg: 'bg-rose-100', text: 'text-rose-700', icon: 'i-tabler-x', border: 'border-rose-200' },
-                'EN_PROGRESO': { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'i-tabler-hourglass', border: 'border-amber-200' },
-                'MATRICULADO': { bg: 'bg-blue-100', text: 'text-blue-700', icon: 'i-tabler-user', border: 'border-blue-200' }
+                'APROBADO': { 
+                    bg: 'bg-emerald-50', 
+                    text: 'text-emerald-700', 
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>', 
+                    border: 'border-emerald-100',
+                    dot: 'bg-emerald-500'
+                },
+                'COMPLETADO': { 
+                    bg: 'bg-emerald-50', 
+                    text: 'text-emerald-700', 
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>', 
+                    border: 'border-emerald-100',
+                    dot: 'bg-emerald-500'
+                },
+                'REPROBADO': { 
+                    bg: 'bg-rose-50', 
+                    text: 'text-rose-700', 
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>', 
+                    border: 'border-rose-100',
+                    dot: 'bg-rose-500'
+                },
+                'EN_PROGRESO': { 
+                    bg: 'bg-amber-50', 
+                    text: 'text-amber-700', 
+                    icon: '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>', 
+                    border: 'border-amber-100',
+                    dot: 'bg-amber-500'
+                },
+                'MATRICULADO': { 
+                    bg: 'bg-blue-50', 
+                    text: 'text-blue-700', 
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M17 11l2 2 4-4"/></svg>', 
+                    border: 'border-blue-100',
+                    dot: 'bg-blue-500'
+                }
             };
 
             const c = colors[statusFull] || colors['MATRICULADO'];
-            const fecha = s.fecha_matricula ? new Date(s.fecha_matricula).toLocaleDateString() : 'N/A';
+            const fecha = s.fecha_matricula ? new Date(s.fecha_matricula).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+            const delay = index * 100;
 
             return `
-                <div class="relative pl-10">
-                    <div class="absolute -left-3.5 flex items-center justify-center w-7 h-7 ${c.bg} ${c.text} rounded-full ring-8 ring-white shadow-sm border ${c.border}">
-                        <i class="${c.icon} text-sm"></i>
+                <div class="relative pl-12 pb-8 group animate-fade-in-up" style="animation-delay: ${delay}ms">
+                    <!-- Timeline Line Pulse Effect -->
+                    <div class="absolute left-3 top-0 h-full w-0.5 bg-gray-100 group-last:bg-transparent"></div>
+                    
+                    <!-- Timeline Dot -->
+                    <div class="absolute left-0 top-1 z-10 flex items-center justify-center w-7 h-7 rounded-full bg-white shadow-lg border-2 ${c.border} transition-transform group-hover:scale-110">
+                        <span class="${c.text}">
+                            ${c.icon}
+                        </span>
                     </div>
-                    <div class="flex flex-col p-4 bg-white border border-gray-100 rounded-2xl shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${fecha}</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c.bg} ${c.text}">${statusFull}</span>
+
+                    <!-- Card Content -->
+                    <div class="relative flex flex-col p-5 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] hover:border-primary/20 hover:-translate-y-1">
+                        <!-- Background Glow -->
+                        <div class="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 ${c.bg} opacity-20 blur-2xl rounded-full"></div>
+
+                        <div class="flex items-center justify-between mb-3 relative z-10">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full ${c.dot} animate-pulse"></div>
+                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">${fecha}</span>
+                            </div>
+                            <span class="px-3 py-1 rounded-xl text-[10px] font-black tracking-wider ${c.bg} ${c.text} border ${c.border} shadow-sm">
+                                ${statusFull}
+                            </span>
                         </div>
-                        <h5 class="text-sm font-bold text-gray-800">${s.nombre_curso}</h5>
-                        <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                            <i class="i-tabler-calendar-event opacity-50"></i>
-                            Programación: ${s.prog_fecha_inicio ? new Date(s.prog_fecha_inicio).toLocaleDateString() : 'N/A'} - ${s.prog_fecha_final ? new Date(s.prog_fecha_final).toLocaleDateString() : 'N/A'}
-                        </p>
+
+                        <h5 class="text-[15px] font-black text-gray-800 leading-tight mb-2 group-hover:text-primary transition-colors">${s.nombre_curso}</h5>
+                        
+                        <div class="flex flex-wrap items-center gap-4 mt-1">
+                            <div class="flex items-center gap-1.5 bg-gray-50/80 px-2.5 py-1.5 rounded-lg border border-gray-100">
+                                <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span class="text-[11px] font-bold text-gray-600">Inicio:</span>
+                                <span class="text-[11px] text-gray-500">${s.prog_fecha_inicio ? new Date(s.prog_fecha_inicio).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 bg-gray-50/80 px-2.5 py-1.5 rounded-lg border border-gray-100">
+                                <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                <span class="text-[11px] font-bold text-gray-600">Fin:</span>
+                                <span class="text-[11px] text-gray-500">${s.prog_fecha_final ? new Date(s.prog_fecha_final).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    // @ts-ignore
-    const modal = new HSOverlay(document.getElementById('modal-historial'));
-    modal.open();
+    try {
+        if (typeof HSOverlay !== 'undefined') {
+            HSOverlay.open('#modal-historial');
+        }
+    } catch (e) {
+        console.error('Error al abrir modal historial:', e);
+    }
 }
 
 function obtenerClaseEstadoHistorial(estado, isBadge = false) {
@@ -416,12 +524,15 @@ function renderizarTablaCursos(cursos) {
         perPageSelect: [8, 15, 25],
         searchable: false,
         sortable: true,
-        fixedHeight: false,
+        fixedHeight: true,
+        columns: [
+            { select: 2, sortable: false }
+        ],
         labels: {
             placeholder: "Buscar...",
-            perPage: "{select} por página",
+            perPage: "{select} Filas por página",
             noRows: "No hay cursos encontrados",
-            info: "Mostrando {start} a {end} de {rows} cursos"
+            info: "Mostrando {start} - {end} de {rows} cursos"
         }
     });
 
@@ -605,14 +716,18 @@ function actualizarEstadisticas(matriculas) {
  * Poblar el select de filtro de Sedes
  */
 function poblarFiltroSede(matriculas) {
+    const sedes = [...new Set(matriculas.map(m => m.sucursal).filter(s => s))].sort();
+    
+    // Despachar evento para Alpine
+    const sedesData = sedes.map(s => ({ codigo: s, descripcion: s }));
+    window.dispatchEvent(new CustomEvent('sedes-matriculas-loaded', { detail: sedesData }));
+
     const select = document.getElementById('slcFiltroSede');
     if (!select) return;
 
     const currentVal = select.value;
     select.innerHTML = '<option value="">🏢 Todas las Sedes</option>';
 
-    const sedes = [...new Set(matriculas.map(m => m.sucursal).filter(s => s))].sort();
-    
     sedes.forEach(sede => {
         const option = document.createElement('option');
         option.value = sede;
@@ -679,11 +794,33 @@ function inicializarTabulator() {
     tabulatorMatriculas = new Tabulator("#tblMatriculas", {
         data: [],
         layout: "fitColumns",
-        height: "550px", 
-        placeholder: "No hay matrículas para mostrar",
+        height: "550px",
         pagination: "local",
         paginationSize: 20,
         paginationSizeSelector: [10, 20, 50, 100],
+        locale: true,
+        langs: {
+            "default": {
+                "pagination": {
+                    "first": "Primero",
+                    "first_title": "Primera página",
+                    "last": "Último",
+                    "last_title": "Última página",
+                    "prev": "Anterior",
+                    "prev_title": "Página anterior",
+                    "next": "Siguiente",
+                    "next_title": "Página siguiente",
+                    "all": "Todos",
+                    "counter": {
+                        "showing": "Mostrando",
+                        "of": "de",
+                        "rows": "filas",
+                        "pages": "páginas",
+                    },
+                    "page_size": "Filas por página",
+                }
+            }
+        },
         columns: [
             {
                 title: "#",
@@ -747,7 +884,7 @@ function inicializarTabulator() {
                 formatter: function (cell) {
                     const estado = cell.getValue() || 'MATRICULADO';
                     const colores = {
-                        'MATRICULADO': 'bg-blue-500 shadow-blue-100',
+                        'MATRICULADO': 'bg-blue-500 shadow-blue-100 py-1 py-2 px-3',
                         'EN_PROGRESO': 'bg-amber-400 shadow-amber-100',
                         'COMPLETADO': 'bg-emerald-500 shadow-emerald-100',
                         'APROBADO': 'bg-emerald-500 shadow-emerald-100',
@@ -993,7 +1130,7 @@ function aplicarFiltrosCombine() {
         filtrados = filtrados.filter(m => {
             const st = m.estado || 'MATRICULADO';
             switch (window.filtroEstadoActivo) {
-                case 'countMatriculados': label = 'MATRICULADOS'; return true; 
+                case 'countMatriculados': label = 'MATRICULADOS'; return true;
                 case 'countEnProgreso': label = 'EN PROGRESO'; return st === 'EN_PROGRESO';
                 case 'countAprobados': label = 'APROBADOS'; return st === 'APROBADO' || st === 'COMPLETADO';
                 case 'countReprobados': label = 'REPROBADOS'; return st === 'REPROBADO';

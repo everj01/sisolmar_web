@@ -44,7 +44,7 @@
    ===================================================== */
 
 .tabulator .tabulator-col-title {
-    text-align: center;
+  text-align: center;
 }
 
 /* =====================================================
@@ -123,45 +123,54 @@ table.datatable tbody tr:hover {
 }
 
 .tabulator-paginator {
-    display: flex;
-    gap: 0.5rem; /* separación entre botones */
-    justify-content: center; /* centra horizontalmente */
-    margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  /* separación entre botones */
+  justify-content: center;
+  /* centra horizontalmente */
+  margin-top: 1rem;
+}
+
+span.tabulator-paginator {
+  align-items: center;
 }
 
 /* Cada botón de página */
 .tabulator-page {
-    display: inline-block;
-    padding: 0.3rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    background-color: #f9f9f9;
-    transition: all 0.2s;
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: all 0.2s;
 }
 
 /* Hover */
 .tabulator-page:hover {
-    background-color: #e2e8f0; /* un gris claro */
+  background-color: #e2e8f0;
+  /* un gris claro */
 }
 
 /* Página activa */
 .tabulator-page.active {
-    background-color: #3b82f6; /* azul */
-    color: white;
-    border-color: #3b82f6;
+  background-color: #3b82f6;
+  /* azul */
+  color: white;
+  border-color: #3b82f6;
 }
 
 
 .fila-no-vigente {
-    background-color: #ffeaea !important;
-    color: #7a2222;
+  background-color: #ffeaea !important;
+  color: #7a2222;
 }
 
 
 /* Selector de cantidad */
 .dataTable-selector {
-  appearance: none;           /* Elimina estilos nativos */
+  appearance: none;
+  /* Elimina estilos nativos */
   -webkit-appearance: none;
   -moz-appearance: none;
 
@@ -442,13 +451,13 @@ table.datatable tbody tr:hover {
     border-radius: 6px;
     padding: 10px;
     background-color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
   .dark .responsive-table tr {
     background-color: #1e293b;
     border-color: #475569;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
   .responsive-table td {
@@ -492,7 +501,8 @@ table.datatable tbody tr:hover {
   height: 44px;
   border-radius: 50%;
   background-color: #ffffff;
-  color: #4338ca; /* Indigo-800 */
+  color: #4338ca;
+  /* Indigo-800 */
   font-weight: 700;
   font-size: 14px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -523,13 +533,14 @@ table.datatable tbody tr:hover {
 
 
 #filtroClienteSelect {
-    position: relative;
-    z-index: 9999;
+  position: relative;
+  z-index: 9999;
 }
 
 
 /* Responsive tweaks */
 @media (max-width: 768px) {
+
   table.datatable th,
   table.datatable td {
     padding: 8px 10px;
@@ -781,7 +792,7 @@ table.datatable tbody tr:hover {
   border-color: #475569 !important;
 }
 
-.dark .hs-overlay > div {
+.dark .hs-overlay>div {
   background-color: #1e293b;
   border-color: #475569;
 }
@@ -814,4 +825,3 @@ table.datatable tbody tr:hover {
 .dark .border-dashed.border-default-300:hover {
   border-color: #60a5fa;
 }
-

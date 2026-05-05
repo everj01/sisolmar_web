@@ -32,7 +32,7 @@ if (archivoInput) {
 
         // Validar peso (1MB máx)
         if (archivo.size > 1024 * 1024) {
-            alert(`El archivo "${archivo.name}" supera 1 MB y fue omitido.`);
+            Swal.fire("Atención", `El archivo "${archivo.name}" supera 1 MB y fue omitido.`, "warning");
             archivoInput.value = "";
             return;
         }
@@ -40,7 +40,7 @@ if (archivoInput) {
         // Validar extensión
         const ext = archivo.name.split('.').pop().toLowerCase();
         if (!["mbz"].includes(ext)) {
-            alert(`Solo se permiten archivos .mbz`);
+            Swal.fire("Atención", `Solo se permiten archivos .mbz`, "warning");
             archivoInput.value = "";
             archivoSeleccionado = null;
             btnAnalizar.disabled = true;
@@ -87,7 +87,7 @@ if (btnAnalizar) {
                 const alpineData = Alpine.$data(formElement);
                 // Sincronizar el total de preguntas detectadas
                 alpineData.preguntasBalotario = data.totalQuestions || 0;
-                
+
                 // Si el usuario no ha puesto una cantidad de preguntas, sugerir que se tomen todas
                 if (!alpineData.cantidadPreguntas || alpineData.cantidadPreguntas == 0) {
                     alpineData.cantidadPreguntas = data.totalQuestions || 0;
@@ -454,8 +454,6 @@ window.renderTablaCursos = function (data) {
 window.gestionCurso = async (op, cod, nombre = '') => {
     if (op === 'EDIT') {
         const dataget = await obtenerCursoXId(cod);
-        // ... (resto del código de edición sin cambios)
-
 
         if (dataget && dataget.success && dataget.curso) {
             const curso = dataget.curso;
@@ -472,7 +470,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 mensaje.classList.add('bg-warning/25', 'text-warning-800');
             }
 
-            if (title) title.textContent = 'Actualizar plantilla';
+            if (title) title.textContent = 'Actualizar curso';
             if (view) view.classList.remove('hidden');
             if (btnDownload) btnDownload.classList.remove('hidden');
 
@@ -484,15 +482,27 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 const alpineData = Alpine.$data(formElement);
 
                 // Sincronizar campos principales con Alpine
+                alpineData.codigo = curso.codigo;
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
+
+                // IMPORTANTE: Sincronizar Area de Conocimiento
                 alpineData.areaConocimiento = curso.area_conocimiento ?? "";
-                alpineData.area = alpineData.areaConocimiento;
+                alpineData.area = curso.area_conocimiento ?? "";
+
+                if (curso.area_conocimiento) {
+                    alpineData.cargarAreasResponsables(curso.area_conocimiento);
+                    alpineData.areaResponsable = curso.area ?? "";
+                }
+
                 alpineData.frecuencia = curso.frecuencia ?? "";
 
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
+                
+                // Moodle
+                alpineData.codMoodleArea = curso.cod_moodle_area ?? ""; // Si existiera en el futuro
 
                 // METADATOS DE SISTEMA
                 alpineData.sys_codigo = curso.codigo ?? "-";
@@ -501,7 +511,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.sys_modificado_por = curso.modificado_por || "-";
                 alpineData.sys_fecha_modificacion = curso.fecha_modificacion || curso.updated_at || "-";
 
-                // Update PAC logic
+                // Update PAC/PCI/PCU logic
                 const esPacCurso = curso.tipo_curso?.descripcion?.toUpperCase().includes('PAC') || false;
                 alpineData.esPAC = esPacCurso;
                 alpineData.sucursalesAsignadas = curso.sucursales || [];
@@ -522,13 +532,14 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
                 alpineData.nota = curso.examen?.nota_minima ?? 0;
                 alpineData.intentos = curso.examen?.intentos ?? 0;
-                alpineData.cantidadPreguntas = curso.examen?.cantidad_preguntas ?? 0;
+
+                // Corregir nombres de campos de preguntas según el modelo
+                alpineData.cantidadPreguntas = curso.examen?.cantidad_preguntas ?? curso.examen?.preguntas_balotario ?? 0;
                 alpineData.preguntasBalotario = curso.examen?.preguntas_balotario ?? 0;
+            } else {
+                console.warn("No se encontró el elemento Alpine formCursoGestion o Alpine no está disponible");
             }
 
-            // Se eliminaron asignaciones manuales por ID para usar x-model de Alpine
-
-            // Lógica para el botón de descarga de plantilla
             if (btnDownload) {
                 if (curso.examen && curso.examen.file_tiene == 1 && curso.examen.file_ruta) {
                     btnDownload.href = `${VITE_URL_APP}/storage/${curso.examen.file_ruta}`;
@@ -545,6 +556,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
             if (btn) btn.classList.add('hidden');
             if (btnEdit) btnEdit.classList.remove('hidden');
+
+            // Abrir el modal
+            window.dispatchEvent(new CustomEvent('open-modal-gestion'));
 
         } else {
             Swal.fire('Advertencia', 'No se encontró el curso', 'warning');
@@ -637,6 +651,15 @@ window.editarFormGestionCurso = (e) => {
     if (!formElement || !window.Alpine) return;
     const alpineData = Alpine.$data(formElement);
 
+    // Validación de campos obligatorios antes de actualizar
+    const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
+    const vacio = camposObligatorios.some(campo => !alpineData[campo]);
+
+    if (vacio) {
+        Swal.fire('Atención', 'Debe completar los campos obligatorios (*)', 'warning');
+        return;
+    }
+
     const data = {
         codigo: alpineData.codigo,
         nombre: alpineData.nombre,
@@ -667,6 +690,8 @@ window.editarFormGestionCurso = (e) => {
     formData.append('es_demanda', alpineData.esDemanda ? 1 : 0);
     formData.append('target_group', alpineData.targetGroup || 'TODOS');
     formData.append('cod_responsable', alpineData.codResponsable);
+    formData.append('area_responsable', alpineData.areaResponsable);
+    formData.append('cod_moodle_area', alpineData.codMoodleArea);
 
 
     //formData.append('archivo', archivoSeleccionado);
@@ -694,11 +719,14 @@ window.editarFormGestionCurso = (e) => {
     })
         .then(async (res) => {
             if (res.status === 200 && res.data.success) {
-                Swal.fire('Éxito', res.data.message || 'Curso registrado correctamente', 'success')
+                // Cerrar el modal antes de mostrar el éxito
+                window.dispatchEvent(new CustomEvent('close-modal-gestion'));
+
+                Swal.fire('Éxito', res.data.message || 'Curso actualizado correctamente', 'success')
 
                 await listarCursos();
 
-                restaurarFormCurso();
+                restaurarFormCurso(false);
             } else {
                 Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
             }
@@ -725,7 +753,7 @@ window.editarFormGestionCurso = (e) => {
         })
 }
 
-window.restaurarFormCurso = () => {
+window.restaurarFormCurso = (abrir = true) => {
     const mensaje = document.getElementById('txtMensajeNuevo');
     const view = document.getElementById('viewEditCreate');
     const btn = document.getElementById('btnGestion');
@@ -743,7 +771,7 @@ window.restaurarFormCurso = () => {
         mensaje.classList.add('bg-primary/25', 'text-primary-800');
         mensaje.classList.remove('bg-warning/25', 'text-warning-800');
     }
-    
+
     if (title) {
         title.textContent = 'Actualizar plantilla';
     }
@@ -753,7 +781,7 @@ window.restaurarFormCurso = () => {
     }
 
     const codEditar = document.getElementById('codGestionEditar');
-    if (codEditar) codEditar.value = '-1';
+    if (codEditar) codEditar.value = '';
 
     // Al llamar a restaurarFormCurso (Crear curso), limpiamos el estado de Alpine
     const formElement = document.querySelector('[x-data="formCursoGestion()"]');
@@ -766,11 +794,18 @@ window.restaurarFormCurso = () => {
 
     if (btn) btn.classList.remove('hidden');
     if (btnEdit) btnEdit.classList.add('hidden');
+
+    // Abrir o cerrar el modal según el parámetro
+    if (abrir) {
+        window.dispatchEvent(new CustomEvent('open-modal-gestion'));
+    } else {
+        window.dispatchEvent(new CustomEvent('close-modal-gestion'));
+    }
 }
 
 window.formCursoGestion = function () {
     return {
-        codigo: '-1',
+        codigo: '',
         // Información de Sistema
         sys_codigo: '-',
         sys_creado_por: '-',
@@ -781,7 +816,32 @@ window.formCursoGestion = function () {
         nombre: '',
         tipoCurso: '',
         areaConocimiento: '',
-        area: '', // 👈 NUEVO: Evitar error "area is not defined"
+        area: '',
+        areaResponsable: '',
+        codMoodleArea: '',
+        areasResponsables: [],
+        lastSistemaId: null,
+        async cargarAreasResponsables(sistemaId) {
+            if (!sistemaId) {
+                this.areasResponsables = [];
+                this.areaResponsable = '';
+                this.lastSistemaId = null;
+                return;
+            }
+
+            if (sistemaId == this.lastSistemaId) return;
+
+            try {
+                this.lastSistemaId = sistemaId;
+                const res = await axios.get(`${VITE_URL_APP}/api/get-areas-por-sistema/${sistemaId}`);
+                if (res.data.success) {
+                    this.areasResponsables = res.data.areas;
+                }
+            } catch (e) {
+                console.error("Error cargando áreas responsables:", e);
+                this.lastSistemaId = null;
+            }
+        },
         areasEncargadas: [],
         frecuencia: '',
         // Removed: nombreExa, descripcion
@@ -797,7 +857,7 @@ window.formCursoGestion = function () {
         codResponsable: '',
         nombreResponsable: '',
 
-        aplicaEvaluacion: true,
+        aplicaEvaluacion: false,
         obligatorioAlta: true, // Siempre true por regla de negocio
         esDemanda: false,      // Retirado
 
@@ -829,7 +889,7 @@ window.formCursoGestion = function () {
                 if (res.data.success) {
                     // Guardamos las preguntas en estado Alpine (no guardamos en BD aún)
                     this.preguntasExamenIA = res.data.preguntas;
-                    
+
                     // Almacenar métricas de consumo y costo
                     if (res.data.metrics) {
                         this.iaMetrics = {
@@ -926,6 +986,9 @@ window.formCursoGestion = function () {
         },
 
         init() {
+            this.$watch('areaConocimiento', (val) => {
+                this.cargarAreasResponsables(val);
+            });
             // Cargar sucursales dinámicamente al iniciar
             axios.get(`${VITE_URL_APP}/api/get-sucursales`)
                 .then(res => {
@@ -981,7 +1044,7 @@ window.formCursoGestion = function () {
         },
 
         limpiarCampos() {
-            this.codigo = '-1';
+            this.codigo = '';
             this.nombre = '';
             this.tipoCurso = '';
             this.areaConocimiento = '';
@@ -989,6 +1052,9 @@ window.formCursoGestion = function () {
             this.tipoResponsable = 'ADMINISTRATIVO_5';
             this.codResponsable = '';
             this.nombreResponsable = '';
+            this.lastSistemaId = null;
+            this.areasResponsables = [];
+            this.codMoodleArea = '';
             this.frecuencia = '';
             this.limiteTiempo = '0';
             this.nota = '0';
@@ -1104,7 +1170,9 @@ window.formCursoGestion = function () {
             }
 
             formData.append('cod_responsable', this.codResponsable);
-            
+            formData.append('area_responsable', this.areaResponsable);
+            formData.append('cod_moodle_area', this.codMoodleArea);
+
             if (this.archivoIA) {
                 formData.append('archivo', this.archivoIA);
             }
@@ -1112,7 +1180,7 @@ window.formCursoGestion = function () {
             axios.post(`${VITE_URL_APP}/api/save-cursos`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
-                    .then(async (res) => {
+                .then(async (res) => {
                     if (res.status === 200 && res.data.success) {
 
                         // Si hay preguntas de IA cargadas, guardarlas en el banco 2026
@@ -1147,7 +1215,7 @@ window.formCursoGestion = function () {
                         this.limpiarCampos();
 
                         await listarCursos();
-                        restaurarFormCurso();
+                        restaurarFormCurso(false);
 
                     } else {
                         Swal.fire('Error', res.data.message || 'No se pudo registrar el curso', 'error')

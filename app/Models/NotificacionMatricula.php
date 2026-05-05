@@ -33,7 +33,7 @@ class NotificacionMatricula extends Model
     /**
      * Crear notificación de proceso completado exitosamente
      */
-    public static function crearNotificacionExitosa($usuarioId, $cursoId, $nombreCurso, $totalPersonas)
+    public static function crearNotificacionExitosa(int $usuarioId, int $cursoId, string $nombreCurso, int $totalPersonas)
     {
         return self::create([
             'usuario_id' => $usuarioId,
@@ -53,7 +53,7 @@ class NotificacionMatricula extends Model
     /**
      * Crear notificación de error por conexión
      */
-    public static function crearNotificacionErrorConexion($usuarioId, $cursoId, $nombreCurso, $fallidos)
+    public static function crearNotificacionErrorConexion(int $usuarioId, int $cursoId, string $nombreCurso, int $fallidos)
     {
         return self::create([
             'usuario_id' => $usuarioId,
@@ -73,7 +73,7 @@ class NotificacionMatricula extends Model
     /**
      * Crear notificación de múltiples fallos
      */
-    public static function crearNotificacionMultiplesFallos($usuarioId, $cursoId, $nombreCurso, $totalPersonas, $enviados, $fallidos)
+    public static function crearNotificacionMultiplesFallos(int $usuarioId, int $cursoId, string $nombreCurso, int $totalPersonas, int $enviados, int $fallidos)
     {
         return self::create([
             'usuario_id' => $usuarioId,
@@ -93,7 +93,7 @@ class NotificacionMatricula extends Model
     /**
      * Obtener notificaciones no leídas de un usuario
      */
-    public static function obtenerNoLeidas($usuarioId)
+    public static function obtenerNoLeidas(int $usuarioId)
     {
         return self::where('usuario_id', $usuarioId)
             ->where('leido', 0) // SQL Server usa 0 para false
@@ -104,7 +104,7 @@ class NotificacionMatricula extends Model
     /**
      * Marcar notificación como leída
      */
-    public static function marcarComoLeida($codigo)
+    public static function marcarComoLeida(int $codigo)
     {
         return self::where('codigo', $codigo)->update(['leido' => 1]); // SQL Server usa 1 para true
     }
@@ -112,7 +112,7 @@ class NotificacionMatricula extends Model
     /**
      * Marcar todas las notificaciones de un usuario como leídas
      */
-    public static function marcarTodasComoLeidas($usuarioId)
+    public static function marcarTodasComoLeidas(int $usuarioId)
     {
         return self::where('usuario_id', $usuarioId)
             ->where('leido', 0) // SQL Server usa 0 para false

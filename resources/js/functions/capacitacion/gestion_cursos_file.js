@@ -15,7 +15,7 @@ archivoInput.addEventListener("change", (e) => {
 
     // Validar peso (1MB máx)
     if (archivo.size > 1024 * 1024) {
-        alert(`El archivo "${archivo.name}" supera 1 MB y fue omitido.`);
+        Swal.fire("Atención", `El archivo "${archivo.name}" supera 1 MB y fue omitido.`, "warning");
         archivoInput.value = "";
         return;
     }
@@ -23,7 +23,7 @@ archivoInput.addEventListener("change", (e) => {
     // Validar extensión
     const ext = archivo.name.split('.').pop().toLowerCase();
     if (!["doc", "docx"].includes(ext)) {
-        alert(`Solo se permiten archivos .doc o .docx`);
+        Swal.fire("Atención", `Solo se permiten archivos .doc o .docx`, "warning");
         archivoInput.value = "";
         return;
     }

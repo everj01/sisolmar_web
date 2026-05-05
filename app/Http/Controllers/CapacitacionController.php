@@ -13,6 +13,8 @@ use App\Models\FileControl;
 use App\Models\TipoCurso;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 use App\Models\ExamenCurso;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -32,7 +34,7 @@ class CapacitacionController extends Controller
 {
 
 
-    public function index(Request $request, $op = null)
+    public function index(Request $request, ?string $op = null): JsonResponse
     {
         // Query base - solo seleccionamos columnas necesarias para la lista
         // El eager loading no es necesario aquí porque no devolvemos datos de relaciones
@@ -72,16 +74,14 @@ class CapacitacionController extends Controller
                 'frecuencia' => $curso->frecuencia,
                 'proyeccion_anios' => $curso->proyeccion_anios,
                 'tiene_vigente' => in_array($curso->codigo, $cursosVigentes),
+                'codigo_moodle' => $curso->codigo_moodle,
             ];
         });
 
         return response()->json($cursos);
     }
 
-
-    // ...existing code...
-
-    public function getCursoExamenXId($id)
+    public function getCursoExamenXId(int $id): JsonResponse
     {
         $curso = Cursos::with(['examen', 'tipoCurso'])->where('codigo', $id)->firstOrFail();
 
@@ -89,7 +89,7 @@ class CapacitacionController extends Controller
         $sucursales = DB::table('sw_curso_sucursales')
             ->where('curso_codigo', $curso->codigo)
             ->pluck('sucursal');
-            
+
         $curso->sucursales = $sucursales;
 
         // Resolver nombre del responsable si existe (Fuente Oficial si_solm)
@@ -99,7 +99,7 @@ class CapacitacionController extends Controller
                 FROM si_solm.dbo.PERSONAL 
                 WHERE CODI_PERS = ?
             ", [$curso->cod_responsable]);
-            
+
             $curso->nombre_responsable = $resp->nombre ?? 'No encontrado';
         } else {
             $curso->nombre_responsable = '';
@@ -111,16 +111,18 @@ class CapacitacionController extends Controller
         ]);
     }
 
-    public function updateCurso(Request $request){
+    public function updateCurso(Request $request): JsonResponse
+    {
 
         $validator = Validator::make($request->all(), [
             'nombre' => 'required|string|max:100',
-            'tipo_curso'=> 'required|integer|exists:sw_capacitacion_tipo_curso,codigo',
-            'area_conocimiento'=> 'required|exists:sw_capacitacion_areas,codigo',
-            'es_periodico'=> 'required|integer|in:0,1',
-            'frecuencia'=> 'nullable|string',
-            'proyeccion_anios'=> 'nullable|integer',
-            'fechas_generadas'=> 'nullable|string',
+            'tipo_curso' => 'required|integer|exists:sw_capacitacion_tipo_curso,codigo',
+            'area_conocimiento' => 'required|exists:sw_capacitacion_areas,codigo',
+            'area_responsable' => 'nullable|integer',
+            'es_periodico' => 'required|integer|in:0,1',
+            'frecuencia' => 'nullable|string',
+            'proyeccion_anios' => 'nullable|integer',
+            'fechas_generadas' => 'nullable|string',
             'nombre_exa' => 'nullable|string',
             'descripcion' => 'nullable|string',
             'tiempo' => 'nullable|required_if:aplica_evaluacion,1|integer',
@@ -131,6 +133,7 @@ class CapacitacionController extends Controller
             'obligatorio_alta' => 'nullable|integer|in:0,1',
             'cod_responsable' => 'nullable|string|max:20',
             'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
+            'cod_moodle_area' => 'nullable|integer',
         ]);
 
 
@@ -151,13 +154,27 @@ class CapacitacionController extends Controller
             $periodicidadVal = 0;
             if ($request->input('es_periodico') == 1) {
                 switch ($request->input('frecuencia')) {
-                    case 'MENSUAL': $periodicidadVal = 12; break;
-                    case 'BIMESTRAL': $periodicidadVal = 6; break;
-                    case 'TRIMESTRAL': $periodicidadVal = 4; break;
-                    case 'CUATRIMESTRAL': $periodicidadVal = 3; break;
-                    case 'SEMESTRAL': $periodicidadVal = 2; break;
-                    case 'ANUAL': $periodicidadVal = 1; break;
-                    default: $periodicidadVal = 0; break;
+                    case 'MENSUAL':
+                        $periodicidadVal = 12;
+                        break;
+                    case 'BIMESTRAL':
+                        $periodicidadVal = 6;
+                        break;
+                    case 'TRIMESTRAL':
+                        $periodicidadVal = 4;
+                        break;
+                    case 'CUATRIMESTRAL':
+                        $periodicidadVal = 3;
+                        break;
+                    case 'SEMESTRAL':
+                        $periodicidadVal = 2;
+                        break;
+                    case 'ANUAL':
+                        $periodicidadVal = 1;
+                        break;
+                    default:
+                        $periodicidadVal = 0;
+                        break;
                 }
             }
 
@@ -165,6 +182,7 @@ class CapacitacionController extends Controller
                 'nombre' => $request->nombre,
                 'tipo_curso' => $request->tipo_curso,
                 'area_conocimiento' => $request->area_conocimiento,
+                'area' => $request->area_responsable ?? $request->area_conocimiento, // Persistir área específica si existe
                 'periodicidad' => $periodicidadVal,
                 'es_periodico' => $request->input('es_periodico'),
                 'frecuencia' => $request->input('frecuencia'),
@@ -175,7 +193,7 @@ class CapacitacionController extends Controller
                 'target_group' => $request->input('target_group', 'TODOS'),
                 'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
             ]);
-            
+
             // AUTOGENERAR PROGRAMACIONES SI VIENEN NUEVAS
             if ($request->has('fechas_generadas')) {
                 $fechasArray = json_decode($request->input('fechas_generadas'), true);
@@ -198,7 +216,7 @@ class CapacitacionController extends Controller
                                 'tipo'          => 'REGULAR',
                                 'fecha_inicio'  => $fechaItem['inicio'] . 'T00:00:00.000',
                                 'fecha_final'   => $fechaItem['final'] . 'T23:59:59.000',
-                                'fecha_creacion'=> date('Y-m-d\TH:i:s.000'),
+                                'fecha_creacion' => date('Y-m-d\TH:i:s.000'),
                                 'habilitado'    => 1,
                             ]);
                         }
@@ -208,7 +226,7 @@ class CapacitacionController extends Controller
 
             // ACTUALIZAR SUCURSALES (Borrar anteriores e insertar nuevas)
             DB::table('sw_curso_sucursales')->where('curso_codigo', $curso->codigo)->delete();
-            
+
             if ($request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
                 $sucursales = $request->sucursales_asignadas;
                 foreach ($sucursales as $sucursal) {
@@ -232,6 +250,8 @@ class CapacitacionController extends Controller
                 'tiempo' => (int) ($request->tiempo ?? 0),
                 'nota_minima' => (int) ($request->nota ?? 0),
                 'intentos' => (int) ($request->intentos ?? 0),
+                'cantidad_preguntas' => (int) ($request->cantidad_preguntas ?? 0),
+                'preguntas_balotario' => (int) ($request->preguntas_balotario ?? 0),
                 'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
             ]);
 
@@ -243,7 +263,11 @@ class CapacitacionController extends Controller
                 }
 
                 if ($archivo->getClientOriginalExtension() !== 'mbz') {
-                    return back()->withErrors(['archivo' => 'El archivo debe ser .mbz']);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El archivo debe ser .mbz',
+                        'errors' => ['archivo' => ['El archivo debe ser .mbz']]
+                    ], 422);
                 }
 
                 $tienePlantilla = true;
@@ -288,10 +312,9 @@ class CapacitacionController extends Controller
                 'success' => true,
                 'message' => 'Curso actualizado correctamente'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             // SEGURIDAD: No exponer información técnica al frontend en producción
             // Los detalles del error se guardan en logs para debugging interno
             // Antes exponía $e->getMessage() y $e->getLine() que revelan estructura de BD y rutas
@@ -308,7 +331,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function updateCursoHab(Request $request, $codigo)
+    public function updateCursoHab(Request $request, int $codigo): JsonResponse
     {
         $curso = Cursos::where('codigo', $codigo)->firstOrFail();
 
@@ -328,7 +351,7 @@ class CapacitacionController extends Controller
         ]);
     }
 
-    public function destroyCurso($codigo)
+    public function destroyCurso(int $codigo): JsonResponse
     {
         DB::beginTransaction();
         try {
@@ -352,7 +375,7 @@ class CapacitacionController extends Controller
             // 4. Delete Asistencias / Matriculados / Notas ? 
             // Esto asume que si estaba eliminado, no tiene matriculas o si las tiene se borran (normalmente dependen del codigo_programacion).
             // Lo más seguro es que si el usuario lo puede borrar es porque recién lo creó o es un error.
-            
+
             // 5. Delete Curso base
             $curso->delete();
 
@@ -375,17 +398,18 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function saveCurso(Request $request)
+    public function saveCurso(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
                 'nombre' => 'required|string|max:100',
-                'tipo_curso'=> 'required|integer|exists:sw_capacitacion_tipo_curso,codigo',
-                'area_conocimiento'=> 'required|exists:sw_capacitacion_areas,codigo',
-                'es_periodico'=> 'required|integer|in:0,1',
-                'frecuencia'=> 'nullable|string',
-                'proyeccion_anios'=> 'nullable|integer',
-                'fechas_generadas'=> 'nullable|string',
+                'tipo_curso' => 'required|integer|exists:sw_capacitacion_tipo_curso,codigo',
+                'area_conocimiento' => 'required|exists:sw_capacitacion_areas,codigo',
+                'area_responsable' => 'nullable|integer',
+                'es_periodico' => 'required|integer|in:0,1',
+                'frecuencia' => 'nullable|string',
+                'proyeccion_anios' => 'nullable|integer',
+                'fechas_generadas' => 'nullable|string',
                 'nombre_exa' => 'nullable|string',
                 'descripcion' => 'nullable|string',
                 'tiempo' => 'nullable|required_if:aplica_evaluacion,1|integer',
@@ -398,6 +422,7 @@ class CapacitacionController extends Controller
                 'obligatorio_alta' => 'nullable|integer|in:0,1',
                 'cod_responsable' => 'nullable|string|max:20',
                 'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
+                'cod_moodle_area' => 'nullable|integer',
             ]);
 
             if ($validator->fails()) {
@@ -421,13 +446,27 @@ class CapacitacionController extends Controller
             $periodicidadVal = 0;
             if ($request->input('es_periodico') == 1) {
                 switch ($request->input('frecuencia')) {
-                    case 'MENSUAL': $periodicidadVal = 12; break;
-                    case 'BIMESTRAL': $periodicidadVal = 6; break;
-                    case 'TRIMESTRAL': $periodicidadVal = 4; break;
-                    case 'CUATRIMESTRAL': $periodicidadVal = 3; break;
-                    case 'SEMESTRAL': $periodicidadVal = 2; break;
-                    case 'ANUAL': $periodicidadVal = 1; break;
-                    default: $periodicidadVal = 0; break;
+                    case 'MENSUAL':
+                        $periodicidadVal = 12;
+                        break;
+                    case 'BIMESTRAL':
+                        $periodicidadVal = 6;
+                        break;
+                    case 'TRIMESTRAL':
+                        $periodicidadVal = 4;
+                        break;
+                    case 'CUATRIMESTRAL':
+                        $periodicidadVal = 3;
+                        break;
+                    case 'SEMESTRAL':
+                        $periodicidadVal = 2;
+                        break;
+                    case 'ANUAL':
+                        $periodicidadVal = 1;
+                        break;
+                    default:
+                        $periodicidadVal = 0;
+                        break;
                 }
             }
 
@@ -436,6 +475,7 @@ class CapacitacionController extends Controller
                 'codigo_curso' => $newCode,
                 'tipo_curso' => $request->tipo_curso,
                 'area_conocimiento' => $request->area_conocimiento,
+                'area' => $request->area_responsable ?? $request->area_conocimiento, // Persistir área específica si existe
                 'periodicidad' => $periodicidadVal,
                 'es_periodico' => $request->input('es_periodico', 0),
                 'frecuencia' => $request->input('frecuencia'),
@@ -455,7 +495,6 @@ class CapacitacionController extends Controller
                 ], 500);
             }
 
-            // GUARDAR SUCURSALES ASIGNADAS (Lógica PAC)
             if ($request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
                 $sucursales = $request->sucursales_asignadas;
                 foreach ($sucursales as $sucursal) {
@@ -473,13 +512,18 @@ class CapacitacionController extends Controller
             $tipoArchivo = null;
             $extensionArchivo = null;
             $rutaArchivo = null;
+            $nombreArchivoFinal = null;
             $baseNombre = '';
 
             if ($request->hasFile('archivo')) {
                 $archivo = $request->file('archivo');
 
                 if ($archivo->getClientOriginalExtension() !== 'mbz') {
-                    return back()->withErrors(['archivo' => 'El archivo debe ser .mbz']);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El archivo debe ser .mbz',
+                        'errors' => ['archivo' => ['El archivo debe ser .mbz']]
+                    ], 422);
                 }
 
                 $tienePlantilla = true;
@@ -509,7 +553,6 @@ class CapacitacionController extends Controller
                 $rutaArchivo = $archivo->storeAs($carpeta, $nombreArchivoFinal, 'public');
             }
 
-            // Auto-generar nombre si no viene (usuario eliminó campo)
             $nombreExamen = $request->nombre_exa ?? ("Examen de " . $request->nombre);
 
             $examen = ExamenCurso::create([
@@ -525,6 +568,8 @@ class CapacitacionController extends Controller
                 'file_tipo' => $tipoArchivo,
                 'file_nombre_original' => $nombreArchivoOriginal,
                 'intentos' => (int) ($request->intentos ?? 0),
+                'cantidad_preguntas' => (int) ($request->cantidad_preguntas ?? 0),
+                'preguntas_balotario' => (int) ($request->preguntas_balotario ?? 0),
                 'fecha_creacion' => date('Y-m-d\TH:i:s.000')
             ]);
 
@@ -536,7 +581,6 @@ class CapacitacionController extends Controller
                 ], 500);
             }
 
-            // AUTOGENERAR PROGRAMACIONES SI EXISTEN (FASE 3)
             if ($request->has('fechas_generadas')) {
                 $fechasArray = json_decode($request->input('fechas_generadas'), true);
                 if (json_last_error() === JSON_ERROR_NONE && is_array($fechasArray)) {
@@ -552,11 +596,31 @@ class CapacitacionController extends Controller
                             'tipo'          => 'REGULAR',
                             'fecha_inicio'  => $fechaItem['inicio'] . 'T00:00:00.000',
                             'fecha_final'   => $fechaItem['final'] . 'T23:59:59.000',
-                            'fecha_creacion'=> date('Y-m-d\TH:i:s.000'),
+                            'fecha_creacion' => date('Y-m-d\TH:i:s.000'),
                             'habilitado'    => 1,
                         ]);
                     }
                 }
+            }
+
+            try {
+                $nombre = $request->input('nombre');
+                $codigo = $curso->codigo;
+                $codMoodleArea = $request->input('cod_moodle_area');
+
+                $resMoodle = DB::connection('mysql_grupoihb')->select(
+                    "SELECT F_COURSE_crear(?, ?, ?) AS course_id",
+                    [$nombre, $codigo, $codMoodleArea]
+                );
+
+                if (!empty($resMoodle) && isset($resMoodle[0]->course_id)) {
+                    $curso->update(['codigo_moodle' => $resMoodle[0]->course_id]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error al ejecutar F_COURSE_crear en MySQL Moodle', [
+                    'error' => $e->getMessage(),
+                    'newCode' => $newCode ?? null
+                ]);
             }
 
             DB::commit();
@@ -565,16 +629,15 @@ class CapacitacionController extends Controller
                 'message' => 'Curso y examen registrados correctamente.',
                 'success' => true
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
-            
+
             Log::error('Error al registrar curso', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al registrar el curso. Por favor, contacte al administrador.'
@@ -582,8 +645,7 @@ class CapacitacionController extends Controller
         }
     }
 
-
-    public function saveProgramacion(Request $request)
+    public function saveProgramacion(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -625,7 +687,7 @@ class CapacitacionController extends Controller
             // Contar programaciones NO eliminadas (habilitado=1) en ese AÑO
             $countProgramaciones = CursoProgramacion::where('cod_cursos', $curso->codigo)
                 ->where('habilitado', 1)
-                ->whereYear('fecha_inicio', $targetYear) 
+                ->whereYear('fecha_inicio', $targetYear)
                 ->count();
 
             // Si es un curso NUEVO, el count es 0. Si ya existen N, y N >= Límite, error.
@@ -667,7 +729,7 @@ class CapacitacionController extends Controller
                 'tipo'          => $request->tipo,
                 'fecha_inicio'  => $fechaInicio,
                 'fecha_final'   => $fechaFinal,
-                'fecha_creacion'=> now()->format('Y-m-d\TH:i:s.000'),
+                'fecha_creacion' => now()->format('Y-m-d\TH:i:s.000'),
                 'habilitado'    => (int) $request->habilitado,
             ]);
 
@@ -682,7 +744,6 @@ class CapacitacionController extends Controller
                 'message' => 'Programación registrada correctamente.',
                 'success' => true
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Error saveProgramacion', ['msg' => $e->getMessage(), 'line' => $e->getLine()]);
@@ -690,7 +751,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function updateProgramacion(Request $request)
+    public function updateProgramacion(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -762,7 +823,6 @@ class CapacitacionController extends Controller
                 'message' => 'Programación actualizada correctamente.',
                 'success' => true
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Error updateProgramacion', ['msg' => $e->getMessage(), 'line' => $e->getLine()]);
@@ -770,7 +830,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function updateProgramacionHab(Request $request, $codigo)
+    public function updateProgramacionHab(Request $request, int $codigo): JsonResponse
     {
         $programacion = CursoProgramacion::where('codigo', $codigo)->firstOrFail();
 
@@ -821,7 +881,7 @@ class CapacitacionController extends Controller
 
     // }
 
-    public function getProgramacionXId($id)
+    public function getProgramacionXId(int $id): JsonResponse
     {
         $programacion = CursoProgramacion::where('codigo', $id)->first();
 
@@ -838,7 +898,7 @@ class CapacitacionController extends Controller
         ]);
     }
 
-    public function getCursoProgramacionXId($id)
+    public function getCursoProgramacionXId(int $id): JsonResponse
     {
         $curso = Cursos::where('codigo', $id)->first();
 
@@ -883,13 +943,13 @@ class CapacitacionController extends Controller
         ]);
     }
 
-    public function getAreas()
+    public function getAreas(): JsonResponse
     {
         $areas = CapacitacionAreas::where('habilitado', 1)->get();
         return response()->json($areas);
     }
 
-    public function getClientesForPAC()
+    public function getClientesForPAC(): JsonResponse
     {
         $raw = \Illuminate\Support\Facades\DB::select('EXEC SW_LISTAR_CLIENTES');
         $clientes = collect($raw)->map(function ($row) {
@@ -901,25 +961,23 @@ class CapacitacionController extends Controller
         return response()->json($clientes);
     }
 
-    public function getEmpresasList()
+    public function getEmpresasList(): JsonResponse
     {
         $empresas = \Illuminate\Support\Facades\DB::table('sw_MIGRA_EMPRESA')
-                    ->select('EMPR_CODIGO as codigo', 'Razon_Social as descripcion')
-                    ->whereIn('EMPR_CODIGO', ['01', '02', '03', '04', '05', '06'])
-                    ->orderBy('EMPR_CODIGO')
-                    ->get();
+            ->select('EMPR_CODIGO as codigo', 'Razon_Social as descripcion')
+            ->whereIn('EMPR_CODIGO', ['01', '02', '03', '04', '05', '06'])
+            ->orderBy('EMPR_CODIGO')
+            ->get();
         return response()->json($empresas);
     }
 
 
-    public function storeProgramacionManual(Request $request)
+    public function storeProgramacionManual(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
                 'cod_cursos'   => 'required|integer|exists:sw_cursos,codigo',
-                'fecha_inicio' => 'required|date_format:Y-m', // Recibe YYYY-MM
-                'dnis'         => 'nullable|array',
-                'dnis.*'       => 'string|max:20',
+                'fecha_inicio' => 'required|date_format:Y-m',
             ]);
 
             if ($validator->fails()) {
@@ -933,143 +991,32 @@ class CapacitacionController extends Controller
             DB::beginTransaction();
 
             $curso = Cursos::findOrFail($request->cod_cursos);
-            
-            // 1. Preparar fechas (Desde el 1ero al último del mes seleccionado)
+
             $fechaBase = Carbon::parse($request->fecha_inicio . '-01');
             $periodo = $fechaBase->format('Y-m');
             $fInicio = $fechaBase->startOfMonth()->format('Y-m-d\TH:i:s.000');
             $fFinal  = $fechaBase->endOfMonth()->format('Y-m-d\TH:i:s.000');
 
-            // 2. Crear Programación
             $lastCod = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
             $newCode = $lastCod ? str_pad(intval($lastCod->codigo_programacion) + 1, 4, '0', STR_PAD_LEFT) : '1001';
 
-            $programacion = CursoProgramacion::create([
+            CursoProgramacion::create([
                 'codigo_programacion' => (string) $newCode,
                 'cod_cursos'    => (int) $curso->codigo,
                 'periodo'       => $periodo,
                 'tipo'          => 'REGULAR',
                 'fecha_inicio'  => $fInicio,
                 'fecha_final'   => $fFinal,
-                'fecha_creacion'=> now()->format('Y-m-d\TH:i:s.000'),
+                'fecha_creacion' => now()->format('Y-m-d\TH:i:s.000'),
                 'habilitado'    => 1,
             ]);
 
-            // 3. Obtener Personal para Matricular
-            // Logic: 
-            // a. Si hay DNIs manuales ($request->dnis), matricular esos específicamente.
-            // b. Si no hay DNIs, aplicar la segmentación automática.
-            
-            // 3. Obtener Personal para Matricular (Lógica Combinada y Robusta)
-            $allPersonalIds = [];
-
-            // --- A. Criterios Automáticos según Tipo de Curso ---
-            $autoIds = [];
-            if ($request->input('incluir_automatico', true)) {
-                $qAuto = DB::table('sw_MIGRA_PERSONAL')->where('ESTA_ACTI', 1);
-                if ($curso->tipo_curso == 5) { // PCE (Plan Estándar)
-                    // Se matricula a TODOS los activos
-                } 
-                elseif ($curso->tipo_curso == 6) { // PCU (Plan del Usuario - Cliente)
-                    $sucursalesAsignadas = DB::table('sw_curso_sucursales')->where('curso_codigo', $curso->codigo)->pluck('sucursal')->toArray();
-                    if (!empty($sucursalesAsignadas)) {
-                        $legacyCodes = DB::table('sw_clientes')->whereIn('codigo', $sucursalesAsignadas)->pluck('cod_legacy')->filter()->toArray();
-                        if (!empty($legacyCodes)) {
-                            $allSucs = [];
-                            foreach ($legacyCodes as $lc) {
-                                $extSucs = DB::connection('sqlsrv_controlclientes')->select('EXEC USP_LISTAR_SUCURSALES_X_CLIENTE :cod_legacy', ['cod_legacy' => $lc]);
-                                foreach ($extSucs as $s) if (isset($s->codigo_sucursal)) $allSucs[] = trim($s->codigo_sucursal);
-                            }
-                            if (!empty($allSucs)) $qAuto->whereIn('SUCU_CODIGO', array_unique($allSucs));
-                            else $qAuto->where('CODI_PERS', '0');
-                        } else { $qAuto->where('CODI_PERS', '0'); }
-                    } else { $qAuto->where('CODI_PERS', '0'); }
-                }
-                elseif ($curso->tipo_curso == 7) { // PCI (Plan de Capacitación Interno - Áreas)
-                    $areasAsignadas = DB::table('sw_capacitacion_areas')->where('cod_cursos', $curso->codigo)->pluck('cod_area')->toArray();
-                    if (!empty($areasAsignadas)) $qAuto->whereIn('CODI_AREA', $areasAsignadas);
-                    else $qAuto->where('CODI_PERS', '0');
-                }
-                $autoIds = $qAuto->pluck('CODI_PERS')->toArray();
-            }
-
-            // --- B. Filtros Específicos de la UI (Sede, Cliente, Área) ---
-            $qFiltros = DB::table('sw_MIGRA_PERSONAL')->where('ESTA_ACTI', 1);
-            $usoFiltros = false;
-            
-            if ($request->filled('sucursal_codigo') && $request->sucursal_codigo != 'null') {
-                $qFiltros->where('SUCU_CODIGO', $request->sucursal_codigo);
-                $usoFiltros = true;
-            }
-            
-            if ($request->filled('area_codigo') && $request->area_codigo != 'null') {
-                $qFiltros->where('CODI_AREA', $request->area_codigo);
-                $usoFiltros = true;
-            }
-
-            if ($request->filled('cliente_id') && $request->cliente_id != 'null') {
-                $clie = DB::table('sw_clientes')->where('codigo', $request->cliente_id)->first();
-                if ($clie && $clie->cod_legacy) {
-                    $clieSucs = [];
-                    $extSucs = DB::connection('sqlsrv_controlclientes')->select('EXEC USP_LISTAR_SUCURSALES_X_CLIENTE :cod_legacy', ['cod_legacy' => $clie->cod_legacy]);
-                    foreach ($extSucs as $s) if (isset($s->codigo_sucursal)) $clieSucs[] = trim($s->codigo_sucursal);
-                    
-                    if (!empty($clieSucs)) {
-                        $qFiltros->whereIn('SUCU_CODIGO', $clieSucs);
-                        $usoFiltros = true;
-                    }
-                }
-            }
-            $filtroIds = $usoFiltros ? $qFiltros->pluck('CODI_PERS')->toArray() : [];
-
-            // --- C. IDs Manuales (Lista de DNIs) ---
-            $manualIds = [];
-            if ($request->has('dnis') && !empty($request->dnis)) {
-                 $manualIds = DB::table('sw_MIGRA_PERSONAL')
-                    ->whereIn('NRO_DOCU_IDEN', $request->dnis)
-                    ->pluck('CODI_PERS')
-                    ->toArray();
-            }
-
-            // --- D. Merge Final y Único ---
-            // Si es un curso PCE (global), los filtros y manuales son redundantes pero permitidos.
-            // Si es PCU/PCI, sumamos los automáticos + los filtros extra + los DNIs pegados.
-            $personalIds = array_unique(array_merge($autoIds, $filtroIds, $manualIds));
-
-            if (empty($personalIds)) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se encontró personal que cumpla con los criterios seleccionados para este ciclo.'
-                ], 404);
-            }
-
-            if (empty($personalIds)) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se encontró personal que cumpla con los criterios de segmentación para este curso.'
-                ], 404);
-            }
-
-            // 4. Despachar Matriculación en Lotes
-            $usuarioId = Auth::id();
-            // Usamos el job existente para procesar la matriculación masiva.
-            // Este job maneja la duplicidad y creación de registros en sw_matriculas.
-            \App\Jobs\DispatchMatriculaBatchJob::dispatch((int)$curso->codigo, (string)$programacion->codigo_programacion, $personalIds, (int)$usuarioId);
-
             DB::commit();
-
-            $msg = 'Apertura de ciclo exitosa. ';
-            $msg .= $request->has('dnis') 
-                ? 'Se están matriculando los DNIs proporcionados.' 
-                : 'Se está matriculando al personal (' . $curso->target_group . ') según el Plan de Capacitación 2026.';
 
             return response()->json([
                 'success' => true,
-                'message' => $msg
+                'message' => 'Programación creada exitosamente. Ahora puede matricular personal desde la pestaña de Matrículas.'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error storeProgramacionManual', ['error' => $e->getMessage(), 'line' => $e->getLine()]);
@@ -1080,14 +1027,14 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function getTipoCursos()
+    public function getTipoCursos(): JsonResponse
     {
         $tipoCursos = CapacitacionTipoCurso::where('habilitado', 1)->get();
         return response()->json($tipoCursos);
     }
 
 
-    public function analizarPlantilla(Request $request)
+    public function analizarPlantilla(Request $request): JsonResponse
     {
         if (!$request->hasFile('plantilla')) {
             return response()->json([
@@ -1119,9 +1066,9 @@ class CapacitacionController extends Controller
                     @unlink($tarPath);
                 } catch (\Throwable $e) {
                 }
-            } 
+            }
 
-            if ($ext === 'zip' || !File::isDirectory($tempPath . '/course') ) {
+            if ($ext === 'zip' || !File::isDirectory($tempPath . '/course')) {
                 $zip = new \ZipArchive;
                 if ($zip->open($filePath) === true) {
                     $zip->extractTo($tempPath);
@@ -1129,7 +1076,7 @@ class CapacitacionController extends Controller
                 }
             }
 
-            $findFile = function(string $base, string $name) {
+            $findFile = function (string $base, string $name) {
                 $rii = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($base, \FilesystemIterator::SKIP_DOTS));
                 foreach ($rii as $f) {
                     if ($f->isFile() && $f->getFilename() === $name) {
@@ -1190,7 +1137,7 @@ class CapacitacionController extends Controller
                 foreach ($info->contents->activities->activity as $act) {
                     $mod = (string) $act->modulename;
                     if ($mod === '') $mod = 'other';
-                    
+
                     $nombre = $mapaTipos[$mod] ?? ucfirst($mod);
 
                     if (!isset($activityStats[$nombre])) {
@@ -1243,7 +1190,7 @@ class CapacitacionController extends Controller
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al procesar la plantilla. Verifique el archivo e inténtelo nuevamente.'
@@ -1255,7 +1202,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function saveMatricula(Request $request)
+    public function saveMatricula(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'cursoId'      => 'required|integer|exists:sw_cursos,codigo',
@@ -1275,7 +1222,7 @@ class CapacitacionController extends Controller
         $cursoId = $request->cursoId;
         $programacionId = $request->programacionId; // Capturar programacionId
         $personalIds = $request->personalIds;
-        
+
         // Validación adicional del límite de 100
         if (count($personalIds) > 100) {
             return response()->json([
@@ -1305,11 +1252,11 @@ class CapacitacionController extends Controller
      * Obtener todas las matrículas de un curso específico
      * GET /api/get-matriculas-curso/{cursoId}
      */
-    public function getMatriculasPorCurso($cursoId)
+    public function getMatriculasPorCurso(int $cursoId): JsonResponse
     {
         try {
             $curso = Cursos::find($cursoId);
-            
+
             if (!$curso) {
                 return response()->json([
                     'success' => false,
@@ -1326,8 +1273,8 @@ class CapacitacionController extends Controller
                     return [
                         'codigo' => $matricula->codigo,
                         'cod_personal' => $matricula->cod_personal,
-                        'nombre_completo' => $personal 
-                            ? trim("{$personal->ape_paterno} {$personal->ape_materno} {$personal->nombres}") 
+                        'nombre_completo' => $personal
+                            ? trim("{$personal->ape_paterno} {$personal->ape_materno} {$personal->nombres}")
                             : 'No encontrado',
                         'dni' => $personal->dni ?? 'N/A',
                         'correo' => $personal->correo ?? 'N/A',
@@ -1349,7 +1296,6 @@ class CapacitacionController extends Controller
                 'matriculas' => $matriculas,
                 'total' => $matriculas->count()
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error al obtener matrículas del curso', [
                 'curso_id' => $cursoId,
@@ -1367,12 +1313,12 @@ class CapacitacionController extends Controller
      * Obtener historial de capacitaciones de un empleado
      * GET /api/get-historial-capacitaciones/{personalId}
      */
-    public function getHistorialCapacitaciones($personalId)
+    public function getHistorialCapacitaciones(string $personalId): JsonResponse
     {
         try {
             // Optimización: Consultar directamente las matrículas sin pasar por el modelo Personal
             // Esto evita errores de conversión de tipos en IDs alfanuméricos (ej. 'P0056')
-            $historial = \DB::table('sw_matriculas as m')
+            $historial = DB::table('sw_matriculas as m')
                 ->join('sw_cursos as c', 'm.cod_curso', '=', 'c.codigo')
                 ->leftJoin('sw_cursos_programacion as prog', 'm.cod_programacion', '=', 'prog.codigo')
                 ->where('m.cod_personal', $personalId)
@@ -1392,7 +1338,6 @@ class CapacitacionController extends Controller
                 'success' => true,
                 'historial' => $historial
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error al obtener historial de capacitaciones', [
                 'personal_id' => $personalId,
@@ -1410,7 +1355,7 @@ class CapacitacionController extends Controller
      * Buscar personal para consulta de historial
      * GET /api/buscar-personal-capacitacion
      */
-    public function buscarPersonalCapacitacion(Request $request)
+    public function buscarPersonalCapacitacion(Request $request): JsonResponse
     {
         Log::info('buscarPersonalCapacitacion: Inicio', $request->all());
         try {
@@ -1453,13 +1398,13 @@ class CapacitacionController extends Controller
                     'sucursal' => $p->sucursal ?? 'N/A'
                 ];
             }
-  // -------------------------------------------------------------
+            // -------------------------------------------------------------
 
             // 2. Cargar conteos de matrículas (Optimizado: una sola query para todos)
             // Se usa el JOIN con sw_cursos para que coincida exactamente con las filas del Historial (Modal)
-            $matriculasCounts = \DB::table('sw_matriculas as m')
+            $matriculasCounts = DB::table('sw_matriculas as m')
                 ->join('sw_cursos as c', 'm.cod_curso', '=', 'c.codigo')
-                ->select('m.cod_personal', \DB::raw('count(*) as total'))
+                ->select('m.cod_personal', DB::raw('count(*) as total'))
                 ->groupBy('m.cod_personal')
                 ->pluck('total', 'm.cod_personal')
                 ->toArray();
@@ -1491,7 +1436,7 @@ class CapacitacionController extends Controller
                 // Se lee desde cargo o TIPOTRAB, ya que SW_LISTAR_PERSONAL_X_SUCURSAL devuelve TIPOTRAB con "ADMIN"/"OPER"
                 $cargo = $p->cargo ?? $p->desc_cargo ?? $p->TIPOTRAB ?? 'N/A';
                 $sucursal = $p->sucursal ?? 'N/A';
-                
+
                 return [
                     'codigo' => $codigo,
                     'nombre_completo' => $nombre,
@@ -1525,11 +1470,11 @@ class CapacitacionController extends Controller
             $termino = strtolower($request->input('q', ''));
             if (!empty($termino)) {
                 $personal = array_filter($personal, function ($item) use ($termino) {
-                    return str_contains(strtolower($item['nombre_completo'] ?? ''), $termino) || 
-                           str_contains(strval($item['dni'] ?? ''), $termino);
+                    return str_contains(strtolower($item['nombre_completo'] ?? ''), $termino) ||
+                        str_contains(strval($item['dni'] ?? ''), $termino);
                 });
             }
-            
+
             // Filtrado por sucursal
             $sucursal = $request->input('sucursal', '');
             if (!empty($sucursal)) {
@@ -1537,7 +1482,7 @@ class CapacitacionController extends Controller
                     return strtoupper(trim($item['sucursal'])) === strtoupper(trim($sucursal));
                 });
             }
-            
+
             // Re-indexar array después de filtrar
             $personal = array_values($personal);
             Log::info('buscarPersonalCapacitacion: Resultados', ['total' => count($personal)]);
@@ -1547,7 +1492,6 @@ class CapacitacionController extends Controller
                 'personal' => $personal,
                 'total' => count($personal)
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error al buscar personal para capacitación: ' . $e->getMessage());
             return response()->json([
@@ -1562,7 +1506,7 @@ class CapacitacionController extends Controller
      * Obtener combos para el modal de apertura de ciclo (Sedes, Clientes, Áreas)
      * GET /api/capacitacion/combos-apertura
      */
-    public function getCombosApertura()
+    public function getCombosApertura(): JsonResponse
     {
         try {
             $sucursales = DB::table('sw_MIGRA_SISO_SUCURSAL')
@@ -1605,7 +1549,7 @@ class CapacitacionController extends Controller
     /**
      * Vista de consulta de matrículas
      */
-    public function vistaConsultaMatriculas()
+    public function vistaConsultaMatriculas(): View
     {
         return view('capacitacion.consulta_matriculas');
     }
@@ -1613,7 +1557,7 @@ class CapacitacionController extends Controller
     /**
      * Vista de historial de capacitaciones
      */
-    public function vistaHistorialCapacitaciones()
+    public function vistaHistorialCapacitaciones(): View
     {
         return view('capacitacion.historial_capacitaciones');
     }
@@ -1622,11 +1566,11 @@ class CapacitacionController extends Controller
      * Listar matrículas de un curso usando MigraPersonal y sw_matriculas (JOIN robusto con logging de errores)
      * Devuelve datos personales y fecha de matrícula
      */
-    public function getMatriculasMigraPersonal($cursoId)
+    public function getMatriculasMigraPersonal(int $cursoId): JsonResponse
     {
         try {
             // 1. Obtener todas las matrículas del curso (Base de la verdad: 1105 registros)
-            $matriculas = \DB::table('sw_matriculas as m')
+            $matriculas = DB::table('sw_matriculas as m')
                 ->leftJoin('sw_cursos_programacion as prog', 'm.cod_programacion', '=', 'prog.codigo')
                 ->where('m.cod_curso', '=', $cursoId)
                 ->select([
@@ -1644,7 +1588,7 @@ class CapacitacionController extends Controller
 
             // 2. Extraer códigos de personal únicos (Normalizados)
             $codigosPersonal = $matriculas->pluck('cod_personal')
-                ->map(fn($id) => trim((string)$id))
+                ->map(fn($id) => str_pad(trim((string)$id), 5, '0', STR_PAD_LEFT))
                 ->unique()
                 ->values()
                 ->toArray();
@@ -1654,20 +1598,20 @@ class CapacitacionController extends Controller
 
             $chunks = array_chunk($codigosPersonal, 2000);
             foreach ($chunks as $chunk) {
-                $batch = \DB::table('sw_MIGRA_PERSONAL')
+                $batch = DB::table('si_solm.dbo.PERSONAL')
                     ->whereIn('CODI_PERS', $chunk)
                     ->select([
                         'CODI_PERS as cod_personal',
                         'NRO_DOCU_IDEN as dni',
-                        \DB::raw("LTRIM(RTRIM(ISNULL(APEL_1, ''))) + ' ' + LTRIM(RTRIM(ISNULL(APEL_2, ''))) + ' ' + LTRIM(RTRIM(ISNULL(NOMB_1, ''))) + ' ' + LTRIM(RTRIM(ISNULL(NOMB_2, ''))) as nombre_completo"),
+                        DB::raw("LTRIM(RTRIM(ISNULL(APEL_1, ''))) + ' ' + LTRIM(RTRIM(ISNULL(APEL_2, ''))) + ' ' + LTRIM(RTRIM(ISNULL(NOMB_1, ''))) + ' ' + LTRIM(RTRIM(ISNULL(NOMB_2, ''))) as nombre_completo"),
                         'PERS_EMAIL as correo',
                         'CODI_CARG as cargo',
                         'SUCU_CODIGO',
                         'EMPR_CODIGO',
                     ])
                     ->get()
-                    ->map(function($item) {
-                        $item->cod_personal = trim($item->cod_personal);
+                    ->map(function ($item) {
+                        $item->cod_personal = str_pad(trim($item->cod_personal), 5, '0', STR_PAD_LEFT);
                         return $item;
                     });
 
@@ -1686,24 +1630,24 @@ class CapacitacionController extends Controller
             $sucursalesMap = [];
             $sucursalClienteMap = []; // SUCU_CODIGO → EMPR_CODIGO (for PCU)
             if (!empty($codigosSucursal)) {
-    $sucChunks = array_chunk($codigosSucursal, 2000);
-    $sucRows = collect();
-    foreach ($sucChunks as $chunk) {
-        $sucRows = $sucRows->merge(
-            \DB::table('sw_MIGRA_SISO_SUCURSAL')
-                ->whereIn('SUCU_CODIGO', $chunk)
-                ->select('SUCU_CODIGO', 'SUCU_ABREVIATURA', 'EMPR_CODIGO')
-                ->get()
-        );
-    }
-    foreach ($sucRows as $suc) {
-        $sucursalesMap[$suc->SUCU_CODIGO]      = $suc->SUCU_ABREVIATURA;
-        $sucursalClienteMap[$suc->SUCU_CODIGO] = $suc->EMPR_CODIGO;
-    }
-}
+                $sucChunks = array_chunk($codigosSucursal, 2000);
+                $sucRows = collect();
+                foreach ($sucChunks as $chunk) {
+                    $sucRows = $sucRows->merge(
+                        DB::table('sw_MIGRA_SISO_SUCURSAL')
+                            ->whereIn('SUCU_CODIGO', $chunk)
+                            ->select('SUCU_CODIGO', 'SUCU_ABREVIATURA', 'EMPR_CODIGO')
+                            ->get()
+                    );
+                }
+                foreach ($sucRows as $suc) {
+                    $sucursalesMap[$suc->SUCU_CODIGO]      = $suc->SUCU_ABREVIATURA;
+                    $sucursalClienteMap[$suc->SUCU_CODIGO] = $suc->EMPR_CODIGO;
+                }
+            }
 
             // 5a. Obtener tipo de curso via description text (PCU/PCI) — more reliable than hardcoded IDs
-            $curso = \DB::table('sw_cursos as c')
+            $curso = DB::table('sw_cursos as c')
                 ->join('sw_capacitacion_tipo_curso as tc', 'c.tipo_curso', '=', 'tc.codigo')
                 ->where('c.codigo', $cursoId)
                 ->select('c.tipo_curso', 'tc.descripcion as tipo_descripcion')
@@ -1713,29 +1657,29 @@ class CapacitacionController extends Controller
             $esPCU = str_contains($tipoDesc, 'PCU');
             $esPCI = str_contains($tipoDesc, 'PCI');
             $esPCE = str_contains($tipoDesc, 'PCE');
-            \Log::info("[ClienteEmpresa] cursoId={$cursoId} tipoDesc={$tipoDesc} esPCU=".($esPCU?'SI':'NO')." esPCI=".($esPCI?'SI':'NO')." esPCE=".($esPCE?'SI':'NO'));
+            Log::info("[ClienteEmpresa] cursoId={$cursoId} tipoDesc={$tipoDesc} esPCU=" . ($esPCU ? 'SI' : 'NO') . " esPCI=" . ($esPCI ? 'SI' : 'NO') . " esPCE=" . ($esPCE ? 'SI' : 'NO'));
 
             // 5b. Para PCU: cargar mapa sucursal -> nombre_cliente desde base externa
             $sucursalClienteNameMap = [];
             if ($esPCU) {
-                $assignedClients = \DB::table('sw_curso_sucursales')
+                $assignedClients = DB::table('sw_curso_sucursales')
                     ->where('curso_codigo', $cursoId)
                     ->pluck('sucursal')
                     ->toArray();
 
                 if (!empty($assignedClients)) {
-                    $clientDetails = \DB::table('sw_clientes')
+                    $clientDetails = DB::table('sw_clientes')
                         ->whereIn('codigo', $assignedClients)
                         ->get(['codigo', 'cod_legacy', 'abreviatura', 'razon_social']);
 
                     foreach ($clientDetails as $cd) {
                         $legacyCode = $cd->cod_legacy;
                         $clientName = $cd->abreviatura ?? $cd->razon_social ?? (string)$cd->codigo;
-                        
+
                         if ($legacyCode) {
-                            $externalSucursales = \DB::connection('sqlsrv_controlclientes')
+                            $externalSucursales = DB::connection('sqlsrv_controlclientes')
                                 ->select('EXEC USP_LISTAR_SUCURSALES_X_CLIENTE :cod_legacy', ['cod_legacy' => $legacyCode]);
-                            
+
                             foreach ($externalSucursales as $es) {
                                 if (isset($es->codigo_sucursal)) {
                                     $sucursalClienteNameMap[trim($es->codigo_sucursal)] = $clientName;
@@ -1749,7 +1693,7 @@ class CapacitacionController extends Controller
             // 5c. Para PCI y PCE: cargar mapa de empresas internas (Normalizado a 2 dígitos)
             $empresasMap = [];
             if ($esPCI || $esPCE) {
-                $empresas = \DB::table('sw_MIGRA_EMPRESA')
+                $empresas = DB::table('sw_MIGRA_EMPRESA')
                     ->select('EMPR_CODIGO', 'Razon_Social')
                     ->get();
                 foreach ($empresas as $e) {
@@ -1760,8 +1704,8 @@ class CapacitacionController extends Controller
             }
 
             // 6. Unir datos en memoria
-            $resultado = $matriculas->map(function($m) use ($personalData, $sucursalesMap, $sucursalClienteNameMap, $esPCU, $esPCI, $esPCE, $empresasMap) {
-                $id = trim((string)$m->cod_personal);
+            $resultado = $matriculas->map(function ($m) use ($personalData, $sucursalesMap, $sucursalClienteNameMap, $esPCU, $esPCI, $esPCE, $empresasMap) {
+                $id = str_pad(trim((string)$m->cod_personal), 5, '0', STR_PAD_LEFT);
                 $p = $personalData->get($id);
 
                 // Resolver cliente/empresa según tipo de curso
@@ -1786,9 +1730,9 @@ class CapacitacionController extends Controller
                     'estado' => $m->estado,
                     'prog_fecha_inicio' => $m->prog_fecha_inicio,
                     'prog_fecha_final' => $m->prog_fecha_final,
-                    'sucursal' => (isset($p->SUCU_CODIGO) && isset($sucursalesMap[$p->SUCU_CODIGO])) 
-                                    ? $sucursalesMap[$p->SUCU_CODIGO] 
-                                    : 'Sin sede'
+                    'sucursal' => (isset($p->SUCU_CODIGO) && isset($sucursalesMap[$p->SUCU_CODIGO]))
+                        ? $sucursalesMap[$p->SUCU_CODIGO]
+                        : 'Sin sede'
                 ];
             })->sortBy('nombre_completo')->values();
 
@@ -1798,7 +1742,7 @@ class CapacitacionController extends Controller
                 'total' => $resultado->count()
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error en getMatriculasMigraPersonal rediseñado: ' . $e->getMessage());
+            Log::error('Error en getMatriculasMigraPersonal rediseñado: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cargar matrículas: ' . $e->getMessage()
@@ -1806,14 +1750,14 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function getAlertasVencimiento()
+    public function getAlertasVencimiento(): JsonResponse
     {
         try {
             $hoy = \Carbon\Carbon::now()->startOfDay();
             $limite = $hoy->copy()->addDays(15)->endOfDay();
 
             // Usar JOIN explícito para garantizar compatibilidad con SQL Server al buscar cursos periódicos ($c->es_periodico = 1)
-            $programacionesVigentes = \DB::table('sw_cursos_programacion as cp')
+            $programacionesVigentes = DB::table('sw_cursos_programacion as cp')
                 ->join('sw_cursos as c', 'c.codigo', '=', 'cp.cod_cursos')
                 ->select('cp.*', 'c.codigo_curso', 'c.nombre as curso_nombre', 'c.frecuencia', 'c.es_periodico')
                 ->where('cp.habilitado', 1)
@@ -1835,13 +1779,26 @@ class CapacitacionController extends Controller
                 // Quitar espacios extra en la base de datos SQL Server e identificar tipo
                 $frecuencia = trim(strtoupper($programacion->frecuencia));
                 switch ($frecuencia) {
-                    case 'MENSUAL': $fechaProximaClonacion->addMonth(); break;
-                    case 'BIMESTRAL': $fechaProximaClonacion->addMonths(2); break;
-                    case 'TRIMESTRAL': $fechaProximaClonacion->addMonths(3); break;
-                    case 'CUATRIMESTRAL': $fechaProximaClonacion->addMonths(4); break;
-                    case 'SEMESTRAL': $fechaProximaClonacion->addMonths(6); break;
-                    case 'ANUAL': $fechaProximaClonacion->addYear(); break;
-                    default: continue 2; // Salta al siguiente iterador del loop
+                    case 'MENSUAL':
+                        $fechaProximaClonacion->addMonth();
+                        break;
+                    case 'BIMESTRAL':
+                        $fechaProximaClonacion->addMonths(2);
+                        break;
+                    case 'TRIMESTRAL':
+                        $fechaProximaClonacion->addMonths(3);
+                        break;
+                    case 'CUATRIMESTRAL':
+                        $fechaProximaClonacion->addMonths(4);
+                        break;
+                    case 'SEMESTRAL':
+                        $fechaProximaClonacion->addMonths(6);
+                        break;
+                    case 'ANUAL':
+                        $fechaProximaClonacion->addYear();
+                        break;
+                    default:
+                        continue 2; // Salta al siguiente iterador del loop
                 }
 
                 // Condición ESTRICTA: fecha_proxima_clonacion BETWEEN hoy AND (hoy + 15 días)
@@ -1858,23 +1815,22 @@ class CapacitacionController extends Controller
                 }
             }
 
-            \Log::info('Cursos por vencer auditar:', $alertas);
+            Log::info('Cursos por vencer auditar:', $alertas);
 
             return response()->json([
                 'success' => true,
                 'alertas' => $alertas,
                 'total' => count($alertas)
             ]);
-
         } catch (\Exception $e) {
-            \Log::error('Error en getAlertasVencimiento: ' . $e->getMessage(), [
+            Log::error('Error en getAlertasVencimiento: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['success' => false, 'message' => 'Error al obtener alertas de cursos'], 500);
         }
     }
 
-     public function getSucursales()
+    public function getSucursales(): JsonResponse
     {
         try {
             $sucursales = DB::connection('sqlsrv')->table('sw_MIGRA_SISO_SUCURSAL')
@@ -1888,7 +1844,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function getAreasEncargadas()
+    public function getAreasEncargadas(): JsonResponse
     {
         try {
             // Usamos 1 directamente para evitar errores de conversión si la columna es bit
@@ -1899,6 +1855,22 @@ class CapacitacionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener áreas encargadas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAreasPorSistema(int $sistemaId): JsonResponse
+    {
+        try {
+            $areas = DB::connection('sqlsrv')->select("EXEC SW_LISTAR_AREAS_POR_SISTEMA ?", [$sistemaId]);
+            return response()->json([
+                'success' => true,
+                'areas' => $areas
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener áreas por sistema: ' . $e->getMessage()
             ], 500);
         }
     }
