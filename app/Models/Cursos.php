@@ -22,10 +22,16 @@ class Cursos extends Model
         'fecha_modificacion',
         'habilitado',
         'tipo_curso',
+        'area_conocimiento',
         'area',
         'periodicidad',
         'es_periodico',
         'frecuencia',
+        'aplica_evaluacion',
+        'obligatorio_alta',
+        'cod_responsable',
+        'target_group',
+        'codigo_moodle',
     ];
 
     public $timestamps = false;

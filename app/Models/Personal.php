@@ -9,7 +9,7 @@ class Personal extends Model
 {
     use HasFactory;
 
-    protected $table = 'sw_MIGRA_PERSONAL';
+    protected $table = 'si_solm.dbo.PERSONAL';
     protected $primaryKey = 'CODI_PERS';
     public $timestamps = false;
 

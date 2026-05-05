@@ -130,6 +130,7 @@ Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula'])
 
 Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
 Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
+Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
 Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
 Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);

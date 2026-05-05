@@ -31,7 +31,6 @@ class Matricula extends Model
         'estado',
         'tipo_matricula',
         'origen_matricula',
-        'habilitado'
     ];
 
     /**

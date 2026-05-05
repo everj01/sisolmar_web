@@ -19,7 +19,7 @@
             </div>
 
             <!-- Topbar Brand Logo -->
-            
+
 
             <!-- Topbar Search -->
             <!-- <div class="md:flex hidden items-center relative">
@@ -36,39 +36,37 @@
         </div>
 
         <div class="flex items-center gap-5">
-
-
             <!-- Notification Dropdown Button -->
-                <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
+            <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
 
-                    <button id="btn-notifications" class="relative">
-                        <i class="bx bx-bell text-xl"></i>
+                <button id="btn-notifications" class="relative">
+                    <i class="bx bx-bell text-xl"></i>
 
-                        <!-- badge -->
-                        <span id="notif-count"
-                            class="absolute -top-1 -right-1 bg-red-600 text-white text-xs
+                    <!-- badge -->
+                    <span id="notif-count"
+                        class="absolute -top-1 -right-1 bg-red-600 text-white text-xs
                                     rounded-full px-1.5 leading-none hidden">
-                            0
-                        </span>
-                    </button>
+                        0
+                    </span>
+                </button>
 
-                    <!-- Dropdown menu -->
-                    <div
-                        class="hs-dropdown-menu duration mt-2 w-full max-w-sm rounded-lg border border-default-200 bg-white opacity-0 shadow-md transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden">
-                        <div class="block px-4 py-2 font-medium text-center text-default-700 rounded-t-lg bg-default-50">
-                            Folios por vencer en los próximos 10 días
-                        </div>
+                <!-- Dropdown menu -->
+                <div
+                    class="hs-dropdown-menu duration mt-2 w-full max-w-sm rounded-lg border border-default-200 bg-white opacity-0 shadow-md transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden">
+                    <div class="block px-4 py-2 font-medium text-center text-default-700 rounded-t-lg bg-default-50">
+                        Folios por vencer en los próximos 10 días
+                    </div>
 
-                        <!-- Contenedor con scroll -->
-                        <div class="max-h-[400px] overflow-y-auto" style="max-height: 400px; overflow-y: auto;">
-                            <div class="divide-y divide-default-100" id="notif-list">
-                                <div class="px-4 py-6 text-center text-sm text-default-500">
-                                    Cargando notificaciones...
-                                </div>
+                    <!-- Contenedor con scroll -->
+                    <div class="max-h-[400px] overflow-y-auto" style="max-height: 400px; overflow-y: auto;">
+                        <div class="divide-y divide-default-100" id="notif-list">
+                            <div class="px-4 py-6 text-center text-sm text-default-500">
+                                Cargando notificaciones...
                             </div>
                         </div>
+                    </div>
 
-                        <!-- <a href="#"
+                    <!-- <a href="#"
                             class="block py-2 text-sm font-medium text-center text-default-900 rounded-b-lg bg-default-50 hover:bg-default-100">
                             <div class="inline-flex items-center ">
                                 <svg class="w-4 h-4 me-2 text-default-500" aria-hidden="true"
@@ -79,11 +77,11 @@
                                 View all
                             </div>
                         </a> -->
-                    </div>
                 </div>
+            </div>
 
             <!-- Fullscreen Toggle Button -->
-            <div class="md:flex hidden">
+            <div class="md:flex hidden gap-1.5">
                 <button data-toggle="fullscreen" type="button"
                     class="p-2 rounded-full bg-white border border-default-200 hover:bg-primary/15 hover:text-primary transition-all">
                     <span class="sr-only">Fullscreen Mode</span>
@@ -92,56 +90,56 @@
                         <i class="i-ph-arrows-in-duotone text-2xl hidden group-[-fullscreen]:flex"></i>
                     </span>
                 </button>
-            <!-- Theme Toggle Button -->
-            <div class="flex">
-                <button id="theme-toggle" type="button"
-                    class="p-2 rounded-full bg-white dark:bg-slate-800 border border-default-200 dark:border-slate-700 hover:bg-primary/15 dark:hover:bg-slate-700 transition-all"
-                    title="Cambiar tema">
-                    <span class="sr-only">Toggle theme</span>
-                    <span class="flex items-center justify-center size-6">
-                        <i id="theme-icon-light" class="i-ph-sun-duotone text-2xl text-amber-500"></i>
-                        <i id="theme-icon-dark" class="i-ph-moon-duotone text-2xl text-slate-300 hidden"></i>
-                    </span>
-                </button>
-            </div>
-
-            <!-- Profile Dropdown Button -->
-            <div class="relative">
-                <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                    <button type="button" class="hs-dropdown-toggle">
-                        <img src="{{ asset('images/user.png') }}" alt="user-image" class="rounded-full h-10">
+                <!-- Theme Toggle Button -->
+                <div class="flex">
+                    <button id="theme-toggle" type="button"
+                        class="p-2 rounded-full bg-white dark:bg-slate-800 border border-default-200 dark:border-slate-700 hover:bg-primary/15 dark:hover:bg-slate-700 transition-all"
+                        title="Cambiar tema">
+                        <span class="sr-only">Toggle theme</span>
+                        <span class="flex items-center justify-center size-6">
+                            <i id="theme-icon-light" class="i-ph-sun-duotone text-2xl text-amber-500"></i>
+                            <i id="theme-icon-dark" class="i-ph-moon-duotone text-2xl text-slate-300 hidden"></i>
+                        </span>
                     </button>
-                    <div
-                        class="hs-dropdown-menu duration mt-2 min-w-48 rounded-lg border border-default-200 bg-white p-2 opacity-0 shadow-md transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden">
-                        <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100" onclick="abrirModalPasswordChange()"
-                            href="#">
-                            Cambiar contraseña
-                        </a>
-                        <button hidden style="display: none;" type="button" class="btn bg-primary text-white" data-hs-overlay="#modal-password-change-user" id="btn-modal-password-change-user">
-                            Open modal cambiar contraseña
+                </div>
+
+                <!-- Profile Dropdown Button -->
+                <div class="relative">
+                    <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
+                        <button type="button" class="hs-dropdown-toggle">
+                            <img src="{{ asset('images/user.png') }}" alt="user-image" class="rounded-full h-10">
                         </button>
-                        <hr class="my-2">
-                        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                            @csrf
-                        </form>
+                        <div
+                            class="hs-dropdown-menu duration mt-2 min-w-48 rounded-lg border border-default-200 bg-white p-2 opacity-0 shadow-md transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden">
+                            <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100" onclick="abrirModalPasswordChange()"
+                                href="#">
+                                Cambiar contraseña
+                            </a>
+                            <button hidden style="display: none;" type="button" class="btn bg-primary text-white" data-hs-overlay="#modal-password-change-user" id="btn-modal-password-change-user">
+                                Open modal cambiar contraseña
+                            </button>
+                            <hr class="my-2">
+                            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                                @csrf
+                            </form>
 
-                        <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100"
-                        href="#"
-                        onclick="sessionStorage.removeItem('folioToastShown'); document.getElementById('logout-form').submit();">
-                            <i class="ti-power-off text-primary"></i>
-                            Cerrar Sesión
-                        </a>
+                            <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100"
+                                href="#"
+                                onclick="sessionStorage.removeItem('folioToastShown'); document.getElementById('logout-form').submit();">
+                                <i class="ti-power-off text-primary"></i>
+                                Cerrar Sesión
+                            </a>
 
-                        <!-- <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100"
+                            <!-- <a class="flex items-center py-2 px-3 rounded-md text-sm text-default-800 hover:bg-default-100"
                             href="#" onclick="document.getElementById('logout-form').submit();">
                             <i class="ti-power-off text-primary"></i>
                             Cerrar Sesión
                         </a> -->
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 </header>
 
 <div id="modal-password-change-user" class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none">
@@ -157,31 +155,29 @@
             </div>
             <div class="p-4 overflow-y-auto">
                 <p class="mt-1 text-default-600">
-                    <div class="grid lg:grid-cols-3 gap-6">
-                        <div class="col-span-2">
-                            <label for="txt-new-password-user" class="text-default-800 text-sm font-medium inline-block mb-2">Colocar Contraseña</label>
-                            <div x-data="{ show: false }" class="flex gap-1 items-center">
-                                <input
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <div class="col-span-2">
+                        <label for="txt-new-password-user" class="text-default-800 text-sm font-medium inline-block mb-2">Colocar Contraseña</label>
+                        <div x-data="{ show: false }" class="flex gap-1 items-center">
+                            <input
                                 :type="show ? 'text' : 'password'"
                                 id="txt-new-password-user"
-                                class="form-input"
-                                >
-                                <input type="hidden" name="txtUserNombre" id="txt-user-nombre-pass" value="{{ session('usuario') }}">
+                                class="form-input">
+                            <input type="hidden" name="txtUserNombre" id="txt-user-nombre-pass" value="{{ session('usuario') }}">
 
-                                <button
+                            <button
                                 type="button"
                                 class="btn bg-info text-white"
-                                @click="show = !show"
-                                >
-                                    <span x-text="show ? 'ocultar' : 'ver'"></span>
-                                </button>
-                            </div>
-                            
+                                @click="show = !show">
+                                <span x-text="show ? 'ocultar' : 'ver'"></span>
+                            </button>
                         </div>
-                        <div class="col-span-2">
-                            <button type="button" class="btn bg-primary text-white" onclick="passwordChangeUserGeneralMe()">Actualizar</button>
-                        </div>
+
                     </div>
+                    <div class="col-span-2">
+                        <button type="button" class="btn bg-primary text-white" onclick="passwordChangeUserGeneralMe()">Actualizar</button>
+                    </div>
+                </div>
                 </p>
             </div>
             <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t border-default-200">

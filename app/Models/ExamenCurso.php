@@ -31,7 +31,9 @@ class ExamenCurso extends Model
         'file_nombre_original',
         'fecha_creacion',
         'fecha_modificacion',
-        'habilitado'
+        'habilitado',
+        'cantidad_preguntas',
+        'preguntas_balotario'
     ];
 
     public $timestamps = false;
