@@ -348,7 +348,7 @@
 
                                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 w-full mt-4">
                                     <!-- Columna 1: Datos del curso -->
-                                    <div>
+                                    <div class="xl:col-span-2">
                                         <div class="w-full flex flex-col items-center mb-4">
                                             <div class="w-full flex items-center justify-between gap-4">
                                                 <div class="flex-1 border-t border-gray-200"></div>
@@ -825,7 +825,7 @@
                                             <div>
                                                 <label
                                                     class="text-gray-800 text-sm font-medium inline-block mb-1">Observaciones</label>
-                                                <textarea rows="2"
+                                                <textarea rows="2" x-model="observaciones"
                                                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
                                                     placeholder="Ingrese observaciones o detalles adicionales..."></textarea>
                                             </div>
@@ -834,6 +834,7 @@
 
                                         <!-- NUEVO: Aplica Evaluación -->
                                         <div class="flex items-center justify-between mb-2 bg-indigo-50/80 border border-indigo-100 px-5 py-3 rounded-xl shadow-sm w-full transition-all hover:bg-indigo-50 cursor-pointer select-none"
+                                            style="display: none !important;"
                                             @click="aplicaEvaluacion = !aplicaEvaluacion"
                                             title="Activar para requerir una evaluación obligatoria en este curso">
                                             <div class="flex flex-col pointer-events-none">
@@ -849,9 +850,11 @@
                                     </div>
 
                                     <!-- Columna 2: Datos del Examen & Metadatos -->
-                                    <div class="flex flex-col h-full mt-8 xl:mt-0">
+                                    <div class="flex flex-col h-full mt-8 xl:mt-0"
+                                         style="display: none !important;">
                                         <!-- Placeholder cuando no aplica evaluación -->
                                         <div x-show="!aplicaEvaluacion" x-transition
+                                            style="display: none !important;"
                                             class="flex flex-col items-center justify-center h-full min-h-[300px] border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 p-6">
                                             <i class="bx bx-file-blank mb-3 text-gray-300" style="font-size: 3.5rem;"></i>
                                             <h4 class="text-base font-bold text-gray-500 mb-1">Sin evaluación requerida
@@ -863,7 +866,8 @@
                                             </p>
                                         </div>
 
-                                        <div x-show="aplicaEvaluacion" class="w-full flex flex-col items-center mb-4">
+                                        <div x-show="aplicaEvaluacion" class="w-full flex flex-col items-center mb-4"
+                                            style="display: none !important;">
                                             <div class="w-full flex items-center justify-between gap-4">
                                                 <div class="flex-1 border-t border-gray-200"></div>
                                                 <h3 class="text-lg font-semibold text-primary text-center">
@@ -875,6 +879,7 @@
 
                                         <!-- Contenedor condicional para Examen -->
                                         <div x-show="aplicaEvaluacion" x-transition.duration.300ms
+                                            style="display: none !important;"
                                             class="w-full border border-gray-100 bg-gray-50/30 p-5 rounded-xl shadow-sm mb-4">
                                             <div class="w-full grid gap-4 grid-cols-1 sm:grid-cols-2">
                                                 <div>
@@ -1019,19 +1024,21 @@
                                     </div> <!-- End Columna 2 -->
                                 </div> <!-- End Grid 2-col -->
 
-                                <div class="flex justify-center w-full py-4 border-t border-gray-100 mt-6 gap-3">
-                                    <button type="submit" id="btnGestion" @click="registrar"
-                                        class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white">
-                                        Registrar Curso&nbsp;<i class="fa-solid fa-floppy-disk"></i>
-                                    </button>
-                                    <button type="button" id="btnGestionEditar" onclick="editarFormGestionCurso()"
-                                        class="hidden btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white ">
-                                        Actualizar curso
-                                    </button>
-                                    <button type="button" @click="showModal = false"
+                                <div class="flex flex-col items-center w-full py-4 border-t border-gray-100 mt-6 gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <button type="submit" id="btnGestion" @click="registrar" :disabled="!formularioCompleto"
+                                            class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                                            Registrar Curso&nbsp;<i class="fa-solid fa-floppy-disk"></i>
+                                        </button>
+                                        <button type="button" id="btnGestionEditar" onclick="editarFormGestionCurso()"
+                                            class="hidden btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white ">
+                                            Actualizar curso
+                                        </button>
+                                        <button type="button" @click="showModal = false"
                                         class="btn rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">
                                         Cancelar
                                     </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

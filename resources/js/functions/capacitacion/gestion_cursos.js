@@ -500,7 +500,8 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
-                
+                alpineData.observaciones = curso.observaciones ?? "";
+
                 // Moodle
                 alpineData.codMoodleArea = curso.cod_moodle_area ?? ""; // Si existiera en el futuro
 
@@ -692,6 +693,7 @@ window.editarFormGestionCurso = (e) => {
     formData.append('cod_responsable', alpineData.codResponsable);
     formData.append('area_responsable', alpineData.areaResponsable);
     formData.append('cod_moodle_area', alpineData.codMoodleArea);
+    formData.append('observaciones', alpineData.observaciones);
 
 
     //formData.append('archivo', archivoSeleccionado);
@@ -856,6 +858,7 @@ window.formCursoGestion = function () {
         tipoResponsable: 'ADMINISTRATIVO_5',
         codResponsable: '',
         nombreResponsable: '',
+        observaciones: '',
 
         aplicaEvaluacion: false,
         obligatorioAlta: true, // Siempre true por regla de negocio
@@ -1069,13 +1072,14 @@ window.formCursoGestion = function () {
             this.busquedaCliente = '';
             this.busquedaAreaPCI = '';
             this.busquedaEmpresa = '';
+            this.observaciones = '';
 
             // IA 2026: limpiar preguntas cargadas
             this.archivoIA = null;
             this.archivoIANombre = '';
             this.preguntasExamenIA = [];
 
-            this.aplicaEvaluacion = true;
+            this.aplicaEvaluacion = false;
             this.obligatorioAlta = true; // Forzado a true por requerimiento
             this.esDemanda = false;
 
@@ -1172,6 +1176,7 @@ window.formCursoGestion = function () {
             formData.append('cod_responsable', this.codResponsable);
             formData.append('area_responsable', this.areaResponsable);
             formData.append('cod_moodle_area', this.codMoodleArea);
+            formData.append('observaciones', this.observaciones);
 
             if (this.archivoIA) {
                 formData.append('archivo', this.archivoIA);
@@ -1207,7 +1212,8 @@ window.formCursoGestion = function () {
                             frecuencia: "",
                             limiteTiempo: 0,
                             nota: 0,
-                            intentos: 0
+                            intentos: 0,
+                            observaciones: ""
                         };
 
                         // Reset Alpine Data
