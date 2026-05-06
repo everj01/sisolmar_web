@@ -865,12 +865,12 @@ window.formCursoGestion = function () {
         esDemanda: false,      // Retirado
 
 
-        // IA 2026
-        archivoIA: null,
-        archivoIANombre: '',
-        cargandoIA: false,
-        preguntasExamenIA: [],  // Almacena las preguntas extraídas hasta que se guarde el curso
-        iaMetrics: {
+        // Procesamiento Word 2026
+        archivoWord: null,
+        archivoWordNombre: '',
+        cargandoWord: false,
+        preguntasExamen: [],  // Almacena las preguntas extraídas hasta que se guarde el curso
+        wordMetrics: {
             tokensInput: 0,
             tokensOutput: 0,
             tokensTotal: 0,
@@ -878,24 +878,37 @@ window.formCursoGestion = function () {
             tiempoSeg: 0
         },
 
-        async analizarConIA() {
-            if (!this.archivoIA) return;
-            this.cargandoIA = true;
+        async analizarExamenWord() {
+            if (!this.archivoWord) return;
+
+            // Validación de formato antiguo
+            const extension = this.archivoWord.name.split('.').pop().toLowerCase();
+            if (extension === 'doc' || extension === 'dot') {
+                Swal.fire({
+                    title: 'Formato Deprecado',
+                    html: `El archivo <b>.${extension}</b> es un formato antiguo de Word.<br><br>Para usar la extracción por estilos, por favor abre el archivo y <b>Guárdalo como .docx</b> antes de subirlo.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return;
+            }
+            this.cargandoWord = true;
             try {
                 const formData = new FormData();
-                formData.append('archivo', this.archivoIA);
+                formData.append('archivo', this.archivoWord);
 
-                const res = await axios.post(`${VITE_URL_APP}/api/capacitacion/procesar-examen-ia`, formData, {
+                const res = await axios.post(`${VITE_URL_APP}/api/capacitacion/procesar-examen-word`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
 
                 if (res.data.success) {
                     // Guardamos las preguntas en estado Alpine (no guardamos en BD aún)
-                    this.preguntasExamenIA = res.data.preguntas;
+                    this.preguntasExamen = res.data.preguntas;
 
-                    // Almacenar métricas de consumo y costo
+                    // Almacenar métricas si las hay
                     if (res.data.metrics) {
-                        this.iaMetrics = {
+                        this.wordMetrics = {
                             tokensInput: res.data.metrics.tokens_input,
                             tokensOutput: res.data.metrics.tokens_output,
                             tokensTotal: res.data.metrics.tokens_total,
@@ -916,25 +929,25 @@ window.formCursoGestion = function () {
                 }
             } catch (e) {
                 console.error(e);
-                Swal.fire('Error', 'No se pudo procesar el archivo con IA', 'error');
+                Swal.fire('Error', 'No se pudo procesar el archivo Word', 'error');
             } finally {
-                this.cargandoIA = false;
+                this.cargandoWord = false;
             }
         },
 
         // Abrir el modal de previsualización con las preguntas ya cargadas
         verVistaPrevia() {
-            if (this.preguntasExamenIA.length === 0) {
-                Swal.fire('Sin preguntas', 'Primero debe analizar un archivo con IA.', 'info');
+            if (this.preguntasExamen.length === 0) {
+                Swal.fire('Sin preguntas', 'Primero debe analizar un archivo Word.', 'info');
                 return;
             }
-            window.dispatchEvent(new CustomEvent('abrir-modal-ia', {
+            window.dispatchEvent(new CustomEvent('abrir-modal-word', {
                 detail: {
-                    preguntas: this.preguntasExamenIA,
+                    preguntas: this.preguntasExamen,
                     cursoId: this.codigo,
                     examenId: document.getElementById('codGestionEditar')?.value || -1,
-                    nombreArc: this.archivoIANombre,
-                    metrics: this.iaMetrics // 👈 Pasar métricas al modal si es necesario
+                    nombreArc: this.archivoWordNombre,
+                    metrics: this.wordMetrics // 👈 Pasar métricas al modal si es necesario
                 }
             }));
         },
@@ -1074,10 +1087,10 @@ window.formCursoGestion = function () {
             this.busquedaEmpresa = '';
             this.observaciones = '';
 
-            // IA 2026: limpiar preguntas cargadas
-            this.archivoIA = null;
-            this.archivoIANombre = '';
-            this.preguntasExamenIA = [];
+            // Word 2026: limpiar preguntas cargadas
+            this.archivoWord = null;
+            this.archivoWordNombre = '';
+            this.preguntasExamen = [];
 
             this.aplicaEvaluacion = false;
             this.obligatorioAlta = true; // Forzado a true por requerimiento
@@ -1086,12 +1099,15 @@ window.formCursoGestion = function () {
             this.targetGroup = 'TODOS';
 
             // Forzar limpieza de inputs de archivos y estados visuales
-            const archivoInput = document.getElementById('archivoInput');
-            if (archivoInput) archivoInput.value = '';
+            const wordInput = document.getElementById('inputWordExamen');
+            if (wordInput) wordInput.value = '';
+
+            const excelInput = document.getElementById('inputExcelMatricula');
+            if (excelInput) excelInput.value = '';
 
             archivoSeleccionado = null;
-            if (resumenPlantilla) resumenPlantilla.innerHTML = "";
-            if (btnAnalizar) btnAnalizar.disabled = true;
+            if (typeof resumenPlantilla !== 'undefined' && resumenPlantilla) resumenPlantilla.innerHTML = "";
+            if (typeof btnAnalizar !== 'undefined' && btnAnalizar) btnAnalizar.disabled = true;
         },
 
         registrar(e) {
@@ -1136,8 +1152,8 @@ window.formCursoGestion = function () {
                 }
             }
 
-            // Validación opcional de plantilla, ahora validamos si existe archivoIA (el word)
-            if (this.aplicaEvaluacion && !this.archivoIA && this.preguntasExamenIA.length === 0) {
+            // Validación opcional de plantilla, ahora validamos si existe archivoWord (el word)
+            if (this.aplicaEvaluacion && !this.archivoWord && this.preguntasExamen.length === 0) {
                 // Ya no es estrictamente obligatorio pero avisamos
                 console.info('No se subió archivo de examen. Continuando sin archivo adjunto.');
             }
@@ -1178,8 +1194,8 @@ window.formCursoGestion = function () {
             formData.append('cod_moodle_area', this.codMoodleArea);
             formData.append('observaciones', this.observaciones);
 
-            if (this.archivoIA) {
-                formData.append('archivo', this.archivoIA);
+            if (this.archivoWord) {
+                formData.append('archivo', this.archivoWord);
             }
 
             axios.post(`${VITE_URL_APP}/api/save-cursos`, formData, {
@@ -1188,17 +1204,17 @@ window.formCursoGestion = function () {
                 .then(async (res) => {
                     if (res.status === 200 && res.data.success) {
 
-                        // Si hay preguntas de IA cargadas, guardarlas en el banco 2026
-                        if (this.preguntasExamenIA.length > 0 && res.data.codigo) {
+                        // Si hay preguntas de Word cargadas, guardarlas en el banco 2026
+                        if (this.preguntasExamen.length > 0 && res.data.codigo) {
                             try {
-                                await axios.post(`${VITE_URL_APP}/api/capacitacion/guardar-examen-ia`, {
+                                await axios.post(`${VITE_URL_APP}/api/capacitacion/guardar-examen-word`, {
                                     cod_curso: res.data.codigo,
                                     cod_examen: -1,
-                                    preguntas: this.preguntasExamenIA,
+                                    preguntas: this.preguntasExamen,
                                     tiempo: 60
                                 });
                             } catch (iaErr) {
-                                console.warn('Banco IA: no se pudo guardar automáticamente', iaErr);
+                                console.warn('Banco Word: no se pudo guardar automáticamente', iaErr);
                             }
                         }
 

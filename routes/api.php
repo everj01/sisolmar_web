@@ -133,8 +133,8 @@ Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class,
 Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
 Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
-Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
-Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
+Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
+Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
 Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
 Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
 

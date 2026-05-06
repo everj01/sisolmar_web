@@ -21,6 +21,8 @@ use App\Jobs\DispatchMatriculaBatchJob;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Matricula;
 use App\Models\Consulta;
+use App\Models\ExamenPregunta2026;
+use PhpOffice\PhpWord\IOFactory;
 
 class CapacitacionController extends Controller
 {
@@ -142,7 +144,7 @@ class CapacitacionController extends Controller
 
         try {
             $curso = Cursos::where('codigo', $request->codigo)->firstOrFail();
-            $codigo_curso =  $curso->codigo_curso;
+            $codigo_curso = $curso->codigo_curso;
 
             $periodicidadVal = 0;
             if ($request->input('es_periodico') == 1) {
@@ -205,13 +207,13 @@ class CapacitacionController extends Controller
                             $newProgCod++;
                             CursoProgramacion::create([
                                 'codigo_programacion' => str_pad($newProgCod, 4, '0', STR_PAD_LEFT),
-                                'cod_cursos'    => $curso->codigo,
-                                'periodo'       => $fechaItem['periodo'],
-                                'tipo'          => 'REGULAR',
-                                'fecha_inicio'  => $fechaItem['inicio'] . 'T00:00:00.000',
-                                'fecha_final'   => $fechaItem['final'] . 'T23:59:59.000',
+                                'cod_cursos' => $curso->codigo,
+                                'periodo' => $fechaItem['periodo'],
+                                'tipo' => 'REGULAR',
+                                'fecha_inicio' => $fechaItem['inicio'] . 'T00:00:00.000',
+                                'fecha_final' => $fechaItem['final'] . 'T23:59:59.000',
                                 'fecha_creacion' => date('Y-m-d\TH:i:s.000'),
-                                'habilitado'    => 1,
+                                'habilitado' => 1,
                             ]);
                         }
                     }
@@ -247,7 +249,7 @@ class CapacitacionController extends Controller
                     // Actualizar examen existente
                     $examen->update([
                         'nombre' => $nombreExamen,
-                        'descripcion' =>  $request->descripcion,
+                        'descripcion' => $request->descripcion,
                         'tiempo' => (int) ($request->tiempo ?? 0),
                         'nota_minima' => (int) ($request->nota ?? 0),
                         'intentos' => (int) ($request->intentos ?? 0),
@@ -550,12 +552,14 @@ class CapacitacionController extends Controller
 
             if ($request->hasFile('archivo')) {
                 $archivo = $request->file('archivo');
+                $extensionOriginal = strtolower($archivo->getClientOriginalExtension());
 
-                if ($archivo->getClientOriginalExtension() !== 'mbz') {
+                // Permitimos .mbz (nativo) y .docx (para "convertirlo" a mbz)
+                if ($extensionOriginal !== 'mbz' && $extensionOriginal !== 'docx') {
                     return response()->json([
                         'success' => false,
-                        'message' => 'El archivo debe ser .mbz',
-                        'errors' => ['archivo' => ['El archivo debe ser .mbz']]
+                        'message' => 'El archivo debe ser .mbz o .docx',
+                        'errors' => ['archivo' => ['El archivo debe ser .mbz o .docx']]
                     ], 422);
                 }
 
@@ -565,7 +569,9 @@ class CapacitacionController extends Controller
                 $mes = ucfirst(Carbon::now()->translatedFormat('F'));
 
                 $tipoArchivo = $archivo->getClientMimeType();
-                $extensionArchivo = $archivo->getClientOriginalExtension();
+                
+                // Si es docx, lo "convertimos" a mbz (renombramos extensión) para cumplir con el estándar del sistema
+                $extensionArchivo = ($extensionOriginal === 'docx') ? 'mbz' : $extensionOriginal;
                 $nombreArchivoOriginal = $archivo->getClientOriginalName();
 
                 $baseNombre = 'EXA_' . $newCode . '_' . date('Ymd');
@@ -627,13 +633,13 @@ class CapacitacionController extends Controller
                         $newProgCod++;
                         CursoProgramacion::create([
                             'codigo_programacion' => str_pad($newProgCod, 4, '0', STR_PAD_LEFT),
-                            'cod_cursos'    => $curso->codigo,
-                            'periodo'       => $fechaItem['periodo'],
-                            'tipo'          => 'REGULAR',
-                            'fecha_inicio'  => $fechaItem['inicio'] . 'T00:00:00.000',
-                            'fecha_final'   => $fechaItem['final'] . 'T23:59:59.000',
+                            'cod_cursos' => $curso->codigo,
+                            'periodo' => $fechaItem['periodo'],
+                            'tipo' => 'REGULAR',
+                            'fecha_inicio' => $fechaItem['inicio'] . 'T00:00:00.000',
+                            'fecha_final' => $fechaItem['final'] . 'T23:59:59.000',
                             'fecha_creacion' => date('Y-m-d\TH:i:s.000'),
-                            'habilitado'    => 1,
+                            'habilitado' => 1,
                         ]);
                     }
                 }
@@ -645,7 +651,7 @@ class CapacitacionController extends Controller
                 $codMoodleArea = $request->input('cod_moodle_area');
 
                 $aplicaEvaluacion = $request->input('aplica_evaluacion', 0);
-                
+
                 DB::connection('mysql_grupoihb')->statement("
                 CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
                     $nombre,          // V_FULLNAME
@@ -655,7 +661,7 @@ class CapacitacionController extends Controller
                     (int) ($request->tiempo ?? 0),               // V_TIEMPO
                     (int) ($request->intentos ?? 0),                // V_MAX_INTENTOS
                     (int) ($request->cantidad_preguntas ?? 0),                // V_CANT_PREGUNTAS
-                    (float) ($request->nota ?? 0.00)             // V_NOTA_MINIMA
+                    (float) ($request->nota ?? 0.00)             // V_NOTA_MINIMA<
                 ]);
 
                 $res = DB::connection('mysql_grupoihb')->select("SELECT @resultado AS resultado");
@@ -704,12 +710,12 @@ class CapacitacionController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'cod_cursos'    => 'required|integer|exists:sw_cursos,codigo',
+                'cod_cursos' => 'required|integer|exists:sw_cursos,codigo',
                 // 'periodo'       => 'required|date_format:Y-m', // Ya no es requerido por input
-                'tipo'          => 'required|in:REGULAR,EXTEMPORANEO',
-                'fecha_inicio'  => 'required|date',
-                'fecha_final'   => 'required|date|after_or_equal:fecha_inicio',
-                'habilitado'    => 'required|integer|in:0,1',
+                'tipo' => 'required|in:REGULAR,EXTEMPORANEO',
+                'fecha_inicio' => 'required|date',
+                'fecha_final' => 'required|date|after_or_equal:fecha_inicio',
+                'habilitado' => 'required|integer|in:0,1',
             ]);
 
             if ($validator->fails()) {
@@ -756,7 +762,7 @@ class CapacitacionController extends Controller
             // Lógica de Fechas con Carbon
             // Usar fechas del usuario directamente para AMBOS tipos (REGULAR y EXTEMPORANEO)
             $fechaInicio = Carbon::parse($request->fecha_inicio)->startOfDay()->format('Y-m-d\TH:i:s.000');
-            $fechaFinal  = Carbon::parse($request->fecha_final)->endOfDay()->format('Y-m-d\TH:i:s.000');
+            $fechaFinal = Carbon::parse($request->fecha_final)->endOfDay()->format('Y-m-d\TH:i:s.000');
 
             // Validación de Unicidad Compuesta: Curso + Periodo + Tipo
             // Evita duplicar el mismo tipo de curso en el mismo mes
@@ -779,13 +785,13 @@ class CapacitacionController extends Controller
 
             $programacion = CursoProgramacion::create([
                 'codigo_programacion' => (string) $newCode,
-                'cod_cursos'    => (int) $curso->codigo,
-                'periodo'       => $periodoCalculado,
-                'tipo'          => $request->tipo,
-                'fecha_inicio'  => $fechaInicio,
-                'fecha_final'   => $fechaFinal,
+                'cod_cursos' => (int) $curso->codigo,
+                'periodo' => $periodoCalculado,
+                'tipo' => $request->tipo,
+                'fecha_inicio' => $fechaInicio,
+                'fecha_final' => $fechaFinal,
                 'fecha_creacion' => now()->format('Y-m-d\TH:i:s.000'),
-                'habilitado'    => (int) $request->habilitado,
+                'habilitado' => (int) $request->habilitado,
             ]);
 
             if (!$programacion) {
@@ -810,13 +816,13 @@ class CapacitacionController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'codigo'        => 'required|integer|exists:sw_cursos_programacion,codigo',
-                'cod_cursos'    => 'required|integer|exists:sw_cursos,codigo',
+                'codigo' => 'required|integer|exists:sw_cursos_programacion,codigo',
+                'cod_cursos' => 'required|integer|exists:sw_cursos,codigo',
                 // 'periodo'       => 'required|date_format:Y-m', // Ya no requerido
-                'tipo'          => 'required|in:REGULAR,EXTEMPORANEO',
-                'fecha_inicio'  => 'required|date',
-                'fecha_final'   => 'required|date|after_or_equal:fecha_inicio',
-                'habilitado'    => 'required|integer|in:0,1',
+                'tipo' => 'required|in:REGULAR,EXTEMPORANEO',
+                'fecha_inicio' => 'required|date',
+                'fecha_final' => 'required|date|after_or_equal:fecha_inicio',
+                'habilitado' => 'required|integer|in:0,1',
             ]);
 
             if ($validator->fails()) {
@@ -843,7 +849,7 @@ class CapacitacionController extends Controller
             // Lógica de Fechas con Carbon
             // Usar fechas del usuario directamente para AMBOS tipos
             $fechaInicio = Carbon::parse($request->fecha_inicio)->startOfDay()->format('Y-m-d\TH:i:s.000');
-            $fechaFinal  = Carbon::parse($request->fecha_final)->endOfDay()->format('Y-m-d\TH:i:s.000');
+            $fechaFinal = Carbon::parse($request->fecha_final)->endOfDay()->format('Y-m-d\TH:i:s.000');
 
             // Validar unicidad (excluyendo la propia programación)
             $existe = CursoProgramacion::where('cod_cursos', $request->cod_cursos)
@@ -863,12 +869,12 @@ class CapacitacionController extends Controller
 
             // Actualizar campos
             $programacion->update([
-                'cod_cursos'    => (int) $request->cod_cursos,
-                'periodo'       => $periodoCalculado,
-                'tipo'          => $request->tipo,
-                'fecha_inicio'  => $fechaInicio,
-                'fecha_final'   => $fechaFinal,
-                'habilitado'    => (int) $request->habilitado,
+                'cod_cursos' => (int) $request->cod_cursos,
+                'periodo' => $periodoCalculado,
+                'tipo' => $request->tipo,
+                'fecha_inicio' => $fechaInicio,
+                'fecha_final' => $fechaFinal,
+                'habilitado' => (int) $request->habilitado,
                 'fecha_modificacion' => now()->format('Y-m-d\TH:i:s.000'),
             ]);
 
@@ -1009,7 +1015,7 @@ class CapacitacionController extends Controller
         $raw = DB::select('EXEC SW_LISTAR_CLIENTES');
         $clientes = collect($raw)->map(function ($row) {
             return [
-                'codigo'      => $row->codigo,
+                'codigo' => $row->codigo,
                 'descripcion' => $row->abreviatura ?? $row->razon_social ?? '',
             ];
         })->sortBy('descripcion')->values();
@@ -1031,7 +1037,7 @@ class CapacitacionController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'cod_cursos'   => 'required|integer|exists:sw_cursos,codigo',
+                'cod_cursos' => 'required|integer|exists:sw_cursos,codigo',
                 'fecha_inicio' => 'required|date_format:Y-m',
             ]);
 
@@ -1050,20 +1056,20 @@ class CapacitacionController extends Controller
             $fechaBase = Carbon::parse($request->fecha_inicio . '-01');
             $periodo = $fechaBase->format('Y-m');
             $fInicio = $fechaBase->startOfMonth()->format('Y-m-d\TH:i:s.000');
-            $fFinal  = $fechaBase->endOfMonth()->format('Y-m-d\TH:i:s.000');
+            $fFinal = $fechaBase->endOfMonth()->format('Y-m-d\TH:i:s.000');
 
             $lastCod = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
             $newCode = $lastCod ? str_pad(intval($lastCod->codigo_programacion) + 1, 4, '0', STR_PAD_LEFT) : '1001';
 
             CursoProgramacion::create([
                 'codigo_programacion' => (string) $newCode,
-                'cod_cursos'    => (int) $curso->codigo,
-                'periodo'       => $periodo,
-                'tipo'          => 'REGULAR',
-                'fecha_inicio'  => $fInicio,
-                'fecha_final'   => $fFinal,
+                'cod_cursos' => (int) $curso->codigo,
+                'periodo' => $periodo,
+                'tipo' => 'REGULAR',
+                'fecha_inicio' => $fInicio,
+                'fecha_final' => $fFinal,
                 'fecha_creacion' => now()->format('Y-m-d\TH:i:s.000'),
-                'habilitado'    => 1,
+                'habilitado' => 1,
             ]);
 
             DB::commit();
@@ -1158,12 +1164,12 @@ class CapacitacionController extends Controller
                 ], 400);
             }
 
-            $courseName    = (string) ($info->original_course_fullname ?? 'Sin nombre');
-            $courseShort   = (string) ($info->original_course_shortname ?? '');
-            $backupDate    = (string) ($info->backup_date ?? null);
+            $courseName = (string) ($info->original_course_fullname ?? 'Sin nombre');
+            $courseShort = (string) ($info->original_course_shortname ?? '');
+            $backupDate = (string) ($info->backup_date ?? null);
             $moodleVersion = (string) ($info->moodle_version ?? null);
 
-            $totalSections   = 0;
+            $totalSections = 0;
             $totalActivities = 0;
             if (isset($info->contents->sections->section)) {
                 $sectionsNode = $info->contents->sections->section;
@@ -1191,7 +1197,8 @@ class CapacitacionController extends Controller
             if (isset($info->contents->activities->activity)) {
                 foreach ($info->contents->activities->activity as $act) {
                     $mod = (string) $act->modulename;
-                    if ($mod === '') $mod = 'other';
+                    if ($mod === '')
+                        $mod = 'other';
 
                     $nombre = $mapaTipos[$mod] ?? ucfirst($mod);
 
@@ -1209,7 +1216,7 @@ class CapacitacionController extends Controller
                 foreach ($questionsDoc->question_category as $category) {
                     if (isset($category->questions->question)) {
                         foreach ($category->questions->question as $q) {
-                            if (((string)$q->parent) === "0") {
+                            if (((string) $q->parent) === "0") {
                                 $totalQuestions++;
                             }
                         }
@@ -1220,7 +1227,8 @@ class CapacitacionController extends Controller
                     foreach ($xml->questions->question_category as $category) {
                         if (isset($category->questions->question)) {
                             foreach ($category->questions->question as $q) {
-                                if (((string)$q->parent) === "0") $totalQuestions++;
+                                if (((string) $q->parent) === "0")
+                                    $totalQuestions++;
                             }
                         }
                     }
@@ -1233,10 +1241,10 @@ class CapacitacionController extends Controller
                 'courseShortname' => $courseShort,
                 'backupDate' => $backupDate,
                 'moodleVersion' => $moodleVersion,
-                'totalSections' => (int)$totalSections,
-                'totalActivities' => (int)$totalActivities,
+                'totalSections' => (int) $totalSections,
+                'totalActivities' => (int) $totalActivities,
                 'activityStats' => $activityStats,
-                'totalQuestions' => (int)$totalQuestions
+                'totalQuestions' => (int) $totalQuestions
             ]);
         } catch (\Throwable $e) {
             // Loggear detalles para debugging
@@ -1260,9 +1268,9 @@ class CapacitacionController extends Controller
     public function saveMatricula(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'cursoId'      => 'required|integer|exists:sw_cursos,codigo',
+            'cursoId' => 'required|integer|exists:sw_cursos,codigo',
             'programacionId' => 'required|integer|exists:sw_cursos_programacion,codigo',
-            'personalIds'  => 'required|array|max:100',
+            'personalIds' => 'required|array|max:100',
             'personalIds.*' => 'required|string'
         ]);
 
@@ -1473,7 +1481,7 @@ class CapacitacionController extends Controller
                     // Se usa try-catch y query simple para evitar 500 errors si faltan columnas
                     $matriculadosEnCurso = Matricula::where('cod_curso', $cursoId)
                         ->pluck('cod_personal')
-                        ->map(fn($id) => (string)$id)
+                        ->map(fn($id) => (string) $id)
                         ->toArray();
                 } catch (\Exception $e) {
                     Log::error('Error verificando enrollments: ' . $e->getMessage());
@@ -1498,7 +1506,7 @@ class CapacitacionController extends Controller
                     'dni' => $dni,
                     'cargo' => $cargo,
                     'sucursal' => $sucursal,
-                    'matriculado' => in_array((string)$codigo, $matriculadosEnCurso),
+                    'matriculado' => in_array((string) $codigo, $matriculadosEnCurso),
                     'total_capacitaciones' => $matriculasCounts[$codigo] ?? 0
                 ];
             }, $rawPersonal);
@@ -1642,7 +1650,7 @@ class CapacitacionController extends Controller
             }
 
             $codigosPersonal = $matriculas->pluck('cod_personal')
-                ->map(fn($id) => str_pad(trim((string)$id), 5, '0', STR_PAD_LEFT))
+                ->map(fn($id) => str_pad(trim((string) $id), 5, '0', STR_PAD_LEFT))
                 ->unique()
                 ->values()
                 ->toArray();
@@ -1693,7 +1701,7 @@ class CapacitacionController extends Controller
                     );
                 }
                 foreach ($sucRows as $suc) {
-                    $sucursalesMap[$suc->SUCU_CODIGO]      = $suc->SUCU_ABREVIATURA;
+                    $sucursalesMap[$suc->SUCU_CODIGO] = $suc->SUCU_ABREVIATURA;
                     $sucursalClienteMap[$suc->SUCU_CODIGO] = $suc->EMPR_CODIGO;
                 }
             }
@@ -1720,7 +1728,7 @@ class CapacitacionController extends Controller
 
                     foreach ($clientDetails as $cd) {
                         $legacyCode = $cd->cod_legacy;
-                        $clientName = $cd->abreviatura ?? $cd->razon_social ?? (string)$cd->codigo;
+                        $clientName = $cd->abreviatura ?? $cd->razon_social ?? (string) $cd->codigo;
 
                         if ($legacyCode) {
                             $externalSucursales = DB::connection('sqlsrv_controlclientes')
@@ -1751,7 +1759,7 @@ class CapacitacionController extends Controller
 
             // 6. Unir datos en memoria
             $resultado = $matriculas->map(function ($m) use ($personalData, $sucursalesMap, $sucursalClienteNameMap, $esPCU, $esPCI, $esPCE, $empresasMap) {
-                $id = str_pad(trim((string)$m->cod_personal), 5, '0', STR_PAD_LEFT);
+                $id = str_pad(trim((string) $m->cod_personal), 5, '0', STR_PAD_LEFT);
                 $p = $personalData->get($id);
 
                 // Resolver cliente/empresa según tipo de curso
@@ -1907,6 +1915,205 @@ class CapacitacionController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener áreas por sistema: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Procesa un archivo Word usando PHPWord para extraer preguntas y respuestas.
+     * Basado en formato: Pregunta (ListItemRun) con respuesta correcta al final (letra).
+     */
+    public function procesarExamenWord(Request $request): JsonResponse
+    {
+        try {
+            if (!$request->hasFile('archivo')) {
+                return response()->json(['success' => false, 'message' => 'No se cargó ningún archivo.'], 400);
+            }
+
+            $file = $request->file('archivo');
+            $extension = strtolower($file->getClientOriginalExtension());
+            
+            if ($extension === 'doc' || $extension === 'dot') {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'El formato .doc es antiguo. Por favor guarda el archivo como .docx para permitir la extracción por estilos.'
+                ], 422);
+            }
+
+            $path = $file->getRealPath();
+
+            if (!$path || !file_exists($path)) {
+                return response()->json(['success' => false, 'message' => 'El archivo no se pudo encontrar en el servidor.'], 400);
+            }
+
+            $phpWord = IOFactory::load($path);
+            $preguntas = [];
+            $currentPregunta = null;
+
+            foreach ($phpWord->getSections() as $section) {
+                foreach ($section->getElements() as $element) {
+                    $text = '';
+                    $isCorrectByStyle = false;
+                    $isCorrectByColor = false;
+                    $type = get_class($element);
+
+                    // 1. Obtener Estilo del Párrafo
+                    $styleName = '';
+                    if (method_exists($element, 'getParagraphStyle')) {
+                        $pStyle = $element->getParagraphStyle();
+                        if ($pStyle) {
+                            $styleName = is_string($pStyle) ? $pStyle : (method_exists($pStyle, 'getStyleName') ? $pStyle->getStyleName() : '');
+                        }
+                    }
+
+                    if ($styleName === 'RightAnswer') {
+                        $isCorrectByStyle = true;
+                    }
+
+                    // 2. Extraer texto y detectar color manual (fallback)
+                    if (method_exists($element, 'getElements')) {
+                        foreach ($element->getElements() as $child) {
+                            if (method_exists($child, 'getText')) {
+                                $partText = $child->getText();
+                                $text .= $partText;
+                                
+                                if (method_exists($child, 'getFontStyle')) {
+                                    $font = $child->getFontStyle();
+                                    if ($font) {
+                                        $color = $font->getColor();
+                                        // Detectar verdes comunes
+                                        if ($color && (strpos($color, '00B0') !== false || in_array($color, ['008000', '92D050', '00FF00', '228B22']))) {
+                                            $isCorrectByColor = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } elseif (method_exists($element, 'getText')) {
+                        $text = $element->getText();
+                    }
+
+                    $text = trim($text);
+                    if (empty($text)) continue;
+
+                    // 3. IDENTIFICAR PREGUNTA
+                    $esPregunta = ($styleName === 'MultipleChoiceQ') || (strpos($type, 'ListItem') !== false) || preg_match('/^\d+[\.\)]\s+/', $text);
+
+                    if ($esPregunta) {
+                        if ($currentPregunta) {
+                            $preguntas[] = $currentPregunta;
+                        }
+
+                        // Extraer la respuesta correcta del final del texto (ej: "Pregunta... A")
+                        // NOTA: Solo lo usaremos si no detectamos RightAnswer en las opciones
+                        $respuestaCandidata = 'A';
+                        if (preg_match('/\s+([A-E])$/', $text, $matches)) {
+                            $respuestaCandidata = $matches[1];
+                            $text = preg_replace('/\s+[A-E]$/', '', $text);
+                        }
+
+                        $currentPregunta = [
+                            'texto' => preg_replace('/^\d+[\.\)]\s+/', '', $text),
+                            'opciones' => [],
+                            'respuesta_correcta' => $respuestaCandidata, // Valor por defecto
+                            'manual_correct_found' => false, // Flag para saber si ya encontramos la rpta por color/estilo
+                            'tipo' => 'multiple'
+                        ];
+                        
+                        Log::debug("Pregunta detectada: " . $currentPregunta['texto']);
+                    } 
+                    // 4. IDENTIFICAR OPCIÓN
+                    else if ($currentPregunta) {
+                        $opcionLimpia = preg_replace('/^[o\-\*]\s+/', '', $text);
+                        $currentPregunta['opciones'][] = $opcionLimpia;
+                        
+                        // Si detectamos que es correcta por ESTILO o COLOR
+                        if ($isCorrectByStyle || $isCorrectByColor) {
+                            $index = count($currentPregunta['opciones']) - 1;
+                            $currentPregunta['respuesta_correcta'] = chr(65 + $index);
+                            $currentPregunta['manual_correct_found'] = true;
+                            Log::debug("Respuesta correcta detectada por " . ($isCorrectByStyle ? 'ESTILO' : 'COLOR') . ": " . $currentPregunta['respuesta_correcta']);
+                        }
+                    }
+                }
+            }
+
+            if ($currentPregunta) {
+                $preguntas[] = $currentPregunta;
+            }
+
+            // Limpieza final de campos internos
+            foreach ($preguntas as &$p) {
+                unset($p['manual_correct_found']);
+            }
+
+            Log::info("PHPWord - Preguntas finalizadas con Estilos: " . count($preguntas));
+
+            return response()->json([
+                'success' => true,
+                'preguntas' => $preguntas,
+                'total' => count($preguntas),
+                'debug_info' => 'Procesado con detección de Estilos (RightAnswer)'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("PHPWord Style Parser Error: " . $e->getMessage() . " at " . $e->getLine());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Persiste las preguntas procesadas en la base de datos vinculadas al examen del curso.
+     */
+    public function guardarExamenWord(Request $request): JsonResponse
+    {
+        $request->validate([
+            'cod_curso' => 'required',
+            'preguntas' => 'required|array'
+        ]);
+
+        try {
+            DB::beginTransaction();
+            
+            // Buscar el examen vinculado al curso
+            $examen = ExamenCurso::where('cod_cursos', $request->cod_curso)->first();
+            
+            if (!$examen) {
+                // Si no existe, lo creamos con valores por defecto
+                $curso = Cursos::where('codigo', $request->cod_curso)->first();
+                $examen = ExamenCurso::create([
+                    'cod_cursos' => $request->cod_curso,
+                    'nombre' => 'Examen de ' . ($curso->nombre ?? 'Curso'),
+                    'intentos' => 1,
+                    'nota_minima' => 14,
+                    'tiempo' => 20,
+                    'fecha_creacion' => now()
+                ]);
+            }
+
+            // Limpiar preguntas previas (reemplazo total de la carga actual)
+            ExamenPregunta2026::where('cod_examen', $examen->codigo)->delete();
+
+            foreach ($request->preguntas as $p) {
+                ExamenPregunta2026::create([
+                    'cod_examen' => $examen->codigo,
+                    'tipo_pregunta' => $p['tipo'] ?? 'multiple',
+                    'texto_pregunta' => $p['texto'],
+                    'opciones_json' => $p['opciones'],
+                    'respuesta_correcta' => $p['respuesta_correcta'] ?? 'A',
+                    'estado_revision' => 'PENDIENTE',
+                    'fecha_creacion' => now()
+                ]);
+            }
+
+            DB::commit();
+            return response()->json([
+                'success' => true, 
+                'message' => 'Examen guardado correctamente con ' . count($request->preguntas) . ' preguntas.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error guardando examen Word: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }
