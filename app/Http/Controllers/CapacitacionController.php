@@ -569,7 +569,7 @@ class CapacitacionController extends Controller
                 $mes = ucfirst(Carbon::now()->translatedFormat('F'));
 
                 $tipoArchivo = $archivo->getClientMimeType();
-                
+
                 // Si es docx, lo "convertimos" a mbz (renombramos extensión) para cumplir con el estándar del sistema
                 $extensionArchivo = ($extensionOriginal === 'docx') ? 'mbz' : $extensionOriginal;
                 $nombreArchivoOriginal = $archivo->getClientOriginalName();
@@ -592,7 +592,6 @@ class CapacitacionController extends Controller
                 $rutaArchivo = $archivo->storeAs($carpeta, $nombreArchivoFinal, 'public');
             }
 
-            // Solo crear examen si aplica evaluación
             if ($request->input('aplica_evaluacion', 0) == 1) {
                 $nombreExamen = $request->nombre_exa ?? ("Examen de " . $request->nombre);
 
@@ -649,38 +648,59 @@ class CapacitacionController extends Controller
                 $nombre = $request->input('nombre');
                 $codigo = $curso->codigo;
                 $codMoodleArea = $request->input('cod_moodle_area');
-
                 $aplicaEvaluacion = $request->input('aplica_evaluacion', 0);
 
                 DB::connection('mysql_grupoihb')->statement("
-                CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
-                    $nombre,          // V_FULLNAME
-                    $codigo,          // V_IDNUMBER
-                    $codMoodleArea,   // V_IDCATEGORY
-                    $aplicaEvaluacion,                // V_CREAR_EXAMEN
-                    (int) ($request->tiempo ?? 0),               // V_TIEMPO
-                    (int) ($request->intentos ?? 0),                // V_MAX_INTENTOS
-                    (int) ($request->cantidad_preguntas ?? 0),                // V_CANT_PREGUNTAS
-                    (float) ($request->nota ?? 0.00)             // V_NOTA_MINIMA<
+        CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
+                    $nombre,
+                    $codigo,
+                    $codMoodleArea,
+                    $aplicaEvaluacion,
+                    (int) ($request->tiempo ?? 0),
+                    (int) ($request->intentos ?? 0),
+                    0,
+                    (float) ($request->nota ?? 0.00)
                 ]);
 
                 $res = DB::connection('mysql_grupoihb')->select("SELECT @resultado AS resultado");
+                $courseId = $res[0]->resultado ?? null;
 
-                if (!empty($res)) {
-                    $resultado = $res[0]->resultado;
+                if ($courseId > 0) {
+                    $curso->update(['codigo_moodle' => $courseId]);
 
-                    if ($resultado > 0) {
-                        $curso->update(['codigo_moodle' => $resultado]);
-                    } else {
-                        Log::warning('SP_COURSE_crear_con_examen devolvió código negativo', [
-                            'resultado' => $resultado
-                        ]);
+                    $preguntasWordStr = $request->input('preguntas_word');
+
+                    if ($aplicaEvaluacion && $preguntasWordStr) {
+                        $preguntas = json_decode($preguntasWordStr, true);
+
+                        if (!empty($preguntas)) {
+                            $quizRow = DB::connection('mysql_grupoihb')
+                                ->select("SELECT id FROM mdl_quiz WHERE course = ? LIMIT 1", [$courseId]);
+
+                            if (!empty($quizRow)) {
+                                $quizId = $quizRow[0]->id;
+
+                                DB::connection('mysql_grupoihb')->statement("
+                        CALL SP_QUIZ_agregar_preguntas_mc(?, ?, @res_preguntas)", [
+                                    $quizId,
+                                    json_encode($preguntas)
+                                ]);
+
+                                $resPreg = DB::connection('mysql_grupoihb')
+                                    ->select("SELECT @res_preguntas AS resultado");
+
+                                Log::info('Preguntas Word insertadas en Moodle', [
+                                    'quiz_id' => $quizId,
+                                    'total'   => $resPreg[0]->resultado ?? 0
+                                ]);
+                            }
+                        }
                     }
                 }
             } catch (\Throwable $e) {
-                Log::error('Error al ejecutar F_COURSE_crear en MySQL Moodle', [
-                    'error' => $e->getMessage(),
-                    'newCode' => $newCode ?? null
+                Log::error('Error al crear curso en Moodle', [
+                    'error'   => $e->getMessage(),
+                    'codigo'  => $curso->codigo ?? null
                 ]);
             }
 
@@ -1931,10 +1951,10 @@ class CapacitacionController extends Controller
 
             $file = $request->file('archivo');
             $extension = strtolower($file->getClientOriginalExtension());
-            
+
             if ($extension === 'doc' || $extension === 'dot') {
                 return response()->json([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'El formato .doc es antiguo. Por favor guarda el archivo como .docx para permitir la extracción por estilos.'
                 ], 422);
             }
@@ -1975,7 +1995,7 @@ class CapacitacionController extends Controller
                             if (method_exists($child, 'getText')) {
                                 $partText = $child->getText();
                                 $text .= $partText;
-                                
+
                                 if (method_exists($child, 'getFontStyle')) {
                                     $font = $child->getFontStyle();
                                     if ($font) {
@@ -2018,14 +2038,14 @@ class CapacitacionController extends Controller
                             'manual_correct_found' => false, // Flag para saber si ya encontramos la rpta por color/estilo
                             'tipo' => 'multiple'
                         ];
-                        
+
                         Log::debug("Pregunta detectada: " . $currentPregunta['texto']);
-                    } 
+                    }
                     // 4. IDENTIFICAR OPCIÓN
                     else if ($currentPregunta) {
                         $opcionLimpia = preg_replace('/^[o\-\*]\s+/', '', $text);
                         $currentPregunta['opciones'][] = $opcionLimpia;
-                        
+
                         // Si detectamos que es correcta por ESTILO o COLOR
                         if ($isCorrectByStyle || $isCorrectByColor) {
                             $index = count($currentPregunta['opciones']) - 1;
@@ -2054,7 +2074,6 @@ class CapacitacionController extends Controller
                 'total' => count($preguntas),
                 'debug_info' => 'Procesado con detección de Estilos (RightAnswer)'
             ]);
-
         } catch (\Exception $e) {
             Log::error("PHPWord Style Parser Error: " . $e->getMessage() . " at " . $e->getLine());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -2073,10 +2092,10 @@ class CapacitacionController extends Controller
 
         try {
             DB::beginTransaction();
-            
+
             // Buscar el examen vinculado al curso
             $examen = ExamenCurso::where('cod_cursos', $request->cod_curso)->first();
-            
+
             if (!$examen) {
                 // Si no existe, lo creamos con valores por defecto
                 $curso = Cursos::where('codigo', $request->cod_curso)->first();
@@ -2107,7 +2126,7 @@ class CapacitacionController extends Controller
 
             DB::commit();
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Examen guardado correctamente con ' . count($request->preguntas) . ' preguntas.'
             ]);
         } catch (\Exception $e) {

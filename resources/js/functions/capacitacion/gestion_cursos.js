@@ -1073,10 +1073,10 @@ window.formCursoGestion = function () {
             this.codMoodleArea = '';
             this.frecuencia = '';
             this.limiteTiempo = '0';
-            this.nota = '0';
-            this.intentos = '0';
-            this.cantidadPreguntas = '0';
-            this.preguntasBalotario = '0';
+            this.nota = '10';
+            this.intentos = '1';
+            this.cantidadPreguntas = '1';
+            this.preguntasBalotario = '1';
             this.esPAC = false;
             this.sucursalesAsignadas = [];
             this.busquedaSucursal = '';
@@ -1110,7 +1110,7 @@ window.formCursoGestion = function () {
             if (typeof btnAnalizar !== 'undefined' && btnAnalizar) btnAnalizar.disabled = true;
         },
 
-        registrar(e) {
+        async registrar(e) {
             e?.preventDefault();
 
             // Validación PAC General
@@ -1152,10 +1152,16 @@ window.formCursoGestion = function () {
                 }
             }
 
-            // Validación opcional de plantilla, ahora validamos si existe archivoWord (el word)
-            if (this.aplicaEvaluacion && !this.archivoWord && this.preguntasExamen.length === 0) {
-                // Ya no es estrictamente obligatorio pero avisamos
-                console.info('No se subió archivo de examen. Continuando sin archivo adjunto.');
+            if (this.aplicaEvaluacion && this.archivoWord && this.preguntasExamen.length === 0) {
+                const confirm = await Swal.fire({
+                    title: 'Archivo sin analizar',
+                    text: 'Subiste un archivo Word pero no lo analizaste. ¿Deseas continuar sin cargar las preguntas?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, continuar',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (!confirm.isConfirmed) return;
             }
 
             const formData = new FormData();
@@ -1177,14 +1183,20 @@ window.formCursoGestion = function () {
                 formData.append('intentos', this.intentos);
                 formData.append('cantidad_preguntas', this.cantidadPreguntas);
                 formData.append('preguntas_balotario', this.preguntasBalotario);
+
+                if (this.preguntasExamen.length > 0) {
+                    formData.append('preguntas_word', JSON.stringify(this.preguntasExamen));
+                }
             }
-            // Recolección PAC, PCU, PCI compartiendo el mismo campo en Backend
+
             if (this.esPAC && this.sucursalesAsignadas.length > 0) {
                 this.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
             }
+
             if (this.tipoCurso == '6' && this.clientesAsignados.length > 0) {
                 this.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
             }
+
             if (this.tipoCurso == '7' && this.areasAsignadas.length > 0) {
                 this.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
             }
@@ -1198,26 +1210,20 @@ window.formCursoGestion = function () {
                 formData.append('archivo', this.archivoWord);
             }
 
+            Swal.fire({
+                title: 'Registrando curso...',
+                html: 'Por favor espera mientras se procesa la información.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
             axios.post(`${VITE_URL_APP}/api/save-cursos`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
                 .then(async (res) => {
                     if (res.status === 200 && res.data.success) {
-
-                        // Si hay preguntas de Word cargadas, guardarlas en el banco 2026
-                        if (this.preguntasExamen.length > 0 && res.data.codigo) {
-                            try {
-                                await axios.post(`${VITE_URL_APP}/api/capacitacion/guardar-examen-word`, {
-                                    cod_curso: res.data.codigo,
-                                    cod_examen: -1,
-                                    preguntas: this.preguntasExamen,
-                                    tiempo: 60
-                                });
-                            } catch (iaErr) {
-                                console.warn('Banco Word: no se pudo guardar automáticamente', iaErr);
-                            }
-                        }
-
                         Swal.fire('Éxito', res.data.message || 'Curso registrado correctamente', 'success')
 
                         const valoresPorDefecto = {
@@ -1226,9 +1232,9 @@ window.formCursoGestion = function () {
                             tipoCurso: "",
                             area: "",
                             frecuencia: "",
-                            limiteTiempo: 0,
-                            nota: 0,
-                            intentos: 0,
+                            limiteTiempo: 10,
+                            nota: 10,
+                            intentos: 1,
                             observaciones: ""
                         };
 
