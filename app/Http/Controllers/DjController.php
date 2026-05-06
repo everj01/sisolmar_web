@@ -386,7 +386,7 @@ class DjController extends Controller
         ], 200);
     }
 
-    private function getTelefonos($codiPers, $source = 'migracion')
+    private function getTelefonos(string $codiPers, string $source = 'migracion')
     {
         // 1. Definir tabla según source
         $tablaTel = ($source === 'pendiente')
@@ -569,7 +569,7 @@ class DjController extends Controller
     /**
      * Completar campos NULL desde si_solm.dbo.PERSONAL
      */
-    private function completarCamposNull($data, $codiPers)
+    private function completarCamposNull(array $data, string $codiPers)
     {
         // Buscar datos en la tabla PERSONAL
         $personalData = DB::select(
@@ -939,7 +939,7 @@ class DjController extends Controller
     }
 
     // ✅ FAMILIARES - Guardar en tabla temporal
-    private function saveFamiliaresTemp($codiPers, $data)
+    private function saveFamiliaresTemp(string $codiPers, array $data)
     {
         if (!isset($data['FAM_NOMBRES']) || !is_array($data['FAM_NOMBRES'])) {
             Log::info('No hay familiares para guardar');
@@ -995,7 +995,7 @@ class DjController extends Controller
     }
 
     // ✅ OCUPACIONES - Guardar en tabla temporal
-    private function saveOcupacionesTemp($dni, $data)
+    private function saveOcupacionesTemp(string $dni, array $data)
     {
         if (!isset($data['dj2026_descripcion']) || !is_array($data['dj2026_descripcion'])) {
             Log::info('No hay ocupaciones para guardar');
@@ -1021,7 +1021,7 @@ class DjController extends Controller
         }
     }
 
-    private function insertOrUpdateDJ2026Personal($codiPers, $data)
+    private function insertOrUpdateDJ2026Personal(string $codiPers, array $data)
     {
         // ✅ 1. Obtener datos base de sw_MIGRA_PERSONAL
         $migraData = DB::select(
@@ -1634,7 +1634,7 @@ class DjController extends Controller
      * Solo actualiza columnas donde DJ2026_PERSONAL tenga valor NO NULL.
      * Si DJ2026_PERSONAL tiene NULL en una columna, NO borra lo que ya existe en PERSONAL.
      */
-    private function syncDJ2026ToPersonal($codiPers)
+    private function syncDJ2026ToPersonal(string $codiPers)
     {
         // 1. Obtener el registro recién guardado en DJ2026_PERSONAL
         $djData = DB::select(
@@ -1931,7 +1931,7 @@ class DjController extends Controller
      * Usa formato YYYYMMDD HH:MM:SS.mmm (sin guiones en fecha) que es
      * SIEMPRE seguro en SQL Server independientemente del DATEFORMAT/LANGUAGE.
      */
-    private function sanitizeDatetimeForPersonal($value)
+    private function sanitizeDatetimeForPersonal(mixed $value): ?string
     {
         if (is_null($value) || $value === '') {
             return null;
@@ -1973,7 +1973,7 @@ class DjController extends Controller
     // MÉTODOS PRIVADOS AUXILIARES
     // ============================================
 
-    private function updateMigraPersonal($codiPers, $data)
+    private function updateMigraPersonal(string $codiPers, array $data)
     {
         // Obtener datos actuales
         $current = DB::select(
@@ -2080,7 +2080,7 @@ class DjController extends Controller
     }
 
     // ✅ AGREGAR ESTAS FUNCIONES HELPER
-    private function extraerNombre($nombreCompleto, $index)
+    private function extraerNombre(string $nombreCompleto, int $index): string
     {
         $partes = preg_split('/\s+/', trim($nombreCompleto));
         // Asumiendo formato: NOMBRE1 NOMBRE2 APELLIDO1 APELLIDO2
@@ -2091,7 +2091,7 @@ class DjController extends Controller
         return '';
     }
 
-    private function extraerApellido($nombreCompleto, $index)
+    private function extraerApellido(string $nombreCompleto, int $index): string
     {
         $partes = preg_split('/\s+/', trim($nombreCompleto));
         if (count($partes) >= 3) {
@@ -2103,7 +2103,7 @@ class DjController extends Controller
         return '';
     }
 
-    private function migrarPersonal($codiPers)
+    private function migrarPersonal(string $codiPers)
     {
         // Verificar si ya existe en DJ2026_PERSONAL
         $exists = DB::select(
@@ -2156,7 +2156,7 @@ class DjController extends Controller
         }
     }
 
-    private function saveFamiliares($codiPers, $data)
+    private function saveFamiliares(string $codiPers, array $data)
     {
         if (!isset($data['FAM_NOMBRES']) || !is_array($data['FAM_NOMBRES'])) {
             Log::info('No hay familiares para guardar');
@@ -2221,7 +2221,7 @@ class DjController extends Controller
         }
     }
 
-    private function migrarFamiliares($codiPers)
+    private function migrarFamiliares(string $codiPers)
     {
         // Eliminar todos los familiares existentes del trabajador en DJ2026_DERECHO_HABIENTE
         DB::delete(
@@ -2404,7 +2404,7 @@ class DjController extends Controller
     //     // );
     // }
 
-    private function saveOcupaciones($dni, $data)
+    private function saveOcupaciones(string $dni, array $data)
     {
         if (!isset($data['dj2026_descripcion']) || !is_array($data['dj2026_descripcion'])) {
             Log::info('No hay ocupaciones para guardar');
@@ -2430,7 +2430,7 @@ class DjController extends Controller
         }
     }
 
-    private function migrarOcupaciones($dni)
+    private function migrarOcupaciones(string $dni)
     {
         // Limpiar destino
         DB::delete(
@@ -2446,7 +2446,7 @@ class DjController extends Controller
         );
     }
 
-    private function formatDatesForInput($data)
+    private function formatDatesForInput(array $data): array
     {
         // Formatear fechas
         $dateFields = ['FECH_NACI', 'PERS_FECHCADUCADNI', 'FECH_INGRE', 'FECH_CESE'];
@@ -2474,7 +2474,7 @@ class DjController extends Controller
         return $data;
     }
 
-    private function groupFamiliares($familiares)
+    private function groupFamiliares(array $familiares): array
     {
         $grouped = [
             'padres' => [],
@@ -2658,7 +2658,7 @@ class DjController extends Controller
     }
 
 
-    private function saveTelefonosTemp($codiPers, $data)
+    private function saveTelefonosTemp(string $codiPers, array $data)
     {
         $telPersonal   = isset($data['celular'])           ? trim($data['celular'])           : '';
         $telWsp        = isset($data['whatsapp'])          ? trim($data['whatsapp'])          : '';
@@ -2767,7 +2767,7 @@ class DjController extends Controller
         ]);
     }
 
-    private function migrarTelefonos($codiPers)
+    private function migrarTelefonos(string $codiPers)
     {
         // 1. Borrar teléfonos existentes en tabla original
         DB::delete(

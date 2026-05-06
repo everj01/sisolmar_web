@@ -644,13 +644,32 @@ class CapacitacionController extends Controller
                 $codigo = $curso->codigo;
                 $codMoodleArea = $request->input('cod_moodle_area');
 
-                $resMoodle = DB::connection('mysql_grupoihb')->select(
-                    "SELECT F_COURSE_crear(?, ?, ?) AS course_id",
-                    [$nombre, $codigo, $codMoodleArea]
-                );
+                $aplicaEvaluacion = $request->input('aplica_evaluacion', 0);
+                
+                DB::connection('mysql_grupoihb')->statement("
+                CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
+                    $nombre,          // V_FULLNAME
+                    $codigo,          // V_IDNUMBER
+                    $codMoodleArea,   // V_IDCATEGORY
+                    $aplicaEvaluacion,                // V_CREAR_EXAMEN
+                    (int) ($request->tiempo ?? 0),               // V_TIEMPO
+                    (int) ($request->intentos ?? 0),                // V_MAX_INTENTOS
+                    (int) ($request->cantidad_preguntas ?? 0),                // V_CANT_PREGUNTAS
+                    (float) ($request->nota ?? 0.00)             // V_NOTA_MINIMA
+                ]);
 
-                if (!empty($resMoodle) && isset($resMoodle[0]->course_id)) {
-                    $curso->update(['codigo_moodle' => $resMoodle[0]->course_id]);
+                $res = DB::connection('mysql_grupoihb')->select("SELECT @resultado AS resultado");
+
+                if (!empty($res)) {
+                    $resultado = $res[0]->resultado;
+
+                    if ($resultado > 0) {
+                        $curso->update(['codigo_moodle' => $resultado]);
+                    } else {
+                        Log::warning('SP_COURSE_crear_con_examen devolvió código negativo', [
+                            'resultado' => $resultado
+                        ]);
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::error('Error al ejecutar F_COURSE_crear en MySQL Moodle', [

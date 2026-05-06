@@ -346,9 +346,9 @@
                                 <input type="hidden" name="codGestionEditar" x-model="codigo" id="codGestionEditar">
                                 <input type="hidden" id="slcArea" x-model="area">
 
-                                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 w-full mt-4">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full mt-4">
                                     <!-- Columna 1: Datos del curso -->
-                                    <div class="xl:col-span-2">
+                                    <div class="xl:col-span-1">
                                         <div class="w-full flex flex-col items-center mb-4">
                                             <div class="w-full flex items-center justify-between gap-4">
                                                 <div class="flex-1 border-t border-gray-200"></div>
@@ -832,11 +832,14 @@
 
                                         </div>
 
+                                    </div>
+
+                                    <!-- Columna 2: Datos del Examen & Metadatos -->
+                                     <div class="flex flex-col h-full mt-8 lg:mt-0">
                                         <!-- NUEVO: Aplica Evaluación -->
-                                        <div class="flex items-center justify-between mb-2 bg-indigo-50/80 border border-indigo-100 px-5 py-3 rounded-xl shadow-sm w-full transition-all hover:bg-indigo-50 cursor-pointer select-none"
-                                            style="display: none !important;"
-                                            @click="aplicaEvaluacion = !aplicaEvaluacion"
-                                            title="Activar para requerir una evaluación obligatoria en este curso">
+                                         <div class="flex items-center justify-between mb-2 bg-indigo-50/80 border border-indigo-100 px-5 py-3 rounded-xl shadow-sm w-full transition-all hover:bg-indigo-50 cursor-pointer select-none"
+                                             @click="aplicaEvaluacion = !aplicaEvaluacion"
+                                             title="Activar para requerir una evaluación obligatoria en este curso">
                                             <div class="flex flex-col pointer-events-none">
                                                 <span class="text-sm font-bold text-indigo-900">Evaluación de Curso</span>
                                                 <span class="text-[11px] text-indigo-600/80 font-medium mt-0.5">Requerir
@@ -847,15 +850,10 @@
                                                     role="switch" id="chkAplicaEvaluacion" x-model="aplicaEvaluacion">
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Columna 2: Datos del Examen & Metadatos -->
-                                    <div class="flex flex-col h-full mt-8 xl:mt-0"
-                                         style="display: none !important;">
                                         <!-- Placeholder cuando no aplica evaluación -->
-                                        <div x-show="!aplicaEvaluacion" x-transition
-                                            style="display: none !important;"
-                                            class="flex flex-col items-center justify-center h-full min-h-[300px] border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 p-6">
+                                         <div x-show="!aplicaEvaluacion" x-transition
+                                             class="flex flex-col items-center justify-center h-full min-h-[300px] border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 p-6">
                                             <i class="bx bx-file-blank mb-3 text-gray-300" style="font-size: 3.5rem;"></i>
                                             <h4 class="text-base font-bold text-gray-500 mb-1">Sin evaluación requerida
                                             </h4>
@@ -866,8 +864,7 @@
                                             </p>
                                         </div>
 
-                                        <div x-show="aplicaEvaluacion" class="w-full flex flex-col items-center mb-4"
-                                            style="display: none !important;">
+                                        <div x-show="aplicaEvaluacion" class="w-full flex flex-col items-center mb-4">
                                             <div class="w-full flex items-center justify-between gap-4">
                                                 <div class="flex-1 border-t border-gray-200"></div>
                                                 <h3 class="text-lg font-semibold text-primary text-center">
@@ -878,9 +875,8 @@
                                         </div>
 
                                         <!-- Contenedor condicional para Examen -->
-                                        <div x-show="aplicaEvaluacion" x-transition.duration.300ms
-                                            style="display: none !important;"
-                                            class="w-full border border-gray-100 bg-gray-50/30 p-5 rounded-xl shadow-sm mb-4">
+                                         <div x-show="aplicaEvaluacion" x-transition.duration.300ms
+                                             class="w-full border border-gray-100 bg-gray-50/30 p-5 rounded-xl shadow-sm mb-4">
                                             <div class="w-full grid gap-4 grid-cols-1 sm:grid-cols-2">
                                                 <div>
                                                     <label for="txtLimite"
