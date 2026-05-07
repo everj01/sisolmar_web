@@ -878,10 +878,40 @@ window.formCursoGestion = function () {
             tiempoSeg: 0
         },
 
+        imageFilePortada: null,
+        imagePreviewPortada: null,
+        imageFileAfiche: null,
+        imagePreviewAfiche: null,
+
+        async handleImageUpload(event, type = 'portada') {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowed.includes(file.type)) {
+                Swal.fire('Atención', 'Solo se permiten imágenes .jpg, .jpeg o .png', 'warning');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            const _this = this;
+
+            reader.onload = (e) => {
+                if (type === 'portada') {
+                    _this.imagePreviewPortada = e.target.result;
+                    _this.imageFilePortada = file;
+                } else {
+                    _this.imagePreviewAfiche = e.target.result;
+                    _this.imageFileAfiche = file;
+                }
+            };
+            reader.readAsDataURL(file);
+        },
+
         async analizarExamenWord() {
             if (!this.archivoWord) return;
 
-            // Validación de formato antiguo
             const extension = this.archivoWord.name.split('.').pop().toLowerCase();
             if (extension === 'doc' || extension === 'dot') {
                 Swal.fire({
@@ -903,10 +933,8 @@ window.formCursoGestion = function () {
                 });
 
                 if (res.data.success) {
-                    // Guardamos las preguntas en estado Alpine (no guardamos en BD aún)
                     this.preguntasExamen = res.data.preguntas;
 
-                    // Almacenar métricas si las hay
                     if (res.data.metrics) {
                         this.wordMetrics = {
                             tokensInput: res.data.metrics.tokens_input,
@@ -917,12 +945,10 @@ window.formCursoGestion = function () {
                         };
                     }
 
-                    // Autocompletado automático de la cantidad de preguntas (Pauta 2026)
                     const count = res.data.preguntas.length;
                     this.cantidadPreguntas = count;
                     this.preguntasBalotario = count;
 
-                    // Abrimos el modal de previsualización automáticamente
                     this.verVistaPrevia();
                 } else {
                     Swal.fire('Error', res.data.message, 'error');
@@ -935,7 +961,6 @@ window.formCursoGestion = function () {
             }
         },
 
-        // Abrir el modal de previsualización con las preguntas ya cargadas
         verVistaPrevia() {
             if (this.preguntasExamen.length === 0) {
                 Swal.fire('Sin preguntas', 'Primero debe analizar un archivo Word.', 'info');
@@ -947,12 +972,11 @@ window.formCursoGestion = function () {
                     cursoId: this.codigo,
                     examenId: document.getElementById('codGestionEditar')?.value || -1,
                     nombreArc: this.archivoWordNombre,
-                    metrics: this.wordMetrics // 👈 Pasar métricas al modal si es necesario
+                    metrics: this.wordMetrics
                 }
             }));
         },
 
-        // Lógica PAC
         esPAC: false,
         sucursalesAsignadas: [],
         sucursalesDisponibles: [],
@@ -968,7 +992,7 @@ window.formCursoGestion = function () {
 
         clientesDisponibles: [],
         clientesAsignados: [],
-        empresasDisponibles: [], // Sin uso actualmente para PCI (migrado a áreas)
+        empresasDisponibles: [],
         areasAsignadas: [],
         busquedaCliente: '',
         busquedaEmpresa: '',
@@ -1092,6 +1116,15 @@ window.formCursoGestion = function () {
             this.archivoWordNombre = '';
             this.preguntasExamen = [];
 
+            this.imageFilePortada = null;
+            this.imagePreviewPortada = null;
+            this.imageFileAfiche = null;
+            this.imagePreviewAfiche = null;
+            const portInput = document.getElementById('inputImagePortada');
+            const aficInput = document.getElementById('inputImageAfiche');
+            if (portInput) portInput.value = '';
+            if (aficInput) aficInput.value = '';
+
             this.aplicaEvaluacion = false;
             this.obligatorioAlta = true; // Forzado a true por requerimiento
             this.esDemanda = false;
@@ -1208,6 +1241,14 @@ window.formCursoGestion = function () {
 
             if (this.archivoWord) {
                 formData.append('archivo', this.archivoWord);
+            }
+
+            if (this.imageFilePortada) {
+                formData.append('image_portada', this.imageFilePortada);
+            }
+
+            if (this.imageFileAfiche) {
+                formData.append('image_afiche', this.imageFileAfiche);
             }
 
             Swal.fire({

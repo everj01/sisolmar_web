@@ -829,6 +829,121 @@
                                                     placeholder="Ingrese observaciones o detalles adicionales..."></textarea>
                                             </div>
 
+                                            <!-- NUEVO: Recursos Visuales del Curso (2026) -->
+                                            <div class="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
+                                                <label
+                                                    class="text-primary text-[11px] font-black uppercase tracking-widest mb-3 flex items-center">
+                                                    <i class="bx bx-images mr-1.5 text-base"></i> Recursos Visuales
+                                                    (Opcionales)
+                                                </label>
+
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <!-- Slot 1: Portada del Curso -->
+                                                    <div class="flex flex-col gap-2">
+                                                        <span
+                                                            class="text-[10px] font-bold text-slate-500 uppercase tracking-tight ml-1">Portada
+                                                            del Curso</span>
+                                                        <div class="relative w-full aspect-[3/2] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all"
+                                                            :class="imagePreviewPortada ? 'border-solid border-primary/30' :
+                                                                'hover:border-slate-300'">
+
+                                                            <template x-if="imagePreviewPortada">
+                                                                <div class="w-full h-full relative">
+                                                                    <img :src="imagePreviewPortada"
+                                                                        class="w-full h-full object-cover shadow-inner">
+                                                                    <div
+                                                                        class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                        <button type="button"
+                                                                            @click="imagePreviewPortada = null; imageFilePortada = null; $refs.inputImagePortada.value = ''"
+                                                                            class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
+                                                                            <i class="bx bx-trash text-lg"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+
+                                                            <template x-if="!imagePreviewPortada">
+                                                                <div class="flex flex-col items-center py-4 cursor-pointer group/upload"
+                                                                    @click="$refs.inputImagePortada.click()">
+                                                                    <div
+                                                                        class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-2 border border-slate-100 group-hover/upload:bg-primary/10 group-hover/upload:text-primary group-hover/upload:border-primary/20 transition-all duration-300">
+                                                                        <i
+                                                                            class="bx bx-image text-2xl text-slate-400 group-hover/upload:text-primary"></i>
+                                                                    </div>
+                                                                    <span
+                                                                        class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Subir
+                                                                        Portada</span>
+                                                                    <div
+                                                                        class="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 text-primary border border-primary/10 rounded-md">
+                                                                        <i class="bx bx-expand-alt text-[10px]"></i>
+                                                                        <span
+                                                                            class="text-[9px] font-black uppercase tracking-wider">1200x300
+                                                                            px • JPG</span>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                        <input type="file" id="inputImagePortada"
+                                                            x-ref="inputImagePortada" class="hidden"
+                                                            accept=".jpg,.jpeg,.png"
+                                                            @change="handleImageUpload($event, 'portada')">
+                                                    </div>
+
+                                                    <!-- Slot 2: Afiche Informativo -->
+                                                    <div class="flex flex-col gap-2">
+                                                        <span
+                                                            class="text-[10px] font-bold text-slate-500 uppercase tracking-tight ml-1">Afiche
+                                                            Informativo</span>
+                                                        <div class="relative w-full aspect-[3/2] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all"
+                                                            :class="imagePreviewAfiche ? 'border-solid border-indigo-200' :
+                                                                'hover:border-slate-300'">
+
+                                                            <template x-if="imagePreviewAfiche">
+                                                                <div class="w-full h-full relative">
+                                                                    <img :src="imagePreviewAfiche"
+                                                                        class="w-full h-full object-cover shadow-inner">
+                                                                    <div
+                                                                        class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                        <button type="button"
+                                                                            @click="imagePreviewAfiche = null; imageFileAfiche = null; $refs.inputImageAfiche.value = ''"
+                                                                            class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
+                                                                            <i class="bx bx-trash text-lg"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+
+                                                            <template x-if="!imagePreviewAfiche">
+                                                                <div class="flex flex-col items-center text-slate-400 py-4 cursor-pointer"
+                                                                    @click="$refs.inputImageAfiche.click()">
+                                                                    <div
+                                                                        class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-1 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                                                                        <i class="bx bx-info-circle text-xl"></i>
+                                                                    </div>
+                                                                    <span
+                                                                        class="text-[9px] font-bold uppercase tracking-tight">Subir
+                                                                        Afiche Informativo</span>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                        <input type="file" id="inputImageAfiche"
+                                                            x-ref="inputImageAfiche" class="hidden"
+                                                            accept=".jpg,.jpeg,.png"
+                                                            @change="handleImageUpload($event, 'afiche')">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Información simple de formatos -->
+                                                <div
+                                                    class="mt-4 flex items-center justify-center bg-slate-100/50 border border-slate-200 rounded-lg px-3 py-2">
+                                                    <span
+                                                        class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                                                        <i class="bx bx-info-circle align-middle mr-1"></i> Formatos
+                                                        Permitidos: .jpg, .jpeg, .png
+                                                    </span>
+                                                </div>
+                                            </div>
+
                                         </div>
 
                                     </div>

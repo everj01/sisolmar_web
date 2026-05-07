@@ -457,6 +457,8 @@ class CapacitacionController extends Controller
                 'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
                 'cod_moodle_area' => 'nullable|integer',
                 'observaciones' => 'nullable|string',
+                'image_portada' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'image_afiche'  => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             ]);
 
             if ($validator->fails()) {
@@ -1785,7 +1787,7 @@ class CapacitacionController extends Controller
                     ->whereIn('username', $dnis)
                     ->orWhereIn('idnumber', $dnis)
                     ->get(['id', 'username', 'idnumber']);
-                
+
                 foreach ($moodleUsers as $mu) {
                     if ($mu->username) $moodleUsersMap[$mu->username] = $mu->id;
                     if ($mu->idnumber) $moodleUsersMap[$mu->idnumber] = $mu->id;
@@ -2173,7 +2175,7 @@ class CapacitacionController extends Controller
             }
 
             $codPersonal = str_pad(trim($request->codPersonal), 5, '0', STR_PAD_LEFT);
-            
+
             // 1. Eliminar de la base de datos local (SISOLMAR)
             $deleted = DB::table('sw_matriculas')
                 ->where('cod_curso', $request->cursoId)
@@ -2186,7 +2188,7 @@ class CapacitacionController extends Controller
 
             // 2. Sincronizar con Moodle si tenemos el ID del usuario
             $moodleUserId = $request->moodleUserId;
-            
+
             if (!$moodleUserId) {
                 $personal = DB::table('si_solm.dbo.PERSONAL')->where('CODI_PERS', $codPersonal)->first(['NRO_DOCU_IDEN']);
                 if ($personal && $personal->NRO_DOCU_IDEN) {
@@ -2202,13 +2204,13 @@ class CapacitacionController extends Controller
                 // Usar la misma lógica que el Job de matrícula para encontrar el IDNUMBER
                 $courseIdNumber = $curso->codigo_moodle ?: $curso->codigo_curso;
                 $observacion = $request->observacion ?: 'Desmatriculación desde Intranet';
-                
+
                 $res = DB::connection('mysql_grupoihb')->select(
                     "SELECT F_USER_matricula_eliminar(?, ?, ?, ?, ?) AS result",
                     [
                         $moodleUserId,
                         $courseIdNumber,
-                        '00001', 
+                        '00001',
                         $observacion,
                         5
                     ]
@@ -2222,7 +2224,6 @@ class CapacitacionController extends Controller
                 'success' => true,
                 'message' => 'Usuario desmatriculado correctamente' . ($moodleUserId ? ' y sincronizado con Moodle' : ' (Solo local, no se encontró ID Moodle)')
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error en desmatricularUsuario: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al desmatricular: ' . $e->getMessage()], 500);
