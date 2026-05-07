@@ -884,35 +884,17 @@ function inicializarTabulator() {
                 formatter: function (cell) {
                     const estado = cell.getValue() || 'MATRICULADO';
                     const colores = {
-                        'MATRICULADO': 'bg-blue-500 shadow-blue-100 py-1 py-2 px-3',
-                        'EN_PROGRESO': 'bg-amber-400 shadow-amber-100',
+                        'MATRICULADO': 'bg-blue-500 shadow-blue-100 py-2 px-3',
+                        'EN_PROGRESO': 'bg-amber-600 shadow-amber-100',
                         'COMPLETADO': 'bg-emerald-500 shadow-emerald-100',
                         'APROBADO': 'bg-emerald-500 shadow-emerald-100',
                         'REPROBADO': 'bg-rose-500 shadow-rose-100',
-                        'CANCELADO': 'bg-gray-400 shadow-gray-100'
+                        'CANCELADO': 'bg-gray-600 shadow-gray-100'
                     };
                     const color = colores[estado] || 'bg-gray-400';
                     return `<span class="px-2.5 py-1 rounded-full text-[10px] font-black text-white shadow-sm ${color} uppercase tracking-wider">${estado}</span>`;
                 }
             },
-            {
-                title: "Acciones",
-                width: 100,
-                hozAlign: "center",
-                headerSort: false,
-                formatter: function (cell) {
-                    const data = cell.getRow().getData();
-                    return `
-                        <div class="flex items-center justify-center">
-                            <button type="button" class="p-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger hover:text-white transition-all shadow-sm"
-                                onclick="window.eliminarMatricula('${data.cod_personal}', '${data.moodle_user_id || ''}', '${data.nombre_completo.replace(/'/g, "\\'")}')"
-                                title="Desmatricular">
-                                <i class="i-tabler-user-minus text-lg"></i>
-                            </button>
-                        </div>
-                    `;
-                }
-            }
         ]
     });
 }
@@ -1025,6 +1007,8 @@ function configurarEventos() {
             // Limpiar estados previos
             personasSeleccionadas.clear();
             actualizarContadorSeleccionados();
+            const selectSucursal = document.getElementById("slcFiltroSucursalModal");
+            if (selectSucursal) selectSucursal.value = "";
 
             // Cargar datos
             await cargarProgramacionesModal(cursoSeleccionado.codigo);
@@ -1242,8 +1226,8 @@ async function cargarPersonalModal(cursoId) {
             return response.personal || response;
         },
         pagination: "local",
-        paginationSize: 20,
-        height: "240px", // Altura compacta
+        paginationSize: 10,
+        height: "400px",
         layout: "fitColumns",
         columns: [
             {
@@ -1262,9 +1246,9 @@ async function cargarPersonalModal(cursoId) {
                     return `<input type="checkbox" class="chk-personal-modal" ${isChecked} data-id="${data.codigo}">`;
                 }
             },
-            { title: "Nombre", field: "nombre_completo", minWidth: 200 },
+            { title: "Nombre", field: "nombre_completo", minWidth: 280 },
             { title: "DNI", field: "dni", width: 100 },
-            { title: "Sucursal", field: "sucursal", width: 120 }
+            { title: "Sucursal", field: "sucursal", width: 150 }
         ],
         rowFormatter: function (row) {
             if (row.getData().matriculado) {
@@ -1278,13 +1262,51 @@ async function cargarPersonalModal(cursoId) {
     tblPersonalMatriculaModal.on("tableBuilt", () => {
         configurarBuscadorModal();
         configurarCheckboxesModal();
+        configurarFiltroSucursalModal();
         const data = tblPersonalMatriculaModal.getData();
+        poblarFiltroSucursalModal(data);
         actualizarContadoresModal(data);
     });
 
     tblPersonalMatriculaModal.on("dataLoaded", (data) => {
+        poblarFiltroSucursalModal(data);
         actualizarContadoresModal(data);
     });
+}
+
+function poblarFiltroSucursalModal(data) {
+    const select = document.getElementById("slcFiltroSucursalModal");
+    if (!select) return;
+
+    const sucursales = [...new Set(data.map(d => d.sucursal).filter(s => s))].sort();
+    const currentVal = select.value;
+
+    select.innerHTML = '<option value="">Todas las sucursales</option>';
+    sucursales.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        if (s === currentVal) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+function configurarFiltroSucursalModal() {
+    const select = document.getElementById("slcFiltroSucursalModal");
+    if (!select) return;
+    if (select.dataset.listenerSucursal) return;
+
+    select.addEventListener("change", function () {
+        const val = this.value;
+        if (tblPersonalMatriculaModal) {
+            if (!val) {
+                tblPersonalMatriculaModal.clearFilter();
+            } else {
+                tblPersonalMatriculaModal.setFilter("sucursal", "=", val);
+            }
+        }
+    });
+    select.dataset.listenerSucursal = "true";
 }
 
 function configurarCheckboxesModal() {
