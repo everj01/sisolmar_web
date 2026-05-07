@@ -816,7 +816,7 @@ window.formCursoGestion = function () {
         sys_fecha_modificacion: '-',
 
         nombre: '',
-        tipoCurso: '',
+        tipoCurso: '5',
         areaConocimiento: '',
         area: '',
         areaResponsable: '',
@@ -1087,7 +1087,7 @@ window.formCursoGestion = function () {
         limpiarCampos() {
             this.codigo = '';
             this.nombre = '';
-            this.tipoCurso = '';
+            this.tipoCurso = '5';
             this.areaConocimiento = '';
             this.area = '';
             this.tipoResponsable = 'ADMINISTRATIVO_5';

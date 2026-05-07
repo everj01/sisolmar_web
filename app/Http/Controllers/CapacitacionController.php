@@ -178,7 +178,7 @@ class CapacitacionController extends Controller
                 'nombre' => $request->nombre,
                 'tipo_curso' => $request->tipo_curso,
                 'area_conocimiento' => $request->area_conocimiento,
-                'area' => $request->area_responsable ?? $request->area_conocimiento, // Persistir área específica si existe
+                'area' => $request->area_responsable,
                 'periodicidad' => $periodicidadVal,
                 'es_periodico' => $request->input('es_periodico'),
                 'frecuencia' => $request->input('frecuencia'),
@@ -233,6 +233,17 @@ class CapacitacionController extends Controller
                         'sucursal' => $sucursal,
                         'created_at' => date('Y-m-d\TH:i:s.000'),
                         'updated_at' => date('Y-m-d\TH:i:s.000')
+                    ]);
+                }
+            }
+
+            // Actualizar sw_cliente_curso si es PCU
+            DB::table('sw_cliente_curso')->where('cod_curso', $curso->codigo)->delete();
+            if ($request->input('tipo_curso') == '6' && $request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
+                foreach ($request->sucursales_asignadas as $cliente) {
+                    DB::table('sw_cliente_curso')->insert([
+                        'cod_cliente' => $cliente,
+                        'cod_curso' => $curso->codigo,
                     ]);
                 }
             }
@@ -452,7 +463,7 @@ class CapacitacionController extends Controller
                 'intentos' => 'nullable|required_if:aplica_evaluacion,1|integer',
                 'archivo' => 'nullable|file|max:51200',
                 'sucursales_asignadas' => 'nullable|array',
-                'sucursales_asignadas.*' => 'string',
+                'sucursales_asignadas.*' => 'integer|exists:sw_clientes,codigo',
                 'aplica_evaluacion' => 'nullable|integer|in:0,1',
                 'obligatorio_alta' => 'nullable|integer|in:0,1',
                 'cod_responsable' => 'nullable|string|max:20',
@@ -514,7 +525,7 @@ class CapacitacionController extends Controller
                 'codigo_curso' => $newCode,
                 'tipo_curso' => $request->tipo_curso,
                 'area_conocimiento' => $request->area_conocimiento,
-                'area' => $request->area_responsable ?? $request->area_conocimiento, // Persistir área específica si existe
+                'area' => $request->area_responsable,
                 'periodicidad' => $periodicidadVal,
                 'es_periodico' => $request->input('es_periodico', 0),
                 'frecuencia' => $request->input('frecuencia'),
@@ -544,6 +555,15 @@ class CapacitacionController extends Controller
                         'sucursal' => $sucursal,
                         'created_at' => date('Y-m-d\TH:i:s.000'),
                         'updated_at' => date('Y-m-d\TH:i:s.000')
+                    ]);
+                }
+            }
+
+            if ($request->input('tipo_curso') == '6' && $request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
+                foreach ($request->sucursales_asignadas as $cliente) {
+                    DB::table('sw_cliente_curso')->insert([
+                        'cod_cliente' => $cliente,
+                        'cod_curso' => $curso->codigo,
                     ]);
                 }
             }
