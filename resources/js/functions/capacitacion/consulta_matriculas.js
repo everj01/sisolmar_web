@@ -294,38 +294,38 @@ function mostrarModalHistorial(nombre, solicitudes) {
         container.innerHTML = solicitudes.map((s, index) => {
             const statusFull = s.estado || 'MATRICULADO';
             const colors = {
-                'APROBADO': { 
-                    bg: 'bg-emerald-50', 
-                    text: 'text-emerald-700', 
-                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>', 
+                'APROBADO': {
+                    bg: 'bg-emerald-50',
+                    text: 'text-emerald-700',
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
                     border: 'border-emerald-100',
                     dot: 'bg-emerald-500'
                 },
-                'COMPLETADO': { 
-                    bg: 'bg-emerald-50', 
-                    text: 'text-emerald-700', 
-                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>', 
+                'COMPLETADO': {
+                    bg: 'bg-emerald-50',
+                    text: 'text-emerald-700',
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
                     border: 'border-emerald-100',
                     dot: 'bg-emerald-500'
                 },
-                'REPROBADO': { 
-                    bg: 'bg-rose-50', 
-                    text: 'text-rose-700', 
-                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>', 
+                'REPROBADO': {
+                    bg: 'bg-rose-50',
+                    text: 'text-rose-700',
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
                     border: 'border-rose-100',
                     dot: 'bg-rose-500'
                 },
-                'EN_PROGRESO': { 
-                    bg: 'bg-amber-50', 
-                    text: 'text-amber-700', 
-                    icon: '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>', 
+                'EN_PROGRESO': {
+                    bg: 'bg-amber-50',
+                    text: 'text-amber-700',
+                    icon: '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>',
                     border: 'border-amber-100',
                     dot: 'bg-amber-500'
                 },
-                'MATRICULADO': { 
-                    bg: 'bg-blue-50', 
-                    text: 'text-blue-700', 
-                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M17 11l2 2 4-4"/></svg>', 
+                'MATRICULADO': {
+                    bg: 'bg-blue-50',
+                    text: 'text-blue-700',
+                    icon: '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M17 11l2 2 4-4"/></svg>',
                     border: 'border-blue-100',
                     dot: 'bg-blue-500'
                 }
@@ -717,7 +717,7 @@ function actualizarEstadisticas(matriculas) {
  */
 function poblarFiltroSede(matriculas) {
     const sedes = [...new Set(matriculas.map(m => m.sucursal).filter(s => s))].sort();
-    
+
     // Despachar evento para Alpine
     const sedesData = sedes.map(s => ({ codigo: s, descripcion: s }));
     window.dispatchEvent(new CustomEvent('sedes-matriculas-loaded', { detail: sedesData }));
@@ -879,7 +879,7 @@ function inicializarTabulator() {
             {
                 title: "Estado",
                 field: "estado",
-                width: 130,
+                width: 120,
                 hozAlign: "center",
                 formatter: function (cell) {
                     const estado = cell.getValue() || 'MATRICULADO';
@@ -893,6 +893,24 @@ function inicializarTabulator() {
                     };
                     const color = colores[estado] || 'bg-gray-400';
                     return `<span class="px-2.5 py-1 rounded-full text-[10px] font-black text-white shadow-sm ${color} uppercase tracking-wider">${estado}</span>`;
+                }
+            },
+            {
+                title: "Acciones",
+                width: 100,
+                hozAlign: "center",
+                headerSort: false,
+                formatter: function (cell) {
+                    const data = cell.getRow().getData();
+                    return `
+                        <div class="flex items-center justify-center">
+                            <button type="button" class="p-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger hover:text-white transition-all shadow-sm"
+                                onclick="window.eliminarMatricula('${data.cod_personal}', '${data.moodle_user_id || ''}', '${data.nombre_completo.replace(/'/g, "\\'")}')"
+                                title="Desmatricular">
+                                <i class="i-tabler-user-minus text-lg"></i>
+                            </button>
+                        </div>
+                    `;
                 }
             }
         ]
@@ -1333,3 +1351,53 @@ function actualizarContadoresModal(data) {
     if (bMat) bMat.textContent = matriculados.toString();
     if (bDisp) bDisp.textContent = disponibles.toString();
 }
+// =========================================================================================
+// ACCIONES DE MATRÍCULA
+// =========================================================================================
+
+window.eliminarMatricula = function (codPersonal, moodleUserId, nombre) {
+    if (!cursoSeleccionado) return;
+
+    Swal.fire({
+        title: '¿Desmatricular Usuario?',
+        html: `¿Estás seguro de que deseas eliminar la matrícula de <br><b>${nombre}</b>? <br><br><span class="text-xs text-danger font-bold uppercase tracking-widest">Esta acción también lo desmatriculará de Moodle</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, eliminar matrícula',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        showLoaderOnConfirm: true,
+        preConfirm: (observacion) => {
+            return axios.post('/api/capacitacion/desmatricular-usuario', {
+                cursoId: cursoSeleccionado.codigo,
+                codPersonal: codPersonal,
+                moodleUserId: moodleUserId || null,
+                observacion: 'Desmatriculación manual desde Intranet'
+            })
+                .then(response => {
+                    if (!response.data.success) {
+                        throw new Error(response.data.message || 'Error al desmatricular');
+                    }
+                    return response.data;
+                })
+                .catch(error => {
+                    Swal.showValidationMessage(
+                        `Error: ${error.message}`
+                    );
+                });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: '¡Eliminado!',
+                text: result.value.message || 'El usuario ha sido desmatriculado correctamente.',
+                icon: 'success'
+            });
+            // Recargar la lista
+            cargarMatriculas(cursoSeleccionado.codigo);
+        }
+    });
+};

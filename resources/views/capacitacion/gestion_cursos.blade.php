@@ -934,7 +934,7 @@
 
                                                 <label
                                                     class="text-primary text-[11px] font-black uppercase tracking-widest mb-3 flex items-center">
-                                                    <i class="bx bxs-file-doc mr-1.5 text-base"></i> Documento de preguntas
+                                                    <i class="bx bxs-file-doc mr-1.5 text-base"></i> Banco de preguntas
                                                 </label>
 
                                                 <div class="flex flex-col gap-3">
