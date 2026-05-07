@@ -672,6 +672,19 @@
                                                 </select>
                                             </div>
 
+                                            <!-- Dirigido a -->
+                                            <div x-show="!esDemanda" x-transition>
+                                                <label for="slcDirigido"
+                                                    class="text-gray-800 text-sm font-medium inline-block mb-1">Dirigido a</label>
+                                                <select id="slcDirigido" x-model="dirigido"
+                                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+                                                    <option value="">-- Seleccione Dirigido --</option>
+                                                    @foreach($dirigidos as $item)
+                                                        <option value="{{ $item->codigo }}">{{ $item->texto }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
                                             <!-- SELECTOR SUCURSALES (SOLO PAC) -->
                                             <div x-show="esPAC" x-transition
                                                 class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">

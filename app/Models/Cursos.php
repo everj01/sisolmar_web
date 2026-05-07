@@ -34,6 +34,7 @@ class Cursos extends Model
         'codigo_moodle',
         'observaciones',
         'proyeccion_anios',
+        'dirigido_a',
     ];
 
     public $timestamps = false;

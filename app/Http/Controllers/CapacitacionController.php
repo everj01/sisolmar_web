@@ -129,6 +129,7 @@ class CapacitacionController extends Controller
             'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
             'cod_moodle_area' => 'nullable|integer',
             'observaciones' => 'nullable|string',
+            'dirigido_a' => 'nullable|integer',
         ]);
 
 
@@ -187,6 +188,7 @@ class CapacitacionController extends Controller
                 'cod_responsable' => $request->input('cod_responsable'),
                 'target_group' => $request->input('target_group', 'TODOS'),
                 'observaciones' => $request->input('observaciones'),
+                'dirigido_a' => $request->input('dirigido_a'),
                 'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
             ]);
 
@@ -457,6 +459,7 @@ class CapacitacionController extends Controller
                 'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
                 'cod_moodle_area' => 'nullable|integer',
                 'observaciones' => 'nullable|string',
+                'dirigido_a' => 'nullable|integer',
                 'image_portada' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
                 'image_afiche'  => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             ]);
@@ -521,6 +524,7 @@ class CapacitacionController extends Controller
                 'cod_responsable' => $request->input('cod_responsable'),
                 'target_group' => $request->input('target_group', 'TODOS'),
                 'observaciones' => $request->input('observaciones'),
+                'dirigido_a' => $request->input('dirigido_a'),
                 'fecha_creacion' => date('Y-m-d\TH:i:s.000')
             ]);
 
@@ -1040,7 +1044,7 @@ class CapacitacionController extends Controller
                 'codigo' => $row->codigo,
                 'descripcion' => $row->abreviatura ?? $row->razon_social ?? '',
             ];
-        })->sortBy('descripcion')->values();
+        })->sortBy('codigo')->values();
         return response()->json($clientes);
     }
 
@@ -1637,6 +1641,15 @@ class CapacitacionController extends Controller
     public function vistaConsultaMatriculas(): View
     {
         return view('capacitacion.consulta_matriculas');
+    }
+
+    /**
+     * Vista de gestión de cursos
+     */
+    public function vistaGestionCursos(): View
+    {
+        $dirigidos = \App\Models\Consulta::obtenerDirigidos();
+        return view('capacitacion.gestion_cursos', compact('dirigidos'));
     }
 
     /**

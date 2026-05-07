@@ -97,4 +97,13 @@ class Consulta extends Model
             ->select('c.tipo_curso', 'tc.descripcion as tipo_descripcion')
             ->first();
     }
+
+    public static function obtenerDirigidos()
+    {
+        return DB::table('sw_cursos_dirigido as d')
+            ->select('codigo', 'opcion as texto')
+            ->where('habilitado', 1)
+            ->orderBy('codigo')
+            ->get();
+    }
 }

@@ -694,7 +694,7 @@ window.editarFormGestionCurso = (e) => {
     formData.append('area_responsable', alpineData.areaResponsable);
     formData.append('cod_moodle_area', alpineData.codMoodleArea);
     formData.append('observaciones', alpineData.observaciones);
-
+    formData.append('dirigido_a', alpineData.dirigido);
 
     //formData.append('archivo', archivoSeleccionado);
 
@@ -846,6 +846,7 @@ window.formCursoGestion = function () {
         },
         areasEncargadas: [],
         frecuencia: '',
+        dirigido: '',
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
         nota: '',
@@ -1238,6 +1239,7 @@ window.formCursoGestion = function () {
             formData.append('area_responsable', this.areaResponsable);
             formData.append('cod_moodle_area', this.codMoodleArea);
             formData.append('observaciones', this.observaciones);
+            formData.append('dirigido_a', this.dirigido);
 
             if (this.archivoWord) {
                 formData.append('archivo', this.archivoWord);
