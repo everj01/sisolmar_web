@@ -137,6 +137,7 @@ Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class
 Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
 Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
 Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
+Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
 
 // Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);

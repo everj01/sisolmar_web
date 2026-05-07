@@ -1777,14 +1777,27 @@ class CapacitacionController extends Controller
                 }
             }
 
-            // 6. Unir datos en memoria
-            $resultado = $matriculas->map(function ($m) use ($personalData, $sucursalesMap, $sucursalClienteNameMap, $esPCU, $esPCI, $esPCE, $empresasMap) {
+            // 6. Obtener IDs de Moodle por DNI para permitir desmatriculación
+            $dnis = $personalData->pluck('dni')->filter()->unique()->toArray();
+            $moodleUsersMap = [];
+            if (!empty($dnis)) {
+                $moodleUsers = DB::connection('mysql_grupoihb')->table('mdl_user')
+                    ->whereIn('username', $dnis)
+                    ->orWhereIn('idnumber', $dnis)
+                    ->get(['id', 'username', 'idnumber']);
+                
+                foreach ($moodleUsers as $mu) {
+                    if ($mu->username) $moodleUsersMap[$mu->username] = $mu->id;
+                    if ($mu->idnumber) $moodleUsersMap[$mu->idnumber] = $mu->id;
+                }
+            }
+
+            // 7. Unir datos en memoria
+            $resultado = $matriculas->map(function ($m) use ($personalData, $sucursalesMap, $sucursalClienteNameMap, $esPCU, $esPCI, $esPCE, $empresasMap, $moodleUsersMap) {
                 $id = str_pad(trim((string) $m->cod_personal), 5, '0', STR_PAD_LEFT);
                 $p = $personalData->get($id);
 
                 // Resolver cliente/empresa según tipo de curso
-                // PCU: personal.SUCU_CODIGO → sw_clientes.abreviatura
-                // PCI / PCE: personal.EMPR_CODIGO → sw_MIGRA_EMPRESA.Razon_Social
                 $clienteEmpresa = '-';
                 if ($esPCU && $p && isset($p->SUCU_CODIGO)) {
                     $clienteEmpresa = $sucursalClienteNameMap[trim($p->SUCU_CODIGO)] ?? '-';
@@ -1793,9 +1806,12 @@ class CapacitacionController extends Controller
                     $clienteEmpresa = $empresasMap[$codeNormalizer] ?? $p->EMPR_CODIGO;
                 }
 
+                $dni = $p->dni ?? null;
+                $moodleUserId = $dni ? ($moodleUsersMap[$dni] ?? null) : null;
+
                 return [
                     'cod_personal' => $id,
-                    'dni' => $p->dni ?? 'N/A',
+                    'dni' => $dni ?? 'N/A',
                     'nombre_completo' => $p->nombre_completo ?? 'Personal no encontrado (Retirado)',
                     'correo' => $p->correo ?? 'N/A',
                     'cargo' => $p->cargo ?? 'N/A',
@@ -1806,7 +1822,8 @@ class CapacitacionController extends Controller
                     'prog_fecha_final' => $m->prog_fecha_final,
                     'sucursal' => (isset($p->SUCU_CODIGO) && isset($sucursalesMap[$p->SUCU_CODIGO]))
                         ? $sucursalesMap[$p->SUCU_CODIGO]
-                        : 'Sin sede'
+                        : 'Sin sede',
+                    'moodle_user_id' => $moodleUserId
                 ];
             })->sortBy('nombre_completo')->values();
 
@@ -2133,6 +2150,82 @@ class CapacitacionController extends Controller
             DB::rollBack();
             Log::error("Error guardando examen Word: " . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function desmatricularUsuario(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'cursoId' => 'required|integer',
+            'codPersonal' => 'required|string',
+            'moodleUserId' => 'nullable|integer',
+            'observacion' => 'nullable|string|max:200'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Datos inválidos', 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $curso = Cursos::find($request->cursoId);
+            if (!$curso) {
+                return response()->json(['success' => false, 'message' => 'Curso no encontrado'], 404);
+            }
+
+            $codPersonal = str_pad(trim($request->codPersonal), 5, '0', STR_PAD_LEFT);
+            
+            // 1. Eliminar de la base de datos local (SISOLMAR)
+            $deleted = DB::table('sw_matriculas')
+                ->where('cod_curso', $request->cursoId)
+                ->where('cod_personal', $codPersonal)
+                ->delete();
+
+            if ($deleted === 0) {
+                return response()->json(['success' => false, 'message' => 'No se encontró la matrícula local'], 404);
+            }
+
+            // 2. Sincronizar con Moodle si tenemos el ID del usuario
+            $moodleUserId = $request->moodleUserId;
+            
+            if (!$moodleUserId) {
+                $personal = DB::table('si_solm.dbo.PERSONAL')->where('CODI_PERS', $codPersonal)->first(['NRO_DOCU_IDEN']);
+                if ($personal && $personal->NRO_DOCU_IDEN) {
+                    $moodleUser = DB::connection('mysql_grupoihb')->table('mdl_user')
+                        ->where('username', trim($personal->NRO_DOCU_IDEN))
+                        ->orWhere('idnumber', trim($personal->NRO_DOCU_IDEN))
+                        ->first(['id']);
+                    if ($moodleUser) $moodleUserId = $moodleUser->id;
+                }
+            }
+
+            if ($moodleUserId) {
+                // Usar la misma lógica que el Job de matrícula para encontrar el IDNUMBER
+                $courseIdNumber = $curso->codigo_moodle ?: $curso->codigo_curso;
+                $observacion = $request->observacion ?: 'Desmatriculación desde Intranet';
+                
+                $res = DB::connection('mysql_grupoihb')->select(
+                    "SELECT F_USER_matricula_eliminar(?, ?, ?, ?, ?) AS result",
+                    [
+                        $moodleUserId,
+                        $courseIdNumber,
+                        '00001', 
+                        $observacion,
+                        5
+                    ]
+                );
+
+                $moodleResult = $res[0]->result;
+                Log::info("Desmatriculación Moodle curso={$courseIdNumber} user={$moodleUserId} resultado={$moodleResult}");
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario desmatriculado correctamente' . ($moodleUserId ? ' y sincronizado con Moodle' : ' (Solo local, no se encontró ID Moodle)')
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en desmatricularUsuario: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al desmatricular: ' . $e->getMessage()], 500);
         }
     }
 }
