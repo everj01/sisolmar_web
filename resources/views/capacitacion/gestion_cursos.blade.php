@@ -368,8 +368,18 @@
                                                 Nombre del curso
                                             </label>
                                             <input type="text" id="txtNombreCurso"
+                                                placeholder="Escriba el nombre del curso..."
                                                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                                                 x-model="nombre" />
+                                        </div>
+
+                                        <!-- Descripción del curso -->
+                                        <div>
+                                            <label
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Descripción del curso</label>
+                                            <textarea rows="2" x-model="descripcion"
+                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
+                                                placeholder="Describa el contenido, objetivos y temática del curso..."></textarea>
                                         </div>
 
                                         <!-- Plan de Capacitación -->
@@ -832,14 +842,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- NUEVO: Observaciones -->
-                                        <div>
-                                            <label
-                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Observaciones</label>
-                                            <textarea rows="2" x-model="observaciones"
-                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
-                                                placeholder="Ingrese observaciones o detalles adicionales..."></textarea>
-                                        </div>
+
 
                                         <!-- NUEVO: Recursos Visuales del Curso (2026) -->
                                         <div class="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">

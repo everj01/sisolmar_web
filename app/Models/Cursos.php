@@ -32,7 +32,7 @@ class Cursos extends Model
         'cod_responsable',
         'target_group',
         'codigo_moodle',
-        'observaciones',
+        'descripcion',
         'proyeccion_anios',
         'dirigido_a',
     ];

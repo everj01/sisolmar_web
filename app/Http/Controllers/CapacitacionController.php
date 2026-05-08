@@ -119,7 +119,6 @@ class CapacitacionController extends Controller
             'cod_responsable' => 'nullable|string|max:20',
             'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
             'cod_moodle_area' => 'nullable|integer',
-            'observaciones' => 'nullable|string',
             'dirigido_a' => 'nullable|integer',
         ]);
 
@@ -178,7 +177,7 @@ class CapacitacionController extends Controller
                 'obligatorio_alta' => $request->input('obligatorio_alta', 0),
                 'cod_responsable' => $request->input('cod_responsable'),
                 'target_group' => $request->input('target_group', 'TODOS'),
-                'observaciones' => $request->input('observaciones'),
+                'descripcion' => $request->input('descripcion'),
                 'dirigido_a' => $request->input('dirigido_a'),
                 'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
             ]);
@@ -452,7 +451,6 @@ class CapacitacionController extends Controller
                 'cod_responsable' => 'nullable|string|max:20',
                 'target_group' => 'nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO',
                 'cod_moodle_area' => 'nullable|integer',
-                'observaciones' => 'nullable|string',
                 'dirigido_a' => 'nullable|integer',
                 'image_portada' => 'nullable|image|mimes:jpeg,jpg,png|max:1990',
                 'image_afiche'  => 'nullable|image|mimes:jpeg,jpg,png|max:1990',
@@ -468,48 +466,13 @@ class CapacitacionController extends Controller
 
             DB::beginTransaction();
 
-            $lastCod = Cursos::orderBy('codigo_curso', 'desc')->first();
-            if ($lastCod) {
-                $lastNumber = intval($lastCod->codigo_curso);
-                $newCode = str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT);
-            } else {
-                $newCode = '10001';
-            }
-
-            $periodicidadVal = 0;
-            if ($request->input('es_periodico') == 1) {
-                switch ($request->input('frecuencia')) {
-                    case 'MENSUAL':
-                        $periodicidadVal = 12;
-                        break;
-                    case 'BIMESTRAL':
-                        $periodicidadVal = 6;
-                        break;
-                    case 'TRIMESTRAL':
-                        $periodicidadVal = 4;
-                        break;
-                    case 'CUATRIMESTRAL':
-                        $periodicidadVal = 3;
-                        break;
-                    case 'SEMESTRAL':
-                        $periodicidadVal = 2;
-                        break;
-                    case 'ANUAL':
-                        $periodicidadVal = 1;
-                        break;
-                    default:
-                        $periodicidadVal = 0;
-                        break;
-                }
-            }
-
             $curso = Cursos::create([
                 'nombre' => $request->nombre,
-                'codigo_curso' => $newCode,
+                'codigo_curso' => $this->generateCourseCode(),
                 'tipo_curso' => $request->tipo_curso,
                 'area_conocimiento' => $request->area_conocimiento,
                 'area' => $request->area_responsable,
-                'periodicidad' => $periodicidadVal,
+                'periodicidad' => $this->calculatePeriodicidad($request->input('frecuencia'), (int) $request->input('es_periodico', 0)),
                 'es_periodico' => $request->input('es_periodico', 0),
                 'frecuencia' => $request->input('frecuencia'),
                 'proyeccion_anios' => $request->input('proyeccion_anios'),
@@ -517,7 +480,7 @@ class CapacitacionController extends Controller
                 'obligatorio_alta' => $request->input('obligatorio_alta', 0),
                 'cod_responsable' => $request->input('cod_responsable'),
                 'target_group' => $request->input('target_group', 'TODOS'),
-                'observaciones' => $request->input('observaciones'),
+                'descripcion' => $request->input('descripcion'),
                 'dirigido_a' => $request->input('dirigido_a'),
                 'fecha_creacion' => date('Y-m-d\TH:i:s.000')
             ]);
@@ -531,54 +494,13 @@ class CapacitacionController extends Controller
             }
 
             if ($request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
-                $sucursales = $request->sucursales_asignadas;
-                foreach ($sucursales as $sucursal) {
-                    DB::table('sw_curso_sucursales')->insert([
-                        'curso_codigo' => $curso->codigo,
-                        'sucursal' => $sucursal,
-                        'created_at' => date('Y-m-d\TH:i:s.000'),
-                        'updated_at' => date('Y-m-d\TH:i:s.000')
-                    ]);
-                }
+                $this->saveSucursales($curso->codigo, $request->sucursales_asignadas);
             }
 
-            if ($request->input('tipo_curso') == '6' && $request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
-                foreach ($request->sucursales_asignadas as $cliente) {
-                    DB::table('sw_cliente_curso')->insert([
-                        'cod_cliente' => $cliente,
-                        'cod_curso' => $curso->codigo,
-                    ]);
-                }
-            }
-
-            $tienePlantilla = false;
-            $nombreArchivoOriginal = null;
-            $tipoArchivo = null;
-            $extensionArchivo = null;
-            $rutaArchivo = null;
-            $nombreArchivoFinal = null;
+            $this->saveClientesCurso($curso->codigo, $request);
 
             if ($request->input('aplica_evaluacion', 0) == 1) {
-                $nombreExamen = $request->nombre_exa ?? ("Examen de " . $request->nombre);
-
-                $examen = ExamenCurso::create([
-                    'cod_cursos' => $curso->codigo,
-                    'nombre' => $nombreExamen,
-                    'descripcion' => $request->descripcion,
-                    'tiempo' => (int) ($request->tiempo ?? 0),
-                    'nota_minima' => (int) ($request->nota ?? 0),
-                    'file_tiene' => $tienePlantilla ? 1 : 0,
-                    'file_nombre' => $nombreArchivoFinal,
-                    'file_ruta' => $rutaArchivo,
-                    'file_extension' => $extensionArchivo,
-                    'file_tipo' => $tipoArchivo,
-                    'file_nombre_original' => $nombreArchivoOriginal,
-                    'intentos' => (int) ($request->intentos ?? 0),
-                    'cantidad_preguntas' => (int) ($request->cantidad_preguntas ?? 0),
-                    'preguntas_balotario' => (int) ($request->preguntas_balotario ?? 0),
-                    'fecha_creacion' => date('Y-m-d\TH:i:s.000')
-                ]);
-
+                $examen = $this->createExamen($curso, $request);
                 if (!$examen) {
                     DB::rollBack();
                     return response()->json([
@@ -589,236 +511,369 @@ class CapacitacionController extends Controller
             }
 
             if ($request->has('fechas_generadas')) {
-                $fechasArray = json_decode($request->input('fechas_generadas'), true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($fechasArray)) {
-                    $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
-                    $newProgCod = $lastProg ? intval($lastProg->codigo_programacion) : 1000;
-
-                    foreach ($fechasArray as $fechaItem) {
-                        $newProgCod++;
-                        CursoProgramacion::create([
-                            'codigo_programacion' => str_pad($newProgCod, 4, '0', STR_PAD_LEFT),
-                            'cod_cursos' => $curso->codigo,
-                            'periodo' => $fechaItem['periodo'],
-                            'tipo' => 'REGULAR',
-                            'fecha_inicio' => $fechaItem['inicio'] . 'T00:00:00.000',
-                            'fecha_final' => $fechaItem['final'] . 'T23:59:59.000',
-                            'fecha_creacion' => date('Y-m-d\TH:i:s.000'),
-                            'habilitado' => 1,
-                        ]);
-                    }
-                }
+                $this->generateProgramaciones($curso, $request->input('fechas_generadas'));
             }
 
             try {
-                $nombre = $request->input('nombre');
-                $codigo = $curso->codigo;
-                $codMoodleArea = $request->input('cod_moodle_area');
-                $aplicaEvaluacion = $request->input('aplica_evaluacion', 0);
-
-                DB::connection('mysql_grupoihb')->statement("
-        CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
-                    $nombre,
-                    $codigo,
-                    $codMoodleArea,
-                    $aplicaEvaluacion,
+                $courseId = $this->createMoodleCourse(
+                    $request->input('nombre'),
+                    $curso->codigo,
+                    $request->input('descripcion'),
+                    $request->input('cod_moodle_area'),
+                    $request->input('aplica_evaluacion', 0),
                     (int) ($request->tiempo ?? 0),
                     (int) ($request->intentos ?? 0),
-                    0,
+                    (int) ($request->cantidad_preguntas ?? 0),
                     (float) ($request->nota ?? 0.00)
-                ]);
-
-                $res = DB::connection('mysql_grupoihb')->select("SELECT @resultado AS resultado");
-                $courseId = $res[0]->resultado ?? null;
+                );
 
                 if ($courseId > 0) {
                     $curso->update(['codigo_moodle' => $courseId]);
 
-                    if ($request->hasFile('image_portada') && $courseId > 0) {
-                        try {
-                            $file     = $request->file('image_portada');
-                            $filename = $file->getClientOriginalName();
+                    $this->uploadPortadaToMoodle($courseId, $request);
+                    $this->uploadAficheToMoodle($courseId, $request);
+                    $this->syncPreguntasWord($courseId, $request->input('aplica_evaluacion', 0), $request->input('preguntas_word'));
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error al crear curso en Moodle', [
+                    'error'   => $e->getMessage(),
+                    'codigo'  => $curso->codigo ?? null
+                ]);
+            }
 
-                            $contextRow = DB::connection('mysql_grupoihb')
-                                ->select("SELECT id FROM mdl_context 
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Curso y examen registrados correctamente.',
+                'success' => true
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Error al registrar curso', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al registrar el curso. Por favor, contacte al administrador.'
+            ], 500);
+        }
+    }
+
+    private function generateCourseCode(): string
+    {
+        $lastCod = Cursos::orderBy('codigo_curso', 'desc')->first();
+        if ($lastCod) {
+            $lastNumber = intval($lastCod->codigo_curso);
+            return str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT);
+        }
+        return '10001';
+    }
+
+    private function calculatePeriodicidad(?string $frecuencia, int $esPeriodico): int
+    {
+        if ($esPeriodico != 1) {
+            return 0;
+        }
+        switch ($frecuencia) {
+            case 'MENSUAL':
+                return 12;
+            case 'BIMESTRAL':
+                return 6;
+            case 'TRIMESTRAL':
+                return 4;
+            case 'CUATRIMESTRAL':
+                return 3;
+            case 'SEMESTRAL':
+                return 2;
+            case 'ANUAL':
+                return 1;
+            default:
+                return 0;
+        }
+    }
+
+    private function saveSucursales(int $cursoCodigo, array $sucursales): void
+    {
+        foreach ($sucursales as $sucursal) {
+            DB::table('sw_curso_sucursales')->insert([
+                'curso_codigo' => $cursoCodigo,
+                'sucursal' => $sucursal,
+                'created_at' => date('Y-m-d\TH:i:s.000'),
+                'updated_at' => date('Y-m-d\TH:i:s.000')
+            ]);
+        }
+    }
+
+    private function saveClientesCurso(int $cursoCodigo, Request $request): void
+    {
+        if ($request->input('tipo_curso') == '6' && $request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
+            foreach ($request->sucursales_asignadas as $cliente) {
+                DB::table('sw_cliente_curso')->insert([
+                    'cod_cliente' => $cliente,
+                    'cod_curso' => $cursoCodigo,
+                ]);
+            }
+        }
+    }
+
+    private function createExamen(Cursos $curso, Request $request): ?ExamenCurso
+    {
+        $nombreExamen = $request->nombre_exa ?? ("Examen de " . $request->nombre);
+
+        return ExamenCurso::create([
+            'cod_cursos' => $curso->codigo,
+            'nombre' => $nombreExamen,
+            'descripcion' => $request->descripcion,
+            'tiempo' => (int) ($request->tiempo ?? 0),
+            'nota_minima' => (int) ($request->nota ?? 0),
+            'file_tiene' => 0,
+            'file_nombre' => null,
+            'file_ruta' => null,
+            'file_extension' => null,
+            'file_tipo' => null,
+            'file_nombre_original' => null,
+            'intentos' => (int) ($request->intentos ?? 0),
+            'cantidad_preguntas' => (int) ($request->cantidad_preguntas ?? 0),
+            'preguntas_balotario' => (int) ($request->preguntas_balotario ?? 0),
+            'fecha_creacion' => date('Y-m-d\TH:i:s.000')
+        ]);
+    }
+
+    private function generateProgramaciones(Cursos $curso, string $fechasGeneradas): void
+    {
+        $fechasArray = json_decode($fechasGeneradas, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($fechasArray)) {
+            return;
+        }
+
+        $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
+        $newProgCod = $lastProg ? intval($lastProg->codigo_programacion) : 1000;
+
+        foreach ($fechasArray as $fechaItem) {
+            $newProgCod++;
+            CursoProgramacion::create([
+                'codigo_programacion' => str_pad($newProgCod, 4, '0', STR_PAD_LEFT),
+                'cod_cursos' => $curso->codigo,
+                'periodo' => $fechaItem['periodo'],
+                'tipo' => 'REGULAR',
+                'fecha_inicio' => $fechaItem['inicio'] . 'T00:00:00.000',
+                'fecha_final' => $fechaItem['final'] . 'T23:59:59.000',
+                'fecha_creacion' => date('Y-m-d\TH:i:s.000'),
+                'habilitado' => 1,
+            ]);
+        }
+    }
+
+    private function createMoodleCourse(string $nombre, int $codigo, ?string $descripcion, ?int $codMoodleArea, int $aplicaEvaluacion, int $tiempo, int $intentos, int $cantPreguntas, float $nota): ?int
+    {
+        DB::connection('mysql_grupoihb')->statement("
+            CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
+            $nombre,
+            $codigo,
+            $descripcion,
+            $codMoodleArea,
+            $aplicaEvaluacion,
+            $tiempo,
+            $intentos,
+            $cantPreguntas,
+            $nota
+        ]);
+
+        $res = DB::connection('mysql_grupoihb')->select("SELECT @resultado AS resultado");
+        return $res[0]->resultado ?? null;
+    }
+
+    private function uploadFileToMoodleDraft($file): ?int
+    {
+        $http = app()->isProduction()
+            ? Http::asForm()
+            : Http::withoutVerifying()->asForm();
+
+        $response = $http->post(config('services.moodle.url') . '/webservice/rest/server.php', [
+            'wstoken'            => config('services.moodle.ws_token'),
+            'wsfunction'         => 'core_files_upload',
+            'moodlewsrestformat' => 'json',
+            'contextlevel'       => 'user',
+            'instanceid'         => config('services.moodle.admin_id'),
+            'component'          => 'user',
+            'filearea'           => 'draft',
+            'itemid'             => 0,
+            'filepath'           => '/',
+            'filename'           => $file->getClientOriginalName(),
+            'filecontent'        => base64_encode(file_get_contents($file->getRealPath())),
+        ]);
+
+        return $response->json('itemid') ?? null;
+    }
+
+    private function uploadPortadaToMoodle(int $courseId, Request $request): void
+    {
+        if (!$request->hasFile('image_portada')) {
+            return;
+        }
+
+        try {
+            $contextRow = DB::connection('mysql_grupoihb')
+                ->select("SELECT id FROM mdl_context 
                       WHERE contextlevel = 50 AND instanceid = ? LIMIT 1", [$courseId]);
 
-                            if (!empty($contextRow)) {
-                                $http = app()->isProduction()
-                                    ? Http::asForm()
-                                    : Http::withoutVerifying()->asForm();
+            if (empty($contextRow)) {
+                return;
+            }
 
-                                $draftResponse = $http->post(config('services.moodle.url') . '/webservice/rest/server.php', [
-                                    'wstoken'            => config('services.moodle.ws_token'),
-                                    'wsfunction'         => 'core_files_upload',
-                                    'moodlewsrestformat' => 'json',
-                                    'contextlevel'       => 'user',
-                                    'instanceid'         => config('services.moodle.admin_id'),
-                                    'component'          => 'user',
-                                    'filearea'           => 'draft',
-                                    'itemid'             => 0,
-                                    'filepath'           => '/',
-                                    'filename'           => $filename,
-                                    'filecontent'        => base64_encode(file_get_contents($file->getRealPath())),
-                                ]);
+            $draftItemId = $this->uploadFileToMoodleDraft($request->file('image_portada'));
 
-                                $draftItemId = $draftResponse->json('itemid') ?? null;
+            if ($draftItemId) {
+                $http = app()->isProduction()
+                    ? Http::asForm()
+                    : Http::withoutVerifying()->asForm();
 
-                                if ($draftItemId) {
-                                    $http2 = app()->isProduction()
-                                        ? Http::asForm()
-                                        : Http::withoutVerifying()->asForm();
+                $http->post(config('services.moodle.url') . '/webservice/rest/server.php', [
+                    'wstoken'                                   => config('services.moodle.ws_token'),
+                    'wsfunction'                                => 'core_course_update_courses',
+                    'moodlewsrestformat'                        => 'json',
+                    'courses[0][id]'                            => $courseId,
+                    'courses[0][courseformatoptions][0][name]'  => 'overviewfiles_filemanager',
+                    'courses[0][courseformatoptions][0][value]' => $draftItemId,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error al subir imagen de portada a Moodle', [
+                'error'    => $e->getMessage(),
+                'courseId' => $courseId,
+            ]);
+        }
+    }
 
-                                    $http2->post(config('services.moodle.url') . '/webservice/rest/server.php', [
-                                        'wstoken'                                   => config('services.moodle.ws_token'),
-                                        'wsfunction'                                => 'core_course_update_courses',
-                                        'moodlewsrestformat'                        => 'json',
-                                        'courses[0][id]'                            => $courseId,
-                                        'courses[0][courseformatoptions][0][name]'  => 'overviewfiles_filemanager',
-                                        'courses[0][courseformatoptions][0][value]' => $draftItemId,
-                                    ]);
-                                }
-                            }
-                        } catch (\Throwable $e) {
-                            Log::error('Error al subir imagen de portada a Moodle', [
-                                'error'    => $e->getMessage(),
-                                'courseId' => $courseId,
-                            ]);
-                        }
-                    }
+    private function uploadAficheToMoodle(int $courseId, Request $request): void
+    {
+        if (!$request->hasFile('image_afiche')) {
+            return;
+        }
 
-                    if ($request->hasFile('image_afiche') && $courseId > 0) {
-                        try {
-                            $file       = $request->file('image_afiche');
-                            $filename   = $file->getClientOriginalName();
+        try {
+            $file       = $request->file('image_afiche');
+            $filename   = $file->getClientOriginalName();
 
-                            $contextRow = DB::connection('mysql_grupoihb')
-                                ->select("SELECT id FROM mdl_context 
+            $contextRow = DB::connection('mysql_grupoihb')
+                ->select("SELECT id FROM mdl_context 
                       WHERE contextlevel = 50 AND instanceid = ? LIMIT 1", [$courseId]);
 
-                            if (!empty($contextRow)) {
-                                $contextid = $contextRow[0]->id;
+            if (empty($contextRow)) {
+                return;
+            }
 
-                                $http = app()->isProduction()
-                                    ? Http::asForm()
-                                    : Http::withoutVerifying()->asForm();
+            $contextid = $contextRow[0]->id;
 
-                                $draftResponse = $http->post(config('services.moodle.url') . '/webservice/rest/server.php', [
-                                    'wstoken'            => config('services.moodle.ws_token'),
-                                    'wsfunction'         => 'core_files_upload',
-                                    'moodlewsrestformat' => 'json',
-                                    'contextlevel'       => 'user',
-                                    'instanceid'         => config('services.moodle.admin_id'),
-                                    'component'          => 'user',
-                                    'filearea'           => 'draft',
-                                    'itemid'             => 0,
-                                    'filepath'           => '/',
-                                    'filename'           => $filename,
-                                    'filecontent'        => base64_encode(file_get_contents($file->getRealPath())),
-                                ]);
+            $draftItemId = $this->uploadFileToMoodleDraft($file);
 
-                                $draftItemId = $draftResponse->json('itemid') ?? null;
+            if (!$draftItemId) {
+                return;
+            }
 
-                                if ($draftItemId) {
-                                    $seccionNombre = 'Afiche informativo';
+            $seccionNombre = 'Afiche informativo';
 
-                                    $seccionExistente = DB::connection('mysql_grupoihb')
-                                        ->select(
-                                            "SELECT id, section FROM mdl_course_sections 
+            $seccionExistente = DB::connection('mysql_grupoihb')
+                ->select(
+                    "SELECT id, section FROM mdl_course_sections 
                          WHERE course = ? AND name = ? LIMIT 1",
-                                            [$courseId, $seccionNombre]
-                                        );
+                    [$courseId, $seccionNombre]
+                );
 
-                                    if (!empty($seccionExistente)) {
-                                        $sectionId     = $seccionExistente[0]->id;
-                                        $sectionNumber = $seccionExistente[0]->section;
-                                    } else {
-                                        DB::connection('mysql_grupoihb')
-                                            ->statement("UPDATE mdl_course_sections 
+            if (!empty($seccionExistente)) {
+                $sectionId     = $seccionExistente[0]->id;
+                $sectionNumber = $seccionExistente[0]->section;
+            } else {
+                DB::connection('mysql_grupoihb')
+                    ->statement("UPDATE mdl_course_sections 
                                      SET section = section + 1 
                                      WHERE course = ? AND section >= 1", [$courseId]);
 
-                                        $sectionNumber = 1;
+                $sectionNumber = 1;
 
-                                        DB::connection('mysql_grupoihb')->table('mdl_course_sections')->insert([
-                                            'course'        => $courseId,
-                                            'section'       => $sectionNumber,
-                                            'name'          => $seccionNombre,
-                                            'summary'       => '',
-                                            'summaryformat' => 1,
-                                            'sequence'      => '',
-                                            'visible'       => 1,
-                                            'timemodified'  => time(),
-                                        ]);
-                                        $sectionId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
-                                    }
+                DB::connection('mysql_grupoihb')->table('mdl_course_sections')->insert([
+                    'course'        => $courseId,
+                    'section'       => $sectionNumber,
+                    'name'          => $seccionNombre,
+                    'summary'       => '',
+                    'summaryformat' => 1,
+                    'sequence'      => '',
+                    'visible'       => 1,
+                    'timemodified'  => time(),
+                ]);
+                $sectionId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+            }
 
-                                    DB::connection('mysql_grupoihb')->table('mdl_label')->insert([
-                                        'course'       => $courseId,
-                                        'name'         => $seccionNombre,
-                                        'intro'        => '',
-                                        'introformat'  => 1,
-                                        'timemodified' => time(),
-                                    ]);
-                                    $labelId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+            DB::connection('mysql_grupoihb')->table('mdl_label')->insert([
+                'course'       => $courseId,
+                'name'         => $seccionNombre,
+                'intro'        => '',
+                'introformat'  => 1,
+                'timemodified' => time(),
+            ]);
+            $labelId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
 
-                                    $moduleRow = DB::connection('mysql_grupoihb')
-                                        ->select("SELECT id FROM mdl_modules WHERE name = 'label' LIMIT 1");
-                                    $moduleId = $moduleRow[0]->id ?? null;
+            $moduleRow = DB::connection('mysql_grupoihb')
+                ->select("SELECT id FROM mdl_modules WHERE name = 'label' LIMIT 1");
+            $moduleId = $moduleRow[0]->id ?? null;
 
-                                    if ($moduleId && $sectionId) {
-                                        DB::connection('mysql_grupoihb')->table('mdl_course_modules')->insert([
-                                            'course'     => $courseId,
-                                            'module'     => $moduleId,
-                                            'instance'   => $labelId,
-                                            'section'    => $sectionId,
-                                            'added'      => time(),
-                                            'visible'    => 1,
-                                            'visibleold' => 1,
-                                            'completion' => 0,
-                                        ]);
-                                        $cmId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+            if ($moduleId && $sectionId) {
+                DB::connection('mysql_grupoihb')->table('mdl_course_modules')->insert([
+                    'course'     => $courseId,
+                    'module'     => $moduleId,
+                    'instance'   => $labelId,
+                    'section'    => $sectionId,
+                    'added'      => time(),
+                    'visible'    => 1,
+                    'visibleold' => 1,
+                    'completion' => 0,
+                ]);
+                $cmId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
 
-                                        DB::connection('mysql_grupoihb')
-                                            ->statement("UPDATE mdl_course_sections 
+                DB::connection('mysql_grupoihb')
+                    ->statement("UPDATE mdl_course_sections 
                                      SET sequence = CONCAT(IF(sequence = '' OR sequence IS NULL, '', CONCAT(sequence, ',')), ?)
                                      WHERE id = ?", [$cmId, $sectionId]);
 
-                                        DB::connection('mysql_grupoihb')->table('mdl_context')->insert([
-                                            'contextlevel' => 70,
-                                            'instanceid'   => $cmId,
-                                            'depth'        => 4,
-                                            'path'         => '',
-                                        ]);
-                                        $cmContextId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+                DB::connection('mysql_grupoihb')->table('mdl_context')->insert([
+                    'contextlevel' => 70,
+                    'instanceid'   => $cmId,
+                    'depth'        => 4,
+                    'path'         => '',
+                ]);
+                $cmContextId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
 
-                                        DB::connection('mysql_grupoihb')
-                                            ->statement("UPDATE mdl_context SET path = CONCAT('/1/', ?, '/', ?) WHERE id = ?", [
-                                                $contextid,
-                                                $cmContextId,
-                                                $cmContextId,
-                                            ]);
+                DB::connection('mysql_grupoihb')
+                    ->statement("UPDATE mdl_context SET path = CONCAT('/1/', ?, '/', ?) WHERE id = ?", [
+                        $contextid,
+                        $cmContextId,
+                        $cmContextId,
+                    ]);
 
-                                        $newPathnamehash = sha1("/{$cmContextId}/mod_label/intro/0/{$filename}");
+                $newPathnamehash = sha1("/{$cmContextId}/mod_label/intro/0/{$filename}");
 
-                                        DB::connection('mysql_grupoihb')->table('mdl_files')
-                                            ->where('component', 'user')
-                                            ->where('filearea', 'draft')
-                                            ->where('itemid', $draftItemId)
-                                            ->where('filename', $filename)
-                                            ->update([
-                                                'component'    => 'mod_label',
-                                                'filearea'     => 'intro',
-                                                'itemid'       => 0,
-                                                'filepath'     => '/',
-                                                'contextid'    => $cmContextId,
-                                                'pathnamehash' => $newPathnamehash,
-                                                'timemodified' => time(),
-                                            ]);
+                DB::connection('mysql_grupoihb')->table('mdl_files')
+                    ->where('component', 'user')
+                    ->where('filearea', 'draft')
+                    ->where('itemid', $draftItemId)
+                    ->where('filename', $filename)
+                    ->update([
+                        'component'    => 'mod_label',
+                        'filearea'     => 'intro',
+                        'itemid'       => 0,
+                        'filepath'     => '/',
+                        'contextid'    => $cmContextId,
+                        'pathnamehash' => $newPathnamehash,
+                        'timemodified' => time(),
+                    ]);
 
-                                        $modalId = 'afiche-modal-' . $courseId;
+                $modalId = 'afiche-modal-' . $courseId;
 
-                                        $htmlAfiche = "
+                $htmlAfiche = "
                                             <!-- Modal afiche -->
                                             <div id='{$modalId}' style='
                                                 display:none; position:fixed; z-index:99999;
@@ -876,71 +931,45 @@ class CapacitacionController extends Controller
                                             </script>
                                         ";
 
-                                        DB::connection('mysql_grupoihb')->table('mdl_label')
-                                            ->where('id', $labelId)
-                                            ->update([
-                                                'intro'        => $htmlAfiche,
-                                                'timemodified' => time(),
-                                            ]);
-                                    }
-                                }
-                            }
-                        } catch (\Throwable $e) {
-                            Log::error('Error al subir afiche a Moodle', [
-                                'error'    => $e->getMessage(),
-                                'line'     => $e->getLine(),
-                                'courseId' => $courseId,
-                            ]);
-                        }
-                    }
-
-                    $preguntasWordStr = $request->input('preguntas_word');
-
-                    if ($aplicaEvaluacion && $preguntasWordStr) {
-                        $preguntas = json_decode($preguntasWordStr, true);
-
-                        if (!empty($preguntas)) {
-                            $quizRow = DB::connection('mysql_grupoihb')
-                                ->select("SELECT id FROM mdl_quiz WHERE course = ? LIMIT 1", [$courseId]);
-
-                            if (!empty($quizRow)) {
-                                $quizId = $quizRow[0]->id;
-
-                                DB::connection('mysql_grupoihb')->statement("
-                        CALL SP_QUIZ_agregar_preguntas_mc(?, ?, @res_preguntas)", [
-                                    $quizId,
-                                    json_encode($preguntas)
-                                ]);
-                            }
-                        }
-                    }
-                }
-            } catch (\Throwable $e) {
-                Log::error('Error al crear curso en Moodle', [
-                    'error'   => $e->getMessage(),
-                    'codigo'  => $curso->codigo ?? null
-                ]);
+                DB::connection('mysql_grupoihb')->table('mdl_label')
+                    ->where('id', $labelId)
+                    ->update([
+                        'intro'        => $htmlAfiche,
+                        'timemodified' => time(),
+                    ]);
             }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Curso y examen registrados correctamente.',
-                'success' => true
-            ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            Log::error('Error al registrar curso', [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
+            Log::error('Error al subir afiche a Moodle', [
+                'error'    => $e->getMessage(),
+                'line'     => $e->getLine(),
+                'courseId' => $courseId,
             ]);
+        }
+    }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Ocurrió un error al registrar el curso. Por favor, contacte al administrador.'
-            ], 500);
+    private function syncPreguntasWord(int $courseId, int $aplicaEvaluacion, ?string $preguntasWordStr): void
+    {
+        if (!$aplicaEvaluacion || !$preguntasWordStr) {
+            return;
+        }
+
+        $preguntas = json_decode($preguntasWordStr, true);
+
+        if (empty($preguntas)) {
+            return;
+        }
+
+        $quizRow = DB::connection('mysql_grupoihb')
+            ->select("SELECT id FROM mdl_quiz WHERE course = ? LIMIT 1", [$courseId]);
+
+        if (!empty($quizRow)) {
+            $quizId = $quizRow[0]->id;
+
+            DB::connection('mysql_grupoihb')->statement("
+                CALL SP_QUIZ_agregar_preguntas_mc(?, ?, @res_preguntas)", [
+                $quizId,
+                json_encode($preguntas)
+            ]);
         }
     }
 

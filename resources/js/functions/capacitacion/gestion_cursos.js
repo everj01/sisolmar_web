@@ -501,7 +501,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
-                alpineData.observaciones = curso.observaciones ?? "";
+                alpineData.descripcion = curso.descripcion ?? "";
 
                 // Moodle
                 alpineData.codMoodleArea = curso.cod_moodle_area ?? ""; // Si existiera en el futuro
@@ -694,7 +694,7 @@ window.editarFormGestionCurso = (e) => {
     formData.append('cod_responsable', alpineData.codResponsable);
     formData.append('area_responsable', alpineData.areaResponsable);
     formData.append('cod_moodle_area', alpineData.codMoodleArea);
-    formData.append('observaciones', alpineData.observaciones);
+    formData.append('descripcion', alpineData.descripcion);
     formData.append('dirigido_a', alpineData.dirigido);
 
     //formData.append('archivo', archivoSeleccionado);
@@ -860,7 +860,7 @@ window.formCursoGestion = function () {
         tipoResponsable: 'ADMINISTRATIVO_5',
         codResponsable: '',
         nombreResponsable: '',
-        observaciones: '',
+        descripcion: '',
 
         aplicaEvaluacion: false,
         obligatorioAlta: true, // Siempre true por regla de negocio
@@ -1184,7 +1184,7 @@ window.formCursoGestion = function () {
             this.busquedaCliente = '';
             this.busquedaAreaPCI = '';
             this.busquedaEmpresa = '';
-            this.observaciones = '';
+            this.descripcion = '';
 
             // Word 2026: limpiar preguntas cargadas
             this.archivoWord = null;
@@ -1312,7 +1312,7 @@ window.formCursoGestion = function () {
             formData.append('cod_responsable', this.codResponsable);
             formData.append('area_responsable', this.areaResponsable);
             formData.append('cod_moodle_area', this.codMoodleArea);
-            formData.append('observaciones', this.observaciones);
+            formData.append('descripcion', this.descripcion);
             formData.append('dirigido_a', this.dirigido);
 
             if (this.archivoWord) {
@@ -1352,7 +1352,7 @@ window.formCursoGestion = function () {
                             limiteTiempo: 10,
                             nota: 10,
                             intentos: 1,
-                            observaciones: ""
+                            descripcion: ""
                         };
 
                         // Reset Alpine Data
