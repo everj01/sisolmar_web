@@ -839,6 +839,27 @@
                     </select>
                 </div>
 
+                <!-- Filtrar por tipo de personal -->
+                <div class="mb-3">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">
+                        Filtrar por tipo de personal
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" class="form-radio text-primary" name="tipo_per_modal" value="TODOS" checked>
+                            <span class="text-sm">Todos</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" class="form-radio text-primary" name="tipo_per_modal" value="ADMIN">
+                            <span class="text-sm">Administrativo</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" class="form-radio text-primary" name="tipo_per_modal" value="OPER">
+                            <span class="text-sm">Operativo</span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Buscador -->
                 <div class="mb-3">
                     <div class="relative">

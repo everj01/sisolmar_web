@@ -1218,6 +1218,12 @@ async function cargarPersonalModal(cursoId) {
         tblPersonalMatriculaModal.destroy();
     }
 
+    // Resetear filtros al abrir el modal
+    const radioTodos = document.querySelector('input[name="tipo_per_modal"][value="TODOS"]');
+    if (radioTodos) radioTodos.checked = true;
+    const slcSucursal = document.getElementById("slcFiltroSucursalModal");
+    if (slcSucursal) slcSucursal.value = "";
+
     // Inicializar Tabulator Modal
     tblPersonalMatriculaModal = new Tabulator("#tblPersonalMatriculaModal", {
         ajaxURL: `/api/buscar-personal-capacitacion`,
@@ -1263,6 +1269,7 @@ async function cargarPersonalModal(cursoId) {
         configurarBuscadorModal();
         configurarCheckboxesModal();
         configurarFiltroSucursalModal();
+        configurarFiltroTipoPersonalModal();
         const data = tblPersonalMatriculaModal.getData();
         poblarFiltroSucursalModal(data);
         actualizarContadoresModal(data);
@@ -1307,6 +1314,24 @@ function configurarFiltroSucursalModal() {
         }
     });
     select.dataset.listenerSucursal = "true";
+}
+
+function configurarFiltroTipoPersonalModal() {
+    const radios = document.querySelectorAll('input[name="tipo_per_modal"]');
+    if (!radios.length) return;
+
+    radios.forEach(radio => {
+        radio.addEventListener("change", function () {
+            const val = this.value;
+            if (tblPersonalMatriculaModal) {
+                if (val === "TODOS") {
+                    tblPersonalMatriculaModal.clearFilter();
+                } else {
+                    tblPersonalMatriculaModal.setFilter("tipo_label", "=", val);
+                }
+            }
+        });
+    });
 }
 
 function configurarCheckboxesModal() {

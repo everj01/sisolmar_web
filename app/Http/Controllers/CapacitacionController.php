@@ -1648,7 +1648,8 @@ class CapacitacionController extends Controller
     public function buscarPersonalCapacitacion(Request $request): JsonResponse
     {
         try {
-            // 1. Obtener personal ADMINISTRATIVO 5 de la fuente oficial (si_solm.dbo.PERSONAL)
+            // 1. Obtener personal de la fuente oficial (si_solm.dbo.PERSONAL)
+            $tipoTrabMap = ['01' => 'OPER', '02' => 'ADMIN', '03' => 'OPER', '05' => 'ADMIN', '06' => 'ESPECIAL'];
             $rawPersonal = DB::connection('sqlsrv')->select("
                 SELECT 
                     P.CODI_PERS as codigo,
@@ -1659,11 +1660,9 @@ class CapacitacionController extends Controller
                     P.PERS_VIGENCIA as VIGENCIA
                 FROM si_solm.dbo.PERSONAL P
                 LEFT JOIN dbo.sw_MIGRA_SISO_SUCURSAL S ON P.SUCU_CODIGO = S.SUCU_CODIGO
-                WHERE P.PERS_TIPOTRAB = '05' 
-                  AND P.PERS_VIGENCIA = 'SI'
+                WHERE P.PERS_VIGENCIA = 'SI'
             ");
 
-            // El filtro de tipo_responsable ya se aplica en el query SQL, no es necesario un filtro manual adicional.
             // Se unifica el mapeo y el filtro de búsqueda en una sola pasada.
             $personal = [];
             $searchTerm = strtoupper(trim($request->input('q', '')));
@@ -1717,7 +1716,7 @@ class CapacitacionController extends Controller
             // ------------------------------------------
 
             // 3. Mapear resultados en memoria
-            $personal = array_map(function ($p) use ($matriculasCounts, $matriculadosEnCurso) {
+            $personal = array_map(function ($p) use ($matriculasCounts, $matriculadosEnCurso, $tipoTrabMap) {
                 // Estandarización de campos
                 $codigo = $p->CODI_PERS ?? $p->codi_pers ?? $p->codigo ?? '';
                 $nombre = $p->personal ?? $p->nombre ?? $p->nombre_completo ?? 'Desconocido';
@@ -1726,11 +1725,14 @@ class CapacitacionController extends Controller
                 $cargo = $p->cargo ?? $p->desc_cargo ?? $p->TIPOTRAB ?? 'N/A';
                 $sucursal = $p->sucursal ?? 'N/A';
 
+                $tipoLabel = $tipoTrabMap[$cargo] ?? 'DESCONOCIDO';
+
                 return [
                     'codigo' => $codigo,
                     'nombre_completo' => $nombre,
                     'dni' => $dni,
                     'cargo' => $cargo,
+                    'tipo_label' => $tipoLabel,
                     'sucursal' => $sucursal,
                     'matriculado' => in_array((string) $codigo, $matriculadosEnCurso),
                     'total_capacitaciones' => $matriculasCounts[$codigo] ?? 0
