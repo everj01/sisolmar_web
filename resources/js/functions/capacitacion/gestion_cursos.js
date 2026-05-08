@@ -1,6 +1,7 @@
 import Swal from "sweetalert2";
 import axios from "axios";
 import DataTable from "vanilla-datatables";
+import imageCompression from 'browser-image-compression';
 
 console.log('ESTO ES UNA PREUBA PROVAOFR');
 
@@ -884,21 +885,92 @@ window.formCursoGestion = function () {
         imageFileAfiche: null,
         imagePreviewAfiche: null,
 
+        modalPreviewAbierto: false,
+        modalPreviewSrc: '',
+        modalPreviewTitulo: '',
+
+        previewImage(src, titulo) {
+            this.modalPreviewSrc = src;
+            this.modalPreviewTitulo = titulo;
+            this.modalPreviewAbierto = true;
+        },
+
         async handleImageUpload(event, type = 'portada') {
-            const file = event.target.files[0];
+
+            let file = event.target.files[0];
             if (!file) return;
 
             const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+
+            const maxSizeKB = 1990;
+            const maxSizeBytes = maxSizeKB * 1024;
+
             if (!allowed.includes(file.type)) {
-                Swal.fire('Atención', 'Solo se permiten imágenes .jpg, .jpeg o .png', 'warning');
+
+                Swal.fire(
+                    'Atención',
+                    'Solo se permiten imágenes .jpg, .jpeg o .png',
+                    'warning'
+                );
+
                 event.target.value = '';
                 return;
+            }
+
+            if (file.size > maxSizeBytes) {
+
+                await Swal.fire({
+                    title: 'Imagen pesada',
+                    text: 'La imagen supera los 1990 KB (1.9 MB). Se intentará comprimir automáticamente, lo que podría reducir ligeramente la calidad.',
+                    icon: 'info',
+                    confirmButtonText: 'Entendido'
+                });
+
+                try {
+
+                    const originalSizeKB = (file.size / 1024).toFixed(2);
+
+                    const options = {
+                        maxSizeMB: 1.9,
+                        maxWidthOrHeight: 1920,
+                        useWebWorker: true,
+                    };
+
+                    file = await imageCompression(file, options);
+
+                    if (!file.name || file.name === 'blob') {
+                        file = new File([file], event.target.files[0].name, { type: file.type });
+                    }
+
+                    const compressedSizeKB = (file.size / 1024).toFixed(2);
+
+                    if (file.size > maxSizeBytes) {
+                        Swal.fire(
+                            'No se pudo procesar',
+                            'Incluso después de la compresión, la imagen sigue superando el límite permitido.',
+                            'warning'
+                        );
+
+                        event.target.value = '';
+                        return;
+                    }
+
+                } catch (error) {
+                    Swal.fire(
+                        'Error',
+                        'Ocurrió un problema al comprimir la imagen.',
+                        'error'
+                    );
+                    event.target.value = '';
+                    return;
+                }
             }
 
             const reader = new FileReader();
             const _this = this;
 
             reader.onload = (e) => {
+
                 if (type === 'portada') {
                     _this.imagePreviewPortada = e.target.result;
                     _this.imageFilePortada = file;
@@ -906,7 +978,9 @@ window.formCursoGestion = function () {
                     _this.imagePreviewAfiche = e.target.result;
                     _this.imageFileAfiche = file;
                 }
+
             };
+
             reader.readAsDataURL(file);
         },
 

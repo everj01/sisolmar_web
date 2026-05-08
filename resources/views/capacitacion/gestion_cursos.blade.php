@@ -864,7 +864,12 @@
                                                                 <img :src="imagePreviewPortada"
                                                                     class="w-full h-full object-cover shadow-inner">
                                                                 <div
-                                                                    class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                                    <button type="button"
+                                                                        @click="previewImage(imagePreviewPortada, 'Portada del Curso')"
+                                                                        class="btn btn-sm bg-white/90 text-slate-700 rounded-full p-2 hover:bg-white shadow-lg transform hover:scale-110 transition-all">
+                                                                        <i class="bx bx-show text-lg"></i>
+                                                                    </button>
                                                                     <button type="button"
                                                                         @click="imagePreviewPortada = null; imageFilePortada = null; $refs.inputImagePortada.value = ''"
                                                                         class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
@@ -907,7 +912,7 @@
                                                         class="text-[10px] font-bold text-slate-500 uppercase tracking-tight ml-1">Afiche
                                                         Informativo</span>
                                                     <div class="relative w-full aspect-[3/2] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all"
-                                                        :class="imagePreviewAfiche ? 'border-solid border-indigo-200' :
+                                                        :class="imagePreviewAfiche ? 'border-solid border-primary/30' :
                                                                 'hover:border-slate-300'">
 
                                                         <template x-if="imagePreviewAfiche">
@@ -915,7 +920,12 @@
                                                                 <img :src="imagePreviewAfiche"
                                                                     class="w-full h-full object-cover shadow-inner">
                                                                 <div
-                                                                    class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                                    <button type="button"
+                                                                        @click="previewImage(imagePreviewAfiche, 'Afiche Informativo')"
+                                                                        class="btn btn-sm bg-white/90 text-slate-700 rounded-full p-2 hover:bg-white shadow-lg transform hover:scale-110 transition-all">
+                                                                        <i class="bx bx-show text-lg"></i>
+                                                                    </button>
                                                                     <button type="button"
                                                                         @click="imagePreviewAfiche = null; imageFileAfiche = null; $refs.inputImageAfiche.value = ''"
                                                                         class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
@@ -926,15 +936,22 @@
                                                         </template>
 
                                                         <template x-if="!imagePreviewAfiche">
-                                                            <div class="flex flex-col items-center text-slate-400 py-4 cursor-pointer"
+                                                            <div class="flex flex-col items-center py-4 cursor-pointer group/upload"
                                                                 @click="$refs.inputImageAfiche.click()">
                                                                 <div
-                                                                    class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-1 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
-                                                                    <i class="bx bx-info-circle text-xl"></i>
+                                                                    class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-2 border border-slate-100 group-hover/upload:bg-primary/10 group-hover/upload:text-primary group-hover/upload:border-primary/20 transition-all duration-300">
+                                                                    <i
+                                                                        class="bx bx-image text-2xl text-slate-400 group-hover/upload:text-primary"></i>
                                                                 </div>
                                                                 <span
-                                                                    class="text-[9px] font-bold uppercase tracking-tight">Subir
+                                                                    class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Subir
                                                                     Afiche Informativo</span>
+                                                                <div
+                                                                    class="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 text-primary border border-primary/10 rounded-md">
+                                                                    <i class="bx bx-expand-alt text-[10px]"></i>
+                                                                    <span
+                                                                        class="text-[9px] font-black uppercase tracking-wider">Peso máx.: 1990KB (1.9MB)</span>
+                                                                </div>
                                                             </div>
                                                         </template>
                                                     </div>
@@ -1200,6 +1217,41 @@
                                         class="btn rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">
                                         Cancelar
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Preview Imagen -->
+                        <div x-show="modalPreviewAbierto" x-cloak
+                            class="fixed inset-0 z-[1050] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                            @keydown.escape.window="modalPreviewAbierto = false">
+                            <div class="relative max-w-3xl w-full mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border border-white/10"
+                                @click.away="modalPreviewAbierto = false">
+                                <div class="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-200">
+                                    <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                        <i class="bx bx-image text-primary"></i>
+                                        <span x-text="modalPreviewTitulo"></span>
+                                    </h4>
+                                    <button type="button" @click="modalPreviewAbierto = false"
+                                        class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 transition-colors">
+                                        <i class="bx bx-x text-lg"></i>
+                                    </button>
+                                </div>
+                                <div class="p-2 bg-slate-900/5 flex items-center justify-center" style="max-height: 75vh;">
+                                    <img :src="modalPreviewSrc" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-inner">
+                                </div>
+                                <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                                    <span class="text-[10px] text-slate-400 font-medium">Vista previa</span>
+                                    <span class="text-[10px] text-slate-500 font-semibold">
+                                        <i class="bx bx-show mr-1"></i>
+                                        <span x-text="modalPreviewTitulo"></span>
+                                    </span>
                                 </div>
                             </div>
                         </div>

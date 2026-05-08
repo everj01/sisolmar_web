@@ -12,7 +12,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use App\Models\ExamenCurso;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -455,8 +454,8 @@ class CapacitacionController extends Controller
                 'cod_moodle_area' => 'nullable|integer',
                 'observaciones' => 'nullable|string',
                 'dirigido_a' => 'nullable|integer',
-                'image_portada' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
-                'image_afiche'  => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'image_portada' => 'nullable|image|mimes:jpeg,jpg,png|max:1990',
+                'image_afiche'  => 'nullable|image|mimes:jpeg,jpg,png|max:1990',
             ]);
 
             if ($validator->fails()) {
@@ -690,8 +689,8 @@ class CapacitacionController extends Controller
 
                     if ($request->hasFile('image_afiche') && $courseId > 0) {
                         try {
-                            $file     = $request->file('image_afiche');
-                            $filename = $file->getClientOriginalName();
+                            $file       = $request->file('image_afiche');
+                            $filename   = $file->getClientOriginalName();
 
                             $contextRow = DB::connection('mysql_grupoihb')
                                 ->select("SELECT id FROM mdl_context 
@@ -721,19 +720,43 @@ class CapacitacionController extends Controller
                                 $draftItemId = $draftResponse->json('itemid') ?? null;
 
                                 if ($draftItemId) {
-                                    $htmlAfiche = "
-                                        <div style='text-align:center; padding: 20px;'>
-                                            <h2 style='color:#333;'>¡Bienvenido(a) al curso de {$nombre}!</h2>
-                                            <img src='@@PLUGINFILE@@/{$filename}' 
-                                                alt='Afiche del curso' 
-                                                style='max-width:100%; height:auto; border-radius:8px;' />
-                                        </div>
-                                    ";
+                                    $seccionNombre = 'Afiche informativo';
+
+                                    $seccionExistente = DB::connection('mysql_grupoihb')
+                                        ->select(
+                                            "SELECT id, section FROM mdl_course_sections 
+                         WHERE course = ? AND name = ? LIMIT 1",
+                                            [$courseId, $seccionNombre]
+                                        );
+
+                                    if (!empty($seccionExistente)) {
+                                        $sectionId     = $seccionExistente[0]->id;
+                                        $sectionNumber = $seccionExistente[0]->section;
+                                    } else {
+                                        DB::connection('mysql_grupoihb')
+                                            ->statement("UPDATE mdl_course_sections 
+                                     SET section = section + 1 
+                                     WHERE course = ? AND section >= 1", [$courseId]);
+
+                                        $sectionNumber = 1;
+
+                                        DB::connection('mysql_grupoihb')->table('mdl_course_sections')->insert([
+                                            'course'        => $courseId,
+                                            'section'       => $sectionNumber,
+                                            'name'          => $seccionNombre,
+                                            'summary'       => '',
+                                            'summaryformat' => 1,
+                                            'sequence'      => '',
+                                            'visible'       => 1,
+                                            'timemodified'  => time(),
+                                        ]);
+                                        $sectionId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+                                    }
 
                                     DB::connection('mysql_grupoihb')->table('mdl_label')->insert([
                                         'course'       => $courseId,
-                                        'name'         => 'Afiche informativo',
-                                        'intro'        => $htmlAfiche,
+                                        'name'         => $seccionNombre,
+                                        'intro'        => '',
                                         'introformat'  => 1,
                                         'timemodified' => time(),
                                     ]);
@@ -742,11 +765,6 @@ class CapacitacionController extends Controller
                                     $moduleRow = DB::connection('mysql_grupoihb')
                                         ->select("SELECT id FROM mdl_modules WHERE name = 'label' LIMIT 1");
                                     $moduleId = $moduleRow[0]->id ?? null;
-
-                                    $sectionRow = DB::connection('mysql_grupoihb')
-                                        ->select("SELECT id FROM mdl_course_sections 
-                              WHERE course = ? AND section = 0 LIMIT 1", [$courseId]);
-                                    $sectionId = $sectionRow[0]->id ?? null;
 
                                     if ($moduleId && $sectionId) {
                                         DB::connection('mysql_grupoihb')->table('mdl_course_modules')->insert([
@@ -778,7 +796,7 @@ class CapacitacionController extends Controller
                                             ->statement("UPDATE mdl_context SET path = CONCAT('/1/', ?, '/', ?) WHERE id = ?", [
                                                 $contextid,
                                                 $cmContextId,
-                                                $cmContextId
+                                                $cmContextId,
                                             ]);
 
                                         $newPathnamehash = sha1("/{$cmContextId}/mod_label/intro/0/{$filename}");
@@ -792,8 +810,76 @@ class CapacitacionController extends Controller
                                                 'component'    => 'mod_label',
                                                 'filearea'     => 'intro',
                                                 'itemid'       => 0,
+                                                'filepath'     => '/',
                                                 'contextid'    => $cmContextId,
                                                 'pathnamehash' => $newPathnamehash,
+                                                'timemodified' => time(),
+                                            ]);
+
+                                        $modalId = 'afiche-modal-' . $courseId;
+
+                                        $htmlAfiche = "
+                                            <!-- Modal afiche -->
+                                            <div id='{$modalId}' style='
+                                                display:none; position:fixed; z-index:99999;
+                                                inset:0; background:rgba(0,0,0,0.85);
+                                                align-items:center; justify-content:center;
+                                            ' onclick='this.style.display=\"none\"'>
+                                                <div style='position:relative; max-width:90vw; max-height:90vh;'>
+                                                    <img src='@@PLUGINFILE@@/{$filename}'
+                                                        alt='Afiche del curso'
+                                                        style='
+                                                            display:block;
+                                                            max-width:90vw; max-height:90vh;
+                                                            width:auto; height:auto;
+                                                            object-fit:contain;
+                                                            border-radius:6px;
+                                                            box-shadow:0 8px 32px rgba(0,0,0,0.6);
+                                                        ' />
+                                                </div>
+                                            </div>
+
+                                            <script>
+                                            (function () {
+                                                var sectionName = '{$seccionNombre}';
+                                                var modalId     = '{$modalId}';
+
+                                                function attachTrigger() {
+                                                    var headers = document.querySelectorAll(
+                                                        '.sectionname, .section-title, h3.sectionname a, ' +
+                                                        '[data-sectionname], .course-section-header .sectionname'
+                                                    );
+                                                    for (var i = 0; i < headers.length; i++) {
+                                                        var el = headers[i];
+                                                        if (el.textContent.trim() === sectionName && !el.dataset.afficheReady) {
+                                                            el.dataset.afficheReady = '1';
+                                                            el.style.cursor = 'pointer';
+                                                            el.addEventListener('click', function (e) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                document.getElementById(modalId).style.display = 'flex';
+                                                            });
+                                                        }
+                                                    }
+                                                }
+
+                                                if (document.readyState === 'loading') {
+                                                    document.addEventListener('DOMContentLoaded', attachTrigger);
+                                                } else {
+                                                    attachTrigger();
+                                                }
+
+                                                if (window.MutationObserver) {
+                                                    new MutationObserver(attachTrigger).observe(document.body, { childList: true, subtree: true });
+                                                }
+                                            })();
+                                            </script>
+                                        ";
+
+                                        DB::connection('mysql_grupoihb')->table('mdl_label')
+                                            ->where('id', $labelId)
+                                            ->update([
+                                                'intro'        => $htmlAfiche,
                                                 'timemodified' => time(),
                                             ]);
                                     }
@@ -802,6 +888,7 @@ class CapacitacionController extends Controller
                         } catch (\Throwable $e) {
                             Log::error('Error al subir afiche a Moodle', [
                                 'error'    => $e->getMessage(),
+                                'line'     => $e->getLine(),
                                 'courseId' => $courseId,
                             ]);
                         }
@@ -823,14 +910,6 @@ class CapacitacionController extends Controller
                         CALL SP_QUIZ_agregar_preguntas_mc(?, ?, @res_preguntas)", [
                                     $quizId,
                                     json_encode($preguntas)
-                                ]);
-
-                                $resPreg = DB::connection('mysql_grupoihb')
-                                    ->select("SELECT @res_preguntas AS resultado");
-
-                                Log::info('Preguntas Word insertadas en Moodle', [
-                                    'quiz_id' => $quizId,
-                                    'total'   => $resPreg[0]->resultado ?? 0
                                 ]);
                             }
                         }
@@ -1430,7 +1509,6 @@ class CapacitacionController extends Controller
 
         // Obtener el ID del usuario autenticado
         $usuarioId = Auth::id();
-        Log::info('CapacitacionController->saveMatricula: Usuario autenticado ID: ' . $usuarioId);
 
         // Despachamos el trabajo principal a la cola.
         // Este job se encargará de crear los trabajos individuales para cada persona.
@@ -1540,7 +1618,6 @@ class CapacitacionController extends Controller
 
     public function buscarPersonalCapacitacion(Request $request): JsonResponse
     {
-        Log::info('buscarPersonalCapacitacion: Inicio', $request->all());
         try {
             // 1. Obtener personal ADMINISTRATIVO 5 de la fuente oficial (si_solm.dbo.PERSONAL)
             $rawPersonal = DB::connection('sqlsrv')->select("
@@ -1668,7 +1745,6 @@ class CapacitacionController extends Controller
 
             // Re-indexar array después de filtrar
             $personal = array_values($personal);
-            Log::info('buscarPersonalCapacitacion: Resultados', ['total' => count($personal)]);
 
             return response()->json([
                 'success' => true,
@@ -1815,8 +1891,6 @@ class CapacitacionController extends Controller
             $esPCU = str_contains($tipoDesc, 'PCU');
             $esPCI = str_contains($tipoDesc, 'PCI');
             $esPCE = str_contains($tipoDesc, 'PCE');
-            Log::info("[ClienteEmpresa] cursoId={$cursoId} tipoDesc={$tipoDesc} esPCU=" . ($esPCU ? 'SI' : 'NO') . " esPCI=" . ($esPCI ? 'SI' : 'NO') . " esPCE=" . ($esPCE ? 'SI' : 'NO'));
-
             $sucursalClienteNameMap = [];
             if ($esPCU) {
                 $assignedClients = DB::table('sw_curso_sucursales')
@@ -1981,8 +2055,6 @@ class CapacitacionController extends Controller
                 }
             }
 
-            Log::info('Cursos por vencer auditar:', $alertas);
-
             return response()->json([
                 'success' => true,
                 'alertas' => $alertas,
@@ -2134,8 +2206,6 @@ class CapacitacionController extends Controller
                             'manual_correct_found' => false, // Flag para saber si ya encontramos la rpta por color/estilo
                             'tipo' => 'multiple'
                         ];
-
-                        Log::debug("Pregunta detectada: " . $currentPregunta['texto']);
                     }
                     // 4. IDENTIFICAR OPCIÓN
                     else if ($currentPregunta) {
@@ -2147,7 +2217,6 @@ class CapacitacionController extends Controller
                             $index = count($currentPregunta['opciones']) - 1;
                             $currentPregunta['respuesta_correcta'] = chr(65 + $index);
                             $currentPregunta['manual_correct_found'] = true;
-                            Log::debug("Respuesta correcta detectada por " . ($isCorrectByStyle ? 'ESTILO' : 'COLOR') . ": " . $currentPregunta['respuesta_correcta']);
                         }
                     }
                 }
@@ -2161,8 +2230,6 @@ class CapacitacionController extends Controller
             foreach ($preguntas as &$p) {
                 unset($p['manual_correct_found']);
             }
-
-            Log::info("PHPWord - Preguntas finalizadas con Estilos: " . count($preguntas));
 
             return response()->json([
                 'success' => true,
@@ -2291,7 +2358,6 @@ class CapacitacionController extends Controller
                 );
 
                 $moodleResult = $res[0]->result;
-                Log::info("Desmatriculación Moodle curso={$courseIdNumber} user={$moodleUserId} resultado={$moodleResult}");
             }
 
             return response()->json([
