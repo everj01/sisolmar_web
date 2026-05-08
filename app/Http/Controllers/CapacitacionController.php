@@ -23,6 +23,7 @@ use App\Models\Matricula;
 use App\Models\Consulta;
 use App\Models\ExamenPregunta2026;
 use PhpOffice\PhpWord\IOFactory;
+use Illuminate\Support\Facades\Http;
 
 class CapacitacionController extends Controller
 {
@@ -30,27 +31,20 @@ class CapacitacionController extends Controller
 
     public function index(Request $request, ?string $op = null): JsonResponse
     {
-        // Query base - solo seleccionamos columnas necesarias para la lista
-        // El eager loading no es necesario aquí porque no devolvemos datos de relaciones
-        // Para ver detalles de un curso específico (con examen/área), usar getCursoExamenXId()
         $query = Cursos::query();
 
-        // Filtrar por habilitado
         if (!is_null($op)) {
             $query->where('habilitado', $op);
         }
 
-        // Filtro por área
         if ($request->filled('filtro_area')) {
             $query->where('area', $request->input('filtro_area'));
         }
 
-        // Filtro por tipo de curso
         if ($request->filled('filtro_tipo')) {
             $query->where('tipo_curso', $request->input('filtro_tipo'));
         }
 
-        // Validar qué cursos tienen periodos vigentes para ocultar botón mágico
         $cursosVigentes = DB::table('sw_cursos_programacion')
             ->where('estado_periodo', 'VIGENTE')
             ->where('habilitado', 1)
@@ -79,14 +73,12 @@ class CapacitacionController extends Controller
     {
         $curso = Cursos::with(['examen', 'tipoCurso'])->where('codigo', $id)->firstOrFail();
 
-        // Obtener sucursales asignadas
         $sucursales = DB::table('sw_curso_sucursales')
             ->where('curso_codigo', $curso->codigo)
             ->pluck('sucursal');
 
         $curso->sucursales = $sucursales;
 
-        // Resolver nombre del responsable si existe (Fuente Oficial si_solm)
         if ($curso->cod_responsable) {
             $resp = DB::connection('sqlsrv')->selectOne("
                 SELECT LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre
@@ -192,7 +184,6 @@ class CapacitacionController extends Controller
                 'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
             ]);
 
-            // AUTOGENERAR PROGRAMACIONES SI VIENEN NUEVAS
             if ($request->has('fechas_generadas')) {
                 $fechasArray = json_decode($request->input('fechas_generadas'), true);
                 if (json_last_error() === JSON_ERROR_NONE && is_array($fechasArray)) {
@@ -222,7 +213,6 @@ class CapacitacionController extends Controller
                 }
             }
 
-            // ACTUALIZAR SUCURSALES (Borrar anteriores e insertar nuevas)
             DB::table('sw_curso_sucursales')->where('curso_codigo', $curso->codigo)->delete();
 
             if ($request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
@@ -237,7 +227,6 @@ class CapacitacionController extends Controller
                 }
             }
 
-            // Actualizar sw_cliente_curso si es PCU
             DB::table('sw_cliente_curso')->where('cod_curso', $curso->codigo)->delete();
             if ($request->input('tipo_curso') == '6' && $request->has('sucursales_asignadas') && is_array($request->sucursales_asignadas)) {
                 foreach ($request->sucursales_asignadas as $cliente) {
@@ -248,18 +237,14 @@ class CapacitacionController extends Controller
                 }
             }
 
-            // Manejar examen según aplica_evaluacion
             $aplicaEvaluacion = $request->input('aplica_evaluacion', 0);
 
             if ($aplicaEvaluacion == 1) {
-                // Verificar si ya existe el examen
                 $examen = ExamenCurso::where('cod_cursos', $request->codigo)->first();
 
-                // Auto-generar nombre si no viene (usuario eliminó campo)
                 $nombreExamen = $request->nombre_exa ?? ("Examen de " . $request->nombre);
 
                 if ($examen) {
-                    // Actualizar examen existente
                     $examen->update([
                         'nombre' => $nombreExamen,
                         'descripcion' => $request->descripcion,
@@ -271,7 +256,6 @@ class CapacitacionController extends Controller
                         'fecha_modificacion' => date('Y-m-d\TH:i:s.000')
                     ]);
                 } else {
-                    // Crear nuevo examen
                     $examen = ExamenCurso::create([
                         'cod_cursos' => $curso->codigo,
                         'nombre' => $nombreExamen,
@@ -574,49 +558,6 @@ class CapacitacionController extends Controller
             $extensionArchivo = null;
             $rutaArchivo = null;
             $nombreArchivoFinal = null;
-            $baseNombre = '';
-
-            if ($request->hasFile('archivo')) {
-                $archivo = $request->file('archivo');
-                $extensionOriginal = strtolower($archivo->getClientOriginalExtension());
-
-                // Permitimos .mbz (nativo) y .docx (para "convertirlo" a mbz)
-                if ($extensionOriginal !== 'mbz' && $extensionOriginal !== 'docx') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'El archivo debe ser .mbz o .docx',
-                        'errors' => ['archivo' => ['El archivo debe ser .mbz o .docx']]
-                    ], 422);
-                }
-
-                $tienePlantilla = true;
-
-                $anio = date('Y');
-                $mes = ucfirst(Carbon::now()->translatedFormat('F'));
-
-                $tipoArchivo = $archivo->getClientMimeType();
-
-                // Si es docx, lo "convertimos" a mbz (renombramos extensión) para cumplir con el estándar del sistema
-                $extensionArchivo = ($extensionOriginal === 'docx') ? 'mbz' : $extensionOriginal;
-                $nombreArchivoOriginal = $archivo->getClientOriginalName();
-
-                $baseNombre = 'EXA_' . $newCode . '_' . date('Ymd');
-                $carpeta = "plantillas/{$anio}/{$mes}";
-
-                if (!Storage::disk('public')->exists($carpeta)) {
-                    Storage::disk('public')->makeDirectory($carpeta);
-                }
-
-                $contador = 1;
-
-                do {
-                    $nombreArchivoFinal = "{$baseNombre}_{$contador}." . $extensionArchivo;
-                    $rutaCompleta = storage_path("app/public/{$carpeta}/{$nombreArchivoFinal}");
-                    $contador++;
-                } while (file_exists($rutaCompleta));
-
-                $rutaArchivo = $archivo->storeAs($carpeta, $nombreArchivoFinal, 'public');
-            }
 
             if ($request->input('aplica_evaluacion', 0) == 1) {
                 $nombreExamen = $request->nombre_exa ?? ("Examen de " . $request->nombre);
@@ -693,6 +634,178 @@ class CapacitacionController extends Controller
 
                 if ($courseId > 0) {
                     $curso->update(['codigo_moodle' => $courseId]);
+
+                    if ($request->hasFile('image_portada') && $courseId > 0) {
+                        try {
+                            $file     = $request->file('image_portada');
+                            $filename = $file->getClientOriginalName();
+
+                            $contextRow = DB::connection('mysql_grupoihb')
+                                ->select("SELECT id FROM mdl_context 
+                      WHERE contextlevel = 50 AND instanceid = ? LIMIT 1", [$courseId]);
+
+                            if (!empty($contextRow)) {
+                                $http = app()->isProduction()
+                                    ? Http::asForm()
+                                    : Http::withoutVerifying()->asForm();
+
+                                $draftResponse = $http->post(config('services.moodle.url') . '/webservice/rest/server.php', [
+                                    'wstoken'            => config('services.moodle.ws_token'),
+                                    'wsfunction'         => 'core_files_upload',
+                                    'moodlewsrestformat' => 'json',
+                                    'contextlevel'       => 'user',
+                                    'instanceid'         => config('services.moodle.admin_id'),
+                                    'component'          => 'user',
+                                    'filearea'           => 'draft',
+                                    'itemid'             => 0,
+                                    'filepath'           => '/',
+                                    'filename'           => $filename,
+                                    'filecontent'        => base64_encode(file_get_contents($file->getRealPath())),
+                                ]);
+
+                                $draftItemId = $draftResponse->json('itemid') ?? null;
+
+                                if ($draftItemId) {
+                                    $http2 = app()->isProduction()
+                                        ? Http::asForm()
+                                        : Http::withoutVerifying()->asForm();
+
+                                    $http2->post(config('services.moodle.url') . '/webservice/rest/server.php', [
+                                        'wstoken'                                   => config('services.moodle.ws_token'),
+                                        'wsfunction'                                => 'core_course_update_courses',
+                                        'moodlewsrestformat'                        => 'json',
+                                        'courses[0][id]'                            => $courseId,
+                                        'courses[0][courseformatoptions][0][name]'  => 'overviewfiles_filemanager',
+                                        'courses[0][courseformatoptions][0][value]' => $draftItemId,
+                                    ]);
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('Error al subir imagen de portada a Moodle', [
+                                'error'    => $e->getMessage(),
+                                'courseId' => $courseId,
+                            ]);
+                        }
+                    }
+
+                    if ($request->hasFile('image_afiche') && $courseId > 0) {
+                        try {
+                            $file     = $request->file('image_afiche');
+                            $filename = $file->getClientOriginalName();
+
+                            $contextRow = DB::connection('mysql_grupoihb')
+                                ->select("SELECT id FROM mdl_context 
+                      WHERE contextlevel = 50 AND instanceid = ? LIMIT 1", [$courseId]);
+
+                            if (!empty($contextRow)) {
+                                $contextid = $contextRow[0]->id;
+
+                                $http = app()->isProduction()
+                                    ? Http::asForm()
+                                    : Http::withoutVerifying()->asForm();
+
+                                $draftResponse = $http->post(config('services.moodle.url') . '/webservice/rest/server.php', [
+                                    'wstoken'            => config('services.moodle.ws_token'),
+                                    'wsfunction'         => 'core_files_upload',
+                                    'moodlewsrestformat' => 'json',
+                                    'contextlevel'       => 'user',
+                                    'instanceid'         => config('services.moodle.admin_id'),
+                                    'component'          => 'user',
+                                    'filearea'           => 'draft',
+                                    'itemid'             => 0,
+                                    'filepath'           => '/',
+                                    'filename'           => $filename,
+                                    'filecontent'        => base64_encode(file_get_contents($file->getRealPath())),
+                                ]);
+
+                                $draftItemId = $draftResponse->json('itemid') ?? null;
+
+                                if ($draftItemId) {
+                                    $htmlAfiche = "
+                                        <div style='text-align:center; padding: 20px;'>
+                                            <h2 style='color:#333;'>¡Bienvenido(a) al curso de {$nombre}!</h2>
+                                            <img src='@@PLUGINFILE@@/{$filename}' 
+                                                alt='Afiche del curso' 
+                                                style='max-width:100%; height:auto; border-radius:8px;' />
+                                        </div>
+                                    ";
+
+                                    DB::connection('mysql_grupoihb')->table('mdl_label')->insert([
+                                        'course'       => $courseId,
+                                        'name'         => 'Afiche informativo',
+                                        'intro'        => $htmlAfiche,
+                                        'introformat'  => 1,
+                                        'timemodified' => time(),
+                                    ]);
+                                    $labelId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+
+                                    $moduleRow = DB::connection('mysql_grupoihb')
+                                        ->select("SELECT id FROM mdl_modules WHERE name = 'label' LIMIT 1");
+                                    $moduleId = $moduleRow[0]->id ?? null;
+
+                                    $sectionRow = DB::connection('mysql_grupoihb')
+                                        ->select("SELECT id FROM mdl_course_sections 
+                              WHERE course = ? AND section = 0 LIMIT 1", [$courseId]);
+                                    $sectionId = $sectionRow[0]->id ?? null;
+
+                                    if ($moduleId && $sectionId) {
+                                        DB::connection('mysql_grupoihb')->table('mdl_course_modules')->insert([
+                                            'course'     => $courseId,
+                                            'module'     => $moduleId,
+                                            'instance'   => $labelId,
+                                            'section'    => $sectionId,
+                                            'added'      => time(),
+                                            'visible'    => 1,
+                                            'visibleold' => 1,
+                                            'completion' => 0,
+                                        ]);
+                                        $cmId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+
+                                        DB::connection('mysql_grupoihb')
+                                            ->statement("UPDATE mdl_course_sections 
+                                     SET sequence = CONCAT(IF(sequence = '' OR sequence IS NULL, '', CONCAT(sequence, ',')), ?)
+                                     WHERE id = ?", [$cmId, $sectionId]);
+
+                                        DB::connection('mysql_grupoihb')->table('mdl_context')->insert([
+                                            'contextlevel' => 70,
+                                            'instanceid'   => $cmId,
+                                            'depth'        => 4,
+                                            'path'         => '',
+                                        ]);
+                                        $cmContextId = DB::connection('mysql_grupoihb')->getPdo()->lastInsertId();
+
+                                        DB::connection('mysql_grupoihb')
+                                            ->statement("UPDATE mdl_context SET path = CONCAT('/1/', ?, '/', ?) WHERE id = ?", [
+                                                $contextid,
+                                                $cmContextId,
+                                                $cmContextId
+                                            ]);
+
+                                        $newPathnamehash = sha1("/{$cmContextId}/mod_label/intro/0/{$filename}");
+
+                                        DB::connection('mysql_grupoihb')->table('mdl_files')
+                                            ->where('component', 'user')
+                                            ->where('filearea', 'draft')
+                                            ->where('itemid', $draftItemId)
+                                            ->where('filename', $filename)
+                                            ->update([
+                                                'component'    => 'mod_label',
+                                                'filearea'     => 'intro',
+                                                'itemid'       => 0,
+                                                'contextid'    => $cmContextId,
+                                                'pathnamehash' => $newPathnamehash,
+                                                'timemodified' => time(),
+                                            ]);
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('Error al subir afiche a Moodle', [
+                                'error'    => $e->getMessage(),
+                                'courseId' => $courseId,
+                            ]);
+                        }
+                    }
 
                     $preguntasWordStr = $request->input('preguntas_word');
 
@@ -966,28 +1079,6 @@ class CapacitacionController extends Controller
         ]);
     }
 
-    // public function getCursoProgramacionXId($id){
-    //     if (!is_null($id)) {
-    //         $cursos = Cursos::get()
-    //         ->map(function ($curso) {
-    //             return [
-    //                 'codigo' => $curso->codigo,
-    //                 'codigoCurso' => $curso->codigo_curso,
-    //                 'nombre' => $curso->nombre,
-    //                 'habilitado' => $curso->habilitado,
-    //             ];
-    //         });
-    //     } else{
-    //         return response()->json([
-    //             'message' => 'Ninguna programacion encontrad',
-    //             'success' => false
-    //         ]);
-    //     }
-
-    //     return response()->json($cursos);
-
-    // }
-
     public function getProgramacionXId(int $id): JsonResponse
     {
         $programacion = CursoProgramacion::where('codigo', $id)->first();
@@ -1077,8 +1168,6 @@ class CapacitacionController extends Controller
             ->get();
         return response()->json($empresas);
     }
-
-
     public function storeProgramacionManual(Request $request): JsonResponse
     {
         try {
@@ -1139,7 +1228,6 @@ class CapacitacionController extends Controller
         $tipoCursos = CapacitacionTipoCurso::where('habilitado', 1)->get();
         return response()->json($tipoCursos);
     }
-
 
     public function analizarPlantilla(Request $request): JsonResponse
     {
@@ -1357,10 +1445,6 @@ class CapacitacionController extends Controller
         ], 202);
     }
 
-    /**
-     * Obtener todas las matrículas de un curso específico
-     * GET /api/get-matriculas-curso/{cursoId}
-     */
     public function getMatriculasPorCurso(int $cursoId): JsonResponse
     {
         try {
@@ -1418,15 +1502,9 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Obtener historial de capacitaciones de un empleado
-     * GET /api/get-historial-capacitaciones/{personalId}
-     */
     public function getHistorialCapacitaciones(string $personalId): JsonResponse
     {
         try {
-            // Optimización: Consultar directamente las matrículas sin pasar por el modelo Personal
-            // Esto evita errores de conversión de tipos en IDs alfanuméricos (ej. 'P0056')
             $historial = DB::table('sw_matriculas as m')
                 ->join('sw_cursos as c', 'm.cod_curso', '=', 'c.codigo')
                 ->leftJoin('sw_cursos_programacion as prog', 'm.cod_programacion', '=', 'prog.codigo')
@@ -1460,10 +1538,6 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Buscar personal para consulta de historial
-     * GET /api/buscar-personal-capacitacion
-     */
     public function buscarPersonalCapacitacion(Request $request): JsonResponse
     {
         Log::info('buscarPersonalCapacitacion: Inicio', $request->all());
@@ -1611,10 +1685,6 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Obtener combos para el modal de apertura de ciclo (Sedes, Clientes, Áreas)
-     * GET /api/capacitacion/combos-apertura
-     */
     public function getCombosApertura(): JsonResponse
     {
         try {
@@ -1647,47 +1717,25 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Obtener lista de sucursales
-                'message' => 'Error al cargar sucursales',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Vista de consulta de matrículas
-     */
     public function vistaConsultaMatriculas(): View
     {
         return view('capacitacion.consulta_matriculas');
     }
 
-    /**
-     * Vista de gestión de cursos
-     */
     public function vistaGestionCursos(): View
     {
         $dirigidos = \App\Models\Consulta::obtenerDirigidos();
         return view('capacitacion.gestion_cursos', compact('dirigidos'));
     }
 
-    /**
-     * Vista de historial de capacitaciones
-     */
     public function vistaHistorialCapacitaciones(): View
     {
         return view('capacitacion.historial_capacitaciones');
     }
 
-    /**
-     * Listar matrículas de un curso usando MigraPersonal y sw_matriculas (JOIN robusto con logging de errores)
-     * Devuelve datos personales y fecha de matrícula
-     */
     public function getMatriculasMigraPersonal(int $cursoId): JsonResponse
     {
         try {
-            // 1. Obtener todas las matrículas del curso (Base de la verdad: 1105 registros)
             $matriculas = DB::table('sw_matriculas as m')
                 ->leftJoin('sw_cursos_programacion as prog', 'm.cod_programacion', '=', 'prog.codigo')
                 ->where('m.cod_curso', '=', $cursoId)
@@ -1990,10 +2038,6 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Procesa un archivo Word usando PHPWord para extraer preguntas y respuestas.
-     * Basado en formato: Pregunta (ListItemRun) con respuesta correcta al final (letra).
-     */
     public function procesarExamenWord(Request $request): JsonResponse
     {
         try {
@@ -2132,9 +2176,6 @@ class CapacitacionController extends Controller
         }
     }
 
-    /**
-     * Persiste las preguntas procesadas en la base de datos vinculadas al examen del curso.
-     */
     public function guardarExamenWord(Request $request): JsonResponse
     {
         $request->validate([
