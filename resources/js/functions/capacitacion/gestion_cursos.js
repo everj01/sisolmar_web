@@ -1164,6 +1164,7 @@ window.formCursoGestion = function () {
             this.tipoCurso = '5';
             this.areaConocimiento = '';
             this.area = '';
+            this.areaResponsable = '';
             this.tipoResponsable = 'ADMINISTRATIVO_5';
             this.codResponsable = '';
             this.nombreResponsable = '';
@@ -1171,7 +1172,8 @@ window.formCursoGestion = function () {
             this.areasResponsables = [];
             this.codMoodleArea = '';
             this.frecuencia = '';
-            this.limiteTiempo = '0';
+            this.dirigido = '';
+            this.limiteTiempo = '30';
             this.nota = '10';
             this.intentos = '1';
             this.cantidadPreguntas = '1';
@@ -1200,7 +1202,7 @@ window.formCursoGestion = function () {
             if (portInput) portInput.value = '';
             if (aficInput) aficInput.value = '';
 
-            this.aplicaEvaluacion = false;
+            this.aplicaEvaluacion = true;
             this.obligatorioAlta = true; // Forzado a true por requerimiento
             this.esDemanda = false;
 

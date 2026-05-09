@@ -319,7 +319,7 @@
             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
 
             <div
-                class="card w-full max-w-5xl max-h-[95dvh] sm:max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+                class="card w-full max-w-7xl max-h-[95dvh] sm:max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
 
                 <div class="overflow-y-auto custom-scrollbar flex-1 bg-white" x-data="formCursoGestion()" @submit.prevent
                     x-init="$nextTick(() => { $watch('tipoCurso', value => { if (value != '5') targetGroup = 'TODOS'; }); })">
@@ -329,11 +329,7 @@
                             <div class="flex items-center justify-between">
                                 <h4 class="card-title" x-text="codigo ? 'Actualizar Curso' : 'Datos del curso'"></h4>
                                 <div class="flex items-center gap-3">
-                                    <span
-                                        class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium"
-                                        :class="codigo ? 'bg-warning/25 text-warning-800' : 'bg-primary/25 text-primary-800'"
-                                        x-text="codigo ? 'Editando' : 'Nuevo'">Nuevo</span>
-                                    <button type="button" @click="showModal = false"
+                                    <button type="button" @click="window.restaurarFormCurso(false)"
                                         class="text-gray-400 hover:text-gray-600 transition-colors">
                                         <i class="bx bx-x text-2xl"></i>
                                     </button>
@@ -346,26 +342,16 @@
                             <input type="hidden" name="codGestionEditar" x-model="codigo" id="codGestionEditar">
                             <input type="hidden" id="slcArea" x-model="area">
 
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 w-full mt-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 w-full mt-4">
                                 <!-- Columna 1: Datos del curso -->
                                 <div>
-                                    <div class="w-full flex flex-col items-center mb-4">
-                                        <div class="w-full flex items-center justify-between gap-4">
-                                            <div class="flex-1 border-t border-gray-200"></div>
-                                            <h3 class="text-lg font-semibold text-primary text-center">
-                                                <i class="bx bx-book-open mr-1"></i> Información General
-                                            </h3>
-                                            <div class="flex-1 border-t border-gray-200"></div>
-                                        </div>
-                                    </div>
-
                                     <div class="w-full grid gap-4 grid-cols-1 pb-6">
 
-                                        <!-- Nombre Completo de Curso -->
+                                        <!-- Nombre del curso -->
                                         <div>
                                             <label for="txtNombreCurso"
                                                 class="text-gray-800 text-sm font-medium inline-block mb-1">
-                                                Nombre del curso
+                                                Nombre del curso <span class="text-danger">*</span>
                                             </label>
                                             <input type="text" id="txtNombreCurso"
                                                 placeholder="Escriba el nombre del curso..."
@@ -382,34 +368,249 @@
                                                 placeholder="Describa el contenido, objetivos y temática del curso..."></textarea>
                                         </div>
 
-                                        <!-- Plan de Capacitación -->
+                                        <!-- Responsable del curso -->
+                                        <div>
+                                            <label class="text-gray-800 text-sm font-medium inline-block mb-1.5">
+                                                Responsable del curso
+                                            </label>
+
+                                            <div class="flex items-center gap-2" x-data="searchablePersonnel()">
+                                                <div class="relative flex-1">
+                                                    <div @click="toggle()"
+                                                        class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm flex items-center gap-2 cursor-pointer hover:border-indigo-300 transition-colors shadow-sm min-h-[38px]"
+                                                        :class="codResponsable ? 'border-indigo-300 ring-1 ring-indigo-100' : ''">
+                                                        <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded min-w-[40px] text-center"
+                                                            x-text="codResponsable || 'Código'"></span>
+                                                        <span class="flex-1 truncate text-gray-700"
+                                                            :class="nombreResponsable ? 'font-medium' : 'text-gray-400'"
+                                                            x-text="nombreResponsable || 'Seleccione responsable...'"></span>
+                                                        <i class="bx bx-chevron-down text-gray-400 text-lg"
+                                                            :class="{ 'rotate-180': open }"></i>
+                                                    </div>
+
+                                                    <div x-show="open" @click.away="open = false" x-cloak
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        class="absolute z-[100] mt-1 left-0 w-full min-w-[480px] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+
+                                                        <div class="p-3 border-b bg-gradient-to-r from-indigo-50 to-white flex items-center gap-2">
+                                                            <i class="bx bx-search text-indigo-400 text-lg"></i>
+                                                            <input type="text" x-model="query"
+                                                                @input.debounce.300ms="search()"
+                                                                class="w-full border-none bg-transparent p-1 text-sm focus:ring-0 outline-none text-gray-700"
+                                                                placeholder="Buscar por nombre o DNI...">
+                                                        </div>
+
+                                                        <div class="bg-gray-50 px-4 py-1.5 border-b flex gap-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex-shrink-0">
+                                                            <div class="w-14 shrink-0 text-center">Código</div>
+                                                            <div class="flex-1 px-3 border-l border-gray-200">Nombre Completo</div>
+                                                            <div class="w-20 shrink-0 text-center border-l border-gray-200">DNI</div>
+                                                            <div class="w-28 shrink-0 text-center border-l border-gray-200">Sucursal</div>
+                                                        </div>
+
+                                                        <div class="overflow-y-auto custom-scrollbar bg-white" style="max-height: 280px !important;">
+                                                            <template x-for="(p, index) in results" :key="p.codigo + '-' + index">
+                                                                <div @click="select(p); open = false"
+                                                                    class="px-4 py-2.5 text-[12px] hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors flex items-center gap-2 min-h-[38px]"
+                                                                    :class="{ 'bg-indigo-50/50': codResponsable == p.codigo }">
+                                                                    <div class="w-14 shrink-0 font-mono text-indigo-600 font-bold text-center text-[11px]"
+                                                                        x-text="p.codigo"></div>
+                                                                    <div class="flex-1 px-3 text-gray-800 font-medium truncate"
+                                                                        x-text="p.nombre_completo"></div>
+                                                                    <div class="w-20 shrink-0 text-center text-gray-500 font-mono text-[11px]"
+                                                                        x-text="p.dni"></div>
+                                                                    <div class="w-28 shrink-0 text-center text-gray-400 text-[11px] truncate"
+                                                                        x-text="p.sucursal || 'N/A'"></div>
+                                                                </div>
+                                                            </template>
+
+                                                            <div x-show="loading"
+                                                                class="p-8 text-center text-sm text-indigo-500 font-medium">
+                                                                <i class="bx bx-loader-alt bx-spin mr-2 text-lg align-middle"></i>
+                                                                Buscando responsables...
+                                                            </div>
+
+                                                            <div x-show="error"
+                                                                class="p-4 text-center text-sm text-red-500 bg-red-50"
+                                                                x-text="error"></div>
+
+                                                            <div x-show="!loading && !error && results.length === 0"
+                                                                class="p-10 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
+                                                                <i class="bx bx-search-alt-2 text-3xl opacity-20"></i>
+                                                                <span>No se encontraron coincidencias</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="bg-indigo-600 px-4 py-1.5 text-[10px] text-white font-semibold flex justify-between items-center">
+                                                            <span class="flex items-center gap-1">
+                                                                <i class="bx bx-check-shield text-xs"></i>
+                                                                ADMINISTRATIVOS ACTIVOS
+                                                            </span>
+                                                            <span class="bg-white/20 px-2 py-0.5 rounded text-[10px]"
+                                                                x-text="results.length + ' RESULTADOS'"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Frecuencia del curso -->
+                                        <div x-show="!esDemanda" x-transition>
+                                            <label for="slcFrecuencia"
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia del curso</label>
+                                            <select id="slcFrecuencia" x-model="frecuencia"
+                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+                                                <option value="">Seleccione la frecuencia del curso</option>
+                                                <option value="MENSUAL">Mensual</option>
+                                                <option value="BIMESTRAL">Bimestral</option>
+                                                <option value="TRIMESTRAL">Trimestral</option>
+                                                <option value="CUATRIMESTRAL">Cuatrimestral</option>
+                                                <option value="SEMESTRAL">Semestral</option>
+                                                <option value="ANUAL">Anual</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Recursos Visuales -->
+                                        <div>
+                                            <label
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1.5 flex items-center gap-1.5">
+                                                Recursos Visuales
+                                                <span class="text-gray-400 font-normal text-xs">(Opcionales)</span>
+                                            </label>
+
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <!-- Slot 1: Portada del Curso -->
+                                                <div class="flex flex-col gap-1.5">
+                                                    <div class="relative w-full aspect-[4/3] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all duration-200 cursor-pointer"
+                                                        :class="imagePreviewPortada ? 'border-solid border-primary/40 bg-primary/[0.02]' : 'hover:border-primary/40 hover:bg-primary/[0.02]'"
+                                                        @click="!imagePreviewPortada && $refs.inputImagePortada.click()">
+
+                                                        <template x-if="imagePreviewPortada">
+                                                            <div class="w-full h-full relative">
+                                                                <img :src="imagePreviewPortada"
+                                                                    class="w-full h-full object-cover">
+                                                                <div
+                                                                    class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3 gap-2">
+                                                                    <button type="button"
+                                                                        @click.stop="previewImage(imagePreviewPortada, 'Portada del Curso')"
+                                                                        class="btn btn-sm bg-white/90 text-slate-700 rounded-full p-2 hover:bg-white shadow-lg transform hover:scale-110 transition-all">
+                                                                        <i class="bx bx-show text-base"></i>
+                                                                    </button>
+                                                                    <button type="button"
+                                                                        @click.stop="imagePreviewPortada = null; imageFilePortada = null; $refs.inputImagePortada.value = ''"
+                                                                        class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
+                                                                        <i class="bx bx-trash text-base"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </template>
+
+                                                        <template x-if="!imagePreviewPortada">
+                                                            <div class="flex flex-col items-center py-5 px-4">
+                                                                <div
+                                                                    class="w-11 h-11 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center mb-2.5 group-hover:bg-primary/10 group-hover:border-primary/20 group-hover:text-primary transition-all duration-200">
+                                                                    <i
+                                                                        class="bx bx-image-alt text-xl text-slate-400 group-hover:text-primary transition-colors"></i>
+                                                                </div>
+                                                                <span
+                                                                    class="text-xs font-semibold text-slate-600 mb-1">Subir Portada</span>
+                                                                <span
+                                                                    class="text-[10px] text-slate-400 font-medium">1200x300 px &bull; JPG, PNG</span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <input type="file" id="inputImagePortada"
+                                                        x-ref="inputImagePortada" class="hidden"
+                                                        accept=".jpg,.jpeg,.png"
+                                                        @change="handleImageUpload($event, 'portada')">
+                                                </div>
+
+                                                <!-- Slot 2: Afiche Informativo -->
+                                                <div class="flex flex-col gap-1.5">
+                                                    <div class="relative w-full aspect-[4/3] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all duration-200 cursor-pointer"
+                                                        :class="imagePreviewAfiche ? 'border-solid border-primary/40 bg-primary/[0.02]' : 'hover:border-primary/40 hover:bg-primary/[0.02]'"
+                                                        @click="!imagePreviewAfiche && $refs.inputImageAfiche.click()">
+
+                                                        <template x-if="imagePreviewAfiche">
+                                                            <div class="w-full h-full relative">
+                                                                <img :src="imagePreviewAfiche"
+                                                                    class="w-full h-full object-cover">
+                                                                <div
+                                                                    class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3 gap-2">
+                                                                    <button type="button"
+                                                                        @click.stop="previewImage(imagePreviewAfiche, 'Afiche Informativo')"
+                                                                        class="btn btn-sm bg-white/90 text-slate-700 rounded-full p-2 hover:bg-white shadow-lg transform hover:scale-110 transition-all">
+                                                                        <i class="bx bx-show text-base"></i>
+                                                                    </button>
+                                                                    <button type="button"
+                                                                        @click.stop="imagePreviewAfiche = null; imageFileAfiche = null; $refs.inputImageAfiche.value = ''"
+                                                                        class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
+                                                                        <i class="bx bx-trash text-base"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </template>
+
+                                                        <template x-if="!imagePreviewAfiche">
+                                                            <div class="flex flex-col items-center py-5 px-4">
+                                                                <div
+                                                                    class="w-11 h-11 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center mb-2.5 group-hover:bg-primary/10 group-hover:border-primary/20 group-hover:text-primary transition-all duration-200">
+                                                                    <i
+                                                                        class="bx bx-image text-xl text-slate-400 group-hover:text-primary transition-colors"></i>
+                                                                </div>
+                                                                <span
+                                                                    class="text-xs font-semibold text-slate-600 mb-1">Subir Afiche Informativo</span>
+                                                                <span
+                                                                    class="text-[10px] text-slate-400 font-medium">Máx. 1.9 MB &bull; JPG, PNG</span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <input type="file" id="inputImageAfiche"
+                                                        x-ref="inputImageAfiche" class="hidden"
+                                                        accept=".jpg,.jpeg,.png"
+                                                        @change="handleImageUpload($event, 'afiche')">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Columna 2: Planificación -->
+                                <div>
+                                    <div class="w-full grid gap-4 grid-cols-1 pb-6">
+
+                                        <!-- Plan de capacitación -->
                                         <div>
                                             <label
                                                 class="text-gray-800 text-sm font-medium inline-block mb-2 text-primary">
-                                                Plan de Capacitación <span class="text-danger">*</span>
+                                                Plan de capacitación <span class="text-danger">*</span>
                                             </label>
                                             <div class="flex flex-wrap gap-3" x-data="{ tipos: window.opcionesTipoCurso || [] }"
                                                 @tipo-curso-loaded.window="tipos = $event.detail">
                                                 <template x-for="tipo in tipos" :key="tipo.codigo">
                                                     <label
-                                                        class="flex items-center space-x-2 cursor-pointer bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-slate-50 transition-all shadow-sm"
+                                                        class="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2 transition-all shadow-sm"
                                                         :class="{
-                                                                'border-primary ring-1 ring-primary/30 bg-primary/5': tipoCurso ==
-                                                                    tipo
-                                                                    .codigo
-                                                            }">
+                                                                'border-primary ring-1 ring-primary/30 bg-primary/5': tipoCurso == tipo.codigo,
+                                                                'cursor-pointer hover:bg-slate-50': tipo.codigo != '7',
+                                                                'opacity-50 cursor-not-allowed border-dashed': tipo.codigo == '7'
+                                                            }"
+                                                        :title="tipo.codigo == '7' ? 'Aún en desarrollo' : ''">
                                                         <input type="radio" :value="tipo.codigo"
                                                             x-model="tipoCurso"
                                                             @change="checkEsPACByText(tipo.descripcion)"
                                                             name="plan_capacitacion"
-                                                            class="w-4 h-4 text-primary focus:ring-primary border-gray-300">
+                                                            class="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                                                            :disabled="tipo.codigo == '7'">
                                                         <span class="text-sm font-medium text-gray-700"
+                                                            :class="{ 'text-gray-400': tipo.codigo == '7' }"
                                                             x-text="tipo.descripcion"></span>
                                                     </label>
                                                 </template>
                                             </div>
 
-                                            <!-- NUEVO: Selector PCU (Clientes) -->
+                                            <!-- Selector PCU (Clientes) -->
                                             <div x-show="tipoCurso == '6'" x-transition
                                                 class="mt-4 bg-blue-50/50 border border-blue-100 rounded-lg p-5">
                                                 <label
@@ -451,7 +652,7 @@
                                                 </div>
                                             </div>
 
-                                            <!-- NUEVO: Selector PCI (Áreas Operativas) -->
+                                            <!-- Selector PCI (Áreas Operativas) -->
                                             <div x-show="tipoCurso == '7'" x-transition
                                                 class="mt-4 bg-teal-50/50 border border-teal-100 rounded-lg p-5">
                                                 <label
@@ -492,14 +693,52 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
 
+                                            <!-- Sucursales (solo PAC) -->
+                                            <div x-show="esPAC" x-transition
+                                                class="mt-4 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
+                                                <label
+                                                    class="text-indigo-800 text-sm font-bold tracking-wide inline-block mb-2">
+                                                    <i class="bx bx-buildings mr-1"></i> Sucursales Asignadas <span
+                                                        class="text-red-500">*</span>
+                                                </label>
+                                                <div class="mb-3">
+                                                    <input type="text" x-model="busquedaSucursal"
+                                                        placeholder="Buscar sucursal por nombre..."
+                                                        class="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 outline-none shadow-sm"
+                                                        @keydown.enter.prevent>
+                                                </div>
+                                                <div class="border border-indigo-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner"
+                                                    style="max-height: 160px;">
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        <template x-for="suc in sucursalesFiltradas"
+                                                            :key="suc">
+                                                            <label
+                                                                class="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
+                                                                <input type="checkbox" :value="suc"
+                                                                    x-model="sucursalesAsignadas"
+                                                                    class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                                <span class="text-xs font-medium text-gray-700"
+                                                                    x-text="suc"></span>
+                                                            </label>
+                                                        </template>
+                                                    </div>
+                                                    <div x-show="sucursalesFiltradas.length === 0"
+                                                        class="text-gray-400 text-sm text-center py-4">
+                                                        No se encontraron sucursales asociadas.
+                                                    </div>
+                                                </div>
+                                                <p class="text-xs text-indigo-500 mt-2 font-medium">Seleccione
+                                                    explícitamente las sucursales
+                                                    donde este curso estará activo.</p>
+                                            </div>
+                                        </div>
 
                                         <!-- Sistema de gestión -->
                                         <div>
                                             <label
                                                 class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
-                                                Sistema de Gestión <span class="text-danger">*</span>
+                                                Sistema de gestión <span class="text-danger">*</span>
                                             </label>
 
                                             <div x-data="{
@@ -514,7 +753,7 @@
                                                     },
                                                     selectOption(option) {
                                                         areaConocimiento = option ? option.codigo : '';
-                                                        area = areaConocimiento; // Sincronizar campo alternativo
+                                                        area = areaConocimiento;
                                                         cargarAreasResponsables(areaConocimiento);
                                                         this.searchTerm = '';
                                                         this.open = false;
@@ -525,7 +764,6 @@
                                                         }
                                                     },
                                                     get currentDescription() {
-                                                        // Buscamos en las opciones basándonos en areaConocimiento (del padre)
                                                         const found = this.options.find(opt => opt.codigo == areaConocimiento);
                                                         return found ? found.descripcion : '';
                                                     }
@@ -533,7 +771,6 @@
                                                 @areas-loaded.window="options = $event.detail"
                                                 class="relative w-full">
 
-                                                <!-- Botón que simula el select -->
                                                 <button @click="open = !open" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
                                                     <span
@@ -544,7 +781,6 @@
                                                         :class="open ? 'rotate-180' : ''"></i>
                                                 </button>
 
-                                                <!-- Dropdown con búsqueda -->
                                                 <div x-show="open" x-cloak @click.away="open = false"
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 scale-95"
@@ -584,7 +820,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Área Responsable -->
+                                        <!-- Área responsable -->
                                         <div>
                                             <label
                                                 class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
@@ -614,7 +850,6 @@
                                                     }
                                                 }" class="relative w-full">
 
-                                                <!-- Botón que simula el select -->
                                                 <button @click="open = !open" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
                                                     <span
@@ -625,7 +860,6 @@
                                                         :class="open ? 'rotate-180' : ''"></i>
                                                 </button>
 
-                                                <!-- Dropdown con búsqueda -->
                                                 <div x-show="open" x-cloak @click.away="open = false"
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 scale-95"
@@ -665,322 +899,88 @@
                                             </div>
                                         </div>
 
-                                        <!-- Frecuencia -->
-                                        <div x-show="!esDemanda" x-transition>
-                                            <label for="slcFrecuencia"
-                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia</label>
-                                            <select id="slcFrecuencia" x-model="frecuencia"
-                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
-                                                <option value="">-- Seleccione Frecuencia --</option>
-                                                <option value="MENSUAL">Mensual</option>
-                                                <option value="BIMESTRAL">Bimestral</option>
-                                                <option value="TRIMESTRAL">Trimestral</option>
-                                                <option value="CUATRIMESTRAL">Cuatrimestral</option>
-                                                <option value="SEMESTRAL">Semestral</option>
-                                                <option value="ANUAL">Anual</option>
-                                            </select>
-                                        </div>
-
                                         <!-- Dirigido a -->
                                         <div x-show="!esDemanda" x-transition>
-                                            <label for="slcDirigido"
-                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Dirigido a</label>
-                                            <select id="slcDirigido" x-model="dirigido"
-                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
-                                                <option value="">-- Seleccione Dirigido --</option>
-                                                @foreach($dirigidos as $item)
-                                                <option value="{{ $item->codigo }}">{{ $item->texto }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <!-- SELECTOR SUCURSALES (SOLO PAC) -->
-                                        <div x-show="esPAC" x-transition
-                                            class="mt-2 bg-indigo-50/50 border border-indigo-100 rounded-lg p-5">
                                             <label
-                                                class="text-indigo-800 text-sm font-bold tracking-wide inline-block mb-2">
-                                                <i class="bx bx-buildings mr-1"></i> Sucursales Asignadas <span
-                                                    class="text-red-500">*</span>
-                                            </label>
-                                            <div class="mb-3">
-                                                <input type="text" x-model="busquedaSucursal"
-                                                    placeholder="Buscar sucursal por nombre..."
-                                                    class="w-full border border-indigo-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 outline-none shadow-sm"
-                                                    @keydown.enter.prevent>
-                                            </div>
-                                            <div class="border border-indigo-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner"
-                                                style="max-height: 160px;">
-                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                    <template x-for="suc in sucursalesFiltradas"
-                                                        :key="suc">
-                                                        <label
-                                                            class="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
-                                                            <input type="checkbox" :value="suc"
-                                                                x-model="sucursalesAsignadas"
-                                                                class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                                            <span class="text-xs font-medium text-gray-700"
-                                                                x-text="suc"></span>
-                                                        </label>
-                                                    </template>
-                                                </div>
-                                                <div x-show="sucursalesFiltradas.length === 0"
-                                                    class="text-gray-400 text-sm text-center py-4">
-                                                    No se encontraron sucursales asociadas.
-                                                </div>
-                                            </div>
-                                            <p class="text-xs text-indigo-500 mt-2 font-medium">Seleccione
-                                                explícitamente las sucursales
-                                                donde este curso estará activo.</p>
-                                        </div>
-
-                                        <!-- NUEVO: Responsable (Estilo Escritorio) -->
-                                        <div
-                                            class="mt-4 bg-gray-50/50 border border-gray-100 rounded-lg p-3 shadow-sm">
-                                            <label
-                                                class="text-indigo-800 text-[11px] font-bold uppercase tracking-wider mb-2 block">
-                                                <i class="bx bx-user-check mr-1"></i> Responsable (Administrativo 5)
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
+                                                Dirigido a <span class="text-danger">*</span>
                                             </label>
 
-                                            <div class="flex items-center gap-2">
-                                                <!-- Input Código -->
-                                                <div class="w-24">
-                                                    <input type="text" x-model="codResponsable" readonly
-                                                        class="w-full bg-gray-100 border border-gray-300 rounded px-2 py-1.5 text-xs text-center font-mono text-gray-600 cursor-default"
-                                                        placeholder="Código">
-                                                </div>
+                                            <div x-data="{
+                                                    open: false,
+                                                    searchTerm: '',
+                                                    options: {{ Js::from($dirigidos->map(fn($d) => ['codigo' => $d->codigo, 'texto' => $d->texto])->values()->toArray()) }},
+                                                    get filteredOptions() {
+                                                        if (this.searchTerm === '') return this.options;
+                                                        return this.options.filter(opt =>
+                                                            (opt.texto || '').toLowerCase().includes(this.searchTerm.toLowerCase())
+                                                        );
+                                                    },
+                                                    selectOption(option) {
+                                                        dirigido = option ? option.codigo : '';
+                                                        this.searchTerm = '';
+                                                        this.open = false;
+                                                    },
+                                                    get currentDescription() {
+                                                        const found = this.options.find(opt => opt.codigo == dirigido);
+                                                        return found ? found.texto : '';
+                                                    }
+                                                }" class="relative w-full">
 
-                                                <!-- Botón Búsqueda (Modal) -->
-                                                <div class="relative" x-data="searchablePersonnel()">
-                                                    <button type="button" @click="toggle()"
-                                                        class="px-3 py-1.5 bg-white border border-gray-300 rounded text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm font-bold">
-                                                        ...
-                                                    </button>
-
-                                                    <!-- Lista Desplegable (Layout Amplio) -->
-                                                    <div x-show="open" @click.away="open = false" x-transition
-                                                        class="absolute z-[100] mt-1 left-0 w-[90vw] md:w-[650px] max-w-4xl bg-white border border-gray-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
-                                                        style="display: none;">
-
-                                                        <div
-                                                            class="p-3 border-b bg-indigo-50/50 flex items-center gap-2">
-                                                            <i class="bx bx-search text-indigo-500 text-lg"></i>
-                                                            <input type="text" x-model="query"
-                                                                @input.debounce.300ms="search()"
-                                                                class="w-full border-none bg-transparent p-1 text-sm focus:ring-0 outline-none text-gray-700 font-medium"
-                                                                placeholder="Buscar por nombre o DNI en Administrativos 5...">
-                                                        </div>
-
-                                                        <!-- Cabecera de "Tabla" - Usando Divs con Flex para evitar bug 'after' de Alpine -->
-                                                        <div
-                                                            class="bg-indigo-50 px-4 py-2 border-b flex gap-2 text-[10px] font-bold text-gray-500 uppercase flex-shrink-0">
-                                                            <div class="w-16 shrink-0 text-center">Código</div>
-                                                            <div class="flex-1 px-4 border-l border-indigo-100">Nombre
-                                                                Completo</div>
-                                                            <div
-                                                                class="w-24 shrink-0 text-center border-l border-indigo-100">
-                                                                DNI</div>
-                                                            <div
-                                                                class="w-28 shrink-0 text-center border-l border-indigo-100 italic">
-                                                                Sucursal</div>
-                                                        </div>
-
-                                                        <div class="overflow-y-auto custom-scrollbar bg-white"
-                                                            style="max-height: 280px !important;">
-                                                            <template x-for="(p, index) in results"
-                                                                :key="p.codigo + '-' + index">
-                                                                <div @click="select(p)"
-                                                                    class="px-4 py-2 text-[11px] hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors group flex items-center gap-2 min-h-[36px]">
-                                                                    <div class="w-16 shrink-0 font-mono text-gray-400 group-hover:text-indigo-600 font-bold text-center"
-                                                                        x-text="p.codigo"></div>
-                                                                    <div class="flex-1 px-4 font-bold text-gray-800 group-hover:text-indigo-700 truncate"
-                                                                        x-text="p.nombre_completo"></div>
-                                                                    <div class="w-24 shrink-0 text-center text-gray-600 font-medium"
-                                                                        x-text="p.dni"></div>
-                                                                    <div class="w-28 shrink-0 text-center text-gray-500 italic truncate text-[10px]"
-                                                                        x-text="p.sucursal || 'N/A'"></div>
-                                                                </div>
-                                                            </template>
-
-                                                            <!-- Estados -->
-                                                            <div x-show="loading"
-                                                                class="p-8 text-center text-xs text-indigo-500 font-medium">
-                                                                <i
-                                                                    class="bx bx-loader-alt bx-spin mr-2 text-lg align-middle"></i>
-                                                                Buscando
-                                                                responsables...
-                                                            </div>
-
-                                                            <div x-show="error"
-                                                                class="p-4 text-center text-[11px] text-red-500 bg-red-50"
-                                                                x-text="error"></div>
-
-                                                            <div x-show="!loading && !error && results.length === 0"
-                                                                class="p-10 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
-                                                                <i class="bx bx-search-alt-2 text-3xl opacity-20"></i>
-                                                                <span>No se encontraron coincidencias</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <!-- Footer Informativo -->
-                                                        <div
-                                                            class="bg-indigo-600 p-2 text-[10px] text-center text-white font-bold flex justify-between px-4 items-center">
-                                                            <span class="flex items-center gap-1"><i
-                                                                    class="bx bx-check-shield text-sm"></i>
-                                                                ADMINISTRATIVOS ACTIVOS</span>
-                                                            <span class="bg-white/20 px-2 py-0.5 rounded text-[9px]"
-                                                                x-text="results.length + ' RESULTADOS'"></span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Input Nombre -->
-                                                <div class="flex-1">
-                                                    <input type="text" x-model="nombreResponsable" readonly
-                                                        class="w-full bg-gray-100 border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-600 cursor-default"
-                                                        placeholder="Nombre completo del responsable">
-                                                </div>
-                                            </div>
-                                        </div>
-
-
-
-                                        <!-- NUEVO: Recursos Visuales del Curso (2026) -->
-                                        <div class="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
-                                            <label
-                                                class="text-primary text-[11px] font-black uppercase tracking-widest mb-3 flex items-center">
-                                                <i class="bx bx-images mr-1.5 text-base"></i> Recursos Visuales
-                                                (Opcionales)
-                                            </label>
-
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <!-- Slot 1: Portada del Curso -->
-                                                <div class="flex flex-col gap-2">
+                                                <button @click="open = !open" type="button"
+                                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
                                                     <span
-                                                        class="text-[10px] font-bold text-slate-500 uppercase tracking-tight ml-1">Portada
-                                                        del Curso</span>
-                                                    <div class="relative w-full aspect-[3/2] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all"
-                                                        :class="imagePreviewPortada ? 'border-solid border-primary/30' :
-                                                                'hover:border-slate-300'">
+                                                        :class="dirigido ? 'text-gray-800 font-semibold' :
+                                                                'text-gray-400'"
+                                                        x-text="currentDescription || 'Seleccione Dirigido a'"></span>
+                                                    <i class="bx bx-chevron-down text-gray-400 text-lg"
+                                                        :class="open ? 'rotate-180' : ''"></i>
+                                                </button>
 
-                                                        <template x-if="imagePreviewPortada">
-                                                            <div class="w-full h-full relative">
-                                                                <img :src="imagePreviewPortada"
-                                                                    class="w-full h-full object-cover shadow-inner">
-                                                                <div
-                                                                    class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                                    <button type="button"
-                                                                        @click="previewImage(imagePreviewPortada, 'Portada del Curso')"
-                                                                        class="btn btn-sm bg-white/90 text-slate-700 rounded-full p-2 hover:bg-white shadow-lg transform hover:scale-110 transition-all">
-                                                                        <i class="bx bx-show text-lg"></i>
-                                                                    </button>
-                                                                    <button type="button"
-                                                                        @click="imagePreviewPortada = null; imageFilePortada = null; $refs.inputImagePortada.value = ''"
-                                                                        class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
-                                                                        <i class="bx bx-trash text-lg"></i>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </template>
+                                                <div x-show="open" x-cloak @click.away="open = false"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="opacity-0 scale-95"
+                                                    x-transition:enter-end="opacity-100 scale-100"
+                                                    class="absolute mt-1 w-full border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
+                                                    style="display: none; background-color: white !important; opacity: 1 !important; z-index: 99999 !important;">
 
-                                                        <template x-if="!imagePreviewPortada">
-                                                            <div class="flex flex-col items-center py-4 cursor-pointer group/upload"
-                                                                @click="$refs.inputImagePortada.click()">
-                                                                <div
-                                                                    class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-2 border border-slate-100 group-hover/upload:bg-primary/10 group-hover/upload:text-primary group-hover/upload:border-primary/20 transition-all duration-300">
-                                                                    <i
-                                                                        class="bx bx-image text-2xl text-slate-400 group-hover/upload:text-primary"></i>
-                                                                </div>
-                                                                <span
-                                                                    class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Subir
-                                                                    Portada</span>
-                                                                <div
-                                                                    class="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 text-primary border border-primary/10 rounded-md">
-                                                                    <i class="bx bx-expand-alt text-[10px]"></i>
-                                                                    <span
-                                                                        class="text-[9px] font-black uppercase tracking-wider">1200x300
-                                                                        px • JPG</span>
-                                                                </div>
-                                                            </div>
-                                                        </template>
+                                                    <div class="p-2 border-b border-gray-100"
+                                                        style="background-color: white !important;">
+                                                        <input type="text" x-model="searchTerm"
+                                                            class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                                                            placeholder="Buscar...">
                                                     </div>
-                                                    <input type="file" id="inputImagePortada"
-                                                        x-ref="inputImagePortada" class="hidden"
-                                                        accept=".jpg,.jpeg,.png"
-                                                        @change="handleImageUpload($event, 'portada')">
-                                                </div>
 
-                                                <!-- Slot 2: Afiche Informativo -->
-                                                <div class="flex flex-col gap-2">
-                                                    <span
-                                                        class="text-[10px] font-bold text-slate-500 uppercase tracking-tight ml-1">Afiche
-                                                        Informativo</span>
-                                                    <div class="relative w-full aspect-[3/2] bg-white border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex items-center justify-center group transition-all"
-                                                        :class="imagePreviewAfiche ? 'border-solid border-primary/30' :
-                                                                'hover:border-slate-300'">
-
-                                                        <template x-if="imagePreviewAfiche">
-                                                            <div class="w-full h-full relative">
-                                                                <img :src="imagePreviewAfiche"
-                                                                    class="w-full h-full object-cover shadow-inner">
-                                                                <div
-                                                                    class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                                    <button type="button"
-                                                                        @click="previewImage(imagePreviewAfiche, 'Afiche Informativo')"
-                                                                        class="btn btn-sm bg-white/90 text-slate-700 rounded-full p-2 hover:bg-white shadow-lg transform hover:scale-110 transition-all">
-                                                                        <i class="bx bx-show text-lg"></i>
-                                                                    </button>
-                                                                    <button type="button"
-                                                                        @click="imagePreviewAfiche = null; imageFileAfiche = null; $refs.inputImageAfiche.value = ''"
-                                                                        class="btn btn-sm bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transform hover:scale-110 transition-all">
-                                                                        <i class="bx bx-trash text-lg"></i>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
+                                                    <ul class="max-h-60 overflow-y-auto py-1"
+                                                        style="background-color: white !important;">
+                                                        <template x-for="option in filteredOptions"
+                                                            :key="option.codigo">
+                                                            <li @click="selectOption(option)"
+                                                                class="px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors"
+                                                                :class="{
+                                                                        'bg-primary/5 text-primary font-medium': dirigido ==
+                                                                            option.codigo
+                                                                    }">
+                                                                <span x-text="option.texto"></span>
+                                                            </li>
                                                         </template>
-
-                                                        <template x-if="!imagePreviewAfiche">
-                                                            <div class="flex flex-col items-center py-4 cursor-pointer group/upload"
-                                                                @click="$refs.inputImageAfiche.click()">
-                                                                <div
-                                                                    class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-2 border border-slate-100 group-hover/upload:bg-primary/10 group-hover/upload:text-primary group-hover/upload:border-primary/20 transition-all duration-300">
-                                                                    <i
-                                                                        class="bx bx-image text-2xl text-slate-400 group-hover/upload:text-primary"></i>
-                                                                </div>
-                                                                <span
-                                                                    class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Subir
-                                                                    Afiche Informativo</span>
-                                                                <div
-                                                                    class="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 text-primary border border-primary/10 rounded-md">
-                                                                    <i class="bx bx-expand-alt text-[10px]"></i>
-                                                                    <span
-                                                                        class="text-[9px] font-black uppercase tracking-wider">Peso máx.: 1990KB (1.9MB)</span>
-                                                                </div>
-                                                            </div>
+                                                        <template x-if="filteredOptions.length === 0">
+                                                            <li
+                                                                class="px-3 py-2 text-sm text-gray-500 italic text-center">
+                                                                No se encontraron resultados
+                                                            </li>
                                                         </template>
-                                                    </div>
-                                                    <input type="file" id="inputImageAfiche"
-                                                        x-ref="inputImageAfiche" class="hidden"
-                                                        accept=".jpg,.jpeg,.png"
-                                                        @change="handleImageUpload($event, 'afiche')">
+                                                    </ul>
                                                 </div>
-                                            </div>
-
-                                            <!-- Información simple de formatos -->
-                                            <div
-                                                class="mt-4 flex items-center justify-center bg-slate-100/50 border border-slate-200 rounded-lg px-3 py-2">
-                                                <span
-                                                    class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
-                                                    <i class="bx bx-info-circle align-middle mr-1"></i> Formatos
-                                                    Permitidos: .jpg, .jpeg, .png
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Columna 2: Datos del Examen & Metadatos -->
-                                <div class="flex flex-col h-full mt-8 lg:mt-0">
-                                    <!-- NUEVO: Aplica Evaluación -->
+                                <!-- Columna 3: Evaluación -->
+                                <div class="flex flex-col mt-8 lg:mt-0">
+
+                                    <!-- Evaluación del Curso -->
                                     <div class="flex items-center justify-between mb-2 bg-indigo-50/80 border border-indigo-100 px-5 py-3 rounded-xl shadow-sm w-full transition-all hover:bg-indigo-50 cursor-pointer select-none"
                                         @click="aplicaEvaluacion = !aplicaEvaluacion"
                                         title="Activar para requerir una evaluación obligatoria en este curso">
@@ -996,8 +996,8 @@
                                     </div>
 
                                     <!-- Placeholder cuando no aplica evaluación -->
-                                    <div x-show="!aplicaEvaluacion" x-transition
-                                        class="flex flex-col items-center justify-center h-full min-h-[300px] border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 p-6">
+                                    <div x-show="!aplicaEvaluacion" x-transition x-cloak
+                                        class="flex flex-col items-center justify-center h-full border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 p-6">
                                         <i class="bx bx-file-blank mb-3 text-gray-300" style="font-size: 3.5rem;"></i>
                                         <h4 class="text-base font-bold text-gray-500 mb-1">Sin evaluación requerida
                                         </h4>
@@ -1008,19 +1008,9 @@
                                         </p>
                                     </div>
 
-                                    <div x-show="aplicaEvaluacion" class="w-full flex flex-col items-center mb-4">
-                                        <div class="w-full flex items-center justify-between gap-4">
-                                            <div class="flex-1 border-t border-gray-200"></div>
-                                            <h3 class="text-lg font-semibold text-primary text-center">
-                                                <i class="bx bx-task mr-1"></i> Datos del Examen
-                                            </h3>
-                                            <div class="flex-1 border-t border-gray-200"></div>
-                                        </div>
-                                    </div>
-
                                     <!-- Contenedor condicional para Examen -->
                                     <div x-show="aplicaEvaluacion" x-transition.duration.300ms
-                                        class="w-full border border-gray-100 bg-gray-50/30 p-5 rounded-xl shadow-sm mb-4">
+                                        class="w-full border border-gray-100 bg-gray-50/30 p-5 rounded-xl shadow-sm mb-2.5">
                                         <div class="w-full grid gap-4 grid-cols-1 sm:grid-cols-2">
                                             <div>
                                                 <label for="txtLimite"
@@ -1073,7 +1063,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex flex-col py-5" x-show="aplicaEvaluacion" x-transition.opacity>
+                                    <div class="flex flex-col" x-show="aplicaEvaluacion" x-transition.opacity>
                                         <div
                                             class="border border-dashed border-blue-300 bg-blue-50/40 rounded-xl p-5 shadow-sm">
 
@@ -1202,23 +1192,28 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div> <!-- End Columna 2 -->
-                            </div> <!-- End Grid 2-col -->
+                                </div> <!-- End Columna 3 -->
+                            </div> <!-- End Grid 3-col -->
 
-                            <div class="flex flex-col items-center w-full py-4 border-t border-gray-100 mt-6 gap-3">
-                                <div class="flex flex-wrap items-center justify-center gap-3">
+                            <div class="flex items-center justify-between w-full py-4 px-1 border-t border-gray-100 mt-6">
+                                <div class="text-xs text-gray-400 font-medium">
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" @click="window.restaurarFormCurso(false)"
+                                        class="btn h-10 px-5 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center gap-2">
+                                        <i class="bx bx-x text-lg"></i>
+                                        Cancelar
+                                    </button>
                                     <button type="submit" id="btnGestion" @click="registrar"
                                         :disabled="!formularioCompleto"
-                                        class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                                        Registrar Curso&nbsp;<i class="fa-solid fa-floppy-disk"></i>
+                                        class="btn h-10 px-6 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-600 transition-all shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                        <i class="bx bx-save text-lg"></i>
+                                        Registrar Curso
                                     </button>
                                     <button type="button" id="btnGestionEditar" onclick="editarFormGestionCurso()"
-                                        class="hidden btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white ">
+                                        class="hidden h-10 px-6 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-md shadow-amber/20 flex items-center gap-2">
+                                        <i class="bx bx-pencil text-lg"></i>
                                         Actualizar curso
-                                    </button>
-                                    <button type="button" @click="showModal = false"
-                                        class="btn rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">
-                                        Cancelar
                                     </button>
                                 </div>
                             </div>
