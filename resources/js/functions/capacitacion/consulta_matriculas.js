@@ -879,12 +879,26 @@ function inicializarTabulator() {
             {
                 title: "Estado",
                 field: "estado",
-                width: 120,
+                width: 130,
                 hozAlign: "center",
+                tooltip: function (cell) {
+                    const estado = cell.getValue() || 'MATRICULADO';
+                    if (estado === 'MATRICULADO') {
+                        return 'Haga clic para desmatricular';
+                    }
+                    return estado;
+                },
+                cellClick: function (e, cell) {
+                    const estado = cell.getValue() || 'MATRICULADO';
+                    if (estado === 'MATRICULADO') {
+                        const data = cell.getRow().getData();
+                        window.eliminarMatricula(data.cod_personal, data.moodle_user_id, data.nombre_completo);
+                    }
+                },
                 formatter: function (cell) {
                     const estado = cell.getValue() || 'MATRICULADO';
                     const colores = {
-                        'MATRICULADO': 'bg-blue-500 shadow-blue-100 py-2 px-3',
+                        'MATRICULADO': 'bg-blue-500 shadow-blue-100',
                         'EN_PROGRESO': 'bg-amber-600 shadow-amber-100',
                         'COMPLETADO': 'bg-emerald-500 shadow-emerald-100',
                         'APROBADO': 'bg-emerald-500 shadow-emerald-100',
@@ -892,6 +906,17 @@ function inicializarTabulator() {
                         'CANCELADO': 'bg-gray-600 shadow-gray-100'
                     };
                     const color = colores[estado] || 'bg-gray-400';
+
+                    if (estado === 'MATRICULADO') {
+                        return `<span title="Desmatricular" class="group relative inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black text-white shadow-sm uppercase tracking-wider cursor-pointer bg-blue-500 hover:bg-red-500 transition-all duration-200">
+                            <span class="group-hover:hidden">MATRICULADO</span>
+                            <span class="hidden group-hover:inline-flex items-center gap-1">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                DESMATRICULAR
+                            </span>
+                        </span>`;
+                    }
+
                     return `<span class="px-2.5 py-1 rounded-full text-[10px] font-black text-white shadow-sm ${color} uppercase tracking-wider">${estado}</span>`;
                 }
             },
@@ -1407,7 +1432,7 @@ window.eliminarMatricula = function (codPersonal, moodleUserId, nombre) {
 
     Swal.fire({
         title: '¿Desmatricular Usuario?',
-        html: `¿Estás seguro de que deseas eliminar la matrícula de <br><b>${nombre}</b>? <br><br><span class="text-xs text-danger font-bold uppercase tracking-widest">Esta acción también lo desmatriculará de Moodle</span>`,
+        html: `¿Estás seguro de que deseas eliminar la matrícula de <br><b>${nombre}</b>?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',

@@ -2409,7 +2409,6 @@ class CapacitacionController extends Controller
 
             $codPersonal = str_pad(trim($request->codPersonal), 5, '0', STR_PAD_LEFT);
 
-            // 1. Eliminar de la base de datos local (SISOLMAR)
             $deleted = DB::table('sw_matriculas')
                 ->where('cod_curso', $request->cursoId)
                 ->where('cod_personal', $codPersonal)
@@ -2419,7 +2418,6 @@ class CapacitacionController extends Controller
                 return response()->json(['success' => false, 'message' => 'No se encontró la matrícula local'], 404);
             }
 
-            // 2. Sincronizar con Moodle si tenemos el ID del usuario
             $moodleUserId = $request->moodleUserId;
 
             if (!$moodleUserId) {
@@ -2434,12 +2432,20 @@ class CapacitacionController extends Controller
             }
 
             if ($moodleUserId) {
-                // Usar la misma lógica que el Job de matrícula para encontrar el IDNUMBER
-                $courseIdNumber = $curso->codigo_moodle ?: $curso->codigo_curso;
+                $moodleCourse = DB::connection('mysql_grupoihb')
+                    ->table('mdl_course')
+                    ->where('id', $curso->codigo_moodle)
+                    ->first(['idnumber']);
+
+                if (!$moodleCourse || !$moodleCourse->idnumber) {
+                    return response()->json(['success' => false, 'message' => 'El curso no tiene idnumber en Moodle'], 404);
+                }
+
+                $courseIdNumber = $moodleCourse->idnumber;
                 $observacion = $request->observacion ?: 'Desmatriculación desde Intranet';
 
-                $res = DB::connection('mysql_grupoihb')->select(
-                    "SELECT F_USER_matricula_eliminar(?, ?, ?, ?, ?) AS result",
+                $resultado = DB::connection('mysql_grupoihb')->select(
+                    "SELECT F_USER_matricula_eliminar2(?, ?, ?, ?, ?) AS result",
                     [
                         $moodleUserId,
                         $courseIdNumber,
@@ -2449,7 +2455,21 @@ class CapacitacionController extends Controller
                     ]
                 );
 
-                $moodleResult = $res[0]->result;
+                $estado = $resultado[0]->result ?? null;
+
+                Log::info("F_USER_matricula_eliminar2 result: estado={$estado}, userId={$moodleUserId}, course={$courseIdNumber}");
+
+                if ($estado === -2) {
+                    return response()->json(['success' => false, 'message' => "Curso '{$courseIdNumber}' no encontrado en Moodle"], 404);
+                }
+
+                if ($estado === -1) {
+                    return response()->json(['success' => false, 'message' => "Usuario Moodle ID {$moodleUserId} no encontrado o eliminado"], 404);
+                }
+
+                if ($estado !== 1) {
+                    return response()->json(['success' => false, 'message' => "Error inesperado en Moodle (estado: {$estado})"], 500);
+                }
             }
 
             return response()->json([
