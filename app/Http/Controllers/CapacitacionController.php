@@ -520,10 +520,11 @@ class CapacitacionController extends Controller
                     $curso->codigo,
                     $request->input('descripcion'),
                     $request->input('cod_moodle_area'),
+                    $request->input('cod_responsable'),
                     $request->input('aplica_evaluacion', 0),
                     (int) ($request->tiempo ?? 0),
                     (int) ($request->intentos ?? 0),
-                    (int) ($request->cantidad_preguntas ?? 0),
+                    $request->filled('preguntas_word') ? 0 : (int) ($request->cantidad_preguntas ?? 0),
                     (float) ($request->nota ?? 0.00)
                 );
 
@@ -668,14 +669,74 @@ class CapacitacionController extends Controller
         }
     }
 
-    private function createMoodleCourse(string $nombre, int $codigo, ?string $descripcion, ?int $codMoodleArea, int $aplicaEvaluacion, int $tiempo, int $intentos, int $cantPreguntas, float $nota): ?int
+    private function getOrCreateMoodleUser(?string $codResponsable): ?int
     {
+        if (empty($codResponsable)) {
+            return null;
+        }
+
+        $personal = \App\Models\Personal::where('CODI_PERS', $codResponsable)->first();
+        if (!$personal) {
+            Log::warning("No se encontró personal con CODI_PERS: {$codResponsable}");
+            return null;
+        }
+
+        $dni = trim($personal->NRO_DOCU_IDEN);
+        if (empty($dni)) {
+            Log::warning("Personal {$codResponsable} no tiene DNI registrado.");
+            return null;
+        }
+
+        $moodleUser = DB::connection('mysql_grupoihb')->table('mdl_user')
+            ->where('username', $dni)
+            ->orWhere('idnumber', $dni)
+            ->first();
+
+        if ($moodleUser) {
+            return (int) $moodleUser->id;
+        }
+
+        $firstname = trim(($personal->NOMB_1 ?? '') . ' ' . ($personal->NOMB_2 ?? ''));
+        $lastname = trim(($personal->APEL_1 ?? '') . ' ' . ($personal->APEL_2 ?? ''));
+        $email = !empty($personal->PERS_EMAIL) ? trim($personal->PERS_EMAIL) : "{$dni}@sisolmar.com";
+
+        $resUser = DB::connection('mysql_grupoihb')->select(
+            "SELECT F_USER_crear(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) AS user_id",
+            [
+                $dni,
+                'Gpo$olSEE_1@',
+                $firstname,
+                $lastname,
+                $email,
+                '',
+                '',
+                '',
+                '',
+                ''
+            ]
+        );
+
+        $moodleUserId = $resUser[0]->user_id ?? 0;
+
+        if ($moodleUserId <= 0) {
+            Log::error("Error al crear usuario en Moodle para DNI {$dni}. Resultado: {$moodleUserId}");
+            return null;
+        }
+
+        return (int) $moodleUserId;
+    }
+
+    private function createMoodleCourse(string $nombre, int $codigo, ?string $descripcion, ?int $codMoodleArea, ?string $codResponsable, int $aplicaEvaluacion, int $tiempo, int $intentos, int $cantPreguntas, float $nota): ?int
+    {
+        $moodleUserId = $this->getOrCreateMoodleUser($codResponsable);
+
         DB::connection('mysql_grupoihb')->statement("
-            CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
+            CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
             $nombre,
             $codigo,
             $descripcion,
             $codMoodleArea,
+            $moodleUserId,
             $aplicaEvaluacion,
             $tiempo,
             $intentos,
