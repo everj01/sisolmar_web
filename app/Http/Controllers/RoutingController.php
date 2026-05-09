@@ -53,6 +53,11 @@ class RoutingController extends Controller
     {
         // Controladores específicos para cada vista
         $controllers = [
+            'dj' => [
+ 
+                'gestion_dj' => [FileController::class, 'indexGestionDj'],
+
+            ],
             'file_control' => [
                 'chargefile' => [FileController::class, 'index'],
                 'cargos' => [FileController::class, 'ViewCargo'],
@@ -62,7 +67,7 @@ class RoutingController extends Controller
                 'search_legajos' => [FileController::class, 'ViewBusquedaLegajo'],
                 'legajos_pdf' => [FileController::class, 'ViewLegajoPdf'],
                 'dashboard' => [FileController::class, 'ViewDashboard'],
-                'gestion_dj' => [FileController::class, 'indexGestionDj'],
+                //'gestion_dj' => [FileController::class, 'indexGestionDj'],
                 'reportes' => [ReporteController::class, 'index'],
             ],
             'capacitacion' => [

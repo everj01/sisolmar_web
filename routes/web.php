@@ -14,6 +14,23 @@ Route::get('/login',[LoginController::class, 'index'])->name('login');
 
 Route::middleware(['auth'])->group(function () {
 
+    Route::get('/api/get-folios', [FileController::class, 'getFolios']);
+    Route::post('/api/save_folio', [FileController::class, 'saveFolio']);
+    Route::post('/api/disabled_folio', [FileController::class, 'disabledFolio']);
+    Route::post('/api/activar_folio', [FileController::class, 'activarFolio']);
+    Route::get('/api/check-folio-nombre', [FileController::class, 'checkNombreFolio']);
+
+     Route::get('/api/get-cargo', [FileController::class, 'getCargos']);
+      Route::get('/api/get-cargo/{codigo}', [FileController::class, 'getCargosXCodigo']);
+      Route::get('/api/check-cargo-nombre', [FileController::class, 'checkNombreCargo']);
+      Route::post('/api/update_cargo', [FileController::class, 'updateCargo']);
+      Route::post('/api/delete-cargo', [FileController::class, 'eliminarCargo']);
+      Route::post('/api/activar-cargo', [FileController::class, 'activarCargo']);
+
+      Route::post('api/save_legajo', [FileController::class, 'saveLegajo']);
+
+       Route::get('/api/get-notificaciones', [FileController::class, 'getNotificaciones']);
+
     Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
 
     Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
@@ -67,19 +84,14 @@ Route::middleware(['auth'])->group(function () {
         ]);
     });
 
-
     Route::post('/pdf_vacio', [FileController::class, 'pdf_vacio']);
     Route::post('/dash-rrhh', [FileController::class, 'dashboard']);
     Route::post('/generar-pdf', [FileController::class, 'generarPDF']);
     Route::post('/generar-pdf2', [FileController::class, 'generarPDF2']);
     Route::post('/save_cargo', [FileController::class, 'saveCargo']);
-    //Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
-
-
 });
 
 // test email - Pruebas de correos
-
 Route::get('/preview-email-caducidad', function () {
     return new AlertaCaducidadMail([
         'nombre_personal' => 'Juan Pérez',

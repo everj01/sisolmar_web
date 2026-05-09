@@ -43,41 +43,42 @@ Route::get('/get-clientes', [FileController::class, 'getClientes']);
 Route::get('/get-clientes-legajos', [FileController::class, 'getClientesLegajos']);
 Route::get('/get-cargos', [FileController::class, 'getCargosXCliente']);
 Route::get('/cargo-counters', [FileController::class, 'getCargoCounters']);
-Route::get('/get-folios', [FileController::class, 'getFolios']);
+
+//Route::get('/get-folios', [FileController::class, 'getFolios']);
+
+
+
+
 Route::get('/get-folios-personas', [FileController::class, 'getFoliosXPersonas']);
 Route::get('/get-folios-persona_uno', [FileController::class, 'getFoliosXPersona_uno']);
 Route::get('/get-folios/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo']);
 Route::get('/get-folios-cliente-cargo', [FileController::class, 'getFoliosClienteCargo']);
 
-
 Route::get('/get-view-documents/{codPersonal}/{codFolio}', [FileController::class, 'getViewDocumentsPer']);
-
 
 Route::get('/get-folios-comercial/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo_comercial']);
 
 Route::post('/change-password-user', [LoginController::class, 'updatePasswordUser']);
 
-
-
 //GUADAR DATOS
 Route::post('/save_folio_persona', [FileController::class, 'saveFolioPersona']);
 //Route::post('/save_folio_persona', [FileController::class, 'saveFolioPersona2']);
-Route::post('/save_folio', [FileController::class, 'saveFolio']);
-Route::post('/disabled_folio', [FileController::class, 'disabledFolio']);
-Route::post('/activar_folio', [FileController::class, 'activarFolio']);
+//Route::post('/save_folio', [FileController::class, 'saveFolio']);
+// Route::post('/disabled_folio', [FileController::class, 'disabledFolio']);
+// Route::post('/activar_folio', [FileController::class, 'activarFolio']);
 
-Route::post('/save_legajo', [FileController::class, 'saveLegajo']);
+// Route::post('/save_legajo', [FileController::class, 'saveLegajo']);
 
 Route::get('/get-areas', [FileController::class, 'getAreas']);
 Route::get('/get-posicion', [FileController::class, 'getPosicion']);
 Route::get('/get-grupo', [FileController::class, 'getGrupo']);
 Route::get('/get-grupo/{codigo}', [FileController::class, 'getGrupoId']);
-Route::post('/update_cargo', [FileController::class, 'updateCargo']);
+//Route::post('/update_cargo', [FileController::class, 'updateCargo']);
 
-Route::post('/delete-cargo', [FileController::class, 'eliminarCargo']);
-Route::post('/activar-cargo', [FileController::class, 'activarCargo']);
-Route::get('/get-cargo', [FileController::class, 'getCargos']);
-Route::get('/get-cargo/{codigo}', [FileController::class, 'getCargosXCodigo']);
+//Route::post('/delete-cargo', [FileController::class, 'eliminarCargo']);
+//Route::post('/activar-cargo', [FileController::class, 'activarCargo']);
+//Route::get('/get-cargo', [FileController::class, 'getCargos']);
+//Route::get('/get-cargo/{codigo}', [FileController::class, 'getCargosXCodigo']);
 
 
 Route::post('/delete-notif', [NotificacionController::class, 'deleteNotificacion']);

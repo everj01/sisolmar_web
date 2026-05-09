@@ -140,37 +140,40 @@ class FileControl extends Model
             'fecha_creacion'  => DB::raw('GETDATE()'),
         ]);
     }
-    public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma)
+     public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null)
     {
-        // Insertar directamente en la tabla 'folios' usando el Query Builder
         $inserted = DB::table('sw_folios')->insert([
-            'nombre' => $nombre,
-            'tipo' => $tipo,
-            'obligatorio' => $obligatorio,
-            'vencimiento' => $vencimiento,
-            'tipo_fecha' => $tipo_fecha,
-            'plataforma' => $plataforma,
+            'nombre'          => $nombre,
+            'tipo'            => $tipo,
+            'obligatorio'     => $obligatorio,
+            'vencimiento'     => $vencimiento,
+            'tipo_fecha'      => $tipo_fecha,
+            'plataforma'      => $plataforma,
+            'codResponsable'  => $responsable,
+            'fecha_creacion' => DB::raw('GETDATE()'),
+            'creado_por' => $usuario
         ]);
 
         return $inserted;
     }
-    public static function updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma)
-    {
-        // Insertar directamente en la tabla 'folios' usando el Query Builder
-        $updated = DB::table('sw_folios')
-            ->where('codigo', $codigo)
-            ->update([
-                'nombre' => $nombre,
-                'tipo' => $tipo,
-                'obligatorio' => $obligatorio,
-                'vencimiento' => $vencimiento,
-                'tipo_fecha' => $tipo_fecha,
-                'plataforma' => $plataforma,
-                'fecha_modificacion' => DB::raw('GETDATE()'),
-            ]);
+     public static function updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null)
+      {
+          $updated = DB::table('sw_folios')
+              ->where('codigo', $codigo)
+              ->update([
+                  'nombre'             => $nombre,
+                  'tipo'               => $tipo,
+                  'obligatorio'        => $obligatorio,
+                  'vencimiento'        => $vencimiento,
+                  'tipo_fecha'         => $tipo_fecha,
+                  'plataforma'         => $plataforma,
+                  'codResponsable'     => $responsable,
+                  'fecha_modificacion' => DB::raw('GETDATE()'),
+                  'modificado_por' => $usuario
+              ]);
 
-        return $updated;
-    }
+          return $updated;
+      }
     public static function disabledFolio($codigo)
     {
         $updated = DB::table('sw_folios')
@@ -221,6 +224,32 @@ class FileControl extends Model
         ]);
         return $inserted;
     }
+
+     public static function existeNombreFolio($nombre, $excluir = null)
+      {
+          $query = DB::table('sw_folios')
+              ->whereRaw('UPPER(nombre) = UPPER(?)', [$nombre])
+              ->where('habilitado', 1);
+
+          if ($excluir) {
+              $query->where('codigo', '!=', $excluir);
+          }
+
+          return $query->exists();
+      }
+
+     public static function existeNombreCargo($nombre, $excluir = null)
+      {
+          $query = DB::table('sw_cargos')
+              ->whereRaw('UPPER(nombre) = UPPER(?)', [$nombre])
+              ->where('habilitado', 1);
+
+          if ($excluir) {
+              $query->where('codigo', '!=', $excluir);
+          }
+
+          return $query->exists();
+      }
 
     // public static function validarLegajo($folio, $codCliente, $codCargo, $codLegajo){
     //     return DB::select('SELECT TOP 1 * FROM sw_legajos_detalles WHERE codFolio = ? AND codCliente = ? AND codCargo = ? AND habilitado = 1 AND codLegajo = ?', [$folio, $codCliente, $codCargo, $codLegajo]);
@@ -383,17 +412,48 @@ class FileControl extends Model
         return DB::statement('EXEC SW_INSERTAR_CARGO ?, ?, ?, ?, ?, ?, ?, ?', $data);
     }
 
-    public static function activarCargo($codigo, $data){
-        return DB::statement('EXEC SW_ACTIVAR_CARGO ?, ?', [$codigo, $data]);
+    public static function activarCargo($codigo, $data)
+    {
+        return DB::table('sw_cargos')
+            ->where('codigo', $codigo)
+            ->update(['habilitado' => $data]);
     }
 
-    public static function updateCargo($data){
-        return DB::statement('EXEC SW_UPDATE_CARGO ?, ?, ?, ?, ?, ?, ?, ?, ?', $data);
+    public static function updateCargo($codigo, $cod_tipo, $cod_area, $nombre, $descripcion, $abreviatura, $cod_servicio, $cod_subservicio, $usuario = null)
+    {
+        return DB::table('sw_cargos')
+            ->where('codigo', $codigo)
+            ->update([
+                'cod_tipo'           => $cod_tipo,
+                'cod_area'           => $cod_area,
+                'nombre'             => $nombre,
+                'descripcion'        => $descripcion,
+                'abreviatura'        => $abreviatura,
+                'cod_servicio'       => $cod_servicio,
+                'cod_subservicio'    => $cod_subservicio,
+                'modificado_por'     => $usuario,
+                'fecha_modificacion' => DB::raw('GETDATE()'),
+            ]);
     }
 
-    public static function getCargosXCodigo($codigo){
-        return DB::select('EXEC SW_LISTAR_CARGOS_X_CODIGO ?', [$codigo]);
-    }
+      public static function getCargosXCodigo($codigo){
+      $cargo = DB::table('sw_cargos')
+          ->where('codigo', $codigo)
+          ->select(
+              'codigo',
+              'nombre',
+              'descripcion',
+              'abreviatura',
+              'cod_tipo',
+              'cod_area',
+              'habilitado',
+              DB::raw('cod_servicio    AS cod_posicion'),
+              DB::raw('cod_subservicio AS cod_grupo')
+          )
+          ->first();
+
+      return $cargo ? [$cargo] : [];
+  }
 
     public static function getRutaFolio($codFolio){
         $resultados = DB::select('EXEC SW_RUTA_ARCHIVO_FOLIO ?', [$codFolio]);
@@ -496,10 +556,15 @@ class FileControl extends Model
                 ORDER BY IEDU_DESCRIPCION"
             );
     }
-    public static function getRoles()
+    public static function getRoles($test = 0)
     {
-        return DB::table('sw_roles')
+        return $test !== 1 ? DB::table('sw_roles')
+            ->where('habilitado', 1)
+            ->where('test', 0)
+            ->get() : DB::table('sw_roles')
             ->where('habilitado', 1)
             ->get();
     }
+
+    
 }

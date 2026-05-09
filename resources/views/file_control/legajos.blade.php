@@ -1,190 +1,119 @@
-@extends('layouts.vertical', ['title' => 'Gestion de cargo'])
+  @extends('layouts.vertical', ['title' => 'Gestión de Legajos'])
 
-@section('css')
+  @section('css')
+  @endsection
 
-@endsection
+  @section('content')
+  @include("layouts.shared/page-title", ["subtitle" => "File Control", "title" => "Gestión de Legajos"])
 
-@section('content')
+  <style>
+      .disabled-table { pointer-events: none; opacity: 0.3; }
+  </style>
 
-@include("layouts.shared/page-title", [
-    "subtitle" => "Gestion de Legajos",
-    "title" => "Gestión de legajos"
-])
+  <div class="grid lg:grid-cols-5 gap-6 mt-8">
 
-<script src="https://kit.fontawesome.com/76256ea07c.js" crossorigin="anonymous"></script>
+      {{-- ── COLUMNA IZQUIERDA ── --}}
+      <div class="lg:col-span-2 flex flex-col gap-6">
 
-<style>
-    .disabled-table {
-        pointer-events: none;
-        opacity: 0.3;
-    }
+          {{-- CLIENTE --}}
+          <div class="card">
+              <div class="card-header flex justify-between items-center">
+                  <h3 class="card-title">Cliente</h3>
+                  <input type="text" id="buscarCliente" placeholder="Buscar..."
+                      class="w-36 px-3 py-1 border border-gray-300 rounded-full text-sm
+                             focus:outline-none focus:border-blue-500 transition-colors">
+              </div>
+              <div class="px-4 pb-4">
+                  <div id="tblCliente" class="w-full mt-2"></div>
+              </div>
+          </div>
 
-    /* Cards con altura fija */
-    .card-altura-fija {
-        max-height: 400px; /* Ajusta esta altura según necesites */
-    }
+          {{-- CARGO --}}
+          <div class="card">
+              <div class="card-header flex justify-between items-center">
+                  <h3 class="card-title">Cargo</h3>
+                  <input type="text" id="buscarCargo" placeholder="Buscar..."
+                      class="w-36 px-3 py-1 border border-gray-300 rounded-full text-sm
+                             focus:outline-none focus:border-blue-500 transition-colors">
+              </div>
+              <div class="flex justify-center items-center gap-4 px-4 pt-3">
+                  <div class="form-check">
+                      <input type="radio" class="form-radio text-primary" name="cargoFiltro" id="radioTodos" value="TODOS" checked>
+                      <label class="ms-1.5 text-sm" for="radioTodos">Todos</label>
+                  </div>
+                  <div class="form-check">
+                      <input type="radio" class="form-radio text-primary" name="cargoFiltro" id="radioOper" value="OPERATIVO">
+                      <label class="ms-1.5 text-sm" for="radioOper">Operativo</label>
+                  </div>
+                  <div class="form-check">
+                      <input type="radio" class="form-radio text-primary" name="cargoFiltro" id="radioAdmin" value="ADMINISTRATIVO">
+                      <label class="ms-1.5 text-sm" for="radioAdmin">Administrativo</label>
+                  </div>
+              </div>
+              <div class="px-4 pb-4">
+                  <div id="tblCargo" class="w-full mt-2"></div>
+              </div>
+          </div>
 
-    /* Contenedor de tabla con scroll */
-    .tabla-container {
-        max-height: 280px; /* Ajusta según el espacio que necesites para la tabla */
-        overflow-y: auto;
-        overflow-x: auto;
-    }
+      </div>
 
-    /* Para el card de folios que es más alto */
-    .card-folios {
-        max-height: 820px; /* Aproximadamente el doble para que coincida con los dos de la izquierda */
-    }
+      {{-- ── COLUMNA DERECHA: FOLIOS ── --}}
+      <div class="card lg:col-span-3">
 
-    .tabla-folios-container {
-        max-height: 500px; /* Más espacio para la tabla de folios */
-        overflow-y: auto;
-        overflow-x: auto;
-    }
-</style>
+          <div class="card-header flex justify-between items-center">
+              <div class="flex flex-col ">
+                  <h4 class="card-title ms-0 ps-0">Folios del Legajo</h4> 
+                  <span id="infoSeleccion" class=" text-gray-400 italic text-lg">
+                      — Seleccione cliente y cargo
+                  </span>
+              </div>
+              <div class="flex items-center gap-3">
+                  <input type="text" id="buscarFolio" placeholder="Buscar folio..."
+                      class="w-36 px-3 py-1 border border-gray-300 rounded-full text-sm
+                             focus:outline-none focus:border-blue-500 transition-colors">
 
-<div class="grid lg:grid-cols-2 gap-6 mt-8">
-
-    <!-- ===================== -->
-    <!-- COLUMNA IZQUIERDA -->
-    <!-- ===================== -->
-    <div class="flex flex-col gap-6">
-
-        <!-- SELECCIÓN CLIENTE -->
-        <div class="card card-altura-fija">
-            <div class="card-header flex justify-between items-center">
-                <h3 class="card-title">Selección del CLIENTE</h3>
-                <input type="text" id="buscarCliente" placeholder="Buscar cliente..."
-                    class="w-40 px-3 py-1 border border-gray-300 rounded-full text-sm">
-            </div>
-            <div class="w-full px-5 py-2">
-                <div id="tblCliente" class="w-full mt-5 tabla-container"></div>
-            </div>
-        </div>
-
-        <!-- SELECCIÓN CARGO -->
-        <div class="card card-altura-fija">
-            <div class="card-header flex justify-between items-center">
-                <h3 class="card-title">Selección del CARGO</h3>
-                <input type="text" id="buscarCargo" placeholder="Buscar cargo..."
-                    class="w-40 px-3 py-1 border border-gray-300 rounded-full text-sm">
-            </div>
-
-            <div class="flex justify-center items-center gap-4 mt-4">
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" name="cargoFiltro"
-                        id="radioTodos" value="TODOS" checked>
-                    <label class="ms-1.5">Todos</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" name="cargoFiltro"
-                        id="radioOper" value="OPERATIVO">
-                    <label class="ms-1.5">Operativo</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" name="cargoFiltro"
-                        id="radioAdmin" value="ADMINISTRATIVO">
-                    <label class="ms-1.5">Administrativo</label>
-                </div>
-            </div>
-
-            <div class="w-full px-5 py-2">
-                <div id="tblCargo" class="w-full mt-5 tabla-container"></div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ===================== -->
-    <!-- COLUMNA DERECHA -->
-    <!-- ===================== -->
-    <div class="card card-folios">
-
-        <div class="card-header flex justify-between items-center">
-            <h4 class="card-title">Asignar los FOLIOS</h4>
-            <input type="text" id="buscarFolio" placeholder="Buscar folios..."
-                class="w-40 px-3 py-1 border border-gray-300 rounded-full text-sm">
-        </div>
-
-        <div class="w-full px-5 py-2">
-
-            <div class="flex justify-between items-center py-5 mt-5">
-                <div class="flex items-center gap-5">
-                    <div class="flex gap-1 items-center">
-                        <label class="text-sm font-medium">Nombre</label>
-                        <input type="text" id="txtNombre" class="form-input w-[550px]" disabled>
-                    </div>
-
-                    <button type="button" id="btnRegistrar"
-                        onclick="guardarLegajo()" disabled
-                        class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white">
-                        Guardar Legajo
-                    </button>
-                </div>
-
-                <!-- NOTIFICACIONES -->
-                <div class="relative" x-data="{ open: false }">
-                    <button @click="open = !open" class="relative">
-                        <i class="fa-solid fa-envelope text-2xl text-gray-700"></i>
-
-                        @if(isset($notify) && count($notify) > 0)
-                            <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
-                                {{ count($notify) }}
+                  {{-- Notificaciones --}}
+                   <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="relative p-1">
+                            <i class="fa-solid fa-envelope text-xl text-gray-500 hover:text-gray-700 transition-colors"></i>
+                            <span id="notifBadge"
+                                    class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs
+                                        rounded-full w-4 h-4 flex items-center justify-center leading-none">
                             </span>
-                        @endif
-                    </button>
+                        </button>
 
-                    <div x-show="open" @click.outside="open = false" x-transition
-                        class="absolute top-full mt-2 right-0 w-[36rem] max-h-[36rem] overflow-y-auto
-                        bg-white border border-gray-300 rounded-xl shadow-2xl z-50 p-5">
-
-                        @if(isset($notify) && count($notify) > 0)
-                            @foreach ($notify as $nf)
-                                <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl">
-                                    <div class="flex space-x-3">
-                                        <i class="fa-solid {{ $nf->tipo ? 'fa-trash-can text-red-600' : 'fa-plus text-green-600' }}"></i>
-                                        <div>
-                                            <p class="font-semibold">
-                                                Solicitud de {{ $nf->tipo ? 'Desactivación' : 'Activación' }}
-                                            </p>
-                                            <p class="text-sm">
-                                                Se solicita {{ $nf->tipo ? 'quitar' : 'activar' }} el folio
-                                                <b>{{ $nf->folio }}</b><br>
-                                                Cliente: <b>{{ $nf->cliente }}</b><br>
-                                                Cargo: <b>{{ $nf->cargo }}</b>
-                                            </p>
-                                            <p class="text-xs text-right text-gray-500 mt-2">
-                                                {{ date('d/m/Y', strtotime($nf->fecha)) }} - {{ $nf->hora }}
-                                                <button type="button"
-                                                    class="btn btn-sm rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white"
-                                                    onclick="quitarNotificacion('{{ $nf->codigo }}')">
-                                                    Quitar
-                                                </button>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        @else
-                            <p class="text-center text-gray-500 text-sm">No hay notificaciones.</p>
-                        @endif
+                        <div x-show="open" @click.outside="open = false" x-transition
+                            class="absolute top-full mt-2 right-0 w-80 max-h-96 overflow-y-auto
+                                    bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4">
+                            <div id="notifContainer">
+                                <p class="text-center text-gray-400 text-sm py-6">Cargando...</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+              </div>
+          </div>
 
-            <div id="notifiSoli" class="flex flex-col items-center gap-1"></div>
+          <div class="px-5 py-4">
+              <div id="notifiSoli" class="flex flex-col items-center gap-1 mb-3"></div>
+              <div id="tblFolio" class="w-full"></div>
+              <input type="hidden" id="txtNombre">
+              <input type="hidden" id="hidLegajo">
 
-            <div id="tblFolio" class="w-full mt-5 tabla-folios-container"></div>
+              <div class="flex justify-center mt-5">
+                  <button type="button" id="btnRegistrar" onclick="guardarLegajo()" disabled
+                      class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white
+                             disabled:opacity-40 disabled:cursor-not-allowed">
+                      <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Legajo
+                  </button>
+              </div>
+          </div>
 
-            <input type="hidden" id="hidLegajo">
-        </div>
-    </div>
+      </div>
 
-</div>
+  </div>
 
-@endsection
+  @endsection
 
-@vite(['resources/js/functions/legajo.js'])
-@section('script')
-
-@endsection
+  @vite(['resources/js/functions/legajo.js'])
+  @section('script')
+  @endsection

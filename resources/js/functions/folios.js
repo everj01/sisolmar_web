@@ -16,10 +16,10 @@ let datosOriginales = null;
 //Tabla de Folios
 const tblFolios = new Tabulator("#tblFolios", {
     height: "100%",
-    layout: "fitDataFill",
+    layout: "fitColumns",
     responsiveLayout: "collapse",
     pagination: true,
-    paginationSize: 10,
+    paginationSize: 20,
     locale: "es",
     langs: {
         "es": {
@@ -47,9 +47,9 @@ const tblFolios = new Tabulator("#tblFolios", {
         }
     },
     columns: [
-        { title: "Folios", field: "nombre", hozAlign: "left", width: '40%' },
+        { title: "Folios", field: "nombre", hozAlign: "left", widthGrow: 4 },
         {
-            title: "Tipo", field: "tipoFolio", hozAlign: "center", width: '20%',
+            title: "Tipo", field: "tipoFolio", hozAlign: "center", widthGrow: 2,
             formatter: function (cell, formatterParams) {
                 var tipo = cell.getValue();
                 if (tipo === "FORMATO") {
@@ -62,7 +62,28 @@ const tblFolios = new Tabulator("#tblFolios", {
                 return tipo;
             }
         },
-        { title: "Vencimiento", field: "periodo", hozAlign: "center", width: '20%' },
+        {
+            title: "Prioridad", field: "prioridad", hozAlign: "center", widthGrow: 2,
+            formatter: function (cell) {
+                var val = cell.getValue();
+                if (val === "PRINCIPAL") {
+                    return '<span class="inline-flex items-center py-1 px-2.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">PRINCIPAL</span>';
+                } else if (val === "ADICIONAL") {
+                    return '<span class="inline-flex items-center py-1 px-2.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">ADICIONAL</span>';
+                }
+                return val || '';
+            }
+        },
+        {
+            title: "Vencimiento", field: "periodo", hozAlign: "center", widthGrow: 2,
+            formatter: function (cell) {
+                var val = cell.getValue();
+                if (!val || val === "NO VENCE") {
+                    return val || '';
+                }
+                return '<span class="inline-flex items-center py-1 px-2.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">' + val + '</span>';
+            }
+        },
         {
             title: "Acciones", field: "acciones", hozAlign: "center", width: '20%', headerSort: false,
             formatter: function (cell, formatterParams, onRendered) {
@@ -245,55 +266,55 @@ document.getElementById("page-size").addEventListener("change", function () {
 });
 
 // Función para CANCELAR
-document.getElementById("cancelButton").addEventListener("click", function () {
+// document.getElementById("cancelButton").addEventListener("click", function () {
 
-    if (!modoEdicion) {
-        // Modo NUEVO: limpiar el formulario
-        limpiarForm();
-        document.getElementById("tipo").value = "";
-        document.querySelector('#tipo').dispatchEvent(new Event('change'));
-        return;
-    }
+//     if (!modoEdicion) {
+//         // Modo NUEVO: limpiar el formulario
+//         limpiarForm();
+//         document.getElementById("tipo").value = "";
+//         document.querySelector('#tipo').dispatchEvent(new Event('change'));
+//         return;
+//     }
 
-    // Modo EDICIÓN: restaurar datos originales
-    document.querySelector('#codFolio').value = datosOriginales.codigo;
-    document.querySelector('#nombre').value = datosOriginales.nombre;
-    let tipoSelect = document.getElementById("tipo");
-    tipoSelect.value = datosOriginales.tipo;
-    tipoSelect.dispatchEvent(new Event('change'));
+//     // Modo EDICIÓN: restaurar datos originales
+//     document.querySelector('#codFolio').value = datosOriginales.codigo;
+//     document.querySelector('#nombre').value = datosOriginales.nombre;
+//     let tipoSelect = document.getElementById("tipo");
+//     tipoSelect.value = datosOriginales.tipo;
+//     tipoSelect.dispatchEvent(new Event('change'));
 
-    if (datosOriginales.tipo == 3) {
-        institucionDiv.classList.remove('hidden');
-    } else {
-        institucionDiv.classList.add('hidden');
-    }
+//     if (datosOriginales.tipo == 3) {
+//         institucionDiv.classList.remove('hidden');
+//     } else {
+//         institucionDiv.classList.add('hidden');
+//     }
 
-    if (datosOriginales.obligatorio == 1) {
-        document.getElementById('radioPrin').checked = true;
-    } else {
-        document.getElementById('radioAdi').checked = true;
-    }
+//     if (datosOriginales.obligatorio == 1) {
+//         document.getElementById('radioPrin').checked = true;
+//     } else {
+//         document.getElementById('radioAdi').checked = true;
+//     }
 
-    if (datosOriginales.vencimiento == 1) {
-        document.querySelector('#switchVencimiento').checked = true;
-        document.getElementById('periodoDiv').classList.remove('hidden');
-        document.querySelector('#periodo').value = datosOriginales.tipo_fecha;
-    } else {
-        document.querySelector('#switchVencimiento').checked = false;
-        document.getElementById('periodoDiv').classList.add('hidden');
-    }
+//     if (datosOriginales.vencimiento == 1) {
+//         document.querySelector('#switchVencimiento').checked = true;
+//         document.getElementById('periodoDiv').classList.remove('hidden');
+//         document.querySelector('#periodo').value = datosOriginales.tipo_fecha;
+//     } else {
+//         document.querySelector('#switchVencimiento').checked = false;
+//         document.getElementById('periodoDiv').classList.add('hidden');
+//     }
 
-    let radios = document.querySelectorAll('#institucionDiv input[type="radio"]');
-    radios.forEach(r => r.checked = (r.value === datosOriginales.plataforma));
+//     let radios = document.querySelectorAll('#institucionDiv input[type="radio"]');
+//     radios.forEach(r => r.checked = (r.value === datosOriginales.plataforma));
 
-    document.getElementById("txtMensajeNuevo").innerText = "Editando registro";
-    document.getElementById("txtMensajeNuevo").className =
-        "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-red-100 text-red-800";
+//     document.getElementById("txtMensajeNuevo").innerText = "Editando registro";
+//     document.getElementById("txtMensajeNuevo").className =
+//         "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-red-100 text-red-800";
 
-    submitButton.innerHTML = 'Guardar <i class="fa-solid fa-floppy-disk"></i>';
+//     submitButton.innerHTML = 'Guardar <i class="fa-solid fa-floppy-disk"></i>';
 
-    document.getElementById('soloEdicion').classList.add("flex");
-});
+//     document.getElementById('soloEdicion').classList.add("flex");
+// });
 
 
 document.getElementById('tipo').addEventListener('change', function () {
@@ -306,73 +327,111 @@ document.getElementById('tipo').addEventListener('change', function () {
     }
 });
 
-document.querySelector('.clean-btn').addEventListener('click', limpiarForm);
+ document.querySelector('.clean-btn').addEventListener('click', limpiarForm);
 
+  // Verificar nombre duplicado mientras escribe
+  let checkNombreTimeout = null;
+  document.getElementById('nombre').addEventListener('input', function () {
+      clearTimeout(checkNombreTimeout);
+      const aviso = document.getElementById('avisoNombreRepetidoFolio');
+      const valor = this.value.trim();
+
+      if (!valor) {
+          aviso.classList.add('hidden');
+          return;
+      }
+
+      checkNombreTimeout = setTimeout(() => {
+          const excluir = document.getElementById('codFolio').value;
+          const params  = new URLSearchParams({ nombre: valor });
+          if (excluir) params.append('excluir', excluir);
+
+           axios.get(`${ VITE_URL_APP }/api/check-folio-nombre?` + params.toString())
+              .then(response => {
+                  const btn = document.getElementById('submitButton');
+                  if (response.data.existe) {
+                      aviso.classList.remove('hidden');
+                      btn.disabled = true;
+                      btn.classList.add('opacity-50', 'cursor-not-allowed');
+                  } else {
+                      aviso.classList.add('hidden');
+                      btn.disabled = false;
+                      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                  }
+              })
+              .catch(() => {
+                  aviso.classList.add('hidden');
+                  const btn = document.getElementById('submitButton');
+                  btn.disabled = false;
+                  btn.classList.remove('opacity-50', 'cursor-not-allowed');
+              });
+
+      }, 500);
+  });
 document.getElementById("buscar").addEventListener("keyup", function () {
-    let valor = this.value.toLowerCase().trim();
-    tblFolios.setFilter([
-        [
-            { field: "nombre", type: 'like', value: valor },
-            { field: "prioridad", type: 'like', value: valor },
-            { field: "tipoFolio", type: 'like', value: valor },
-            { field: "periodo", type: 'like', value: valor },
-        ]
-    ]);
+    aplicarTodosFiltros();
 });
 
-// Función para actualizar la tabla con los filtros
-// function filterTableByTipoFolio() {
-//     const folioFiltroSeleccionado = document.querySelector('input[name="folioFiltro"]:checked')?.value;
-//     if (!folioFiltroSeleccionado) {
-//         tblFolios.clearFilter();
-//     } else if (folioFiltroSeleccionado === "TODOS") {
-//         tblFolios.clearFilter("prioridad");
-//         tblFolios.clearFilter("tipoFolio");
-//     } else if (["DOCUMENTO", "FORMATO", "CERTIFICADO"].includes(folioFiltroSeleccionado)) {
-//         tblFolios.setFilter("tipoFolio", "=", folioFiltroSeleccionado);
-//         //tblFolios.clearFilter("prioridad");
-//     } else {
-//         tblFolios.setFilter("prioridad", "=", folioFiltroSeleccionado);
-//         //tblFolios.clearFilter("tipoFolio");
-//     }
-// }
-
-// document.querySelectorAll('input[name="folioFiltro"]').forEach(radio => {
-//     radio.addEventListener('change', filterTableByTipoFolio);
-// });
 
 // Función para actualizar la tabla con TODOS los filtros
 function aplicarTodosFiltros() {
-    const folioFiltroSeleccionado = document.querySelector('input[name="folioFiltro"]:checked')?.value;
-    const soloActivosChecked = document.getElementById('chkEliminados')?.checked || false;
+      const filtroTipos          = document.querySelector('input[name="filtroTipos"]:checked')?.value;
+      const filtroClasificacion  = document.querySelector('input[name="filtroClasificacion"]:checked')?.value;
+      const vencimientoFiltro    = document.querySelector('input[name="vencimientoFiltro"]:checked')?.value;
+      const soloActivosChecked   = document.getElementById('chkEliminados')?.checked || false;
+      const buscarValor          = document.getElementById('buscar')?.value.toLowerCase().trim() || '';
 
-    // Limpiar todos los filtros primero
-    tblFolios.clearFilter();
+      const filtros = [];
 
-    // Aplicar filtro de activos si está marcado
-    if (soloActivosChecked) {
-        tblFolios.addFilter("habilitado", "=", "1");
-    }
+      if (soloActivosChecked) {
+          filtros.push({ field: "habilitado", type: "=", value: "1" });
+      }
 
-    // Aplicar filtro de tipo/prioridad según selección
-    if (folioFiltroSeleccionado && folioFiltroSeleccionado !== "TODOS") {
-        if (["DOCUMENTO", "FORMATO", "CERTIFICADO"].includes(folioFiltroSeleccionado)) {
-            tblFolios.addFilter("tipoFolio", "=", folioFiltroSeleccionado);
-        } else {
-            tblFolios.addFilter("prioridad", "=", folioFiltroSeleccionado);
-        }
-    }
-}
+      if (filtroTipos && filtroTipos !== "TODOS") {
+          filtros.push({ field: "prioridad", type: "=", value: filtroTipos });
+      }
 
-// Reemplazar la función anterior
-window.aplicarFiltroSoloActivos = function (op) {
-    aplicarTodosFiltros();
-}
+      if (filtroClasificacion && filtroClasificacion !== "TODOS") {
+          filtros.push({ field: "tipoFolio", type: "=", value: filtroClasificacion });
+      }
 
-// Event listener para los radio buttons de filtro
-document.querySelectorAll('input[name="folioFiltro"]').forEach(radio => {
-    radio.addEventListener('change', aplicarTodosFiltros);
-});
+      if (vencimientoFiltro === "CON_VENCIMIENTO") {
+          filtros.push({ field: "periodo", type: "!=", value: "NO VENCE" });
+      } else if (vencimientoFiltro === "SIN_VENCIMIENTO") {
+          filtros.push({ field: "periodo", type: "=", value: "NO VENCE" });
+      }
+
+      if (buscarValor) {
+          filtros.push([
+              { field: "nombre", type: "like", value: buscarValor },
+              { field: "prioridad", type: "like", value: buscarValor },
+              { field: "tipoFolio", type: "like", value: buscarValor },
+              { field: "periodo", type: "like", value: buscarValor },
+          ]);
+      }
+
+      if (filtros.length === 0) {
+          tblFolios.clearFilter();
+      } else {
+          tblFolios.setFilter(filtros);
+      }
+  }
+
+  window.aplicarFiltroSoloActivos = function (op) {
+      aplicarTodosFiltros();
+  }
+
+  document.querySelectorAll('input[name="filtroTipos"]').forEach(radio => {
+      radio.addEventListener('change', aplicarTodosFiltros);
+  });
+
+  document.querySelectorAll('input[name="filtroClasificacion"]').forEach(radio => {
+      radio.addEventListener('change', aplicarTodosFiltros);
+  });
+
+  document.querySelectorAll('input[name="vencimientoFiltro"]').forEach(radio => {
+      radio.addEventListener('change', aplicarTodosFiltros);
+  });
 
 
 //Activar los periodos si hay VENCIMIENTO
@@ -385,27 +444,32 @@ document.getElementById('switchVencimiento').addEventListener('change', function
 
 
 //Función para limpia los campos del modal
-function limpiarForm() {
-    document.getElementById("txtMensajeNuevo").innerText = "Nuevo registro";
-    document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary/25 text-primary-800";
-    document.getElementById('soloEdicion').classList.remove("flex");
-    document.getElementById('soloEdicion').classList.add("hidden");
+ function limpiarForm() {
+      document.getElementById("txtMensajeNuevo").innerText = "Nuevo registro";
+      document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary/25 text-primary-800";
+      document.getElementById('soloEdicion').classList.remove("flex");
+      document.getElementById('soloEdicion').classList.add("hidden");
 
-    document.getElementById('nombre').value = "";
-    document.getElementById('tipo').value = '';
-    document.getElementById('responsable').value = '';
-    document.getElementById('radioPrin').checked = true;
-    document.getElementById('radioAdi').checked = false;
-    document.querySelector('#switchVencimiento').checked = false;
-    document.getElementById('periodoDiv').classList.add('hidden');
+      document.getElementById('nombre').value = "";
+      document.getElementById('nombre').disabled = false;
+      document.getElementById('tipo').value = '';
+      document.getElementById('tipo').dispatchEvent(new Event('change'));
+      document.getElementById('responsable').value = '';
+      document.getElementById('radioPrin').checked = true;
+      document.getElementById('radioAdi').checked = false;
+      document.querySelector('#switchVencimiento').checked = false;
+      document.getElementById('periodoDiv').classList.add('hidden');
 
-    estadoInstitucion(0);
-    document.querySelector('#codFolio').value = "";
-    modoEdicion = false;
-    datosOriginales = null;
-    const submitButton = document.getElementById('submitButton');
-    submitButton.innerHTML = 'Guardar <i class="fa-solid fa-floppy-disk"></i>';
-}
+      estadoInstitucion(0);
+      document.querySelector('#codFolio').value = "";
+      modoEdicion = false;
+      datosOriginales = null;
+      document.getElementById('submitButton').innerHTML = 'Guardar <i class="fa-solid fa-floppy-disk"></i>';
+
+      document.getElementById('avisoNombreRepetidoFolio').classList.add('hidden');
+      document.getElementById('submitButton').disabled = false;
+      document.getElementById('submitButton').classList.remove('opacity-50', 'cursor-not-allowed');
+  }
 
 
 //========================================== DATA CON AXIOS ==========================================//
@@ -414,6 +478,7 @@ function cargarFolios() {
     axios.get(`${VITE_URL_APP}/api/get-folios`)
         .then(response => {
             tblFolios.setData(response.data);
+            aplicarTodosFiltros();
         })
         .catch(error => {
             console.error("Error al obtener los datos:", error);
