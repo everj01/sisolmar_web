@@ -6,7 +6,7 @@
 
 @section('content')
 
-@include("layouts.shared/page-title", ["subtitle" => "Recursos Humanos", "title" => "Legajos PDF"])
+@include("layouts.shared/page-title", ["subtitle" => "File Control", "title" => "Legajos PDF"])
 
 <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
@@ -20,7 +20,7 @@
                 COMPLETO
             </h3>
             <p class="mt-2 text-default-500">
-                Genera el legajo por cliente/cargo de una persona que está como DESTACADO.
+                Legajos completo por cliente - cargo
             </p>
             <a id="legajo2" class="mt-3 inline-flex items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800 disabled:opacity-50 disabled:pointer-events-none" href="#">
                 Generar
@@ -35,7 +35,7 @@
                 ESPECIAL
             </h3>
             <p class="mt-2 text-default-500">
-                Genera legajos por documentos específicos de todo o algunas personas.
+                Legajos de folios con libre elección.
             </p>
             <a id="legajo1" class="mt-3 inline-flex items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800 disabled:opacity-50 disabled:pointer-events-none" href="#">
                 Generar
@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <div class="card custom-card">
+    {{-- <div class="card custom-card">
         <div class="p-4 md:p-5">
             <h3 class="text-lg font-bold text-default-800">
                 LEGAJO ESPECIAL 3
@@ -72,11 +72,11 @@
                 <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
             </a>
         </div>
-    </div>
+    </div> --}}
 </div>
 
-<div class="grid lg:grid-cols-2 gap-6 mt-8">
-    <div class="card overflow-hidden hidden" id="personasDiv">
+  <div class="grid lg:grid-cols-5 gap-6 mt-8 pb-10">
+    <div class="card overflow-hidden hidden lg:col-span-3"" id="personasDiv">
         <div class="card-header">
             <h4 class="card-title">Listado de PERSONAS</h4>
         </div>
@@ -92,7 +92,22 @@
                     @endforeach
                 </select>
             </div>
+        </div>
 
+        <div class="w-full px-5 py-1 flex items-center gap-4">
+            <span class="text-default-800 text-sm font-medium">Tipo:</span>
+            <div class="form-check">
+                <input type="radio" class="form-radio text-primary" name="tipoPerFiltro" id="radioPerTodos" value="TODOS" checked>
+                <label class="ms-1.5 text-sm" for="radioPerTodos">Todos</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" class="form-radio text-primary" name="tipoPerFiltro" id="radioPerOper" value="OPER">
+                <label class="ms-1.5 text-sm" for="radioPerOper">Operativo</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" class="form-radio text-primary" name="tipoPerFiltro" id="radioPerAdmin" value="ADMIN">
+                <label class="ms-1.5 text-sm" for="radioPerAdmin">Administrativo</label>
+            </div>
         </div>
 
         <div class="w-full px-5 py-2 mt-3">
@@ -104,7 +119,7 @@
         </div>
     </div>
 
-    <div class="card overflow-hidden hidden" id="foliosDiv">
+    <div class="card overflow-hidden hidden lg:col-span-2" id="foliosDiv">
         <div class="card-header">
             <h4 class="card-title">Listado de FOLIOS</h4>
         </div>
@@ -123,7 +138,7 @@
         </div>
     </div>
 
-    <div class="card overflow-hidden hidden" id="legajosDiv" style="height: 100%">
+    <div class="card overflow-hidden hidden lg:col-span-2" id="legajosDiv" style="height: 100%">
         <div class="card-header">
             <h4 class="card-title">Selección de LEGAJOS</h4>
         </div>
@@ -131,9 +146,9 @@
         <div class="p-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-3">
                 <div>
-                    <label for="inputState"
+                    <label for="clientes"
                         class="text-default-800 text-sm font-medium inline-block mb-2">Cliente</label>
-                    <select id="clientes" class="form-select">
+                    <select id="clientes" class="tom-select w-full">
                         <option disabled selected>-Seleccionar-</option>
                         @foreach($clientes as $cliente)
                         <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
@@ -141,7 +156,7 @@
                     </select>
                 </div>
                 <div id="divCargos" class="hidden">
-                    <label for="inputZip" class="text-default-800 text-sm font-medium inline-block mb-2">Cargo</label>
+                    <label for="cargos" class="text-default-800 text-sm font-medium inline-block mb-2">Cargo</label>
                     <select id="cargos" class="tom-select w-full">
                         <option value="">Seleccionar...</option>
                         @foreach($cargos as $cargo)
@@ -158,24 +173,30 @@
     </div>
 </div>
 
-
-<div class="fixed bottom-0 left-0 right-0 bg-gray-800 py-4 flex justify-center">
-    <button id="btnLeg1" class=" bg-cyan-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-cyan-600 focus:outline-none" >
-        Generar LEGAJO 1
-    </button>&nbsp;
-    <button id="btnLeg2" class=" bg-cyan-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-cyan-600 focus:outline-none" >
-    Generar LEGAJO 2
-    </button>&nbsp;
-    <button id="btnLeg3" class=" bg-cyan-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-cyan-600 focus:outline-none" >
-    Generar LEGAJO 3
-    </button>
-</div>
-
-
+  <div class="fixed bottom-0 left-0 right-0 bg-gray-800 py-4 flex justify-center items-center gap-4">
+      <div id="modoGenerarDiv" class="hidden flex items-center gap-3 border border-gray-600 rounded-lg px-4 py-1.5">
+          <span class="text-gray-300 text-sm font-medium">Modo:</span>
+          <label class="text-white text-sm flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="modoGenerar" value="separado" checked class="form-radio text-cyan-400 h-3.5 w-3.5">
+              Separados
+          </label>
+          <label class="text-white text-sm flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="modoGenerar" value="unico" class="form-radio text-cyan-400 h-3.5 w-3.5">
+              Un solo PDF
+          </label>
+      </div>
+      <button id="btnLeg1" class="hidden bg-cyan-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-cyan-600 focus:outline-none">
+          Generar LEGAJO
+      </button>
+      <button id="btnLeg2" class="hidden bg-cyan-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-cyan-600 focus:outline-none">
+          Generar LEGAJO
+      </button>
+      <button id="btnLeg3" class="hidden bg-cyan-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-cyan-600 focus:outline-none">
+          Generar LEGAJO
+      </button>
+  </div>
 
 @endsection
-
 @vite(['resources/js/functions/legajos_pdf.js'])
 @section('script')
-
 @endsection
