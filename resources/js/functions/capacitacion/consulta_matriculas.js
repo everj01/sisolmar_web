@@ -1006,10 +1006,42 @@ function configurarEventos() {
     });
 
     // Exportar Excel
-    document.getElementById('btnExportarExcel').addEventListener('click', () => {
-        if (tabulatorMatriculas && cursoSeleccionado) {
-            tabulatorMatriculas.download("xlsx", `matriculas_${cursoSeleccionado.codigo_curso}.xlsx`, {
-                sheetName: "Matrículas"
+    document.getElementById('btnExportarExcel').addEventListener('click', async () => {
+        if (!cursoSeleccionado) return;
+
+        Swal.fire({
+            title: 'Exportando...',
+            text: 'Generando archivo Excel',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const response = await axios.get(`/api/capacitacion/exportar-excel-matriculas/${cursoSeleccionado.codigo}`, {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `matriculas_${cursoSeleccionado.codigo}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Exportado',
+                text: 'El archivo Excel se descargó correctamente.',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo exportar el Excel.'
             });
         }
     });

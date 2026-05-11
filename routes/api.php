@@ -112,6 +112,7 @@ Route::get('/get-capacitacion-areas', [CapacitacionController::class, 'getAreas'
 // Rutas de consulta de capacitación
 Route::get('/get-matriculas-curso/{cursoId}', [CapacitacionController::class, 'getMatriculasPorCurso']);
 Route::get('/get-matriculas-migra-personal/{cursoId}', [CapacitacionController::class, 'getMatriculasMigraPersonal']);
+Route::get('/capacitacion/exportar-excel-matriculas/{cursoId}', [CapacitacionController::class, 'exportMatriculasExcel']);
 Route::get('/get-historial-capacitaciones/{personalId}', [CapacitacionController::class, 'getHistorialCapacitaciones']);
 Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'buscarPersonalCapacitacion']);
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
