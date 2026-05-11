@@ -12,6 +12,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ReporteAvancesController;
+use App\Http\Controllers\Api\MailController;
 use App\Http\Controllers\BiometricoController;
 /*
 |--------------------------------------------------------------------------
@@ -139,6 +140,8 @@ Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class,
 Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
 Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
 Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
+
+Route::post('/mail/recordatorio-curso/{courseId}', [MailController::class, 'sendRecordatorioCurso']);
 
 // Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
