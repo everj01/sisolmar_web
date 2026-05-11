@@ -505,7 +505,7 @@ function renderizarTablaCursos(cursos) {
                 <td class="px-3 py-2 text-sm">${escapeHtml(curso.nombre)}</td>
                 <td class="px-3 py-2 text-center">
                     <button type="button" class="btn-ver-matriculas px-3 py-1 rounded bg-primary text-white hover:bg-primary/80 transition-colors text-sm"
-                        data-curso-id="${curso.codigo}" data-curso-nombre="${escapeHtml(curso.nombre)}" data-curso-codigo="${curso.codigoCurso}">
+                        data-curso-id="${curso.codigo}" data-curso-nombre="${escapeHtml(curso.nombre)}" data-curso-codigo="${curso.codigoCurso}" data-curso-responsable="${escapeHtml(curso.nombre_responsable || '')}">
                         Ver
                     </button>
                 </td>
@@ -558,11 +558,13 @@ function manejarClickTablaCursos(e) {
         const cursoId = btn.dataset.cursoId;
         const cursoNombre = btn.dataset.cursoNombre;
         const cursoCodigo = btn.dataset.cursoCodigo;
+        const cursoResponsable = btn.dataset.cursoResponsable;
 
         seleccionarCurso({
             codigo: cursoId,
             nombre: cursoNombre,
-            codigo_curso: cursoCodigo
+            codigo_curso: cursoCodigo,
+            nombre_responsable: cursoResponsable
         });
         return;
     }
@@ -603,7 +605,8 @@ async function seleccionarCurso(curso) {
     // Actualizar UI
     document.getElementById('infoCursoSeleccionadoTitulo').textContent = curso.nombre;
     document.getElementById('infoCursoSeleccionado').innerHTML = `
-        <span class="font-bold text-gray-700">Código:</span> ${curso.codigo_curso}
+        <span class="font-bold text-gray-700">Código:</span> ${curso.codigo_curso}<br>
+        <span class="font-bold text-gray-700">Responsable:</span> ${curso.nombre_responsable || 'Sin asignar'}
     `;
 
     document.getElementById('buscarMatricula').disabled = false;

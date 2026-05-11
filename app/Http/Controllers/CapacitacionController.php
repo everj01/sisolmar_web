@@ -51,11 +51,22 @@ class CapacitacionController extends Controller
             ->toArray();
 
         $cursos = $query->get()->map(function ($curso) use ($cursosVigentes) {
+            $nombreResponsable = '';
+            if ($curso->cod_responsable) {
+                $resp = DB::connection('sqlsrv')->selectOne("
+                    SELECT LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre
+                    FROM si_solm.dbo.PERSONAL
+                    WHERE CODI_PERS = ?
+                ", [$curso->cod_responsable]);
+                $nombreResponsable = $resp->nombre ?? '';
+            }
             return [
                 'codigo' => $curso->codigo,
                 'codigoCurso' => $curso->codigo_curso,
                 'nombre' => $curso->nombre,
                 'habilitado' => $curso->habilitado,
+                'cod_responsable' => $curso->cod_responsable,
+                'nombre_responsable' => $nombreResponsable,
                 'periodicidad' => $curso->periodicidad,
                 'es_periodico' => $curso->es_periodico,
                 'frecuencia' => $curso->frecuencia,
