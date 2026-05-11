@@ -1896,9 +1896,10 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function vistaConsultaMatriculas(): View
+    public function vistaConsultaMatriculas(Request $request): View
     {
-        return view('capacitacion.consulta_matriculas');
+        $cursoId = $request->query('curso_id');
+        return view('capacitacion.consulta_matriculas', compact('cursoId'));
     }
 
     public function vistaGestionCursos(): View
@@ -1910,6 +1911,11 @@ class CapacitacionController extends Controller
     public function vistaHistorialCapacitaciones(): View
     {
         return view('capacitacion.historial_capacitaciones');
+    }
+
+    public function vistaSeguimientoMatriculas(): View
+    {
+        return view('capacitacion.seguimiento_matriculas');
     }
 
     public function getMatriculasMigraPersonal(int $cursoId): JsonResponse
@@ -2490,6 +2496,104 @@ class CapacitacionController extends Controller
         } catch (\Exception $e) {
             Log::error('Error en desmatricularUsuario: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al desmatricular: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function getCursosSeguimiento(): JsonResponse
+    {
+        $cursos = DB::select("
+            SELECT
+                c.codigo,
+                c.codigo_curso,
+                c.nombre,
+                c.codigo_moodle,
+                c.cod_responsable,
+                c.fecha_creacion,
+                ISNULL(mat.total_matriculados, 0) as total_matriculados
+            FROM sw_cursos c
+            LEFT JOIN (
+                SELECT cod_curso, COUNT(*) as total_matriculados
+                FROM sw_matriculas
+                GROUP BY cod_curso
+            ) mat ON c.codigo = mat.cod_curso
+            WHERE c.habilitado = 1
+            AND c.codigo_moodle IS NOT NULL
+            AND c.codigo_moodle != ''
+            AND c.codigo_moodle != 0
+            ORDER BY c.fecha_creacion DESC
+        ");
+
+        $result = array_map(function ($curso) {
+            $nombreResponsable = '';
+            if ($curso->cod_responsable) {
+                $resp = DB::connection('sqlsrv')->selectOne("
+                    SELECT LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre
+                    FROM si_solm.dbo.PERSONAL
+                    WHERE CODI_PERS = ?
+                ", [$curso->cod_responsable]);
+                $nombreResponsable = $resp->nombre ?? '';
+            }
+
+            return [
+                'codigo'             => $curso->codigo,
+                'codigo_curso'       => $curso->codigo_curso,
+                'codigo_moodle'      => $curso->codigo_moodle,
+                'nombre'             => $curso->nombre,
+                'responsable'        => $nombreResponsable,
+                'total_matriculados' => (int) $curso->total_matriculados,
+                'fecha_creacion'     => $curso->fecha_creacion,
+            ];
+        }, $cursos);
+
+        return response()->json($result);
+    }
+
+    public function getUsuariosCursoMoodle(int $moodleCourseId): JsonResponse
+    {
+        try {
+            $sinIniciar = DB::connection('mysql_grupoihb')->select(
+                'CALL grupoihb_see.SP_OBTENER_MATRICULADOS_SIN_INICIAR(?)',
+                [$moodleCourseId]
+            );
+
+            $enProgreso = DB::connection('mysql_grupoihb')->select(
+                'CALL grupoihb_see.SP_OBTENER_MATRICULADOS_EN_PROGRESO(?)',
+                [$moodleCourseId]
+            );
+
+            $usuarios = array_merge(
+                array_map(fn($u) => [
+                    'full_name'            => $u->full_name ?? '',
+                    'email'                => $u->email ?? '',
+                    'estado'               => 'SIN_INICIAR',
+                    'enrolment_start_date' => $u->enrolment_start_date ?? null,
+                ], $sinIniciar),
+                array_map(fn($u) => [
+                    'full_name'            => $u->full_name ?? '',
+                    'email'                => $u->email ?? '',
+                    'estado'               => 'EN_PROGRESO',
+                    'enrolment_start_date' => $u->enrolment_start_date ?? null,
+                ], $enProgreso)
+            );
+
+            return response()->json([
+                'success'          => true,
+                'moodle_course_id' => $moodleCourseId,
+                'usuarios'         => $usuarios,
+                'total_sin_iniciar' => count($sinIniciar),
+                'total_en_progreso' => count($enProgreso),
+                'total'            => count($usuarios),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener usuarios del curso', [
+                'moodle_course_id' => $moodleCourseId,
+                'error'            => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener los usuarios del curso',
+            ], 500);
         }
     }
 }

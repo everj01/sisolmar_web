@@ -971,6 +971,7 @@
 
 @section('script')
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+<script>window.cursoAutoSelectId = '{{ $cursoId ?? '' }}';</script>
 @endsection
 
 @vite(['resources/js/functions/capacitacion/consulta_matriculas.js'])

@@ -117,6 +117,8 @@ Route::get('/capacitacion/exportar-excel-matriculas/{cursoId}', [CapacitacionCon
 Route::get('/get-historial-capacitaciones/{personalId}', [CapacitacionController::class, 'getHistorialCapacitaciones']);
 Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'buscarPersonalCapacitacion']);
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
+Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
+Route::get('/get-usuarios-curso-moodle/{moodleCourseId}', [CapacitacionController::class, 'getUsuariosCursoMoodle']);
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 
@@ -142,6 +144,7 @@ Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController:
 Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
 
 Route::post('/mail/recordatorio-curso/{courseId}', [MailController::class, 'sendRecordatorioCurso']);
+Route::post('/mail/send', [MailController::class, 'send']);
 
 // Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
@@ -188,6 +191,3 @@ Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
 
 Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
 Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
-
-
-

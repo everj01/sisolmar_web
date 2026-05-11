@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     buscarPersonal('', 20000); // Cargar personal inicial
     inicializarTabulator();
     configurarEventos();
+    autoSeleccionarCurso();
 });
 
 /**
@@ -1218,6 +1219,26 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+async function autoSeleccionarCurso() {
+    const cursoId = window.cursoAutoSelectId;
+    if (!cursoId) return;
+
+    try {
+        const res = await axios.get(`/api/get-curso-id/${cursoId}`);
+        if (res.data.success) {
+            const c = res.data.curso;
+            seleccionarCurso({
+                codigo: c.codigo,
+                nombre: c.nombre,
+                codigo_curso: c.codigo_curso,
+                nombre_responsable: c.nombre_responsable || '',
+            });
+        }
+    } catch (e) {
+        console.error('Error al auto-seleccionar curso:', e);
+    }
 }
 
 
