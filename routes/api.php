@@ -119,6 +119,7 @@ Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'bus
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
 Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
 Route::get('/get-usuarios-curso-moodle/{moodleCourseId}', [CapacitacionController::class, 'getUsuariosCursoMoodle']);
+Route::get('/get-cursos-alumno/{dni}', [CapacitacionController::class, 'getCursosAlumno']);
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 

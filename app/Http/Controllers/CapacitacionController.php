@@ -1611,17 +1611,13 @@ class CapacitacionController extends Controller
         // Obtener el ID del usuario autenticado
         $usuarioId = Auth::id();
 
-        // Despachamos el trabajo principal a la cola.
-        // Este job se encargará de crear los trabajos individuales para cada persona.
-        DispatchMatriculaBatchJob::dispatch($cursoId, $programacionId, $personalIds, $usuarioId);
+        // Ejecutamos el proceso de matriculación sincrónicamente.
+        DispatchMatriculaBatchJob::dispatchSync($cursoId, $programacionId, $personalIds, $usuarioId);
 
-        // Respondemos inmediatamente al usuario.
-        // El código 202 "Accepted" es el estándar para indicar que la solicitud
-        // ha sido aceptada para procesamiento, pero este aún no ha terminado.
         return response()->json([
             'success' => true,
-            'message' => 'La matriculación ha sido puesta en cola. Recibirá una notificación cuando termine.'
-        ], 202);
+            'message' => 'Matriculación completada exitosamente.'
+        ]);
     }
 
     public function getMatriculasPorCurso(int $cursoId): JsonResponse
@@ -1721,7 +1717,7 @@ class CapacitacionController extends Controller
     {
         try {
             // 1. Obtener personal de la fuente oficial (si_solm.dbo.PERSONAL)
-            $tipoTrabMap = ['01' => 'OPER', '02' => 'ADMIN', '03' => 'OPER', '05' => 'ADMIN', '06' => 'ESPECIAL'];
+            $tipoTrabMap = ['01' => 'Operativo', '02' => 'Administrativo', '03' => 'Operativo', '05' => 'Administrativo', '06' => 'Especial'];
             $rawPersonal = DB::connection('sqlsrv')->select("
                 SELECT 
                     P.CODI_PERS as codigo,
@@ -1729,7 +1725,8 @@ class CapacitacionController extends Controller
                     P.NRO_DOCU_IDEN as nroDoc,
                     S.SUCU_ABREVIATURA as sucursal,
                     P.PERS_TIPOTRAB as TIPOTRAB,
-                    P.PERS_VIGENCIA as VIGENCIA
+                    P.PERS_VIGENCIA as VIGENCIA,
+                    P.PERS_EMAIL as email
                 FROM si_solm.dbo.PERSONAL P
                 LEFT JOIN dbo.sw_MIGRA_SISO_SUCURSAL S ON P.SUCU_CODIGO = S.SUCU_CODIGO
                 WHERE P.PERS_VIGENCIA = 'SI'
@@ -1796,6 +1793,7 @@ class CapacitacionController extends Controller
                 // Se lee desde cargo o TIPOTRAB, ya que SW_LISTAR_PERSONAL_X_SUCURSAL devuelve TIPOTRAB con "ADMIN"/"OPER"
                 $cargo = $p->cargo ?? $p->desc_cargo ?? $p->TIPOTRAB ?? 'N/A';
                 $sucursal = $p->sucursal ?? 'N/A';
+                $email = $p->email ?? '';
 
                 $tipoLabel = $tipoTrabMap[$cargo] ?? 'DESCONOCIDO';
 
@@ -1803,9 +1801,10 @@ class CapacitacionController extends Controller
                     'codigo' => $codigo,
                     'nombre_completo' => $nombre,
                     'dni' => $dni,
-                    'cargo' => $cargo,
+                    'cargo' => $tipoLabel,
                     'tipo_label' => $tipoLabel,
                     'sucursal' => $sucursal,
+                    'email' => $email,
                     'matriculado' => in_array((string) $codigo, $matriculadosEnCurso),
                     'total_capacitaciones' => $matriculasCounts[$codigo] ?? 0
                 ];
@@ -2565,12 +2564,14 @@ class CapacitacionController extends Controller
                 array_map(fn($u) => [
                     'full_name'            => $u->full_name ?? '',
                     'email'                => $u->email ?? '',
+                    'username'             => $u->username ?? '',  // ← agregar
                     'estado'               => 'SIN_INICIAR',
                     'enrolment_start_date' => $u->enrolment_start_date ?? null,
                 ], $sinIniciar),
                 array_map(fn($u) => [
                     'full_name'            => $u->full_name ?? '',
                     'email'                => $u->email ?? '',
+                    'username'             => $u->username ?? '',  // ← agregar
                     'estado'               => 'EN_PROGRESO',
                     'enrolment_start_date' => $u->enrolment_start_date ?? null,
                 ], $enProgreso)
@@ -2593,6 +2594,53 @@ class CapacitacionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener los usuarios del curso',
+            ], 500);
+        }
+    }
+
+    public function getCursosAlumno(string $dni): JsonResponse
+    {
+        try {
+            $cursos = DB::connection('mysql_grupoihb')->select(
+                'CALL SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?)',
+                [$dni]
+            );
+
+            $resultado = array_map(fn($c) => [
+                'course_id'              => $c->course_id              ?? null,
+                'course_codigo'          => $c->course_codigo          ?? '',
+                'course_nombre'          => $c->course_nombre          ?? '',
+                'course_corto'           => $c->course_corto           ?? '',
+                'fecha_inicio_matricula' => $c->fecha_inicio_matricula ?? null,
+                'fecha_fin_matricula'    => $c->fecha_fin_matricula    ?? null,
+                'fecha_matricula'        => $c->fecha_matricula        ?? null,
+                'ultimo_acceso'          => $c->ultimo_acceso          ?? null,
+                'fecha_finalizacion'     => $c->fecha_finalizacion     ?? null,
+                'estado'                 => $c->estado,
+            ], $cursos);
+
+            $totales = [
+                'total'       => count($resultado),
+                'en_curso'    => count(array_filter($resultado, fn($c) => $c['estado'] === 'en_curso')),
+                'sin_iniciar' => count(array_filter($resultado, fn($c) => $c['estado'] === 'sin_iniciar')),
+                'finalizados' => count(array_filter($resultado, fn($c) => $c['estado'] === 'finalizado')),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'dni'     => $dni,
+                'cursos'  => $resultado,
+                'totales' => $totales,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener cursos del alumno', [
+                'dni'   => $dni,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener los cursos del alumno',
             ], 500);
         }
     }
