@@ -598,12 +598,10 @@ async function getArchivosXPersona_uno(codPersonal, selectedFolios, tipo) {
     }
 
     try {
-        const response = await axios.get(`${VITE_URL_APP}/api/get-folios-persona_uno`, {
-            params: {
+         const response = await axios.post(`${VITE_URL_APP}/api/get-folios-persona_uno`, {
                 codPersona: codPersonal,
                 folios: selectedFolios,
-            }
-        });
+            });
 
         // ⏳ Espera que se genere y descargue el PDF
         await generarPDF(response.data);
@@ -619,12 +617,10 @@ async function getArchivosXPersona_uno(codPersonal, selectedFolios, tipo) {
 
   async function getArchivosXPersonas(selectedPersonas, selectedFolios) {
       try {
-          const response = await axios.get(`${VITE_URL_APP}/api/get-folios-personas`, {
-              params: {
-                  personas: selectedPersonas,
-                  folios: selectedFolios,
-              }
-          });
+           const response = await axios.post(`${VITE_URL_APP}/api/get-folios-personas`, {
+            personas: selectedPersonas,
+            folios: selectedFolios,
+        });
           await generarPDF(response.data);
       } catch (error) {
           Swal.fire('Error', 'No se pudo obtener los archivos.', 'error');

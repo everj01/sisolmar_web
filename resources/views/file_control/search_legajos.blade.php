@@ -114,9 +114,7 @@
                   <div id="tblDocsLegajo1" class="w-full hidden"></div>
               </div>
           </div>
-
       </div>
-
   </div>
 
   @endsection

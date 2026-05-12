@@ -27,7 +27,6 @@
 
     </div>
 
-    </div>
 
     <!-- Popup notificación folios por vencer -->
     <div id="folio-toast"
@@ -102,10 +101,10 @@
 
 
 
-
+    @vite(['resources/js/app.js'])
     @yield('script')
 
-    @vite(['resources/js/app.js'])
+   
 
 </body>
 

@@ -24,7 +24,7 @@
 
 @section('content')
 
-    @include("layouts.shared/page-title", ["subtitle" => "Recursos Humanos", "title" => "File Control"])
+    @include("layouts.shared/page-title", ["subtitle" => "DJ", "title" => "Gestion DJ"])
 
     <div id="divListado" class="grid lg:grid-cols-1 gap-6 mt-8">
         <div class="card overflow-hidden">

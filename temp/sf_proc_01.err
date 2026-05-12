@@ -1,47 +1,0 @@
-Loading pages (1/6)
-[>                                                           ] 0%[======>                                                     ] 10%QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-[=========>                                                  ] 15%QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-QNetworkAccessFileBackendFactory: URL has no schema set, use file:// for files
-[==========>                                                 ] 18%[============>                                               ] 21%[=============>                                              ] 23%[===============>                                            ] 25%[================>                                           ] 28%libpng warning: iCCP: known incorrect sRGB profile
-[==================>                                         ] 30%[===================>                                        ] 32%libpng warning: iCCP: known incorrect sRGB profile
-libpng warning: iCCP: cHRM chunk does not match sRGB
-[====================>                                       ] 34%[======================>                                     ] 37%[========================>                                   ] 40%[=========================>                                  ] 42%[==========================>                                 ] 44%Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/huella_digital.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/firma_jorge.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/foto_dni.png (ignore)
-Warning: Failed to load c:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/public/images/firma_digital.png (ignore)
-[===========================>                                ] 46%[============================>                               ] 48%Warning: Failed to load https://i.ibb.co/h9qJKZ7/firma-ejemplo-1.png (ignore)
-Warning: Failed to load https://i.ibb.co/hLMLCLB/firma-ejemplo-2.png (ignore)
-[============================================================] 100%Counting pages (2/6)                                               
-[============================================================] Object 1 of 1Resolving links (4/6)                                                       
-[============================================================] Object 1 of 1Loading headers and footers (5/6)                                           
-Printing pages (6/6)
-[>                                                           ] Preparing[=>                                                          ] Page 1 of 38[===>                                                        ] Page 2 of 38[====>                                                       ] Page 3 of 38[======>                                                     ] Page 4 of 38[=======>                                                    ] Page 5 of 38[=========>                                                  ] Page 6 of 38[==========>                                                 ] Page 7 of 38[============>                                               ] Page 8 of 38[=============>                                              ] Page 9 of 38[===============>                                            ] Page 10 of 38[================>                                           ] Page 11 of 38[==================>                                         ] Page 12 of 38[====================>                                       ] Page 13 of 38[=====================>                                      ] Page 14 of 38[=======================>                                    ] Page 15 of 38[=========================>                                  ] Page 16 of 38[==========================>                                 ] Page 17 of 38libpng warning: iCCP: known incorrect sRGB profile
-libpng warning: iCCP: known incorrect sRGB profile
-libpng warning: iCCP: cHRM chunk does not match sRGB
-[============================>                               ] Page 18 of 38[==============================>                             ] Page 19 of 38[===============================>                            ] Page 20 of 38[=================================>                          ] Page 21 of 38[==================================>                         ] Page 22 of 38[====================================>                       ] Page 23 of 38[=====================================>                      ] Page 24 of 38[=======================================>                    ] Page 25 of 38[========================================>                   ] Page 26 of 38[==========================================>                 ] Page 27 of 38[===========================================>                ] Page 28 of 38[=============================================>              ] Page 29 of 38[==============================================>             ] Page 30 of 38[================================================>           ] Page 31 of 38[==================================================>         ] Page 32 of 38[===================================================>        ] Page 33 of 38[=====================================================>      ] Page 34 of 38[=======================================================>    ] Page 35 of 38[========================================================>   ] Page 36 of 38[==========================================================> ] Page 37 of 38[============================================================] Page 38 of 38Done                                                                        

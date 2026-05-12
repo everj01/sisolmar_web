@@ -2,7 +2,7 @@
 
 @section('content')
 
-@include('layouts.shared/page-title', ['subtitle' => 'Recursos Humanos', 'title' => 'File Control'])
+@include('layouts.shared/page-title', ['subtitle' => 'File Control', 'title' => 'Carga de archivos'])
 
 {{-- =====================================================================
      PANEL PRINCIPAL: Listado de personal + Folios / Legajos
