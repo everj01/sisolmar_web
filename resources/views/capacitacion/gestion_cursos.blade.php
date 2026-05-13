@@ -1,16 +1,17 @@
 @extends('layouts.vertical', ['title' => 'Gestión de cursos'])
 @section('css')
 <style>
-    [x-cloak] {
-        display: none !important;
-    }
+[x-cloak] {
+    display: none !important;
+}
 </style>
 @endsection
 @section('content')
 @include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Gestión de cursos'])
 
 
-<div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" x-cloak class="mb-6 bg-orange-50 ...">
+<div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" x-cloak
+    class="mb-6 bg-orange-50 ...">
     {{-- <div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" style="display: none;" class="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm"> --}}
     <div class="flex items-start">
         <div class="flex-shrink-0 mt-0.5">
@@ -86,8 +87,7 @@
                     id="chkEliminados"
                     x-model="soloEliminados"
                 > --}}
-                    <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
-                        x-model="soloEliminados"
+                    <input class="form-switch" type="checkbox" role="switch" id="chkEliminados" x-model="soloEliminados"
                         @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso)">
                     <label class="ms-1.5 font-medium text-sm text-gray-700" for="chkEliminados">
                         Solo eliminados
@@ -210,8 +210,7 @@
                                 this.search = '';
                                 this.$dispatch('update-filtro-area', option ? option.codigo : ''); // Send Code or empty
                             }
-                        }"
-                        @update-filtro-area="filtroArea = $event.detail"
+                        }" @update-filtro-area="filtroArea = $event.detail"
                         @areas-loaded.window="options = $event.detail">
                         <label class="text-sm font-medium text-gray-700 mb-1">
                             Sistema de Gestión
@@ -321,7 +320,8 @@
             <div
                 class="card w-full max-w-7xl max-h-[95dvh] sm:max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
 
-                <div class="overflow-y-auto custom-scrollbar flex-1 bg-white" x-data="formCursoGestion()" @submit.prevent
+                <div class="overflow-y-auto custom-scrollbar flex-1 bg-white" x-data="formCursoGestion()"
+                    @submit.prevent
                     x-init="$nextTick(() => { $watch('tipoCurso', value => { if (value != '5') targetGroup = 'TODOS'; }); })">
                     <!-- Panel Registro de Curso -->
                     <div x-show="panel === 'registro'" x-transition>
@@ -362,7 +362,8 @@
                                         <!-- Descripción del curso -->
                                         <div>
                                             <label
-                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Descripción del curso</label>
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Descripción
+                                                del curso</label>
                                             <textarea rows="2" x-model="descripcion"
                                                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
                                                 placeholder="Describa el contenido, objetivos y temática del curso..."></textarea>
@@ -379,7 +380,8 @@
                                                     <div @click="toggle()"
                                                         class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm flex items-center gap-2 cursor-pointer hover:border-indigo-300 transition-colors shadow-sm min-h-[38px]"
                                                         :class="codResponsable ? 'border-indigo-300 ring-1 ring-indigo-100' : ''">
-                                                        <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded min-w-[40px] text-center"
+                                                        <span
+                                                            class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded min-w-[40px] text-center"
                                                             x-text="codResponsable || 'Código'"></span>
                                                         <span class="flex-1 truncate text-gray-700"
                                                             :class="nombreResponsable ? 'font-medium' : 'text-gray-400'"
@@ -394,7 +396,8 @@
                                                         x-transition:enter-end="opacity-100 scale-100"
                                                         class="absolute z-[100] mt-1 left-0 w-full min-w-[480px] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col">
 
-                                                        <div class="p-3 border-b bg-gradient-to-r from-indigo-50 to-white flex items-center gap-2">
+                                                        <div
+                                                            class="p-3 border-b bg-gradient-to-r from-indigo-50 to-white flex items-center gap-2">
                                                             <i class="bx bx-search text-indigo-400 text-lg"></i>
                                                             <input type="text" x-model="query"
                                                                 @input.debounce.300ms="search()"
@@ -402,15 +405,23 @@
                                                                 placeholder="Buscar por nombre o DNI...">
                                                         </div>
 
-                                                        <div class="bg-gray-50 px-4 py-1.5 border-b flex gap-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex-shrink-0">
+                                                        <div
+                                                            class="bg-gray-50 px-4 py-1.5 border-b flex gap-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex-shrink-0">
                                                             <div class="w-14 shrink-0 text-center">Código</div>
-                                                            <div class="flex-1 px-3 border-l border-gray-200">Nombre Completo</div>
-                                                            <div class="w-20 shrink-0 text-center border-l border-gray-200">DNI</div>
-                                                            <div class="w-28 shrink-0 text-center border-l border-gray-200">Sucursal</div>
+                                                            <div class="flex-1 px-3 border-l border-gray-200">Nombre
+                                                                Completo</div>
+                                                            <div
+                                                                class="w-20 shrink-0 text-center border-l border-gray-200">
+                                                                DNI</div>
+                                                            <div
+                                                                class="w-28 shrink-0 text-center border-l border-gray-200">
+                                                                Sucursal</div>
                                                         </div>
 
-                                                        <div class="overflow-y-auto custom-scrollbar bg-white" style="max-height: 280px !important;">
-                                                            <template x-for="(p, index) in results" :key="p.codigo + '-' + index">
+                                                        <div class="overflow-y-auto custom-scrollbar bg-white"
+                                                            style="max-height: 280px !important;">
+                                                            <template x-for="(p, index) in results"
+                                                                :key="p.codigo + '-' + index">
                                                                 <div @click="select(p); open = false"
                                                                     class="px-4 py-2.5 text-[12px] hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors flex items-center gap-2 min-h-[38px]"
                                                                     :class="{ 'bg-indigo-50/50': codResponsable == p.codigo }">
@@ -427,7 +438,8 @@
 
                                                             <div x-show="loading"
                                                                 class="p-8 text-center text-sm text-indigo-500 font-medium">
-                                                                <i class="bx bx-loader-alt bx-spin mr-2 text-lg align-middle"></i>
+                                                                <i
+                                                                    class="bx bx-loader-alt bx-spin mr-2 text-lg align-middle"></i>
                                                                 Buscando responsables...
                                                             </div>
 
@@ -442,7 +454,8 @@
                                                             </div>
                                                         </div>
 
-                                                        <div class="bg-indigo-600 px-4 py-1.5 text-[10px] text-white font-semibold flex justify-between items-center">
+                                                        <div
+                                                            class="bg-indigo-600 px-4 py-1.5 text-[10px] text-white font-semibold flex justify-between items-center">
                                                             <span class="flex items-center gap-1">
                                                                 <i class="bx bx-check-shield text-xs"></i>
                                                                 ADMINISTRATIVOS ACTIVOS
@@ -458,7 +471,8 @@
                                         <!-- Frecuencia del curso -->
                                         <div x-show="!esDemanda" x-transition>
                                             <label for="slcFrecuencia"
-                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia del curso</label>
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia
+                                                del curso</label>
                                             <select id="slcFrecuencia" x-model="frecuencia"
                                                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
                                                 <option value="">Seleccione la frecuencia del curso</option>
@@ -514,15 +528,16 @@
                                                                         class="bx bx-image-alt text-xl text-slate-400 group-hover:text-primary transition-colors"></i>
                                                                 </div>
                                                                 <span
-                                                                    class="text-xs font-semibold text-slate-600 mb-1">Subir Portada</span>
+                                                                    class="text-xs font-semibold text-slate-600 mb-1">Subir
+                                                                    Portada</span>
                                                                 <span
-                                                                    class="text-[10px] text-slate-400 font-medium">1200x300 px &bull; JPG, PNG</span>
+                                                                    class="text-[10px] text-slate-400 font-medium">1200x300
+                                                                    px &bull; JPG, PNG</span>
                                                             </div>
                                                         </template>
                                                     </div>
-                                                    <input type="file" id="inputImagePortada"
-                                                        x-ref="inputImagePortada" class="hidden"
-                                                        accept=".jpg,.jpeg,.png"
+                                                    <input type="file" id="inputImagePortada" x-ref="inputImagePortada"
+                                                        class="hidden" accept=".jpg,.jpeg,.png"
                                                         @change="handleImageUpload($event, 'portada')">
                                                 </div>
 
@@ -560,15 +575,16 @@
                                                                         class="bx bx-image text-xl text-slate-400 group-hover:text-primary transition-colors"></i>
                                                                 </div>
                                                                 <span
-                                                                    class="text-xs font-semibold text-slate-600 mb-1">Subir Afiche Informativo</span>
+                                                                    class="text-xs font-semibold text-slate-600 mb-1">Subir
+                                                                    Afiche Informativo</span>
                                                                 <span
-                                                                    class="text-[10px] text-slate-400 font-medium">Máx. 1.9 MB &bull; JPG, PNG</span>
+                                                                    class="text-[10px] text-slate-400 font-medium">Máx.
+                                                                    1.9 MB &bull; JPG, PNG</span>
                                                             </div>
                                                         </template>
                                                     </div>
-                                                    <input type="file" id="inputImageAfiche"
-                                                        x-ref="inputImageAfiche" class="hidden"
-                                                        accept=".jpg,.jpeg,.png"
+                                                    <input type="file" id="inputImageAfiche" x-ref="inputImageAfiche"
+                                                        class="hidden" accept=".jpg,.jpeg,.png"
                                                         @change="handleImageUpload($event, 'afiche')">
                                                 </div>
                                             </div>
@@ -586,7 +602,8 @@
                                                 class="text-gray-800 text-sm font-medium inline-block mb-2 text-primary">
                                                 Plan de capacitación <span class="text-danger">*</span>
                                             </label>
-                                            <div class="flex flex-wrap gap-3" x-data="{ tipos: window.opcionesTipoCurso || [] }"
+                                            <div class="flex flex-wrap gap-3"
+                                                x-data="{ tipos: window.opcionesTipoCurso || [] }"
                                                 @tipo-curso-loaded.window="tipos = $event.detail">
                                                 <template x-for="tipo in tipos" :key="tipo.codigo">
                                                     <label
@@ -595,10 +612,8 @@
                                                                 'border-primary ring-1 ring-primary/30 bg-primary/5': tipoCurso == tipo.codigo,
                                                                 'cursor-pointer hover:bg-slate-50': tipo.codigo != '7',
                                                                 'opacity-50 cursor-not-allowed border-dashed': tipo.codigo == '7'
-                                                            }"
-                                                        :title="tipo.codigo == '7' ? 'Aún en desarrollo' : ''">
-                                                        <input type="radio" :value="tipo.codigo"
-                                                            x-model="tipoCurso"
+                                                            }" :title="tipo.codigo == '7' ? 'Aún en desarrollo' : ''">
+                                                        <input type="radio" :value="tipo.codigo" x-model="tipoCurso"
                                                             @change="checkEsPACByText(tipo.descripcion)"
                                                             name="plan_capacitacion"
                                                             class="w-4 h-4 text-primary focus:ring-primary border-gray-300"
@@ -630,8 +645,7 @@
                                                 <div class="border border-blue-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner"
                                                     style="max-height: 160px;">
                                                     <div class="grid grid-cols-1 gap-2">
-                                                        <template x-for="clie in clientesFiltrados"
-                                                            :key="clie.codigo">
+                                                        <template x-for="clie in clientesFiltrados" :key="clie.codigo">
                                                             <label
                                                                 class="flex items-start space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
                                                                 <input type="checkbox" :value="clie.codigo"
@@ -672,8 +686,7 @@
                                                 <div class="border border-teal-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner"
                                                     style="max-height: 160px;">
                                                     <div class="grid grid-cols-1 gap-2">
-                                                        <template x-for="ar in areasPCIFiltradas"
-                                                            :key="ar.codigo">
+                                                        <template x-for="ar in areasPCIFiltradas" :key="ar.codigo">
                                                             <label
                                                                 class="flex items-start space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
                                                                 <input type="checkbox" :value="ar.codigo"
@@ -711,8 +724,7 @@
                                                 <div class="border border-indigo-100 rounded-md p-3 overflow-y-auto bg-white custom-scrollbar shadow-inner"
                                                     style="max-height: 160px;">
                                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        <template x-for="suc in sucursalesFiltradas"
-                                                            :key="suc">
+                                                        <template x-for="suc in sucursalesFiltradas" :key="suc">
                                                             <label
                                                                 class="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
                                                                 <input type="checkbox" :value="suc"
@@ -767,14 +779,12 @@
                                                         const found = this.options.find(opt => opt.codigo == areaConocimiento);
                                                         return found ? found.descripcion : '';
                                                     }
-                                                }"
-                                                @areas-loaded.window="options = $event.detail"
+                                                }" @areas-loaded.window="options = $event.detail"
                                                 class="relative w-full">
 
                                                 <button @click="open = !open" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
-                                                    <span
-                                                        :class="areaConocimiento ? 'text-gray-800 font-semibold' :
+                                                    <span :class="areaConocimiento ? 'text-gray-800 font-semibold' :
                                                                 'text-gray-400'"
                                                         x-text="currentDescription || 'Seleccione Sistema'"></span>
                                                     <i class="bx bx-chevron-down text-gray-400 text-lg"
@@ -852,8 +862,7 @@
 
                                                 <button @click="open = !open" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
-                                                    <span
-                                                        :class="areaResponsable ? 'text-gray-800 font-semibold' :
+                                                    <span :class="areaResponsable ? 'text-gray-800 font-semibold' :
                                                                 'text-gray-400'"
                                                         x-text="currentDescription || 'Seleccione Área'"></span>
                                                     <i class="bx bx-chevron-down text-gray-400 text-lg"
@@ -929,8 +938,7 @@
 
                                                 <button @click="open = !open" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
-                                                    <span
-                                                        :class="dirigido ? 'text-gray-800 font-semibold' :
+                                                    <span :class="dirigido ? 'text-gray-800 font-semibold' :
                                                                 'text-gray-400'"
                                                         x-text="currentDescription || 'Seleccione Dirigido a'"></span>
                                                     <i class="bx bx-chevron-down text-gray-400 text-lg"
@@ -1057,8 +1065,8 @@
                                                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none"
                                                     :class="preguntasExamen.length > 0 ?
                                                             'bg-gray-100 cursor-not-allowed' : 'bg-white'"
-                                                    :readonly="preguntasExamen.length > 0"
-                                                    x-model="preguntasBalotario" placeholder="" />
+                                                    :readonly="preguntasExamen.length > 0" x-model="preguntasBalotario"
+                                                    placeholder="" />
                                             </div>
                                         </div>
                                     </div>
@@ -1195,7 +1203,8 @@
                                 </div> <!-- End Columna 3 -->
                             </div> <!-- End Grid 3-col -->
 
-                            <div class="flex items-center justify-between w-full py-4 px-1 border-t border-gray-100 mt-6">
+                            <div
+                                class="flex items-center justify-between w-full py-4 px-1 border-t border-gray-100 mt-6">
                                 <div class="text-xs text-gray-400 font-medium">
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -1222,17 +1231,16 @@
                         <!-- Modal Preview Imagen -->
                         <div x-show="modalPreviewAbierto" x-cloak
                             class="fixed inset-0 z-[1050] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0"
-                            x-transition:enter-end="opacity-100"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100"
-                            x-transition:leave-end="opacity-0"
+                            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                             @keydown.escape.window="modalPreviewAbierto = false">
                             <div class="relative max-w-3xl w-full mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border border-white/10"
                                 @click.away="modalPreviewAbierto = false">
-                                <div class="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-200">
-                                    <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                <div
+                                    class="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-200">
+                                    <h4
+                                        class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                                         <i class="bx bx-image text-primary"></i>
                                         <span x-text="modalPreviewTitulo"></span>
                                     </h4>
@@ -1241,10 +1249,13 @@
                                         <i class="bx bx-x text-lg"></i>
                                     </button>
                                 </div>
-                                <div class="p-2 bg-slate-900/5 flex items-center justify-center" style="max-height: 75vh;">
-                                    <img :src="modalPreviewSrc" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-inner">
+                                <div class="p-2 bg-slate-900/5 flex items-center justify-center"
+                                    style="max-height: 75vh;">
+                                    <img :src="modalPreviewSrc"
+                                        class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-inner">
                                 </div>
-                                <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                                <div
+                                    class="px-5 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
                                     <span class="text-[10px] text-slate-400 font-medium">Vista previa</span>
                                     <span class="text-[10px] text-slate-500 font-semibold">
                                         <i class="bx bx-show mr-1"></i>
@@ -1348,8 +1359,7 @@
                                         <select x-model="selectedSucursal"
                                             class="w-full text-xs rounded border-gray-300 py-1.5 focus:ring-primary focus:border-primary">
                                             <option value="">-- Todas --</option>
-                                            <template x-for="item in combosApertura.sucursales"
-                                                :key="item.codigo">
+                                            <template x-for="item in combosApertura.sucursales" :key="item.codigo">
                                                 <option :value="item.codigo" x-text="item.nombre"></option>
                                             </template>
                                         </select>
@@ -1504,8 +1514,8 @@
                                                 :style="p.respuesta_correcta == chr(65 + optIndex) ?
                                                         'border-color:#86efac;background:#f0fdf4' :
                                                         'border-color:#f1f5f9;background:#fafafa'">
-                                                <input type="radio" :name="'resp_' + index"
-                                                    :value="chr(65 + optIndex)" x-model="p.respuesta_correcta"
+                                                <input type="radio" :name="'resp_' + index" :value="chr(65 + optIndex)"
+                                                    x-model="p.respuesta_correcta"
                                                     style="width:0.85rem;height:0.85rem;accent-color:#16a34a;flex-shrink:0">
                                                 <span
                                                     style="margin-left:0.5rem;font-size:0.80rem;font-weight:500;color:#475569;flex:1;line-height:1.35"
@@ -1550,166 +1560,166 @@
     </div>
 
     <script>
-        window.modalExamenWord = function() {
-            return {
-                mostrarModal: false,
-                preguntas: [],
-                codCursoActual: null,
-                archivoNombre: '',
+    window.modalExamenWord = function() {
+        return {
+            mostrarModal: false,
+            preguntas: [],
+            codCursoActual: null,
+            archivoNombre: '',
 
-                abrirModalWord(preguntas, cursoId, examenId, nombreArc) {
-                    this.preguntas = Array.isArray(preguntas) ? preguntas : [];
-                    this.codCursoActual = cursoId;
-                    this.archivoNombre = nombreArc || '';
-                    this.mostrarModal = true;
-                },
+            abrirModalWord(preguntas, cursoId, examenId, nombreArc) {
+                this.preguntas = Array.isArray(preguntas) ? preguntas : [];
+                this.codCursoActual = cursoId;
+                this.archivoNombre = nombreArc || '';
+                this.mostrarModal = true;
+            },
 
-                chr(code) {
-                    return String.fromCharCode(code);
-                }
-            };
-        }
+            chr(code) {
+                return String.fromCharCode(code);
+            }
+        };
+    }
 
-        /**
-         * Componente para Matrícula Masiva vía Excel (2026)
-         */
-        window.modalImportacionExcel = function() {
-            return {
-                mostrarModal: false,
-                cargando: false,
-                procesandoMatricula: false,
-                preguntasIA: [], // No se usa aquí pero para consistencia si hay conflictos
-                codCursoActual: null,
-                nombreCursoActual: '',
-                personalEncontrado: [],
-                resumen: {
+    /**
+     * Componente para Matrícula Masiva vía Excel (2026)
+     */
+    window.modalImportacionExcel = function() {
+        return {
+            mostrarModal: false,
+            cargando: false,
+            procesandoMatricula: false,
+            preguntasIA: [], // No se usa aquí pero para consistencia si hay conflictos
+            codCursoActual: null,
+            nombreCursoActual: '',
+            personalEncontrado: [],
+            resumen: {
+                total: 0,
+                encontrados: 0,
+                errores: 0,
+                advertencias: 0
+            },
+            filtros: {
+                soloErrores: false
+            },
+
+            abrirModalExcel(curso) {
+                this.codCursoActual = curso.codigo;
+                this.nombreCursoActual = curso.nombre;
+                this.personalEncontrado = [];
+                this.mostrarModal = true;
+                this.resetResumen();
+                // Limpiar input file si existe
+                const input = document.getElementById('inputExcelMatricula');
+                if (input) input.value = '';
+            },
+
+            resetResumen() {
+                this.resumen = {
                     total: 0,
                     encontrados: 0,
                     errores: 0,
                     advertencias: 0
-                },
-                filtros: {
-                    soloErrores: false
-                },
+                };
+            },
 
-                abrirModalExcel(curso) {
-                    this.codCursoActual = curso.codigo;
-                    this.nombreCursoActual = curso.nombre;
-                    this.personalEncontrado = [];
-                    this.mostrarModal = true;
-                    this.resetResumen();
-                    // Limpiar input file si existe
-                    const input = document.getElementById('inputExcelMatricula');
-                    if (input) input.value = '';
-                },
+            async procesarArchivo(event) {
+                const file = event.target.files[0];
+                if (!file) return;
 
-                resetResumen() {
-                    this.resumen = {
-                        total: 0,
-                        encontrados: 0,
-                        errores: 0,
-                        advertencias: 0
-                    };
-                },
+                this.cargando = true;
+                const formData = new FormData();
+                formData.append('archivo', file);
 
-                async procesarArchivo(event) {
-                    const file = event.target.files[0];
-                    if (!file) return;
+                try {
+                    const response = await fetch('/api/capacitacion/validar-excel-matricula', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: formData
+                    });
+                    const res = await response.json();
 
-                    this.cargando = true;
-                    const formData = new FormData();
-                    formData.append('archivo', file);
-
-                    try {
-                        const response = await fetch('/api/capacitacion/validar-excel-matricula', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: formData
-                        });
-                        const res = await response.json();
-
-                        if (res.success) {
-                            this.personalEncontrado = res.data;
-                            this.actualizarResumen();
-                        } else {
-                            Swal.fire('Error', res.message, 'error');
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        Swal.fire('Error', 'No se pudo procesar el archivo Excel.', 'error');
-                    } finally {
-                        this.cargando = false;
+                    if (res.success) {
+                        this.personalEncontrado = res.data;
+                        this.actualizarResumen();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
                     }
-                },
-
-                actualizarResumen() {
-                    this.resumen.total = this.personalEncontrado.length;
-                    this.resumen.encontrados = this.personalEncontrado.filter(p => p.status !== 'RED').length;
-                    this.resumen.errores = this.personalEncontrado.filter(p => p.status === 'RED').length;
-                    this.resumen.advertencias = this.personalEncontrado.filter(p => p.status === 'AMBER').length;
-                },
-
-                get listaFiltrada() {
-                    if (this.filtros.soloErrores) {
-                        return this.personalEncontrado.filter(p => p.status === 'RED');
-                    }
-                    return this.personalEncontrado;
-                },
-
-                async confirmarMatricula() {
-                    const swal = window.Swal;
-                    const validos = this.personalEncontrado.filter(p => p.status !== 'RED');
-                    if (validos.length === 0) {
-                        swal ? swal.fire('Atención', 'No hay personal válido para matricular.', 'warning') : alert(
-                            'No hay personal válido para matricular.');
-                        return;
-                    }
-
-                    const confirmResult = swal ? await swal.fire({
-                        title: '¿Confirmar Matrícula Masiva?',
-                        text: `Se matricularán ${validos.length} personas al curso "${this.nombreCursoActual}".`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, matricular',
-                        cancelButtonText: 'Cancelar'
-                    }) : {
-                        isConfirmed: confirm(`¿Matricular ${validos.length} personas?`)
-                    };
-
-                    if (!confirmResult.isConfirmed) return;
-
-                    this.procesandoMatricula = true;
-                    try {
-                        const response = await fetch('/api/capacitacion/confirmar-matricula-masiva', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify({
-                                cod_curso: this.codCursoActual,
-                                personal: validos
-                            })
-                        });
-                        const res = await response.json();
-                        if (res.success) {
-                            swal ? swal.fire('¡Éxito!', res.message, 'success') : alert(res.message);
-                            this.mostrarModal = false;
-                        } else {
-                            swal ? swal.fire('Error', res.message, 'error') : alert('Error: ' + res.message);
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        swal ? swal.fire('Error', 'Ocurrió un problema al procesar la matrícula masiva.', 'error') :
-                            alert('Error al procesar la matrícula.');
-                    } finally {
-                        this.procesandoMatricula = false;
-                    }
+                } catch (e) {
+                    console.error(e);
+                    Swal.fire('Error', 'No se pudo procesar el archivo Excel.', 'error');
+                } finally {
+                    this.cargando = false;
                 }
-            };
-        }
+            },
+
+            actualizarResumen() {
+                this.resumen.total = this.personalEncontrado.length;
+                this.resumen.encontrados = this.personalEncontrado.filter(p => p.status !== 'RED').length;
+                this.resumen.errores = this.personalEncontrado.filter(p => p.status === 'RED').length;
+                this.resumen.advertencias = this.personalEncontrado.filter(p => p.status === 'AMBER').length;
+            },
+
+            get listaFiltrada() {
+                if (this.filtros.soloErrores) {
+                    return this.personalEncontrado.filter(p => p.status === 'RED');
+                }
+                return this.personalEncontrado;
+            },
+
+            async confirmarMatricula() {
+                const swal = window.Swal;
+                const validos = this.personalEncontrado.filter(p => p.status !== 'RED');
+                if (validos.length === 0) {
+                    swal ? swal.fire('Atención', 'No hay personal válido para matricular.', 'warning') : alert(
+                        'No hay personal válido para matricular.');
+                    return;
+                }
+
+                const confirmResult = swal ? await swal.fire({
+                    title: '¿Confirmar Matrícula Masiva?',
+                    text: `Se matricularán ${validos.length} personas al curso "${this.nombreCursoActual}".`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, matricular',
+                    cancelButtonText: 'Cancelar'
+                }) : {
+                    isConfirmed: confirm(`¿Matricular ${validos.length} personas?`)
+                };
+
+                if (!confirmResult.isConfirmed) return;
+
+                this.procesandoMatricula = true;
+                try {
+                    const response = await fetch('/api/capacitacion/confirmar-matricula-masiva', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            cod_curso: this.codCursoActual,
+                            personal: validos
+                        })
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        swal ? swal.fire('¡Éxito!', res.message, 'success') : alert(res.message);
+                        this.mostrarModal = false;
+                    } else {
+                        swal ? swal.fire('Error', res.message, 'error') : alert('Error: ' + res.message);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    swal ? swal.fire('Error', 'Ocurrió un problema al procesar la matrícula masiva.', 'error') :
+                        alert('Error al procesar la matrícula.');
+                } finally {
+                    this.procesandoMatricula = false;
+                }
+            }
+        };
+    }
     </script>
 
     <!-- MODAL: MATRÍCULA MASIVA EXCEL (2026) -->
@@ -1765,8 +1775,7 @@
                         </p>
                         <button type="button"
                             style="padding:0.45rem 1.25rem;background:#2563eb;color:#fff;border:none;border-radius:0.5rem;font-size:0.75rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,0.35);transition:all 0.2s"
-                            onmouseover="this.style.background='#1d4ed8'"
-                            onmouseout="this.style.background='#2563eb'">
+                            onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
                             Seleccionar archivo
                         </button>
                     </div>
@@ -1958,258 +1967,258 @@
     </div>{{-- cierre x-data --}}
 
     <script>
-        // Inicialización síncrona para evitar Alpine/Vite race conditions
-        window.alertasVencimientoCursos = function() {
-            return {
-                alertas: [],
-                initAlertas() {
+    // Inicialización síncrona para evitar Alpine/Vite race conditions
+    window.alertasVencimientoCursos = function() {
+        return {
+            alertas: [],
+            initAlertas() {
 
-                    fetch(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`)
-                        .then(res => res.json())
-                        .then(data => {
-                            console.log('⚡ Respuesta Alertas:', data);
-                            if (data && data.success) {
-                                this.alertas = data.alertas;
-                                window.alertasCursosData = this.alertas.map(a => String(a.codigo_curso));
-                                if (window.cursoTable && typeof window.renderTablaCursos === 'function') {
-                                    window.renderTablaCursos(window.cursosData || []);
-                                }
+                fetch(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`)
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log('⚡ Respuesta Alertas:', data);
+                        if (data && data.success) {
+                            this.alertas = data.alertas;
+                            window.alertasCursosData = this.alertas.map(a => String(a.codigo_curso));
+                            if (window.cursoTable && typeof window.renderTablaCursos === 'function') {
+                                window.renderTablaCursos(window.cursosData || []);
                             }
-                        })
-                        .catch(e => console.error("Error cargando alertas de vencimiento:", e));
-                }
-            };
+                        }
+                    })
+                    .catch(e => console.error("Error cargando alertas de vencimiento:", e));
+            }
         };
+    };
 
-        window.modalApertura = function() {
-            return {
-                isOpen: false,
-                cargando: false,
-                codigoCurso: null,
-                cursoNombre: '',
-                tipoCursoId: '',
-                fechaInicio: '',
-                clientesAsignados: [],
-                empresasAsignadas: [],
-                areasAsignadas: [],
-                listaDNIPaste: '',
-                incluirAutomatico: true,
-                selectedSucursal: '',
-                selectedCliente: '',
-                selectedArea: '',
-                combosApertura: {
-                    sucursales: [],
-                    clientes: [],
-                    areas: []
-                },
+    window.modalApertura = function() {
+        return {
+            isOpen: false,
+            cargando: false,
+            codigoCurso: null,
+            cursoNombre: '',
+            tipoCursoId: '',
+            fechaInicio: '',
+            clientesAsignados: [],
+            empresasAsignadas: [],
+            areasAsignadas: [],
+            listaDNIPaste: '',
+            incluirAutomatico: true,
+            selectedSucursal: '',
+            selectedCliente: '',
+            selectedArea: '',
+            combosApertura: {
+                sucursales: [],
+                clientes: [],
+                areas: []
+            },
 
-                async init() {
-                    await this.fetchCombos();
-                },
+            async init() {
+                await this.fetchCombos();
+            },
 
-                async fetchCombos() {
+            async fetchCombos() {
 
-                    try {
-                        const response = await fetch(`${VITE_URL_APP}/api/capacitacion/combos-apertura`);
-                        const data = await response.json();
-                        if (data.success) {
-                            this.combosApertura = data;
-                        }
-                    } catch (e) {
-                        console.error("Error cargando combos de apertura:", e);
+                try {
+                    const response = await fetch(`${VITE_URL_APP}/api/capacitacion/combos-apertura`);
+                    const data = await response.json();
+                    if (data.success) {
+                        this.combosApertura = data;
                     }
-                },
+                } catch (e) {
+                    console.error("Error cargando combos de apertura:", e);
+                }
+            },
 
-                openModal(data) {
-                    this.codigoCurso = data.codigo;
-                    this.cursoNombre = data.nombre;
-                    this.tipoCursoId = data.tipo_curso || '';
+            openModal(data) {
+                this.codigoCurso = data.codigo;
+                this.cursoNombre = data.nombre;
+                this.tipoCursoId = data.tipo_curso || '';
 
-                    // Reset filtros
-                    this.selectedSucursal = '';
-                    this.selectedCliente = '';
-                    this.selectedArea = '';
-                    this.listaDNIPaste = '';
+                // Reset filtros
+                this.selectedSucursal = '';
+                this.selectedCliente = '';
+                this.selectedArea = '';
+                this.listaDNIPaste = '';
 
-                    const today = new Date();
-                    const yyyy = today.getFullYear();
-                    const mm = String(today.getMonth() + 1).padStart(2, '0');
-                    this.fechaInicio = `${yyyy}-${mm}`;
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                this.fechaInicio = `${yyyy}-${mm}`;
 
-                    window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                    detail: {
+                        panel: 'apertura_manual',
+                        titulo: this.cursoNombre
+                    }
+                }));
+                this.isOpen = true;
+                this.cargando = false;
+            },
+
+            closeModal() {
+                window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                    detail: {
+                        panel: 'registro'
+                    }
+                }));
+                this.isOpen = false;
+                this.codigoCurso = null;
+                this.cursoNombre = '';
+                this.tipoCursoId = '';
+                this.fechaInicio = '';
+                this.selectedSucursal = '';
+                this.selectedCliente = '';
+                this.selectedArea = '';
+            },
+
+            async guardarApertura() {
+                if (!this.fechaInicio) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                         detail: {
-                            panel: 'apertura_manual',
-                            titulo: this.cursoNombre
+                            titulo: "Atención",
+                            mensaje: "Debe seleccionar un mes de campaña.",
+                            tipo: "warning"
                         }
                     }));
-                    this.isOpen = true;
-                    this.cargando = false;
-                },
+                    return;
+                }
 
-                closeModal() {
-                    window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                const dnisLimpios = this.listaDNIPaste.trim() ?
+                    this.listaDNIPaste.split(/\n|,|;/).map(d => d.trim()).filter(d => d.length > 0) : [];
+
+                if (this.tipoCursoId == '6' && this.clientesAsignados.length === 0 && dnisLimpios.length ===
+                    0) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                         detail: {
-                            panel: 'registro'
+                            titulo: "Atención",
+                            mensaje: "Debe seleccionar al menos un cliente o pegar una lista de DNIs.",
+                            tipo: "warning"
                         }
                     }));
-                    this.isOpen = false;
-                    this.codigoCurso = null;
-                    this.cursoNombre = '';
-                    this.tipoCursoId = '';
-                    this.fechaInicio = '';
-                    this.selectedSucursal = '';
-                    this.selectedCliente = '';
-                    this.selectedArea = '';
-                },
+                    return;
+                }
 
-                async guardarApertura() {
-                    if (!this.fechaInicio) {
-                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                            detail: {
-                                titulo: "Atención",
-                                mensaje: "Debe seleccionar un mes de campaña.",
-                                tipo: "warning"
-                            }
-                        }));
-                        return;
-                    }
-
-                    const dnisLimpios = this.listaDNIPaste.trim() ?
-                        this.listaDNIPaste.split(/\n|,|;/).map(d => d.trim()).filter(d => d.length > 0) : [];
-
-                    if (this.tipoCursoId == '6' && this.clientesAsignados.length === 0 && dnisLimpios.length ===
-                        0) {
-                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                            detail: {
-                                titulo: "Atención",
-                                mensaje: "Debe seleccionar al menos un cliente o pegar una lista de DNIs.",
-                                tipo: "warning"
-                            }
-                        }));
-                        return;
-                    }
-
-                    if (this.tipoCursoId == '7' && this.areasAsignadas.length === 0 && dnisLimpios.length === 0) {
-                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                            detail: {
-                                titulo: "Atención",
-                                mensaje: "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.",
-                                tipo: "warning"
-                            }
-                        }));
-                        return;
-                    }
-
-                    this.cargando = true;
-
-
-                    try {
-                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
-                            'content');
-                        const headers = {
-                            'Content-Type': 'application/json'
-                        };
-                        if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
-
-                        const payload = {
-                            cod_cursos: this.codigoCurso,
-                            fecha_inicio: this.fechaInicio,
-                            incluir_automatico: this.incluirAutomatico,
-                            sucursal_codigo: this.selectedSucursal,
-                            cliente_id: this.selectedCliente,
-                            area_codigo: this.selectedArea
-                        };
-
-                        if (dnisLimpios.length > 0) {
-                            payload.dnis = dnisLimpios;
+                if (this.tipoCursoId == '7' && this.areasAsignadas.length === 0 && dnisLimpios.length === 0) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                        detail: {
+                            titulo: "Atención",
+                            mensaje: "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.",
+                            tipo: "warning"
                         }
+                    }));
+                    return;
+                }
 
-                        const response = await fetch(`${VITE_URL_APP}/api/cursos/programacion-manual`, {
-                            method: 'POST',
-                            headers: headers,
-                            body: JSON.stringify(payload)
-                        });
+                this.cargando = true;
 
-                        const result = await response.json();
 
-                        if (response.ok && result.success) {
-                            this.closeModal();
-                            // El mensaje viene del controlador indicando si fue masiva o solo apertura de ciclo
-                            const mensajeFinal = result.message || "Operación exitosa";
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                        'content');
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
 
-                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                                detail: {
-                                    mensaje: mensajeFinal,
-                                    tipo: "success",
-                                    toast: true,
-                                    recargar: true
-                                }
-                            }));
-                        } else {
-                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                                detail: {
-                                    titulo: "No se pudo aperturar",
-                                    mensaje: result.message || "Error al procesar la solicitud.",
-                                    tipo: "error"
-                                }
-                            }));
-                        }
-                    } catch (error) {
-                        console.error("Error aperturando curso:", error);
+                    const payload = {
+                        cod_cursos: this.codigoCurso,
+                        fecha_inicio: this.fechaInicio,
+                        incluir_automatico: this.incluirAutomatico,
+                        sucursal_codigo: this.selectedSucursal,
+                        cliente_id: this.selectedCliente,
+                        area_codigo: this.selectedArea
+                    };
+
+                    if (dnisLimpios.length > 0) {
+                        payload.dnis = dnisLimpios;
+                    }
+
+                    const response = await fetch(`${VITE_URL_APP}/api/cursos/programacion-manual`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        this.closeModal();
+                        // El mensaje viene del controlador indicando si fue masiva o solo apertura de ciclo
+                        const mensajeFinal = result.message || "Operación exitosa";
+
                         window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                             detail: {
-                                titulo: "Error de Servidor",
-                                mensaje: "Ocurrió un problema de conectividad con el servidor. Revisa los logs.",
+                                mensaje: mensajeFinal,
+                                tipo: "success",
+                                toast: true,
+                                recargar: true
+                            }
+                        }));
+                    } else {
+                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                            detail: {
+                                titulo: "No se pudo aperturar",
+                                mensaje: result.message || "Error al procesar la solicitud.",
                                 tipo: "error"
                             }
                         }));
-                    } finally {
-                        this.cargando = false;
                     }
+                } catch (error) {
+                    console.error("Error aperturando curso:", error);
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                        detail: {
+                            titulo: "Error de Servidor",
+                            mensaje: "Ocurrió un problema de conectividad con el servidor. Revisa los logs.",
+                            tipo: "error"
+                        }
+                    }));
+                } finally {
+                    this.cargando = false;
                 }
-            };
-        };
-
-        // Escuchador global en Vanilla JS para evadir el Proxy de AlpineJS
-        window.addEventListener('mostrar-alerta', function(e) {
-            if (typeof Swal !== 'undefined') {
-                if (e.detail.toast) {
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
-                    Toast.fire({
-                        icon: e.detail.tipo,
-                        title: e.detail.mensaje
-                    }).then(() => {
-                        if (e.detail.recargar) {
-                            window.location.reload();
-                        }
-                    });
-                } else {
-                    Swal.fire({
-                        title: e.detail.titulo,
-                        text: e.detail.mensaje,
-                        icon: e.detail.tipo,
-                        confirmButtonText: "Entendido",
-                        confirmButtonColor: "#1d4ed8"
-                    }).then(() => {
-                        if (e.detail.recargar) {
-                            window.location.reload();
-                        }
-                    });
-                }
-            } else {
-                const title = e.detail.titulo ? e.detail.titulo + ": " : "";
-                alert(title + e.detail.mensaje);
-                if (e.detail.recargar) window.location.reload();
             }
-        });
+        };
+    };
+
+    // Escuchador global en Vanilla JS para evadir el Proxy de AlpineJS
+    window.addEventListener('mostrar-alerta', function(e) {
+        if (typeof Swal !== 'undefined') {
+            if (e.detail.toast) {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
+                });
+                Toast.fire({
+                    icon: e.detail.tipo,
+                    title: e.detail.mensaje
+                }).then(() => {
+                    if (e.detail.recargar) {
+                        window.location.reload();
+                    }
+                });
+            } else {
+                Swal.fire({
+                    title: e.detail.titulo,
+                    text: e.detail.mensaje,
+                    icon: e.detail.tipo,
+                    confirmButtonText: "Entendido",
+                    confirmButtonColor: "#1d4ed8"
+                }).then(() => {
+                    if (e.detail.recargar) {
+                        window.location.reload();
+                    }
+                });
+            }
+        } else {
+            const title = e.detail.titulo ? e.detail.titulo + ": " : "";
+            alert(title + e.detail.mensaje);
+            if (e.detail.recargar) window.location.reload();
+        }
+    });
     </script>

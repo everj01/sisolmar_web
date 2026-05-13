@@ -525,6 +525,44 @@ class CapacitacionController extends Controller
                 $this->generateProgramaciones($curso, $request->input('fechas_generadas'));
             }
 
+            $ahora = Carbon::now();
+            $inicioTimestamp = $ahora->copy()->startOfDay()->timestamp;
+            $finTimestamp = null;
+
+            if ($request->has('fechas_generadas')) {
+                $fechasArray = json_decode($request->input('fechas_generadas'), true);
+                if (is_array($fechasArray) && count($fechasArray) > 0) {
+                    $inicioTimestamp = Carbon::parse($fechasArray[0]['inicio'])->startOfDay()->timestamp;
+                    $finTimestamp = Carbon::parse($fechasArray[0]['final'])->endOfDay()->timestamp;
+                }
+            }
+
+            if ($finTimestamp === null) {
+                switch ($request->input('frecuencia')) {
+                    case 'MENSUAL':
+                        $finTimestamp = $ahora->copy()->addMonth()->endOfDay()->timestamp;
+                        break;
+                    case 'BIMESTRAL':
+                        $finTimestamp = $ahora->copy()->addMonths(2)->endOfDay()->timestamp;
+                        break;
+                    case 'TRIMESTRAL':
+                        $finTimestamp = $ahora->copy()->addMonths(3)->endOfDay()->timestamp;
+                        break;
+                    case 'CUATRIMESTRAL':
+                        $finTimestamp = $ahora->copy()->addMonths(4)->endOfDay()->timestamp;
+                        break;
+                    case 'SEMESTRAL':
+                        $finTimestamp = $ahora->copy()->addMonths(6)->endOfDay()->timestamp;
+                        break;
+                    case 'ANUAL':
+                        $finTimestamp = $ahora->copy()->addYear()->endOfDay()->timestamp;
+                        break;
+                    default:
+                        $finTimestamp = $ahora->copy()->addMonth()->endOfDay()->timestamp;
+                        break;
+                }
+            }
+
             try {
                 $courseId = $this->createMoodleCourse(
                     $request->input('nombre'),
@@ -536,7 +574,9 @@ class CapacitacionController extends Controller
                     (int) ($request->tiempo ?? 0),
                     (int) ($request->intentos ?? 0),
                     $request->filled('preguntas_word') ? 0 : (int) ($request->cantidad_preguntas ?? 0),
-                    (float) ($request->nota ?? 0.00)
+                    (float) ($request->nota ?? 0.00),
+                    $inicioTimestamp,
+                    $finTimestamp
                 );
 
                 if ($courseId > 0) {
@@ -737,12 +777,12 @@ class CapacitacionController extends Controller
         return (int) $moodleUserId;
     }
 
-    private function createMoodleCourse(string $nombre, int $codigo, ?string $descripcion, ?int $codMoodleArea, ?string $codResponsable, int $aplicaEvaluacion, int $tiempo, int $intentos, int $cantPreguntas, float $nota): ?int
+    private function createMoodleCourse(string $nombre, int $codigo, ?string $descripcion, ?int $codMoodleArea, ?string $codResponsable, int $aplicaEvaluacion, int $tiempo, int $intentos, int $cantPreguntas, float $nota, int $inicio, int $fin): ?int
     {
         $moodleUserId = $this->getOrCreateMoodleUser($codResponsable);
 
         DB::connection('mysql_grupoihb')->statement("
-            CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
+            CALL SP_COURSE_crear_con_examen(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)", [
             $nombre,
             $codigo,
             $descripcion,
@@ -752,7 +792,9 @@ class CapacitacionController extends Controller
             $tiempo,
             $intentos,
             $cantPreguntas,
-            $nota
+            $nota,
+            $inicio,
+            $fin
         ]);
 
         $res = DB::connection('mysql_grupoihb')->select("SELECT @resultado AS resultado");
@@ -2214,6 +2256,26 @@ class CapacitacionController extends Controller
             return response()->json([
                 'success' => true,
                 'areas' => $areas,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener áreas por sistema: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getCursosPorCategoria(int $categoryId): JsonResponse
+    {
+        try {
+            $cursos = DB::connection('mysql_grupoihb')->select("
+            SELECT *
+            FROM grupoihb_see.mdl_course
+            WHERE category = ?
+        ", [$categoryId]);
+            return response()->json([
+                'success' => true,
+                'cursos' => $cursos,
             ]);
         } catch (\Exception $e) {
             return response()->json([

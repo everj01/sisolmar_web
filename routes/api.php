@@ -133,6 +133,7 @@ Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigr
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
 Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
+Route::get('/get-cursos-por-categoria/{categoryId}', [CapacitacionController::class, 'getCursosPorCategoria']);
 Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
 Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
 Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
@@ -141,6 +142,7 @@ Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'get
 Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
 Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
 Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
+
 Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
 Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
 
