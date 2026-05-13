@@ -70,6 +70,7 @@ class RoutingController extends Controller
                 'historial_capacitaciones'=> [CapacitacionController::class,'vistaHistorialCapacitaciones'],
                 'gestion_cursos'=> [CapacitacionController::class,'vistaGestionCursos'],
                 'seguimiento_matriculas'=> [CapacitacionController::class,'vistaSeguimientoMatriculas'],
+                'reportes_capacitaciones'=> [CapacitacionController::class,'vistaReportesCapacitaciones'],
             ]
         ];
 
