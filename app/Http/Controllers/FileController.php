@@ -191,6 +191,18 @@ class FileController extends Controller
             $usuario
         ]);
 
+        // Agregar FECH_INGRE a cada registro para uso futuro
+        if (!empty($data)) {
+            $codigos = array_map(fn($r) => $r->CODI_PERS, $data);
+            $fechas = DB::table('si_solm.dbo.PERSONAL')
+                ->whereIn('CODI_PERS', $codigos)
+                ->pluck('FECH_INGRE', 'CODI_PERS');
+
+            foreach ($data as $row) {
+                $row->FECH_INGRE = $fechas[$row->CODI_PERS] ?? null;
+            }
+        }
+
         // SP de total
         $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?, ?', [
             $codSucursal,
