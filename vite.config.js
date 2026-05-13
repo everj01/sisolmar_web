@@ -3,6 +3,14 @@ import laravel from 'laravel-vite-plugin';
 
 export default defineConfig({
     base: '/',
+     css: {
+          preprocessorOptions: {
+              scss: {
+                  api: 'modern-compiler',
+                  silenceDeprecations: ['import', 'legacy-js-api'],
+              },
+          },
+      },
     plugins: [
         laravel({
             input: [
@@ -12,7 +20,6 @@ export default defineConfig({
                 'resources/css/styles.css',
                 'node_modules/jsvectormap/dist/css/jsvectormap.min.css',
                 'node_modules/glightbox/dist/css/glightbox.min.css',
-                'node_modules/jsvectormap/dist/css/jsvectormap.min.css',
                 'node_modules/quill/dist/quill.core.css',
                 'node_modules/quill/dist/quill.bubble.css',
                 'node_modules/quill/dist/quill.snow.css',
@@ -24,6 +31,10 @@ export default defineConfig({
                 "node_modules/boxicons/dist/boxicons.js",
                 'node_modules/vanilla-datatables/dist/vanilla-dataTables.min.js',
                 'node_modules/vanilla-datatables/dist/vanilla-dataTables.min.css',
+
+                // DJ
+                'resources/js/functions/gestion_dj.js',
+                'resources/js/functions/nueva_dj.js',
 
                 'resources/js/app.js',
                 'resources/js/pages/app-calendar.js',
@@ -44,15 +55,15 @@ export default defineConfig({
                 'resources/js/functions/legajo_comercial.js',
                 'resources/js/functions/legajos_pdf.js',
                 'resources/js/functions/search_legajos.js',
-                'resources/js/functions/gestion_dj.js',
-                'resources/js/functions/nueva_dj.js',
+    
+                
                 'resources/js/functions/reportes.js',
                 'resources/js/functions/notifications.js',
                 /* CAPACITACION */
                 'resources/js/functions/capacitacion/gestion_cursos.js',
                 'resources/js/functions/capacitacion/consulta_matriculas.js',
-                'resources/js/functions/gestion_dj.js',
-                'resources/js/functions/nueva_dj.js',
+               
+     
                 'resources/js/functions/modal_reporte.js',
                 'resources/js/functions/dj_pdf.js',
                 'resources/js/functions/chargefile/reporteAvancesExcel.js',

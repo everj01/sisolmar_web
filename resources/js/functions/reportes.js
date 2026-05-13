@@ -88,6 +88,85 @@ const filtroSucursalDiv = document.getElementById('filtroSucursalDiv');    const
 
         });
     });
+
+
+    // ==============================
+      // MODALES
+      // ==============================
+      const modales = {
+          foliosVigentes:           document.getElementById('modalFoliosVigentes'),
+          foliosPendientesSucursal: document.getElementById('modalFoliosPendientesSucursal'),
+          foliosPorVencer:          document.getElementById('modalFoliosPorVencer'),
+      };
+
+      function abrirModal(modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+      }
+
+      function cerrarModal(modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+      }
+
+      // Cerrar con botón X o Cancelar
+      document.querySelectorAll('.btnCerrarModal').forEach(btn => {
+          btn.addEventListener('click', () => {
+              Object.values(modales).forEach(m => cerrarModal(m));
+          });
+      });
+
+      // Cerrar al hacer click en el overlay
+      Object.values(modales).forEach(modal => {
+          modal.addEventListener('click', (e) => {
+              if (e.target === modal) cerrarModal(modal);
+          });
+      });
+
+      // TomSelect
+      new TomSelect('#filtroClienteSelect', {
+          placeholder: '-Seleccionar-',
+          allowEmptyOption: true
+      });
+
+      new TomSelect('#filtroSucursalSelect', {
+          placeholder: '-Seleccionar-',
+          allowEmptyOption: true
+      });
+
+      // ==============================
+      // BOTONES PRINCIPALES
+      // ==============================
+      const btnVigentes  = document.getElementById('btnReporteFoliosVigentes');
+      const btnPendientes = document.getElementById('btnReporteFoliosPendientesSucursal');
+      const btnPorVencer  = document.getElementById('btnReporteFoliosPorVencer');
+
+      if (btnVigentes)   btnVigentes.addEventListener('click',   () =>
+  abrirModal(modales.foliosVigentes));
+      if (btnPendientes) btnPendientes.addEventListener('click', () =>
+  abrirModal(modales.foliosPendientesSucursal));
+      if (btnPorVencer)  btnPorVencer.addEventListener('click',  () =>
+  abrirModal(modales.foliosPorVencer));
+
+      // ==============================
+      // RADIOS – FOLIOS POR VENCER
+      // ==============================
+      const radios           = document.querySelectorAll('input[name="tipoFiltro"]');
+      const filtroSucursalDiv = document.getElementById('filtroSucursalDiv');
+      const filtroClienteDiv  = document.getElementById('filtroClienteDiv');
+      const filtroCodigoDiv   = document.getElementById('filtroCodigoDiv');
+
+      radios.forEach(radio => {
+          radio.addEventListener('change', function () {
+              filtroSucursalDiv.classList.add('hidden');
+              filtroClienteDiv.classList.add('hidden');
+              filtroCodigoDiv.classList.add('hidden');
+
+              if      (this.value === 'sucursal') filtroSucursalDiv.classList.remove('hidden');
+              else if (this.value === 'cliente')  filtroClienteDiv.classList.remove('hidden');
+              else if (this.value === 'servicio') filtroCodigoDiv.classList.remove('hidden');
+          });
+      });
 });
 
 

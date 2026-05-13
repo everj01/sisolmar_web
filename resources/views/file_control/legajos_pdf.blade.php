@@ -12,7 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<div class="grid 2xl:grid-cols-4 grid-cols-1 gap-6">
+<div class="grid 2xl:grid-cols-4 grid-cols-1 gap-6 pt-8">
 <!-- <div class="grid lg:grid-cols-1 gap-6 mt-8"> -->
     <div class="card custom-card">
         <div class="p-4 md:p-5">
