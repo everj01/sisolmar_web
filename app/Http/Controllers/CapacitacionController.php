@@ -2805,6 +2805,22 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function getPersonalPorSucursal(string $sucursalId): JsonResponse
+    {
+        try {
+            $personal = Consulta::getPersonalPorSucursal($sucursalId);
+            return response()->json([
+                "success" => true,
+                "personal" => $personal,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(
+                ["success" => false, "message" => "Error al obtener personal: " . $e->getMessage()],
+                500,
+            );
+        }
+    }
+
     public function getAreasEncargadas(): JsonResponse
     {
         try {
@@ -3417,6 +3433,7 @@ class CapacitacionController extends Controller
                     "course_codigo" => $c->course_codigo ?? "",
                     "course_nombre" => $c->course_nombre ?? "",
                     "course_corto" => $c->course_corto ?? "",
+                    "area" => $c->course_categoria ?? "",
                     "fecha_inicio_matricula" =>
                         $c->fecha_inicio_matricula ?? null,
                     "fecha_fin_matricula" => $c->fecha_fin_matricula ?? null,

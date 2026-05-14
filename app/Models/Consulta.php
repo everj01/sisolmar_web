@@ -171,4 +171,18 @@ class Consulta extends Model
             ->where("si_solm.dbo.PERSONAL.SUCU_CODIGO", $codSucursal)
             ->get();
     }
+
+    public static function getPersonalPorSucursal($codSucursal)
+    {
+        return DB::table("si_solm.dbo.PERSONAL")
+            ->select(
+                "CODI_PERS as codigo",
+                DB::raw("LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre_completo"),
+                "NRO_DOCU_IDEN as dni",
+            )
+            ->where("PERS_VIGENCIA", "SI")
+            ->where("SUCU_CODIGO", $codSucursal)
+            ->orderBy("APEL_1")
+            ->get();
+    }
 }

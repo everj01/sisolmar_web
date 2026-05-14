@@ -2,6 +2,114 @@ import axios from "axios";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
+async function _cargarLogoExcel(workbook) {
+    try {
+        const response = await fetch("/images/logo_sol.png");
+        const arrayBuffer = await response.arrayBuffer();
+        return workbook.addImage({ buffer: arrayBuffer, extension: "png" });
+    } catch (e) {
+        console.error("Error cargando logo:", e);
+        return null;
+    }
+}
+
+function _estiloEncabezadoExcel(cell) {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+    cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+    };
+}
+
+function _estiloDatoExcel(cell) {
+    cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+    };
+    cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+}
+
+function _blobExcel(buffer) {
+    return new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+}
+
+function _cargarImagen(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+    });
+}
+
+async function _fetchSistemas() {
+    const { data } = await axios.get("/api/get-capacitacion-areas");
+    return data;
+}
+
+async function _fetchAreas(sistemaId) {
+    if (!sistemaId) return [];
+    const { data } = await axios.get(`/api/get-areas-por-sistema/${sistemaId}`);
+    return data.success ? data.areas : [];
+}
+
+function _ordenarPersonal(datos, columna, direccion) {
+    if (columna && direccion) {
+        datos.sort((a, b) => {
+            const valA = (a[columna] || "").toString();
+            const valB = (b[columna] || "").toString();
+            const cmp = valA.localeCompare(valB, "es", { sensitivity: "base" });
+            return direccion === "asc" ? cmp : -cmp;
+        });
+    } else {
+        datos.sort((a, b) =>
+            (a.NombreCompleto || "").localeCompare(
+                b.NombreCompleto || "",
+                "es",
+                { sensitivity: "base" },
+            ),
+        );
+    }
+    return datos;
+}
+
+function _ordenarCursosConFechas(datos, columna, direccion, obtenerValor) {
+    if (columna && direccion) {
+        datos.sort((a, b) => {
+            if (columna === "FechaInicio" || columna === "FechaFin") {
+                const va = obtenerValor(a, columna);
+                const vb = obtenerValor(b, columna);
+                const na = va == null ? -Infinity : va;
+                const nb = vb == null ? -Infinity : vb;
+                return (direccion === "asc" ? 1 : -1) * (na - nb);
+            }
+            const valA = obtenerValor(a, columna);
+            const valB = obtenerValor(b, columna);
+            const cmp = valA.localeCompare(valB, "es", {
+                sensitivity: "base",
+            });
+            return direccion === "asc" ? cmp : -cmp;
+        });
+    } else {
+        datos.sort((a, b) =>
+            (a.NombreCurso || "").localeCompare(
+                b.NombreCurso || "",
+                "es",
+                { sensitivity: "base" },
+            ),
+        );
+    }
+    return datos;
+}
+
 export default document.addEventListener("alpine:init", () => {
     Alpine.data("reportesApp", () => ({
         abrirModalReporte() {
@@ -9,6 +117,9 @@ export default document.addEventListener("alpine:init", () => {
         },
         abrirModalCursosArea() {
             window.dispatchEvent(new CustomEvent("abrir-cursos-area"));
+        },
+        abrirModalRecordPersonal() {
+            window.dispatchEvent(new CustomEvent("abrir-record-personal"));
         },
     }));
 
@@ -77,9 +188,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarSistemas() {
             this.loadingSistemas = true;
             try {
-                const response = await axios.get("/api/get-capacitacion-areas");
-
-                this.sistemas = response.data;
+                this.sistemas = await _fetchSistemas();
             } catch (error) {
                 console.error(error);
                 this.sistemas = [];
@@ -97,15 +206,7 @@ export default document.addEventListener("alpine:init", () => {
 
             this.loadingAreas = true;
             try {
-                const response = await axios.get(
-                    `/api/get-areas-por-sistema/${sistemaId}`,
-                );
-
-                if (response.data.success) {
-                    this.areas = response.data.areas;
-                } else {
-                    this.areas = [];
-                }
+                this.areas = await _fetchAreas(sistemaId);
             } catch (error) {
                 console.error(error);
                 this.areas = [];
@@ -292,30 +393,13 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         get personalPaginado() {
-            let datos = [...this.personal];
-
-            if (this.sortColumn && this.sortDirection) {
-                datos.sort((a, b) => {
-                    const valA = (a[this.sortColumn] || "").toString();
-                    const valB = (b[this.sortColumn] || "").toString();
-                    const cmp = valA.localeCompare(valB, "es", {
-                        sensitivity: "base",
-                    });
-                    return this.sortDirection === "asc" ? cmp : -cmp;
-                });
-            } else {
-                datos.sort((a, b) =>
-                    (a.NombreCompleto || "").localeCompare(
-                        b.NombreCompleto || "",
-                        "es",
-                        { sensitivity: "base" },
-                    ),
-                );
-            }
-
+            const datos = _ordenarPersonal(
+                [...this.personal],
+                this.sortColumn,
+                this.sortDirection,
+            );
             const start = (this.currentPage - 1) * this.perPage;
             const end = start + this.perPage;
-
             return datos.slice(start, end);
         },
 
@@ -336,19 +420,7 @@ export default document.addEventListener("alpine:init", () => {
 
             const workbook = new ExcelJS.Workbook();
 
-            let logoImageId = null;
-
-            try {
-                const response = await fetch("/images/logo_sol.png");
-                const arrayBuffer = await response.arrayBuffer();
-
-                logoImageId = workbook.addImage({
-                    buffer: arrayBuffer,
-                    extension: "png",
-                });
-            } catch (e) {
-                console.error("Error cargando logo:", e);
-            }
+            const logoImageId = await _cargarLogoExcel(workbook);
 
             const sheet = workbook.addWorksheet("Personal");
 
@@ -433,30 +505,7 @@ export default document.addEventListener("alpine:init", () => {
 
             headerRow.values = headers;
 
-            headerRow.eachCell((cell) => {
-                cell.font = {
-                    bold: true,
-                    color: { argb: "FFFFFFFF" },
-                };
-
-                cell.fill = {
-                    type: "pattern",
-                    pattern: "solid",
-                    fgColor: { argb: "FF1F4E79" },
-                };
-
-                cell.alignment = {
-                    vertical: "middle",
-                    horizontal: "center",
-                };
-
-                cell.border = {
-                    top: { style: "thin" },
-                    left: { style: "thin" },
-                    bottom: { style: "thin" },
-                    right: { style: "thin" },
-                };
-            });
+            headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
 
             const dataOrdenada = [...this.personal].sort((a, b) =>
                 (a.NombreCompleto || "").localeCompare(b.NombreCompleto || ""),
@@ -472,20 +521,7 @@ export default document.addEventListener("alpine:init", () => {
                     p.Estado,
                 ]);
 
-                row.eachCell((cell) => {
-                    cell.border = {
-                        top: { style: "thin" },
-                        left: { style: "thin" },
-                        bottom: { style: "thin" },
-                        right: { style: "thin" },
-                    };
-
-                    cell.alignment = {
-                        vertical: "middle",
-                        horizontal: "left",
-                        wrapText: true,
-                    };
-                });
+                row.eachCell((cell) => _estiloDatoExcel(cell));
             });
 
             sheet.columns = [
@@ -503,10 +539,7 @@ export default document.addEventListener("alpine:init", () => {
             };
 
             const buffer = await workbook.xlsx.writeBuffer();
-
-            const blob = new Blob([buffer], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            });
+            const blob = _blobExcel(buffer);
 
             saveAs(blob, `reporte_${nombreCurso}_${this.selectedEstado}.xlsx`);
 
@@ -539,17 +572,7 @@ export default document.addEventListener("alpine:init", () => {
                 (a) => a.codModdle == this.selectedArea,
             );
 
-            // Logo image area
-            const loadImage = (url) => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.onerror = () => resolve(null);
-                    img.src = url;
-                });
-            };
-
-            const logoSol = await loadImage("/images/logo_sol.png");
+            const logoSol = await _cargarImagen("/images/logo_sol.png");
 
             let logoBottomY = 26;
             let logoWidth = 60;
@@ -784,8 +807,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarSistemas() {
             this.loadingSistemas = true;
             try {
-                const response = await axios.get("/api/get-capacitacion-areas");
-                this.sistemas = response.data;
+                this.sistemas = await _fetchSistemas();
             } catch (error) {
                 console.error(error);
                 this.sistemas = [];
@@ -802,14 +824,7 @@ export default document.addEventListener("alpine:init", () => {
             }
             this.loadingAreas = true;
             try {
-                const response = await axios.get(
-                    `/api/get-areas-por-sistema/${sistemaId}`,
-                );
-                if (response.data.success) {
-                    this.areas = response.data.areas;
-                } else {
-                    this.areas = [];
-                }
+                this.areas = await _fetchAreas(sistemaId);
             } catch (error) {
                 console.error(error);
                 this.areas = [];
@@ -955,41 +970,12 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         get cursosPaginado() {
-            let datos = [...this.cursosFilas];
-
-            if (this.sortColumn && this.sortDirection) {
-                datos.sort((a, b) => {
-                    if (
-                        this.sortColumn === "FechaInicio" ||
-                        this.sortColumn === "FechaFin"
-                    ) {
-                        const va = this.valorOrden(a, this.sortColumn);
-                        const vb = this.valorOrden(b, this.sortColumn);
-                        const na =
-                            va === null || va === undefined ? -Infinity : va;
-                        const nb =
-                            vb === null || vb === undefined ? -Infinity : vb;
-                        const cmp = na - nb;
-                        return this.sortDirection === "asc" ? cmp : -cmp;
-                    }
-
-                    const valA = this.valorOrden(a, this.sortColumn);
-                    const valB = this.valorOrden(b, this.sortColumn);
-                    const cmp = valA.localeCompare(valB, "es", {
-                        sensitivity: "base",
-                    });
-                    return this.sortDirection === "asc" ? cmp : -cmp;
-                });
-            } else {
-                datos.sort((a, b) =>
-                    (a.NombreCurso || "").localeCompare(
-                        b.NombreCurso || "",
-                        "es",
-                        { sensitivity: "base" },
-                    ),
-                );
-            }
-
+            const datos = _ordenarCursosConFechas(
+                [...this.cursosFilas],
+                this.sortColumn,
+                this.sortDirection,
+                (fila, col) => this.valorOrden(fila, col),
+            );
             const start = (this.currentPage - 1) * this.perPage;
             return datos.slice(start, start + this.perPage);
         },
@@ -1034,42 +1020,12 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         obtenerCursosFilasOrdenadosParaExport() {
-            let datos = [...this.cursosFilas];
-
-            if (this.sortColumn && this.sortDirection) {
-                datos.sort((a, b) => {
-                    if (
-                        this.sortColumn === "FechaInicio" ||
-                        this.sortColumn === "FechaFin"
-                    ) {
-                        const va = this.valorOrden(a, this.sortColumn);
-                        const vb = this.valorOrden(b, this.sortColumn);
-                        const na =
-                            va === null || va === undefined ? -Infinity : va;
-                        const nb =
-                            vb === null || vb === undefined ? -Infinity : vb;
-                        const cmp = na - nb;
-                        return this.sortDirection === "asc" ? cmp : -cmp;
-                    }
-
-                    const valA = this.valorOrden(a, this.sortColumn);
-                    const valB = this.valorOrden(b, this.sortColumn);
-                    const cmp = valA.localeCompare(valB, "es", {
-                        sensitivity: "base",
-                    });
-                    return this.sortDirection === "asc" ? cmp : -cmp;
-                });
-            } else {
-                datos.sort((a, b) =>
-                    (a.NombreCurso || "").localeCompare(
-                        b.NombreCurso || "",
-                        "es",
-                        { sensitivity: "base" },
-                    ),
-                );
-            }
-
-            return datos;
+            return _ordenarCursosConFechas(
+                [...this.cursosFilas],
+                this.sortColumn,
+                this.sortDirection,
+                (fila, col) => this.valorOrden(fila, col),
+            );
         },
 
         async exportarExcelHistorialCursos() {
@@ -1096,17 +1052,7 @@ export default document.addEventListener("alpine:init", () => {
 
             const workbook = new ExcelJS.Workbook();
 
-            let logoImageId = null;
-            try {
-                const response = await fetch("/images/logo_sol.png");
-                const arrayBuffer = await response.arrayBuffer();
-                logoImageId = workbook.addImage({
-                    buffer: arrayBuffer,
-                    extension: "png",
-                });
-            } catch (e) {
-                console.error("Error cargando logo:", e);
-            }
+            const logoImageId = await _cargarLogoExcel(workbook);
 
             const sheet = workbook.addWorksheet("Historial");
 
@@ -1184,30 +1130,7 @@ export default document.addEventListener("alpine:init", () => {
 
             headerRow.values = headers;
 
-            headerRow.eachCell((cell) => {
-                cell.font = {
-                    bold: true,
-                    color: { argb: "FFFFFFFF" },
-                };
-
-                cell.fill = {
-                    type: "pattern",
-                    pattern: "solid",
-                    fgColor: { argb: "FF1F4E79" },
-                };
-
-                cell.alignment = {
-                    vertical: "middle",
-                    horizontal: "center",
-                };
-
-                cell.border = {
-                    top: { style: "thin" },
-                    left: { style: "thin" },
-                    bottom: { style: "thin" },
-                    right: { style: "thin" },
-                };
-            });
+            headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
 
             filasExport.forEach((fila, i) => {
                 const row = sheet.addRow([
@@ -1221,20 +1144,7 @@ export default document.addEventListener("alpine:init", () => {
                     this.observacionParaExportacion(fila),
                 ]);
 
-                row.eachCell((cell) => {
-                    cell.border = {
-                        top: { style: "thin" },
-                        left: { style: "thin" },
-                        bottom: { style: "thin" },
-                        right: { style: "thin" },
-                    };
-
-                    cell.alignment = {
-                        vertical: "middle",
-                        horizontal: "left",
-                        wrapText: true,
-                    };
-                });
+                row.eachCell((cell) => _estiloDatoExcel(cell));
             });
 
             sheet.columns = [
@@ -1254,9 +1164,7 @@ export default document.addEventListener("alpine:init", () => {
             };
 
             const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            });
+            const blob = _blobExcel(buffer);
 
             const slug = (nombreArea || "historial")
                 .toString()
@@ -1301,16 +1209,7 @@ export default document.addEventListener("alpine:init", () => {
                 (a) => String(a.codModdle) === String(this.selectedArea),
             );
 
-            const loadImage = (url) => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.onerror = () => resolve(null);
-                    img.src = url;
-                });
-            };
-
-            const logoSol = await loadImage("/images/logo_sol.png");
+            const logoSol = await _cargarImagen("/images/logo_sol.png");
 
             let logoBottomY = 26;
             const logoWidth = 60;
@@ -1548,6 +1447,374 @@ export default document.addEventListener("alpine:init", () => {
             this.sortColumn = null;
             this.sortDirection = null;
             this.cacheReportes = {};
+        },
+    }));
+
+    Alpine.data("modalReporteRecordDeCapacPorPersonal", () => ({
+        open: false,
+        view: "filters",
+
+        selectedSistema: "",
+        selectedArea: "",
+        selectedCurso: "",
+        selectedFechaInicio: "",
+        selectedFechaFin: "",
+        selectedSucursal: "",
+        selectedPersonal: "",
+        searchPersonal: "",
+        selectedEstado: "PENDIENTE",
+
+        sistemas: [],
+        areas: [],
+        cursos: [],
+        todosLosCursos: [],
+        fechasInicio: [],
+        fechasFin: [],
+        sucursales: [],
+        personalOptions: [],
+        personalRecord: [],
+
+        loadingSistemas: false,
+        loadingAreas: false,
+        loadingCursos: false,
+        loadingSucursales: false,
+        loadingPersonal: false,
+        loadingRecord: false,
+
+        currentPage: 1,
+        perPage: 15,
+
+        sortColumn: null,
+        sortDirection: null,
+
+        async init() {
+            window.addEventListener("abrir-record-personal", () => {
+                this.abrir();
+            });
+            await this.cargarSistemas();
+            await this.cargarSucursales();
+        },
+
+        async cargarSistemas() {
+            this.loadingSistemas = true;
+            try {
+                this.sistemas = await _fetchSistemas();
+            } catch (error) {
+                console.error(error);
+                this.sistemas = [];
+            } finally {
+                this.loadingSistemas = false;
+            }
+        },
+
+        async cargarAreas(sistemaId) {
+            if (!sistemaId) {
+                this.areas = [];
+                this.selectedArea = "";
+                return;
+            }
+            this.loadingAreas = true;
+            try {
+                this.areas = await _fetchAreas(sistemaId);
+            } catch (error) {
+                console.error(error);
+                this.areas = [];
+            } finally {
+                this.loadingAreas = false;
+            }
+        },
+
+        async cargarSucursales() {
+            this.loadingSucursales = true;
+            try {
+                const response = await axios.get("/api/get-sucursales");
+                if (response.data.success) {
+                    this.sucursales = response.data.sucursales;
+                }
+            } catch (error) {
+                console.error(error);
+                this.sucursales = [];
+            } finally {
+                this.loadingSucursales = false;
+            }
+        },
+
+        async cargarPersonalPorSucursal() {
+            if (!this.selectedSucursal) {
+                this.personalOptions = [];
+                this.selectedPersonal = "";
+                return;
+            }
+            this.loadingPersonal = true;
+            try {
+                const response = await axios.get(
+                    `/api/get-personal-por-sucursal/${this.selectedSucursal}`,
+                );
+                if (response.data.success) {
+                    this.personalOptions = response.data.personal;
+                } else {
+                    this.personalOptions = [];
+                }
+            } catch (error) {
+                console.error(error);
+                this.personalOptions = [];
+            } finally {
+                this.loadingPersonal = false;
+            }
+        },
+
+        async cargarCursos(categoriaId) {
+            if (!categoriaId) {
+                this.cursos = [];
+                this.todosLosCursos = [];
+                this.fechasInicio = [];
+                this.fechasFin = [];
+                this.selectedCurso = "";
+                return;
+            }
+            this.loadingCursos = true;
+            try {
+                const response = await axios.get(
+                    `/api/get-cursos-por-categoria/${categoriaId}`,
+                );
+                if (response.data.success) {
+                    this.todosLosCursos = response.data.cursos;
+                    this.cursos = response.data.cursos;
+
+                    const inicioUnicos = [];
+                    const finUnicos = [];
+
+                    this.todosLosCursos.forEach((curso) => {
+                        const inicio = this.formatearFecha(curso.startdate);
+                        const fin = this.formatearFecha(curso.enddate);
+                        if (inicio && !inicioUnicos.some((f) => f.fecha === inicio)) {
+                            inicioUnicos.push({ fecha: inicio });
+                        }
+                        if (fin && !finUnicos.some((f) => f.fecha === fin)) {
+                            finUnicos.push({ fecha: fin });
+                        }
+                    });
+
+                    this.fechasInicio = inicioUnicos;
+                    this.fechasFin = finUnicos;
+                } else {
+                    this.cursos = [];
+                    this.todosLosCursos = [];
+                    this.fechasInicio = [];
+                    this.fechasFin = [];
+                }
+            } catch (error) {
+                console.error(error);
+                this.cursos = [];
+                this.todosLosCursos = [];
+                this.fechasInicio = [];
+                this.fechasFin = [];
+            } finally {
+                this.loadingCursos = false;
+            }
+        },
+
+        filtrarCursosPorFecha() {
+            this.cursos = this.todosLosCursos.filter((curso) => {
+                const fechaInicio = this.formatearFecha(curso.startdate);
+                const fechaFin = this.formatearFecha(curso.enddate);
+                if (this.selectedFechaInicio && fechaInicio !== this.selectedFechaInicio) return false;
+                if (this.selectedFechaFin && fechaFin !== this.selectedFechaFin) return false;
+                return true;
+            });
+            this.selectedCurso = "";
+        },
+
+        formatearFecha(timestamp) {
+            if (!timestamp || timestamp <= 0) return "";
+            const fecha = new Date(timestamp * 1000);
+            const dia = String(fecha.getDate()).padStart(2, "0");
+            const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+            const anio = fecha.getFullYear();
+            return `${dia}/${mes}/${anio}`;
+        },
+
+        async obtenerRecord() {
+            if (!this.selectedPersonal) {
+                Swal.fire("Atención", "Seleccione un personal.", "warning");
+                return;
+            }
+
+            const personal = this.personalOptions.find(
+                (p) => p.codigo == this.selectedPersonal,
+            );
+            if (!personal || !personal.dni) {
+                Swal.fire(
+                    "Atención",
+                    "El personal seleccionado no tiene DNI registrado.",
+                    "warning",
+                );
+                return;
+            }
+
+            this.loadingRecord = true;
+            this.view = "resultados";
+            this.personalRecord = [];
+
+            try {
+                const response = await axios.get(
+                    `/api/get-cursos-alumno/${personal.dni}`,
+                );
+
+                if (response.data.success) {
+                    let cursos = response.data.cursos.map((c) => ({
+                        nombre_curso: c.course_nombre,
+                        area: (this.areas.find(
+                            (a) => a.codModdle == c.area,
+                        ) || {}).Area || c.area,
+                        fecha_inicio: c.fecha_inicio_matricula || "",
+                        fecha_final: c.fecha_fin_matricula || "",
+                        fecha_matricula: c.fecha_matricula || "",
+                        tipo_matricula: "",
+                        categoria: c.area,
+                        estado: c.estado === "sin_iniciar"
+                            ? "PENDIENTE"
+                            : c.estado === "finalizado"
+                              ? "APROBADO"
+                              : c.estado === "en_curso"
+                                ? "EN_CURSO"
+                                : (c.estado || "").toUpperCase(),
+                    }));
+
+                    if (this.selectedArea) {
+                        cursos = cursos.filter(
+                            (c) => c.categoria == this.selectedArea,
+                        );
+                    }
+
+                    if (this.selectedEstado === "PENDIENTE") {
+                        cursos = cursos.filter(
+                            (c) => c.estado === "PENDIENTE",
+                        );
+                    } else if (this.selectedEstado === "APROBADO") {
+                        cursos = cursos.filter(
+                            (c) => c.estado === "APROBADO",
+                        );
+                    } else if (this.selectedEstado === "DESAPROBADO") {
+                        cursos = cursos.filter(
+                            (c) => c.estado === "DESAPROBADO",
+                        );
+                    }
+
+                    this.personalRecord = cursos;
+                } else {
+                    this.personalRecord = [];
+                }
+            } catch (error) {
+                console.error(error);
+                this.personalRecord = [];
+                Swal.fire(
+                    "Error",
+                    "No se pudo obtener el récord del personal.",
+                    "error",
+                );
+            } finally {
+                this.loadingRecord = false;
+                this.currentPage = 1;
+                this.sortColumn = null;
+                this.sortDirection = null;
+            }
+        },
+
+        abrir() {
+            this.open = true;
+        },
+
+        cerrar() {
+            this.open = false;
+            this.view = "filters";
+            this.selectedSistema = "";
+            this.selectedArea = "";
+            this.selectedCurso = "";
+            this.selectedFechaInicio = "";
+            this.selectedFechaFin = "";
+            this.selectedSucursal = "";
+            this.selectedPersonal = "";
+            this.searchPersonal = "";
+            this.selectedEstado = "PENDIENTE";
+            this.areas = [];
+            this.cursos = [];
+            this.todosLosCursos = [];
+            this.fechasInicio = [];
+            this.fechasFin = [];
+            this.personalOptions = [];
+            this.personalRecord = [];
+            this.currentPage = 1;
+            this.loadingPersonal = false;
+            this.loadingRecord = false;
+        },
+
+        volverAFiltros() {
+            this.view = "filters";
+            this.personalRecord = [];
+            this.currentPage = 1;
+            this.sortColumn = null;
+            this.sortDirection = null;
+        },
+
+        ordenar(columna) {
+            if (this.sortColumn === columna) {
+                if (this.sortDirection === "asc") {
+                    this.sortDirection = "desc";
+                } else {
+                    this.sortColumn = null;
+                    this.sortDirection = null;
+                }
+            } else {
+                this.sortColumn = columna;
+                this.sortDirection = "asc";
+            }
+            this.currentPage = 1;
+        },
+
+        get recordPaginado() {
+            let datos = [...this.personalRecord];
+            if (this.sortColumn && this.sortDirection) {
+                datos.sort((a, b) => {
+                    const valA = (a[this.sortColumn] || "").toString();
+                    const valB = (b[this.sortColumn] || "").toString();
+                    const cmp = valA.localeCompare(valB, "es", { sensitivity: "base" });
+                    return this.sortDirection === "asc" ? cmp : -cmp;
+                });
+            } else {
+                datos.sort((a, b) =>
+                    (a.nombre_curso || "").localeCompare(b.nombre_curso || "", "es", { sensitivity: "base" }),
+                );
+            }
+            const start = (this.currentPage - 1) * this.perPage;
+            const end = start + this.perPage;
+            return datos.slice(start, end);
+        },
+
+        get totalPages() {
+            return Math.ceil(this.personalRecord.length / this.perPage);
+        },
+
+        get filteredPersonalOptions() {
+            if (!this.searchPersonal.trim()) return this.personalOptions;
+            const q = this.searchPersonal
+                .trim()
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+            return this.personalOptions.filter(
+                (p) =>
+                    (p.nombre_completo || "")
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .includes(q) || (p.dni || "").includes(q),
+            );
+        },
+
+        get nombrePersonal() {
+            const p = this.personalOptions.find((o) => o.codigo == this.selectedPersonal);
+            return p ? p.nombre_completo : "";
         },
     }));
 });

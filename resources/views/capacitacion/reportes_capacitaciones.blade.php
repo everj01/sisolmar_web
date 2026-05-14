@@ -56,7 +56,8 @@
                 <h3 class="text-lg font-semibold text-default-900 mb-2">Reporte por capacitación</h3>
                 <p class="text-sm text-default-500 leading-relaxed flex-grow mb-4">
                     Filtre por sistema de gestión, área, sucursal, período y curso para obtener el listado del personal
-                    con su estado en la capacitación. Visualice, ordene por columnas y exporte los resultados a Excel o PDF.
+                    con su estado en la capacitación. Visualice, ordene por columnas y exporte los resultados a Excel o
+                    PDF.
                 </p>
                 <button @click="abrirModalReporte()"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm w-full">
@@ -78,9 +79,32 @@
                 </div>
                 <h3 class="text-lg font-semibold text-default-900 mb-2">Reporte de capacitaciones</h3>
                 <p class="text-sm text-default-500 leading-relaxed flex-grow mb-4">
-                    Obtenga todos los cursos de capacitación que tuvo una área en particular dentro de un periodo específico.
+                    Obtenga el listado completo de cursos de capacitación filtrados por sistema de gestión, área responsable y período. Consulte los detalles de cada curso y exporte a Excel o PDF.
                 </p>
                 <button @click="abrirModalCursosArea()"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm w-full">
+                    Generar reporte
+                </button>
+            </div>
+        </div>
+
+        <div
+            class="card-hover relative overflow-hidden rounded-2xl border border-default-200/60 bg-white shadow-sm group">
+            <div
+                class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            </div>
+            <div class="relative p-6 flex flex-col h-full">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <i class="ti ti-history text-2xl text-primary"></i>
+                    </div>
+                </div>
+                <h3 class="text-lg font-semibold text-default-900 mb-2">Reporte de récord de capacitaciones por personal
+                </h3>
+                <p class="text-sm text-default-500 leading-relaxed flex-grow mb-4">
+                    Consulte el historial completo de capacitaciones de un colaborador específico. Seleccione la sucursal, busque por nombre o DNI, y filtre por sistema de gestión, área y estado del curso.
+                </p>
+                <button @click="abrirModalRecordPersonal()"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm w-full">
                     Generar reporte
                 </button>
@@ -133,7 +157,8 @@
                     <select x-model="selectedSistema" @change="cargarAreas($event.target.value)"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                         <option value=""
-                            x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')"></option>
+                            x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')">
+                        </option>
                         <template x-for="option in sistemas" :key="option.codigo">
                             <option :value="option.codigo" x-text="option.descripcion"></option>
                         </template>
@@ -147,7 +172,8 @@
                     <select x-model="selectedArea" @change="cargarCursos($event.target.value)"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                         <option value=""
-                            x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')"></option>
+                            x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')">
+                        </option>
                         <template x-for="option in areas" :key="option.codModdle">
                             <option :value="option.codModdle" x-text="option.Area"></option>
                         </template>
@@ -161,7 +187,8 @@
                     <select x-model="selectedSucursal"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                         <option value=""
-                            x-text="loadingSucursales ? 'Cargando sucursales...' : (sucursales.length === 0 ? 'Sin sucursales disponibles' : 'Seleccione Sucursal')"></option>
+                            x-text="loadingSucursales ? 'Cargando sucursales...' : (sucursales.length === 0 ? 'Sin sucursales disponibles' : 'Seleccione Sucursal')">
+                        </option>
                         <template x-for="option in sucursales" :key="option.codigo">
                             <option :value="option.codigo" x-text="option.sucursal"></option>
                         </template>
@@ -176,7 +203,8 @@
                         <select x-model="selectedFechaInicio" @change="filtrarCursosPorFecha()"
                             class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                             <option value=""
-                                x-text="!selectedArea ? 'Seleccione' : (fechasInicio.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')"></option>
+                                x-text="!selectedArea ? 'Seleccione' : (fechasInicio.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')">
+                            </option>
                             <template x-for="option in fechasInicio" :key="option.fecha">
                                 <option :value="option.fecha" x-text="option.fecha"></option>
                             </template>
@@ -189,7 +217,8 @@
                         <select x-model="selectedFechaFin" @change="filtrarCursosPorFecha()"
                             class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                             <option value=""
-                                x-text="!selectedArea ? 'Seleccione' : (fechasFin.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')"></option>
+                                x-text="!selectedArea ? 'Seleccione' : (fechasFin.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')">
+                            </option>
                             <template x-for="option in fechasFin" :key="option.fecha">
                                 <option :value="option.fecha" x-text="option.fecha"></option>
                             </template>
@@ -204,7 +233,8 @@
                     <select x-model="selectedCurso"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                         <option value=""
-                            x-text="!selectedArea ? 'Seleccione Curso' : (loadingCursos ? 'Cargando cursos...' : (cursos.length > 0 ? cursos.length + ' resultado(s)' : 'Sin cursos disponibles'))"></option>
+                            x-text="!selectedArea ? 'Seleccione Curso' : (loadingCursos ? 'Cargando cursos...' : (cursos.length > 0 ? cursos.length + ' resultado(s)' : 'Sin cursos disponibles'))">
+                        </option>
                         <template x-for="option in cursos" :key="option.id">
                             <option :value="option.id" x-text="option.fullname"></option>
                         </template>
@@ -255,31 +285,36 @@
                                         <th @click="ordenar('CodigoPers')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             Código Pers.
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'CodigoPers' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'CodigoPers' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'CodigoPers' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('NombreCompleto')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             Nombre completo
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'NombreCompleto' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'NombreCompleto' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'NombreCompleto' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('DNI')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             DNI
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'DNI' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'DNI' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'DNI' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('TipoTrabajador')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             Tipo trabajador
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'TipoTrabajador' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'TipoTrabajador' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'TipoTrabajador' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('Estado')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             Estado
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'Estado' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'Estado' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'Estado' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                     </tr>
@@ -297,14 +332,11 @@
                                             <td class="px-4 py-3 text-default-600 whitespace-nowrap"
                                                 x-text="persona.TipoTrabajador"></td>
                                             <td class="px-4 py-3">
-                                                <span
-                                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
-                                                    :class="{
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-medium" :class="{
                                                         'bg-amber-50 text-amber-700 border border-amber-200': persona.Estado === 'PENDIENTE',
                                                         'bg-green-50 text-green-700 border border-green-200': persona.Estado === 'APROBADO',
                                                         'bg-red-50 text-red-700 border border-red-200': persona.Estado === 'DESAPROBADO'
-                                                    }"
-                                                    x-text="persona.Estado">
+                                                    }" x-text="persona.Estado">
                                                 </span>
                                             </td>
                                         </tr>
@@ -428,7 +460,8 @@
                     <select x-model="selectedSistema" @change="cargarAreas($event.target.value)"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                         <option value=""
-                            x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')"></option>
+                            x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')">
+                        </option>
                         <template x-for="option in sistemas" :key="option.codigo">
                             <option :value="option.codigo" x-text="option.descripcion"></option>
                         </template>
@@ -442,7 +475,8 @@
                     <select x-model="selectedArea"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                         <option value=""
-                            x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')"></option>
+                            x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')">
+                        </option>
                         <template x-for="option in areas" :key="option.codModdle">
                             <option :value="option.codModdle" x-text="option.Area"></option>
                         </template>
@@ -498,43 +532,50 @@
                                         <th @click="ordenar('SistemaGestion')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             Sistema de gestión
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'SistemaGestion' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'SistemaGestion' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'SistemaGestion' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('Area')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
                                             Área
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'Area' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'Area' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'Area' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('NombreCurso')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors min-w-[12rem]">
                                             Nombre de curso
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'NombreCurso' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'NombreCurso' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'NombreCurso' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('FechaInicio')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors whitespace-nowrap">
                                             Fecha de inicio
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'FechaInicio' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'FechaInicio' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'FechaInicio' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('FechaFin')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors whitespace-nowrap">
                                             Fecha de fin
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'FechaFin' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'FechaFin' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'FechaFin' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('Responsable')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors min-w-[10rem]">
                                             Responsable
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'Responsable' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'Responsable' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'Responsable' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                         <th @click="ordenar('Descripcion')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors min-w-[10rem]">
                                             Descripción
-                                            <span class="ml-1 text-xs" :class="sortColumn === 'Descripcion' ? 'text-primary' : 'text-default-300'"
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'Descripcion' ? 'text-primary' : 'text-default-300'"
                                                 x-text="sortColumn === 'Descripcion' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
                                         </th>
                                     </tr>
@@ -546,14 +587,19 @@
                                                 x-text="((currentPage - 1) * perPage) + index + 1"></td>
                                             <td class="px-4 py-3 text-default-800" x-text="fila.SistemaGestion"></td>
                                             <td class="px-4 py-3 text-default-800" x-text="fila.Area"></td>
-                                            <td class="px-4 py-3 text-default-800 font-medium" x-text="fila.NombreCurso"></td>
-                                            <td class="px-4 py-3 text-default-600 whitespace-nowrap" x-text="fila.FechaInicio"></td>
-                                            <td class="px-4 py-3 text-default-600 whitespace-nowrap" x-text="fila.FechaFin"></td>
+                                            <td class="px-4 py-3 text-default-800 font-medium"
+                                                x-text="fila.NombreCurso"></td>
+                                            <td class="px-4 py-3 text-default-600 whitespace-nowrap"
+                                                x-text="fila.FechaInicio"></td>
+                                            <td class="px-4 py-3 text-default-600 whitespace-nowrap"
+                                                x-text="fila.FechaFin"></td>
                                             <td class="px-4 py-3 text-default-800 max-w-[14rem]">
-                                                <span class="line-clamp-2" x-text="fila.Responsable" :title="fila.Responsable"></span>
+                                                <span class="line-clamp-2" x-text="fila.Responsable"
+                                                    :title="fila.Responsable"></span>
                                             </td>
                                             <td class="px-4 py-3 text-default-600 max-w-xs">
-                                                <span class="line-clamp-2" x-text="fila.Descripcion" :title="fila.Descripcion"></span>
+                                                <span class="line-clamp-2" x-text="fila.Descripcion"
+                                                    :title="fila.Descripcion"></span>
                                             </td>
                                         </tr>
                                     </template>
@@ -600,8 +646,7 @@
                             class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
                             Cancelar
                         </button>
-                        <button type="button" @click="obtenerCursos()"
-                            :disabled="loadingCursos || !selectedArea"
+                        <button type="button" @click="obtenerCursos()" :disabled="loadingCursos || !selectedArea"
                             class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                             <i class="ti ti-arrow-right text-sm"></i>
                             <span x-text="loadingCursos ? 'Cargando...' : 'Obtener cursos'"></span>
@@ -628,6 +673,282 @@
                                 Exportar PDF
                             </button>
                         </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Récord de Capacitaciones por Personal --}}
+    <div id="modal-reporte-record-de-capac-por-personal" x-data="modalReporteRecordDeCapacPorPersonal" x-show="open"
+        x-cloak class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        style="background: rgba(36,39,70,0.45);">
+
+        <div :class="view === 'resultados' ? 'max-w-6xl' : 'max-w-xl'"
+            class="flex flex-col w-full bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 animate-fade-in transition-all duration-300">
+
+            <div class="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
+                <div class="flex items-center gap-3.5">
+                    <div
+                        class="relative flex-shrink-0 w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm">
+                        <i class="ti ti-history text-lg"></i>
+                    </div>
+                    <div>
+                        <div x-show="view === 'filters'">
+                            <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                                Récord de capacitaciones por personal
+                            </h3>
+                            <p class="text-xs text-default-500 mt-0.5">Filtre por sistema, área, sucursal y personal</p>
+                        </div>
+                        <div x-show="view === 'resultados'">
+                            <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                                Récord encontrado
+                                <span x-text="'de ' + nombrePersonal"></span>
+                            </h3>
+                            <p class="text-xs text-default-500 mt-0.5">Cursos del personal según filtros aplicados</p>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" @click="cerrar()"
+                    class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
+                    <i class="ti ti-x text-base"></i>
+                </button>
+            </div>
+
+            <div x-show="view === 'filters'" class="px-6 pb-1 space-y-4">
+                <div>
+                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                        Sistema de gestión <span class="text-danger">*</span>
+                    </label>
+                    <select x-model="selectedSistema" @change="cargarAreas($event.target.value)"
+                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                        <option value=""
+                            x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')">
+                        </option>
+                        <template x-for="option in sistemas" :key="option.codigo">
+                            <option :value="option.codigo" x-text="option.descripcion"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                        Área responsable <span class="text-danger">*</span>
+                    </label>
+                    <select x-model="selectedArea" @change="cargarCursos($event.target.value)"
+                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                        <option value=""
+                            x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')">
+                        </option>
+                        <template x-for="option in areas" :key="option.codModdle">
+                            <option :value="option.codModdle" x-text="option.Area"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                            Fecha de inicio <span class="text-default-400 font-normal">(opcional)</span>
+                        </label>
+                        <select x-model="selectedFechaInicio" @change="filtrarCursosPorFecha()"
+                            class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                            <option value=""
+                                x-text="!selectedArea ? 'Seleccione' : (fechasInicio.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')">
+                            </option>
+                            <template x-for="option in fechasInicio" :key="option.fecha">
+                                <option :value="option.fecha" x-text="option.fecha"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                            Fecha de fin <span class="text-default-400 font-normal">(opcional)</span>
+                        </label>
+                        <select x-model="selectedFechaFin" @change="filtrarCursosPorFecha()"
+                            class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                            <option value=""
+                                x-text="!selectedArea ? 'Seleccione' : (fechasFin.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')">
+                            </option>
+                            <template x-for="option in fechasFin" :key="option.fecha">
+                                <option :value="option.fecha" x-text="option.fecha"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                        Sucursal <span class="text-danger">*</span>
+                    </label>
+                    <select x-model="selectedSucursal" @change="cargarPersonalPorSucursal()"
+                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                        <option value=""
+                            x-text="loadingSucursales ? 'Cargando sucursales...' : (sucursales.length === 0 ? 'Sin sucursales disponibles' : 'Seleccione Sucursal')">
+                        </option>
+                        <template x-for="option in sucursales" :key="option.codigo">
+                            <option :value="option.codigo" x-text="option.sucursal"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                        Personal <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" x-model="searchPersonal" placeholder="Buscar por nombre o DNI..."
+                        @input="selectedPersonal = ''"
+                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mb-2"
+                        x-show="selectedSucursal && !loadingPersonal && personalOptions.length > 0">
+                    <select x-model="selectedPersonal"
+                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                        <option value=""
+                            x-text="!selectedSucursal ? 'Seleccione sucursal primero' : (loadingPersonal ? 'Cargando personal...' : (filteredPersonalOptions.length === 0 ? 'Sin personal disponible' : filteredPersonalOptions.length + ' resultado(s)'))">
+                        </option>
+                        <template x-for="option in filteredPersonalOptions" :key="option.codigo">
+                            <option :value="option.codigo" x-text="option.nombre_completo + ' (' + option.dni + ')'"
+                                x-show="!searchPersonal || filteredPersonalOptions.length > 0">
+                            </option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                        Estado <span class="text-danger">*</span>
+                    </label>
+                    <select x-model="selectedEstado" disabled
+                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-not-allowed">
+                        <option value="PENDIENTE">PENDIENTE</option>
+                        <option value="APROBADO">APROBADO</option>
+                        <option value="DESAPROBADO">DESAPROBADO</option>
+                    </select>
+                </div>
+            </div>
+
+            <div x-show="view === 'resultados'" class="px-6 pb-2">
+                <template x-if="loadingRecord">
+                    <div class="flex items-center justify-center py-10">
+                        <svg class="animate-spin h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+                </template>
+
+                <template x-if="!loadingRecord && personalRecord.length === 0">
+                    <div class="text-center py-10 text-default-500 text-sm">
+                        No se encontraron cursos para el personal con los filtros indicados.
+                    </div>
+                </template>
+
+                <template x-if="!loadingRecord && personalRecord.length > 0">
+                    <div class="flex flex-col max-h-[500px] border border-default-200 rounded-xl">
+                        <div class="flex-1 overflow-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-semibold text-default-700 w-14">#</th>
+                                        <th @click="ordenar('area')"
+                                            class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
+                                            Area
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'area' ? 'text-primary' : 'text-default-300'"
+                                                x-text="sortColumn === 'area' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
+                                        </th>
+                                        <th @click="ordenar('nombre_curso')"
+                                            class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors min-w-[14rem]">
+                                            Nombre de capacitacion
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'nombre_curso' ? 'text-primary' : 'text-default-300'"
+                                                x-text="sortColumn === 'nombre_curso' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
+                                        </th>
+                                        <th @click="ordenar('estado')"
+                                            class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
+                                            Estado
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'estado' ? 'text-primary' : 'text-default-300'"
+                                                x-text="sortColumn === 'estado' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-default-100 bg-white">
+                                    <template x-for="(item, index) in recordPaginado" :key="index">
+                                        <tr class="hover:bg-default-50 transition-colors">
+                                            <td class="px-4 py-3 text-default-500"
+                                                x-text="((currentPage - 1) * perPage) + index + 1"></td>
+                                            <td class="px-4 py-3 text-default-800" x-text="item.area"></td>
+                                            <td class="px-4 py-3 text-default-800 font-medium"
+                                                x-text="item.nombre_curso"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-medium" :class="{
+                                                        'bg-amber-50 text-amber-700 border border-amber-200': item.estado === 'PENDIENTE',
+                                                        'bg-green-50 text-green-700 border border-green-200': item.estado === 'APROBADO',
+                                                        'bg-red-50 text-red-700 border border-red-200': item.estado === 'DESAPROBADO',
+                                                        'bg-blue-50 text-blue-700 border border-blue-200': item.estado === 'EN_CURSO'
+                                                    }" x-text="item.estado">
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div x-show="personalRecord.length > 0"
+                            class="flex items-center justify-between px-4 py-3 border-t border-default-200 bg-default-50">
+                            <div class="text-sm text-default-500">
+                                Mostrando
+                                <span x-text="((currentPage - 1) * perPage) + 1"></span>
+                                -
+                                <span x-text="Math.min(currentPage * perPage, personalRecord.length)"></span>
+                                de
+                                <span x-text="personalRecord.length"></span>
+                                registros
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="currentPage--" :disabled="currentPage === 1"
+                                    class="px-3 h-8 rounded-lg border border-default-200 bg-white text-sm hover:bg-default-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Anterior
+                                </button>
+                                <div class="px-3 text-sm text-default-600">
+                                    Página <span x-text="currentPage"></span> de <span x-text="totalPages"></span>
+                                </div>
+                                <button type="button" @click="currentPage++" :disabled="currentPage >= totalPages"
+                                    class="px-3 h-8 rounded-lg border border-default-200 bg-white text-sm hover:bg-default-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Siguiente
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 px-6 py-4 mt-2 border-t border-default-100">
+                <template x-if="view === 'filters'">
+                    <div class="flex items-center justify-end gap-2 w-full">
+                        <button type="button" @click="cerrar()"
+                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                            Cancelar
+                        </button>
+                        <button type="button" @click="obtenerRecord()" :disabled="loadingRecord || !selectedPersonal"
+                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ti ti-arrow-right text-sm"></i>
+                            <span x-text="loadingRecord ? 'Cargando...' : 'Obtener récord'"></span>
+                        </button>
+                    </div>
+                </template>
+
+                <template x-if="view === 'resultados'">
+                    <div class="flex items-center justify-between w-full">
+                        <button type="button" @click="volverAFiltros()"
+                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 transition-all cursor-pointer">
+                            <i class="ti ti-arrow-left text-sm"></i>
+                            Atrás
+                        </button>
                     </div>
                 </template>
             </div>
