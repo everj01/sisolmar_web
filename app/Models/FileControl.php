@@ -31,6 +31,8 @@ class FileControl extends Model
         return DB::select('EXEC SW_LISTAR_CLIENTES');
     }
 
+    
+
     public static function getClientesLegajos()
     {
         return DB::select('EXEC SW_LISTAR_CLIENTES_LEGAJOS');

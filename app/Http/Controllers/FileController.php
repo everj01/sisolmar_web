@@ -56,7 +56,7 @@ class FileController extends Controller
         $sucursales = FileControl::getSucursales();
         $cargos = FileControl::getCargos();
 
-        return view('file_control.reportes', compact('clientes', 'sucursales', 'cargos'));
+        return view('file_control.reportes', compact('clientes', 'sucursales', 'cargos', 'clientes_sisolm'));
     }
 
     public function getCargosXCliente(Request $request)
@@ -240,6 +240,72 @@ class FileController extends Controller
         ]);
     }
 
+
+    public function getPersonalTotalReporte(Request $request)
+    {
+        $page = $request->get('page', 1);
+        $size = $request->get('size', 50);
+        $search = $request->get('search', null);
+        $tipo_per = $request->get('tipo_per', null);
+        $vigencia = $request->get('vigencia', null);
+        $codSucursal = $request->get('codSucursal', '0');
+        $tieneFolio = $request->get('tiene_folio_25', null); // null = TODOS
+        $usuario = session('usuario');
+
+        // ─── Códigos con folio 25 ───
+        $conFolio25 = DB::table('sw_folios_detalles')
+            ->where('codFolio', '25')
+            ->where('habilitado', '1')
+            ->pluck('codPersonal')
+            ->toArray();
+
+        // ─── Traer TODOS sin paginar para poder filtrar ───
+        // Solo si hay filtro activo de DJ, traemos todo y filtramos
+        if ($tieneFolio !== null) {
+            $todosDatos = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
+                $codSucursal, 1, 99999, $search, $tipo_per, $vigencia, $usuario,
+            ]);
+
+            // Filtrar por tiene_folio_25
+            $todosDatos = array_filter($todosDatos, function ($persona) use ($conFolio25, $tieneFolio) {
+                $tiene = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
+
+                return $tiene == $tieneFolio;
+            });
+            $todosDatos = array_values($todosDatos);
+
+            // Paginar manualmente
+            $total = count($todosDatos);
+            $offset = ($page - 1) * $size;
+            $data = array_slice($todosDatos, $offset, $size);
+
+            // Agregar campo
+            foreach ($data as $persona) {
+                $persona->tiene_folio_25 = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
+            }
+
+        } else {
+            // Sin filtro DJ — flujo normal con SP de conteo
+            $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_REPORTE ?, ?, ?, ?, ?, ?, ?', [
+                $codSucursal, $page, $size, $search, $tipo_per, $vigencia, $usuario,
+            ]);
+
+            $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?, ?', [
+                $codSucursal, $search, $tipo_per, $vigencia, $usuario,
+            ])[0]->total;
+
+            foreach ($data as $persona) {
+                $persona->tiene_folio_25 = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
+            }
+        }
+
+        return response()->json([
+            'data' => $data,
+            'last_page' => ceil($total / $size),
+            'total' => (int) $total,
+        ]);
+    }
+
     public function getPersonalTotalPrueba(Request $request)
     {
         $page = $request->get('page', 1);
@@ -272,6 +338,22 @@ class FileController extends Controller
 
         if (! file_exists($ruta)) {
             abort(404, 'Documento no encontrado');
+        }
+
+        return response()->file($ruta, [
+            'Content-Type' => 'application/pdf',
+        ]);
+    }
+
+
+    public function verDjPdfExterno($codPersonal)
+    {
+        $ruta = '\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dj\\2026\\'.$codPersonal.'.pdf';
+
+        if (!file_exists($ruta)) {
+            return response()->view('errors.documento_no_encontrado', [
+                'mensaje' => 'El documento DJ del personal <strong>#'.$codPersonal.'</strong> no está disponible.'
+            ], 404);
         }
 
         return response()->file($ruta, [
@@ -1966,5 +2048,28 @@ class FileController extends Controller
 
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+
+
+    public function getEstadoLegajos(Request $request)
+    {
+        $sucursal   = $request->input('sucursal', '');
+        $cliente    = $request->input('cliente', '');
+        $parametros = $request->input('parametros', '');
+
+        $data = DB::select("
+            SELECT CODIGO, PERSONAL, FOTO, DNI1, DNI2, HUELLA,
+                    FIRMA, HUELLAS5, FOTOCONTROL1, FOTOCONTROL2, CD1, CD2,
+                    LA, BREVETE1, BREVETE2, ESTUDIOS, LABORAL,
+                    CROQUIS, FACHADA, ENTORNO, POLICIAL, PENAL, JUDICIAL,
+                    TOXI_SOLMAR, TOXI_EXTERNO, MEDICO, PSICO, VACUNA, CV01, FIASINTO, CUL, DJ,
+                    (SELECT SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WITH (NOLOCK) WHERE SUCU_CODIGO = ?) AS SUCURSAL,
+                    INGRESO_PLANILLA, CARGO, TIPO, CLIENTE
+            FROM si_solm.dbo.UF_LISTAR_ESTADO_LEGAJOS(?, ?, ?)
+            ORDER BY PERSONAL
+        ", [$sucursal, $sucursal, $cliente, $parametros]);
+
+        return response()->json($data);
     }
 }

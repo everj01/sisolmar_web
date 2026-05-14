@@ -3,14 +3,14 @@ import laravel from 'laravel-vite-plugin';
 
 export default defineConfig({
     base: '/',
-     css: {
-          preprocessorOptions: {
-              scss: {
-                  api: 'modern-compiler',
-                  silenceDeprecations: ['import', 'legacy-js-api'],
-              },
-          },
-      },
+    css: {
+        preprocessorOptions: {
+            scss: {
+                api: 'modern-compiler',
+                silenceDeprecations: ['import', 'legacy-js-api'],
+            },
+        },
+    },
     plugins: [
         laravel({
             input: [
@@ -23,9 +23,9 @@ export default defineConfig({
                 'node_modules/quill/dist/quill.core.css',
                 'node_modules/quill/dist/quill.bubble.css',
                 'node_modules/quill/dist/quill.snow.css',
-                'node_modules/tabulator-tables/dist/css/tabulator.min.css', 
-                'node_modules/tabulator-tables/dist/js/tabulator.min.js',  
-                'node_modules/axios/dist/axios.min.js', 
+                'node_modules/tabulator-tables/dist/css/tabulator.min.css',
+                'node_modules/tabulator-tables/dist/js/tabulator.min.js',
+                'node_modules/axios/dist/axios.min.js',
                 "node_modules/sweetalert2/dist/sweetalert2.min.css",
                 "node_modules/sweetalert2/dist/sweetalert2.js",
                 "node_modules/boxicons/dist/boxicons.js",
@@ -55,21 +55,21 @@ export default defineConfig({
                 'resources/js/functions/legajo_comercial.js',
                 'resources/js/functions/legajos_pdf.js',
                 'resources/js/functions/search_legajos.js',
-    
-                
+
+
                 'resources/js/functions/reportes.js',
                 'resources/js/functions/notifications.js',
                 /* CAPACITACION */
                 'resources/js/functions/capacitacion/gestion_cursos.js',
                 'resources/js/functions/capacitacion/consulta_matriculas.js',
-               
-     
+
+
                 'resources/js/functions/modal_reporte.js',
                 'resources/js/functions/dj_pdf.js',
                 'resources/js/functions/chargefile/reporteAvancesExcel.js',
                 'resources/js/functions/chargefile/reporteAvancesPDF.js',
                 'resources/js/functions/chargefile/reporteAvances.js',
-               
+
             ],
             refresh: true,
         }),

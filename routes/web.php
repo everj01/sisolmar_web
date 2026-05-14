@@ -59,6 +59,8 @@ Route::middleware(['auth'])->group(function () {
     // ─── RUTAS /api/* (antes en api.php) ─────────────────────────────────────
     Route::prefix('api')->group(function () {
 
+        Route::get('/reporte/estado-legajos', [FileController::class, 'getEstadoLegajos']);
+
         // Usuarios
         Route::get('/get-usuarios', [UsuarioController::class, 'getUsuarios']);
         Route::post('/save-usuario', [UsuarioController::class, 'store']);
@@ -70,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
         // Personal
         Route::get('/get-personal', [FileController::class, 'getPersonal']);
         Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
+        Route::get('/get-personal-total-reporte', [FileController::class, 'getPersonalTotalReporte']);
         Route::get('/get-personal-total-prueba', [FileController::class, 'getPersonalTotalPrueba']);
         Route::get('/get-personal-legajos', [FileController::class, 'getPersonalLegajos']);
 

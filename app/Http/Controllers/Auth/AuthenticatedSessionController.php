@@ -24,7 +24,7 @@ class AuthenticatedSessionController extends Controller
             ->first();
 
         if ($user && Hash::check($request->password, $user->clave)) {
-            Auth::login($user, $request->boolean('remember_me'));
+            Auth::login($user);
 
             session()->put('nombre', $user->nombre_1);
             session()->put('apellido', $user->apellido_1);
