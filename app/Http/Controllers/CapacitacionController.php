@@ -2852,12 +2852,26 @@ class CapacitacionController extends Controller
         try {
             $cursos = DB::connection("mysql_grupoihb")->select(
                 "
-            SELECT *
-            FROM grupoihb_see.mdl_course
-            WHERE category = ?
-        ",
+                SELECT
+                    c.id,
+                    c.fullname,
+                    c.startdate,
+                    c.enddate,
+                    c.summary,
+                    GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname) SEPARATOR ', ') AS responsible
+                FROM grupoihb_see.mdl_course c
+                LEFT JOIN grupoihb_see.mdl_context ctx
+                    ON ctx.instanceid = c.id AND ctx.contextlevel = 50
+                LEFT JOIN grupoihb_see.mdl_role_assignments ra ON ra.contextid = ctx.id
+                LEFT JOIN grupoihb_see.mdl_role r ON r.id = ra.roleid
+                LEFT JOIN grupoihb_see.mdl_user u ON u.id = ra.userid
+                    AND r.shortname = 'editingteacher'
+                WHERE c.category = ?
+                GROUP BY c.id, c.fullname, c.startdate, c.enddate, c.summary
+            ",
                 [$categoryId],
             );
+
             return response()->json([
                 "success" => true,
                 "cursos" => $cursos,
@@ -2867,7 +2881,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al obtener áreas por sistema: " .
+                        "Error al obtener cursos por categoría: " .
                         $e->getMessage(),
                 ],
                 500,
@@ -3490,10 +3504,10 @@ class CapacitacionController extends Controller
                 })
                 ->map(function (object $persona) {
                     $tipoMap = [
-                        '01' => 'Operativo',
-                        '02' => 'Administrativo',
-                        '03' => 'Operativo',
-                        '05' => 'Administrativo',
+                        "01" => "Operativo",
+                        "02" => "Administrativo",
+                        "03" => "Operativo",
+                        "05" => "Administrativo",
                     ];
 
                     return [
@@ -3508,7 +3522,9 @@ class CapacitacionController extends Controller
                                 $persona->NOMB_2,
                         ),
                         "DNI" => $persona->NRO_DOCU_IDEN,
-                        "TipoTrabajador" => $tipoMap[$persona->PERS_TIPOTRAB] ?? $persona->PERS_TIPOTRAB,
+                        "TipoTrabajador" =>
+                            $tipoMap[$persona->PERS_TIPOTRAB] ??
+                            $persona->PERS_TIPOTRAB,
                         "Estado" => "SIN INICIAR",
                     ];
                 })
