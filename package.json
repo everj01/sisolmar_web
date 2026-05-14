@@ -38,6 +38,8 @@
         "datatables.net-dt": "^2.0.7",
         "dayjs": "^1.11.5",
         "dropzone": "^6.0.0-beta.2",
+        "exceljs": "^4.4.0",
+        "file-saver": "^2.0.5",
         "glightbox": "^3.3.0",
         "gmaps": "^0.4.25",
         "gridjs": "^6.2.0",

@@ -88,7 +88,7 @@ class DispatchMatriculaBatchJob implements ShouldQueue
                                 'cod_programacion' => $prog->codigo_programacion,
                                 'cod_personal' => $codPersonal,
                                 'usuario_id' => $this->usuarioId,
-                                'fecha_matricula' => now(),
+                                'fecha_matricula' => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
                                 'estado' => Matricula::ESTADO_MATRICULADO,
                                 'tipo_matricula' => 'MASIVA',
                                 'origen_matricula' => 'SISTEMA',

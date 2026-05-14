@@ -49,6 +49,7 @@ Route::get('/get-folios-persona_uno', [FileController::class, 'getFoliosXPersona
 Route::get('/get-folios/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo']);
 Route::get('/get-folios-cliente-cargo', [FileController::class, 'getFoliosClienteCargo']);
 
+Route::get('/get-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
 
 Route::get('/get-view-documents/{codPersonal}/{codFolio}', [FileController::class, 'getViewDocumentsPer']);
 
