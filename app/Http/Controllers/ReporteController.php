@@ -8,13 +8,13 @@ use Illuminate\Http\Request;
 
 class ReporteController extends Controller
 {
+    public function index()
+    {
+        $sucursales = FileControl::getSucursales();
+        $clientes = FileControl::getClientes();
 
-    public function index(){
-    $sucursales = FileControl::getSucursales();
-    $clientes = FileControl::getClientes();
-
-    return view('file_control.reportes', compact('sucursales', 'clientes'));
-}
+        return view('file_control.reportes', compact('sucursales', 'clientes'));
+    }
 
     public function foliosPendientesPorSucursal(Request $request)
     {
@@ -34,27 +34,27 @@ class ReporteController extends Controller
 
         foreach ($rows as $row) {
             $nombreSucursal = $row->sucursal;
-            $codPersonal    = $row->codPersonal;
+            $codPersonal = $row->codPersonal;
 
-            if (!isset($reporte[$nombreSucursal])) {
+            if (! isset($reporte[$nombreSucursal])) {
                 $reporte[$nombreSucursal] = [
                     'sucursal' => $nombreSucursal,
-                    'personal' => []
+                    'personal' => [],
                 ];
             }
 
             // Usar referencia para evitar copias de arrays grandes en memoria
-            if (!isset($reporte[$nombreSucursal]['personal'][$codPersonal])) {
+            if (! isset($reporte[$nombreSucursal]['personal'][$codPersonal])) {
                 $reporte[$nombreSucursal]['personal'][$codPersonal] = [
                     'codPersonal' => $codPersonal,
-                    'personal'    => $row->personal,
-                    'documentos'  => []
+                    'personal' => $row->personal,
+                    'documentos' => [],
                 ];
             }
 
             $reporte[$nombreSucursal]['personal'][$codPersonal]['documentos'][] = [
-                'documento'       => $row->documento,
-                'tipo_folio'      => $row->tipo_folio,
+                'documento' => $row->documento,
+                'tipo_folio' => $row->tipo_folio,
                 // Omitir fechas si no son necesarias para reducir tamaño del JSON (opcional)
                 // 'fecha_emision'   => $row->fecha_emision,
                 // 'fecha_caducidad' => $row->fecha_caducidad,
@@ -67,35 +67,43 @@ class ReporteController extends Controller
 
         return response()->json(array_values($reporte));
     }
-    
-   public function foliosPorVencer(Request $request)
-{
-    try {
-        $sucursal = $request->filled('sucursal') ? $request->sucursal : 0;
-        $dias = $request->filled('dias') ? $request->dias : 30;
 
-        $folios = \App\Models\Reporte::getFoliosPorVencer($sucursal, $dias);
+    public function foliosPendientesRegistro(Request $request)
+    {
+        $sucursal = $request->get('sucursal', '0');
+        $cliente = $request->get('cliente', '');
+        $parametros = $request->get('parametros', '');
 
-        return response()->json($folios);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+        $datos = Reporte::getFoliosPendientesRegistro($sucursal, $cliente, $parametros);
+
+        return response()->json($datos);
     }
-}
 
-public function foliosPorVencerXCliente(Request $request)
-{
-    try {
-        $cliente = $request->filled('cliente') ? $request->cliente : 0;
-        $dias = $request->filled('dias') ? $request->dias : 30;
+    public function foliosPorVencer(Request $request)
+    {
+        try {
+            $sucursal = $request->filled('sucursal') ? $request->sucursal : 0;
+            $dias = $request->filled('dias') ? $request->dias : 30;
 
-        $folios = \App\Models\Reporte::getFoliosPorVencerXCliente($cliente, $dias);
+            $folios = \App\Models\Reporte::getFoliosPorVencer($sucursal, $dias);
 
-        return response()->json($folios);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json($folios);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
-}
 
+    public function foliosPorVencerXCliente(Request $request)
+    {
+        try {
+            $cliente = $request->filled('cliente') ? $request->cliente : 0;
+            $dias = $request->filled('dias') ? $request->dias : 30;
 
+            $folios = \App\Models\Reporte::getFoliosPorVencerXCliente($cliente, $dias);
 
+            return response()->json($folios);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

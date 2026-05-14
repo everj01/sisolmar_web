@@ -184,6 +184,7 @@ Route::middleware(['auth'])->group(function () {
         // Reportes
         Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
         Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
+        Route::get('/reporte/folios-pendientes-registro', [ReporteController::class, 'foliosPendientesRegistro']);
 
         // Biométrico
         Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);

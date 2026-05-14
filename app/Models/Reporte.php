@@ -22,6 +22,15 @@ class Reporte extends Model
     }
 }
 
+
+ public static function getFoliosPendientesRegistro($sucursal = '0', $cliente = '', $parametros = '')
+  {
+      return DB::select(
+          'EXEC SW_REPORTE_FOLIOS_PENDIENTES_REGISTRO ?, ?, ?',
+          [$sucursal, $cliente, $parametros]
+      );
+  }
+
 public static function getFoliosPorVencer($sucursal = 0, $diasAlerta = 30)
 {
     return DB::select(

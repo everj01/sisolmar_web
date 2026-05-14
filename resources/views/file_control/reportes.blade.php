@@ -88,7 +88,7 @@
     @include("layouts.shared/page-title", ["subtitle" => "File Control", "title" => "Reportes"])
 
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
-   <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -104,8 +104,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios vigentes en el sistema con
                     su clasificación.</p>
                 <button type="button" id="btnReporteFoliosVigentes" class="mt-3 inline-flex items-center
-           gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+               gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -121,8 +121,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios pendientes por
                     sucursal.</p>
                 <button type="button" id="btnReporteFoliosPendientesSucursal" class="mt-3 inline-flex
-          items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -137,8 +137,8 @@
                 </h3>
                 <p class="mt-2 text-default-500">Genera el reporte de folios Por Vencer.</p>
                 <button type="button" id="btnReporteFoliosPorVencer" class="mt-3 inline-flex
-          items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -154,8 +154,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios que aún no han sido
                     escaneados.</p>
                 <button type="button" id="btnReporteFoliosPendientesEscaneo" class="mt-3 inline-flex
-          items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -171,8 +171,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios que aún no han sido
                     registrados en el sistema.</p>
                 <button type="button" id="btnReporteFoliosPendientesRegistro" class="mt-3 inline-flex
-          items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -188,8 +188,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de documentos según su estado de
                     vigencia.</p>
                 <button type="button" id="btnReporteVigenciaDocumentos" class="mt-3 inline-flex
-          items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -204,7 +204,7 @@
                 </h3>
                 <p class="mt-2 text-default-500">Genera el reporte de carnets del personal.</p>
                 <button type="button" id="btnReporteCarnet" class="mt-3 inline-flex items-center gap-x-1
-           text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
+               text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -220,8 +220,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de certificados registrados en el
                     sistema.</p>
                 <button type="button" id="btnReporteCertificados" class="mt-3 inline-flex items-center
-          gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-          hover:text-primary-800">
+              gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+              hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -452,119 +452,201 @@
             </div>
         </div>
     </div>
-<!-- ====== MODAL: Folios Pendientes de Escaneo ====== -->
-  <div id="modalFoliosPendientesEscaneo" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-7xl mx-4 flex flex-col max-h-[90vh]">
-          <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
-              <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
-                  <i class='bx bx-scan text-info text-xl'></i>
-                  Folios Pendientes de Escaneo
-              </h5>
-              <button class="btnCerrarModal text-default-400 hover:text-default-600">
-                  <i class='bx bx-x text-2xl'></i>
-              </button>
-          </div>
-          <div class="p-5 flex-shrink-0 border-b border-default-100">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">Sucursal</label>
-                      <select id="filtroEscaneoSucursal" class="to-amber-800-select">
-              
-                          @foreach($sucursales as $sucursal)
-                              <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">Cliente</label>
-                      <select id="filtroEscaneoCliente" class="tom-select">
-                          {{-- <option value="">Todos</option> --}}
-                          @foreach($clientes as $cliente)
-                              <option value="{{ $cliente->cod_legacy }}">{{ $cliente->abreviatura }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-                  <div class="flex justify-end gap-2 items-end">
-                      <button class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
-                      <button id="btnGenerarEscaneo" class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
-                          <i class="bx bx-search-alt-2"></i> Generar
-                      </button>
-                  </div>
-              </div>
-               <!-- Selector de personal -->
-  <div>
-      <div class="flex items-center justify-between mb-2">
-          <label class="text-default-800 text-sm font-medium">
-              Personal
-              <span class="text-default-400 font-normal ml-1">(opcional — sin selección incluye todos)</span>
-          </label>
-          <span id="contadorSeleccionadosEscaneo" class="text-xs text-primary font-semibold"></span>
-      </div>
-       <input type="text" id="buscarPersonalEscaneo" class="form-control mb-2"
-      placeholder="Buscar por nombre o DNI...">
-      <div class="border border-default-200 rounded-lg overflow-hidden">
-          <div style="max-height:220px; overflow-y:auto;">
-              <table class="tabla-reporte" style="font-size:0.78rem">
-                  <thead style="position:sticky;top:0;z-index:1">
-                      <tr>
-                          <th style="width:36px">
-                              <input type="checkbox" id="chkTodosEscaneo" title="Seleccionar todos los visibles">
-                          </th>
-                          <th style="width:70px">Código</th>
-                          <th style="text-align:left">Apellidos y Nombres</th>
-                          <th style="width:110px">Tipo</th>
-                      </tr>
-                  </thead>
-                  <tbody id="tbodyPersonalEscaneo">
-                      <tr>
-                          <td colspan="4" class="tc" style="color:#94a3b8;padding:12px">
-                              Selecciona una sucursal o escribe para buscar
-                          </td>
-                      </tr>
-                  </tbody>
-              </table>
-          </div>
-      </div>
-  </div>
-          </div>
-          <!-- Resultados -->
-          <div id="resultadosEscaneo" class="hidden flex-1 flex flex-col overflow-hidden p-5">
-              <div class="flex items-center justify-between mb-3 flex-shrink-0">
-                  <span id="totalEscaneo" class="text-sm text-default-600 font-medium"></span>
-                  <div class="flex gap-2">
-                      <button id="btnExportExcelEscaneo"
-                          class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
-                          <i class="bx bx-spreadsheet"></i> Excel
-                      </button>
-                      <button id="btnExportPdfEscaneo"
-                          class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
-                          <i class="bx bxs-file-pdf"></i> PDF
-                      </button>
-                  </div>
-              </div>
-              <div class="overflow-auto flex-1">
-                  <div id="tablaEscaneo"></div>
-              </div>
-          </div>
-      </div>
-  </div>
-    <!-- ====== MODAL: Folios Pendientes de Registro ====== -->
-    <div id="modalFoliosPendientesRegistro" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div class="flex items-center justify-between p-5 border-b border-default-200">
+    <!-- ====== MODAL: Folios Pendientes de Escaneo ====== -->
+    <div id="modalFoliosPendientesEscaneo" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-7xl mx-4 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
                 <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
-                    <i class='bx bx-list-ul text-secondary text-xl'></i>
-                    Filtros – Folios Pendientes de Registro
+                    <i class='bx bx-scan text-info text-xl'></i>
+                    Folios Pendientes de Escaneo
                 </h5>
                 <button class="btnCerrarModal text-default-400 hover:text-default-600">
                     <i class='bx bx-x text-2xl'></i>
                 </button>
             </div>
-            <div class="p-6">
-                <p class="text-default-500 text-sm">Próximamente...</p>
-                <div class="mt-6 flex justify-end">
-                    <button
-                        class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cerrar</button>
+            <div class="p-5 flex-shrink-0 border-b border-default-100">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Sucursal</label>
+                        <select id="filtroEscaneoSucursal" class="to-amber-800-select">
+
+                            @foreach($sucursales as $sucursal)
+                                <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Cliente</label>
+                        <select id="filtroEscaneoCliente" class="tom-select">
+                            {{-- <option value="">Todos</option> --}}
+                            @foreach($clientes as $cliente)
+                                <option value="{{ $cliente->cod_legacy }}">{{ $cliente->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2 items-end">
+                        <button
+                            class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                        <button id="btnGenerarEscaneo"
+                            class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                            <i class="bx bx-search-alt-2"></i> Generar
+                        </button>
+                    </div>
+                </div>
+                <!-- Selector de personal -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-default-800 text-sm font-medium">
+                            Personal
+                            <span class="text-default-400 font-normal ml-1">(opcional — sin selección incluye todos)</span>
+                        </label>
+                        <span id="contadorSeleccionadosEscaneo" class="text-xs text-primary font-semibold"></span>
+                    </div>
+                    <input type="text" id="buscarPersonalEscaneo" class="form-control mb-2"
+                        placeholder="Buscar por nombre o DNI...">
+                    <div class="border border-default-200 rounded-lg overflow-hidden">
+                        <div style="max-height:220px; overflow-y:auto;">
+                            <table class="tabla-reporte" style="font-size:0.78rem">
+                                <thead style="position:sticky;top:0;z-index:1">
+                                    <tr>
+                                        <th style="width:36px">
+                                            <input type="checkbox" id="chkTodosEscaneo"
+                                                title="Seleccionar todos los visibles">
+                                        </th>
+                                        <th style="width:70px">Código</th>
+                                        <th style="text-align:left">Apellidos y Nombres</th>
+                                        <th style="width:110px">Tipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyPersonalEscaneo">
+                                    <tr>
+                                        <td colspan="4" class="tc" style="color:#94a3b8;padding:12px">
+                                            Selecciona una sucursal o escribe para buscar
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Resultados -->
+            <div id="resultadosEscaneo" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+                <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                    <span id="totalEscaneo" class="text-sm text-default-600 font-medium"></span>
+                    <div class="flex gap-2">
+                        <button id="btnExportExcelEscaneo"
+                            class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                            <i class="bx bx-spreadsheet"></i> Excel
+                        </button>
+                        <button id="btnExportPdfEscaneo"
+                            class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                            <i class="bx bxs-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-auto flex-1">
+                    <div id="tablaEscaneo"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== MODAL: Folios Pendientes de Registro ====== -->
+    <div id="modalFoliosPendientesRegistro" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-7xl mx-4 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
+                <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
+                    <i class='bx bx-list-ul text-secondary text-xl'></i>
+                    Folios Pendientes de Registro
+                </h5>
+                <button class="btnCerrarModal text-default-400 hover:text-default-600">
+                    <i class='bx bx-x text-2xl'></i>
+                </button>
+            </div>
+            <div class="p-5 flex-shrink-0 border-b border-default-100">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Sucursal</label>
+                        <select id="filtroRegistroSucursal" class="tom-select">
+                            <option value="">Todas</option>
+                            @foreach($sucursales as $sucursal)
+                                <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Cliente</label>
+                        <select id="filtroRegistroCliente" class="tom-select">
+                            <option value="">Todos</option>
+                            @foreach($clientes as $cliente)
+                                <option value="{{ $cliente->cod_legacy }}">{{ $cliente->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2 items-end">
+                        <button
+                            class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                        <button id="btnGenerarRegistro"
+                            class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                            <i class="bx bx-search-alt-2"></i> Generar
+                        </button>
+                    </div>
+                </div>
+                <!-- Selector de personal -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-default-800 text-sm font-medium">
+                            Personal
+                            <span class="text-default-400 font-normal ml-1">(opcional — sin selección incluye todos)</span>
+                        </label>
+                        <span id="contadorSeleccionadosRegistro" class="text-xs text-primary font-semibold"></span>
+                    </div>
+                    <input type="text" id="buscarPersonalRegistro" class="form-control mb-2"
+                        placeholder="Buscar por nombre o DNI...">
+                    <div class="border border-default-200 rounded-lg overflow-hidden">
+                        <div style="max-height:220px; overflow-y:auto;">
+                            <table class="tabla-reporte" style="font-size:0.78rem">
+                                <thead style="position:sticky;top:0;z-index:1">
+                                    <tr>
+                                        <th style="width:36px">
+                                            <input type="checkbox" id="chkTodosRegistro"
+                                                title="Seleccionar todos los visibles">
+                                        </th>
+                                        <th style="width:70px">Código</th>
+                                        <th style="text-align:left">Apellidos y Nombres</th>
+                                        <th style="width:110px">Tipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyPersonalRegistro">
+                                    <tr>
+                                        <td colspan="4" class="tc" style="color:#94a3b8;padding:12px">
+                                            Selecciona una sucursal o escribe para buscar
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Resultados -->
+            <div id="resultadosRegistro" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+                <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                    <span id="totalRegistro" class="text-sm text-default-600 font-medium"></span>
+                    <div class="flex gap-2">
+                        <button id="btnExportExcelRegistro"
+                            class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                            <i class="bx bx-spreadsheet"></i> Excel
+                        </button>
+                        <button id="btnExportPdfRegistro"
+                            class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                            <i class="bx bxs-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-auto flex-1">
+                    <div id="tablaRegistro"></div>
                 </div>
             </div>
         </div>
