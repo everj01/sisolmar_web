@@ -416,59 +416,148 @@ body {
     style="background: rgba(0,0,0,0.35); backdrop-filter: blur(2px);">
 
     <div
-        class="flex flex-col glass-card shadow-2xl rounded-3xl overflow-hidden w-full max-w-md border border-white/40 bg-white animate-fade-in">
+        class="flex flex-col glass-card shadow-2xl rounded-3xl overflow-hidden w-full max-w-2xl border border-white/40 bg-white animate-fade-in">
 
+        <!-- Header -->
         <div
-            class="flex justify-between items-center py-5 px-6 bg-gradient-to-r from-primary/10 to-transparent border-b border-gray-100">
-            <div class="flex items-center gap-4">
+            class="flex justify-between items-start py-5 px-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-gray-100">
+            <div class="flex items-start gap-4 flex-1 min-w-0">
                 <div
-                    class="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-lg shadow-primary/20">
+                    class="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-lg shadow-primary/20 shrink-0">
                     <i class="ti ti-book text-xl"></i>
                 </div>
-                <div>
-                    <h3 class="font-black text-gray-800 text-lg leading-tight tracking-tight" x-text="curso.nombre">
+                <div class="min-w-0 flex-1">
+                    <h3 class="font-black text-gray-800 text-lg leading-tight tracking-tight truncate"
+                        x-text="curso.nombre">
                         Cargando...</h3>
-                    <p class="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5"
-                        x-text="'Código Local: ' + curso.codigo">Código Local: -</p>
-                    <p class="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5"
-                        x-text="'Código Moodle: ' + curso.codigo_moodle">Código Moodle: -</p>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                        <p class="text-[10px] font-bold text-primary uppercase tracking-widest"
+                            x-text="'Local: ' + curso.codigo">Local: -</p>
+                        <span class="text-gray-300">|</span>
+                        <p class="text-[10px] font-bold text-primary/70 uppercase tracking-widest"
+                            x-text="'Moodle: ' + curso.codigo_moodle">Moodle: -</p>
+                        <template x-if="curso.responsable">
+                            <template x-if="true">
+                                <div class="flex items-center gap-x-3">
+                                    <span class="text-gray-300">|</span>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate"
+                                        x-text="'Responsable: ' + curso.responsable">Responsable: -</p>
+                                </div>
+                            </template>
+                        </template>
+                    </div>
+                    <template x-if="curso.fechaCreacion">
+                        <p class="text-[10px] text-gray-400 mt-1">
+                            <i class="ti ti-calendar text-[9px] mr-0.5"></i>
+                            <span x-text="'Creado: ' + curso.fechaCreacion"></span>
+                        </p>
+                    </template>
                 </div>
             </div>
             <button type="button" @click="cerrar()"
-                class="w-8 h-8 inline-flex justify-center items-center rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                class="w-8 h-8 inline-flex justify-center items-center rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-danger focus:outline-none focus:ring-2 focus:ring-primary transition-all shrink-0 ml-2">
                 <i class="ti ti-x text-lg"></i>
             </button>
         </div>
 
-        <div class="p-8 grid grid-cols-3 gap-6">
-            <div class="text-center">
-                <a :href="'/capacitacion/consulta-matriculas?curso_id=' + curso.codigoInterno"
-                    class="block text-center">
-                    <div
-                        class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3 cursor-pointer hover:bg-primary/20 transition-colors">
-                        <i class="ti ti-users text-3xl text-primary"></i>
+        <!-- Stats Cards -->
+        <div class="px-6 pt-5 pb-2">
+            <div class="grid grid-cols-4 gap-3">
+                <!-- Total Matriculados -->
+                <div class="text-center p-3 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/10">
+                    <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                        <i class="ti ti-users text-xl text-primary"></i>
                     </div>
-                    <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-1">Matriculados</p>
-                    <p class="text-4xl font-black text-gray-800" x-text="curso.total">0</p>
-                </a>
-            </div>
-            <div class="text-center cursor-pointer" @click="abrirModalUsuarios('sin iniciar')">
-                <div
-                    class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3 hover:bg-amber-200 transition-colors">
-                    <i class="ti ti-hourglass-empty text-3xl text-amber-600"></i>
+                    <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-0.5">Matriculados</p>
+                    <p class="text-2xl font-black text-gray-800" x-text="curso.total">0</p>
                 </div>
-                <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-1">Sin iniciar</p>
-                <p class="text-4xl font-black text-amber-600" x-text="curso.totalSinIniciar">0</p>
-            </div>
-            <div class="text-center">
-                <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
-                    <i class="ti ti-player-play text-3xl text-green-600"></i>
+
+                <!-- Sin Iniciar -->
+                <div class="text-center p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/50 cursor-pointer hover:shadow-md transition-shadow"
+                    @click="abrirModalUsuarios('sin iniciar')">
+                    <div class="w-10 h-10 rounded-xl bg-amber-200/60 flex items-center justify-center mx-auto mb-2">
+                        <i class="ti ti-hourglass-empty text-xl text-amber-600"></i>
+                    </div>
+                    <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-0.5">Sin iniciar</p>
+                    <p class="text-2xl font-black text-amber-600" x-text="curso.totalSinIniciar">0</p>
                 </div>
-                <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-1">En curso</p>
-                <p class="text-4xl font-black text-green-600" x-text="curso.totalEnProgreso">0</p>
+
+                <!-- En Curso -->
+                <div class="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200/50 cursor-pointer hover:shadow-md transition-shadow"
+                    @click="abrirModalUsuarios('en curso')">
+                    <div class="w-10 h-10 rounded-xl bg-green-200/60 flex items-center justify-center mx-auto mb-2">
+                        <i class="ti ti-player-play text-xl text-green-600"></i>
+                    </div>
+                    <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-0.5">En curso</p>
+                    <p class="text-2xl font-black text-green-600" x-text="curso.totalEnProgreso">0</p>
+                </div>
+
+                <!-- Completados -->
+                <div class="text-center p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50">
+                    <div class="w-10 h-10 rounded-xl bg-blue-200/60 flex items-center justify-center mx-auto mb-2">
+                        <i class="ti ti-circle-check text-xl text-blue-600"></i>
+                    </div>
+                    <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-0.5">Completados</p>
+                    <p class="text-2xl font-black text-blue-600" x-text="curso.totalCompletados">0</p>
+                </div>
             </div>
         </div>
 
+        <!-- Progress Bar -->
+        <div class="px-6 py-3">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Progreso general del curso</span>
+                <span class="text-xs font-black text-primary" x-text="curso.porcentajeProgreso + '%'">0%</span>
+            </div>
+            <div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700 ease-out flex"
+                    :style="'width: ' + curso.porcentajeProgreso + '%'">
+                    <template x-if="curso.totalEnProgreso > 0">
+                        <div class="h-full bg-gradient-to-r from-green-400 to-green-500"
+                            :style="'width: ' + (curso.total > 0 ? (curso.totalEnProgreso / curso.total * 100) : 0) + '%'"></div>
+                    </template>
+                    <template x-if="curso.totalCompletados > 0">
+                        <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500"
+                            :style="'width: ' + (curso.total > 0 ? (curso.totalCompletados / curso.total * 100) : 0) + '%'"></div>
+                    </template>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 mt-2">
+                <div class="flex items-center gap-1.5">
+                    <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                    <span class="text-[9px] text-gray-500 font-medium">Sin iniciar</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                    <span class="text-[9px] text-gray-500 font-medium">En curso</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
+                    <span class="text-[9px] text-gray-500 font-medium">Completados</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="px-6 pb-2">
+            <div class="p-3 rounded-xl bg-gray-50/80 border border-gray-100">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Acciones rápidas</p>
+                <div class="flex items-center gap-2">
+                    <a :href="'/capacitacion/consulta-matriculas?curso_id=' + curso.codigoInterno"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors">
+                        <i class="ti ti-list-details text-sm"></i>
+                        Ver matriculados
+                    </a>
+                    <button type="button" @click="abrirModalUsuarios('sin iniciar')"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors">
+                        <i class="ti ti-mail text-sm"></i>
+                        Notificar pendientes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
         <div class="flex justify-end items-center gap-x-2 py-4 px-6 border-t border-gray-100 bg-white/50">
             <button type="button" @click="cerrar()"
                 class="py-2.5 px-6 inline-flex justify-center items-center rounded-xl font-black bg-gray-100 text-gray-800 hover:bg-gray-200 transition-all text-xs uppercase tracking-widest">
@@ -593,168 +682,254 @@ body {
     style="background: rgba(0,0,0,0.35); backdrop-filter: blur(2px);">
 
     <div
-        class="flex flex-col glass-card shadow-2xl rounded-3xl overflow-hidden w-full max-w-7xl border border-white/40 bg-white animate-fade-in max-h-[90vh]">
+        class="flex flex-col glass-card shadow-2xl rounded-3xl overflow-hidden w-full max-w-5xl border border-white/40 bg-white animate-fade-in max-h-[90vh]">
 
+        <!-- Header con perfil -->
         <div
-            class="flex justify-between items-center py-5 px-6 bg-gradient-to-r from-primary/10 to-transparent border-b border-gray-100 shrink-0">
-            <div class="flex items-center gap-3">
+            class="flex justify-between items-start py-5 px-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-gray-100 shrink-0">
+            <div class="flex items-start gap-4 flex-1 min-w-0">
+                <!-- Avatar con iniciales -->
                 <div
-                    class="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-lg shadow-primary/20">
-                    <i class="ti ti-user text-xl"></i>
+                    class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-primary/25 shrink-0">
+                    <span x-text="getIniciales()"></span>
                 </div>
-                <div>
-                    <h3 class="font-black text-gray-800 text-lg leading-tight" x-text="personal.nombre_completo">
+                <div class="min-w-0 flex-1">
+                    <h3 class="font-black text-gray-800 text-lg leading-tight truncate"
+                        x-text="personal.nombre_completo">
                         Cargando...</h3>
-                    <p class="text-xs text-gray-500" x-text="'DNI: ' + personal.dni"></p>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest"
+                            x-text="'DNI: ' + personal.dni">DNI: -</p>
+                        <span class="text-gray-300">|</span>
+                        <p class="text-[10px] font-bold text-primary uppercase tracking-widest"
+                            x-text="'Código: ' + personal.codigo">Código: -</p>
+                        <template x-if="personal.email">
+                            <div class="flex items-center gap-x-3">
+                                <span class="text-gray-300">|</span>
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate"
+                                    x-text="personal.email"></p>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
             <button type="button" @click="cerrar()"
-                class="w-8 h-8 inline-flex justify-center items-center rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                class="w-8 h-8 inline-flex justify-center items-center rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-danger focus:outline-none focus:ring-2 focus:ring-primary transition-all shrink-0 ml-2">
                 <i class="ti ti-x text-lg"></i>
             </button>
         </div>
 
-        <!-- Datos del personal -->
-        <div class="p-6 space-y-3 border-b border-gray-100 shrink-0">
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                <i class="ti ti-building-store text-primary"></i>
-                <div>
-                    <p class="text-xs text-gray-500 font-medium">Sucursal</p>
-                    <p class="text-sm font-semibold text-gray-800" x-text="personal.sucursal || 'No registrada'">
-                    </p>
+        <!-- Info Personal + Stats Resumen -->
+        <div class="px-6 pt-4 pb-2 shrink-0">
+            <div class="flex items-start gap-4">
+                <!-- Datos del personal -->
+                <div class="flex-1 grid grid-cols-3 gap-2">
+                    <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50/80 border border-gray-100">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <i class="ti ti-building-store text-sm text-primary"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Sucursal</p>
+                            <p class="text-xs font-semibold text-gray-700 truncate"
+                                x-text="personal.sucursal || 'No registrada'"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50/80 border border-gray-100">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <i class="ti ti-briefcase text-sm text-primary"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Cargo</p>
+                            <p class="text-xs font-semibold text-gray-700 truncate"
+                                x-text="personal.cargo || 'No registrado'"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50/80 border border-gray-100">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <i class="ti ti-mail text-sm text-primary"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Email</p>
+                            <p class="text-xs font-semibold text-gray-700 truncate"
+                                x-text="personal.email || 'No registrado'"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="w-px h-16 bg-gray-200 self-center"></div>
+
+                <!-- Stats de cursos -->
+                <div class="flex items-center gap-3">
+                    <div class="text-center px-2">
+                        <p class="text-lg font-black text-primary" x-text="cursos.length">0</p>
+                        <p class="text-[8px] text-gray-400 uppercase tracking-wider font-bold">Total</p>
+                    </div>
+                    <div class="text-center px-2">
+                        <p class="text-lg font-black text-amber-500" x-text="countByEstado('sin_iniciar')">0</p>
+                        <p class="text-[8px] text-gray-400 uppercase tracking-wider font-bold">Sin iniciar</p>
+                    </div>
+                    <div class="text-center px-2">
+                        <p class="text-lg font-black text-green-500" x-text="countByEstado('en_curso')">0</p>
+                        <p class="text-[8px] text-gray-400 uppercase tracking-wider font-bold">En curso</p>
+                    </div>
+                    <div class="text-center px-2">
+                        <p class="text-lg font-black text-blue-500" x-text="countByEstado('finalizado')">0</p>
+                        <p class="text-[8px] text-gray-400 uppercase tracking-wider font-bold">Finalizados</p>
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                <i class="ti ti-briefcase text-primary"></i>
-                <div>
-                    <p class="text-xs text-gray-500 font-medium">Cargo</p>
-                    <p class="text-sm font-semibold text-gray-800" x-text="personal.cargo || 'No registrado'">
-                    </p>
+
+            <!-- Barra de progreso -->
+            <div class="mt-3" x-show="cursosCargado && cursos.length > 0">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Avance general</span>
+                    <span class="text-xs font-black text-primary" x-text="porcentajeAvance + '%'">0%</span>
                 </div>
-            </div>
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                <i class="ti ti-id text-primary"></i>
-                <div>
-                    <p class="text-xs text-gray-500 font-medium">Código</p>
-                    <p class="text-sm font-semibold text-gray-800" x-text="personal.codigo"></p>
+                <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-700 ease-out flex">
+                        <div class="h-full bg-gradient-to-r from-green-400 to-green-500"
+                            :style="'width: ' + (cursos.length > 0 ? (countByEstado('en_curso') / cursos.length * 100) : 0) + '%'"></div>
+                        <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500"
+                            :style="'width: ' + (cursos.length > 0 ? (countByEstado('finalizado') / cursos.length * 100) : 0) + '%'"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Cursos del alumno -->
         <div class="flex flex-col flex-1 min-h-0">
-            <div class="shrink-0 px-6 pt-6 pb-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Cursos matriculados</h4>
-                    <span class="text-xs text-gray-400"
+            <div class="shrink-0 px-6 pt-4 pb-2">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                        <i class="ti ti-book text-primary text-sm"></i>
+                        Cursos matriculados
+                    </h4>
+                    <span class="text-[10px] text-gray-400 font-medium"
                         x-text="cursosFiltrados.length + ' de ' + cursos.length + ' curso(s)'"></span>
                 </div>
 
-                <div x-show="cursosCargado" class="flex flex-wrap items-center gap-3 pb-3 border-b border-gray-100">
-                    <div class="flex items-center gap-3">
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="filtro-curso" value="todos" x-model="filtroEstado"
-                                class="text-primary focus:ring-primary/30">
-                            <span class="text-xs font-medium text-gray-600">Todos</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="filtro-curso" value="sin_iniciar" x-model="filtroEstado"
-                                class="text-primary focus:ring-primary/30">
-                            <span class="text-xs font-medium text-gray-600">Sin iniciar</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="filtro-curso" value="en_curso" x-model="filtroEstado"
-                                class="text-primary focus:ring-primary/30">
-                            <span class="text-xs font-medium text-gray-600">En curso</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="filtro-curso" value="finalizado" x-model="filtroEstado"
-                                class="text-primary focus:ring-primary/30">
-                            <span class="text-xs font-medium text-gray-600">Finalizados</span>
-                        </label>
+                <div x-show="cursosCargado" class="flex flex-wrap items-center gap-2 pb-2 border-b border-gray-100">
+                    <!-- Filtros tipo pills -->
+                    <div class="flex items-center gap-1">
+                        <button type="button" @click="filtroEstado = 'todos'"
+                            :class="filtroEstado === 'todos'
+                                ? 'px-3 py-1 rounded-lg bg-primary text-white text-[10px] font-bold transition-all'
+                                : 'px-3 py-1 rounded-lg bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 transition-all'">
+                            Todos
+                        </button>
+                        <button type="button" @click="filtroEstado = 'sin_iniciar'"
+                            :class="filtroEstado === 'sin_iniciar'
+                                ? 'px-3 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-bold transition-all'
+                                : 'px-3 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold hover:bg-amber-100 transition-all'">
+                            <i class="ti ti-clock mr-0.5"></i> Sin iniciar
+                        </button>
+                        <button type="button" @click="filtroEstado = 'en_curso'"
+                            :class="filtroEstado === 'en_curso'
+                                ? 'px-3 py-1 rounded-lg bg-green-500 text-white text-[10px] font-bold transition-all'
+                                : 'px-3 py-1 rounded-lg bg-green-50 text-green-600 text-[10px] font-bold hover:bg-green-100 transition-all'">
+                            <i class="ti ti-player-play mr-0.5"></i> En curso
+                        </button>
+                        <button type="button" @click="filtroEstado = 'finalizado'"
+                            :class="filtroEstado === 'finalizado'
+                                ? 'px-3 py-1 rounded-lg bg-blue-500 text-white text-[10px] font-bold transition-all'
+                                : 'px-3 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold hover:bg-blue-100 transition-all'">
+                            <i class="ti ti-circle-check mr-0.5"></i> Finalizados
+                        </button>
                     </div>
                     <div class="flex-1"></div>
                     <div class="relative">
                         <i
-                            class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none"></i>
+                            class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none"></i>
                         <input x-model="busquedaCurso" placeholder="Buscar curso..."
-                            class="w-56 pl-8 pr-3 py-1.5 text-xs border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-1 focus:ring-primary/30">
+                            class="w-48 pl-7 pr-3 py-1.5 text-xs border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-1 focus:ring-primary/30">
                     </div>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
-                <div x-show="!cursosCargado" class="text-center py-8 text-sm text-gray-400">
-                    <i class="ti ti-loader animate-spin mr-2 align-middle"></i>
-                    Cargando cursos...
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-4">
+                <div x-show="!cursosCargado" class="flex flex-col items-center justify-center py-10 text-gray-400">
+                    <i class="ti ti-loader animate-spin text-2xl mb-2"></i>
+                    <p class="text-sm">Cargando cursos...</p>
                 </div>
 
-                <div x-show="cursosCargado && cursos.length === 0" class="text-center py-8 text-sm text-gray-400">
-                    <i class="ti ti-book-off text-2xl opacity-30 block mx-auto mb-2"></i>
-                    No se encontraron cursos para este alumno
+                <div x-show="cursosCargado && cursos.length === 0"
+                    class="flex flex-col items-center justify-center py-10 text-gray-400">
+                    <i class="ti ti-book-off text-3xl opacity-30 mb-2"></i>
+                    <p class="text-sm">No se encontraron cursos para este alumno</p>
                 </div>
 
                 <div x-show="cursosCargado && cursosFiltrados.length === 0 && cursos.length > 0"
-                    class="text-center py-8 text-sm text-gray-400">
-                    <i class="ti ti-filter-off text-2xl opacity-30 block mx-auto mb-2"></i>
-                    Ningún curso coincide con los filtros
+                    class="flex flex-col items-center justify-center py-10 text-gray-400">
+                    <i class="ti ti-filter-off text-3xl opacity-30 mb-2"></i>
+                    <p class="text-sm">Ningún curso coincide con los filtros</p>
                 </div>
 
                 <div x-show="cursosCargado && cursosFiltrados.length > 0" class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead>
+                        <thead class="bg-gray-50/80 sticky top-0 z-10">
                             <tr
                                 class="border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                <th class="text-left py-3 px-2">#</th>
-                                <th class="text-left py-3 px-2">Código</th>
-                                <th class="text-left py-3 px-2">Nombre del curso</th>
-                                <th class="text-center py-3 px-2">Inicio</th>
-                                <th class="text-center py-3 px-2">Último acceso</th>
-                                <th class="text-center py-3 px-2">Estado</th>
+                                <th class="text-left py-2.5 px-3 w-10">#</th>
+                                <th class="text-left py-2.5 px-3 w-24">Código</th>
+                                <th class="text-left py-2.5 px-3">Nombre del curso</th>
+                                <th class="text-center py-2.5 px-3 w-32">Estado</th>
+                                <th class="text-center py-2.5 px-3 w-32">Último acceso</th>
+                                <th class="text-center py-2.5 px-3 w-28">Matrícula</th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-for="(c, index) in cursosFiltrados" :key="c.course_id">
-                                <tr class="border-b border-gray-100 hover:bg-gray-50/50">
-                                    <td class="py-3 px-2 text-gray-400 text-xs font-mono" x-text="index + 1"></td>
-                                    <td class="py-3 px-2 text-xs font-mono font-bold text-primary"
-                                        x-text="c.course_codigo">
+                                <tr class="border-b border-gray-50 hover:bg-primary/[0.03] transition-colors">
+                                    <td class="py-2.5 px-3 text-gray-400 text-xs font-mono" x-text="index + 1"></td>
+                                    <td class="py-2.5 px-3">
+                                        <span class="inline-block px-2 py-0.5 rounded-md bg-primary/5 text-primary text-[10px] font-bold"
+                                            x-text="c.course_codigo"></span>
                                     </td>
-                                    <td class="py-3 px-2 font-medium text-gray-800" x-text="c.course_nombre"></td>
-                                    <td class="py-3 px-2 text-center">
+                                    <td class="py-2.5 px-3">
+                                        <p class="font-medium text-gray-800 text-xs" x-text="c.course_nombre"></p>
+                                        <template x-if="c.area">
+                                            <p class="text-[9px] text-gray-400 mt-0.5" x-text="c.area"></p>
+                                        </template>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-center">
                                         <span x-show="c.estado === 'en_curso'"
-                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
-                                            <i class="ti ti-player-play"></i>
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold bg-green-100 text-green-700">
+                                            <i class="ti ti-player-play text-[8px]"></i>
                                             En curso
                                         </span>
                                         <span x-show="c.estado === 'sin_iniciar'"
-                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
-                                            <i class="ti ti-clock"></i>
-                                            No iniciado
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700">
+                                            <i class="ti ti-clock text-[8px]"></i>
+                                            Sin iniciar
                                         </span>
                                         <span x-show="c.estado === 'finalizado'"
-                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
-                                            <i class="ti ti-check"></i>
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700">
+                                            <i class="ti ti-circle-check text-[8px]"></i>
                                             Finalizado
                                         </span>
                                     </td>
-                                    <td class="py-3 px-2 text-center">
+                                    <td class="py-2.5 px-3 text-center">
                                         <template x-if="formatearFecha(c.ultimo_acceso)">
                                             <div style="line-height: 1.4;">
-                                                <span style="font-size: 12px; font-weight: 600; color: #374151;"
+                                                <span style="font-size: 11px; font-weight: 600; color: #374151;"
                                                     x-text="formatearFecha(c.ultimo_acceso).fecha"></span>
                                                 <br>
-                                                <span style="font-size: 11px; color: #9ca3af;"
+                                                <span style="font-size: 10px; color: #9ca3af;"
                                                     x-text="formatearFecha(c.ultimo_acceso).hora"></span>
                                             </div>
                                         </template>
                                         <span x-show="!formatearFecha(c.ultimo_acceso)"
-                                            class="text-xs text-gray-400">—</span>
+                                            class="text-[10px] text-gray-300">—</span>
                                     </td>
-                                    <td class="py-3 px-2 text-center" x-text="
-                                        c.estado === 'en_curso' ? 'En curso' :
-                                        c.estado === 'sin_iniciar' ? 'Sin iniciar' :
-                                        c.estado === 'finalizado' ? 'Finalizado' : '—'"></td>
+                                    <td class="py-2.5 px-3 text-center">
+                                        <template x-if="formatearFecha(c.fecha_inicio_matricula)">
+                                            <span style="font-size: 10px; color: #6b7280;"
+                                                x-text="formatearFecha(c.fecha_inicio_matricula).fecha"></span>
+                                        </template>
+                                        <span x-show="!formatearFecha(c.fecha_inicio_matricula)"
+                                            class="text-[10px] text-gray-300">—</span>
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>
@@ -763,19 +938,27 @@ body {
             </div>
         </div>
 
-        <div class="flex justify-end items-center gap-x-2 py-4 px-6 border-t border-gray-100 bg-white/50 shrink-0">
-            <button type="button" @click="!enCooldown() && notificarCursosPendientes()" :disabled="enCooldown()"
-                :class="enCooldown()
-                    ? 'py-2.5 px-6 inline-flex justify-center items-center rounded-xl font-black bg-gray-200 text-gray-400 cursor-not-allowed text-xs uppercase tracking-widest'
-                    : 'py-2.5 px-6 inline-flex justify-center items-center rounded-xl font-black bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs uppercase tracking-widest shadow-sm'">
-                <i :class="enCooldown() ? 'ti ti-clock mr-1.5' : 'ti ti-mail mr-1.5'"></i>
-                <span
-                    x-text="enCooldown() ? 'Espera ' + tiempoRestanteCooldown() : 'Notificar cursos pendientes'"></span>
-            </button>
-            <button type="button" @click="cerrar()"
-                class="py-2.5 px-6 inline-flex justify-center items-center rounded-xl font-black bg-gray-100 text-gray-800 hover:bg-gray-200 transition-all text-xs uppercase tracking-widest">
-                Cerrar
-            </button>
+        <!-- Footer -->
+        <div class="flex justify-between items-center gap-x-2 py-4 px-6 border-t border-gray-100 bg-white/50 shrink-0">
+            <div class="text-xs text-gray-400">
+                <i class="ti ti-info-circle mr-1"></i>
+                <span x-show="countByEstado('sin_iniciar') > 0"
+                    x-text="countByEstado('sin_iniciar') + ' curso(s) pendiente(s)'"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="!enCooldown() && notificarCursosPendientes()" :disabled="enCooldown()"
+                    :class="enCooldown()
+                        ? 'py-2.5 px-5 inline-flex justify-center items-center rounded-xl font-bold bg-gray-200 text-gray-400 cursor-not-allowed text-xs'
+                        : 'py-2.5 px-5 inline-flex justify-center items-center rounded-xl font-bold bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs shadow-sm'">
+                    <i :class="enCooldown() ? 'ti ti-clock mr-1.5' : 'ti ti-mail mr-1.5'"></i>
+                    <span
+                        x-text="enCooldown() ? 'Espera ' + tiempoRestanteCooldown() : 'Notificar pendientes'"></span>
+                </button>
+                <button type="button" @click="cerrar()"
+                    class="py-2.5 px-5 inline-flex justify-center items-center rounded-xl font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all text-xs">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -790,9 +973,13 @@ window.modalCurso = function() {
             codigo: '-',
             codigoInterno: 0,
             codigo_moodle: 0,
+            responsable: '',
+            fechaCreacion: '',
             total: 0,
             totalSinIniciar: 0,
-            totalEnProgreso: 0
+            totalEnProgreso: 0,
+            totalCompletados: 0,
+            porcentajeProgreso: 0
         },
 
         mostrar(data, fetchUsuarios, sendMail) {
@@ -802,24 +989,48 @@ window.modalCurso = function() {
             this.curso.codigo = data.codigo_curso;
             this.curso.codigo_moodle = data.codigo_moodle;
             this.curso.codigoInterno = data.codigo;
+            this.curso.responsable = data.responsable || '';
+            this.curso.fechaCreacion = this.formatearFechaCreacion(data.fecha_creacion);
             this.curso.total = data.total_matriculados;
             this.curso.totalSinIniciar = '...';
             this.curso.totalEnProgreso = '...';
+            this.curso.totalCompletados = '...';
+            this.curso.porcentajeProgreso = 0;
             this.open = true;
 
             fetchUsuarios(data.codigo_moodle)
                 .then(res => {
                     this.curso.totalSinIniciar = res.data.total_sin_iniciar;
                     this.curso.totalEnProgreso = res.data.total_en_progreso;
+                    this.curso.totalCompletados = Math.max(0, this.curso.total - res.data.total_sin_iniciar - res.data.total_en_progreso);
+                    this.curso.porcentajeProgreso = this.curso.total > 0
+                        ? Math.round(((this.curso.totalEnProgreso + this.curso.totalCompletados) / this.curso.total) * 100)
+                        : 0;
                 })
                 .catch(() => {
                     this.curso.totalSinIniciar = 'Error';
                     this.curso.totalEnProgreso = 'Error';
+                    this.curso.totalCompletados = 'Error';
+                    this.curso.porcentajeProgreso = 0;
                 });
         },
 
+        formatearFechaCreacion(fecha) {
+            if (!fecha) return '';
+            try {
+                const d = new Date(fecha);
+                return d.toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            } catch {
+                return '';
+            }
+        },
+
         abrirModalUsuarios(tipo = '') {
-            const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?. [0];
+            const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?.[0];
             if (modalUsuarios) {
                 modalUsuarios.mostrar(this.curso.nombre, this.curso.codigo_moodle, this._fetchUsuarios, this
                     ._sendMail, tipo);
@@ -1034,6 +1245,26 @@ window.modalUsuario = function() {
 
         _cooldownKey() {
             return 'notif_pendientes_' + this.personal.dni;
+        },
+
+        getIniciales() {
+            if (!this.personal.nombre_completo) return '?';
+            const partes = this.personal.nombre_completo.trim().split(/\s+/).filter(Boolean);
+            if (partes.length >= 2) {
+                return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+            }
+            return partes[0][0].toUpperCase();
+        },
+
+        countByEstado(estado) {
+            return this.cursos.filter(c => c.estado === estado).length;
+        },
+
+        get porcentajeAvance() {
+            if (this.cursos.length === 0) return 0;
+            const completados = this.countByEstado('finalizado');
+            const enCurso = this.countByEstado('en_curso');
+            return Math.round(((completados + enCurso) / this.cursos.length) * 100);
         },
 
         enCooldown() {
