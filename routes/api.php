@@ -149,6 +149,9 @@ Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::cl
 Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
 Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
 
+Route::post('/capacitacion/registrar-reporte', [CapacitacionController::class, 'saveReporteCapacitacion']);
+Route::get('/capacitacion/listar-reportes', [CapacitacionController::class, 'listarReportesCapacitaciones']);
+
 Route::post('/mail/recordatorio-curso/{courseId}', [MailController::class, 'sendRecordatorioCurso']);
 Route::post('/mail/send', [MailController::class, 'send']);
 

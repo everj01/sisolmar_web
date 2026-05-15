@@ -24,6 +24,7 @@ use App\Models\ExamenPregunta2026;
 use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Support\Facades\Http;
 use App\Models\Personal;
+use App\Models\CapacitacionReporteHistorial;
 
 class CapacitacionController extends Controller
 {
@@ -3558,6 +3559,108 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" => $e->getMessage(),
+                ],
+                500,
+            );
+        }
+    }
+
+    public function saveReporteCapacitacion(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            "nombre_archivo" => "required|string|max:255",
+            "descripcion" => "nullable|string|max:500",
+            "archivo_pdf" => "nullable|file|mimes:pdf|max:51200",
+            "archivo_excel" => "nullable|file|mimes:xlsx,xls|max:51200",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Errores de validación.",
+                    "errors" => $validator->errors(),
+                ],
+                422,
+            );
+        }
+
+        try {
+            $data = [
+                "nombre_archivo" => $request->nombre_archivo,
+                "descripcion" => $request->input("descripcion", ""),
+                "archivo_pdf" => null,
+                "archivo_excel" => null,
+            ];
+
+            if ($request->hasFile("archivo_pdf")) {
+                $data["archivo_pdf"] = file_get_contents(
+                    $request->file("archivo_pdf")->getRealPath(),
+                );
+            }
+
+            if ($request->hasFile("archivo_excel")) {
+                $data["archivo_excel"] = file_get_contents(
+                    $request->file("archivo_excel")->getRealPath(),
+                );
+            }
+
+            $id = CapacitacionReporteHistorial::crearReporte($data);
+
+            return response()->json([
+                "success" => true,
+                "message" => "Reporte de capacitación registrado correctamente.",
+                "id" => $id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al registrar reporte de capacitación", [
+                "error" => $e->getMessage(),
+                "line" => $e->getLine(),
+                "file" => $e->getFile(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" =>
+                        "Error al registrar el reporte. Por favor, contacte al administrador.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function listarReportesCapacitaciones(): JsonResponse
+    {
+        try {
+            $reportes = CapacitacionReporteHistorial::obtenerReportesHabilitados()
+                ->map(function ($reporte) {
+                    return [
+                        "id" => $reporte->id,
+                        "nombre_archivo" => $reporte->nombre_archivo,
+                        "descripcion" => $reporte->descripcion,
+                        "tiene_pdf" => !is_null($reporte->archivo_pdf),
+                        "tiene_excel" => !is_null($reporte->archivo_excel),
+                        "fecha_creacion" => $reporte->fecha_creacion,
+                        "fecha_actualizacion" => $reporte->fecha_actualizacion,
+                    ];
+                });
+
+            return response()->json([
+                "success" => true,
+                "reportes" => $reportes,
+                "total" => $reportes->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al listar reportes de capacitación", [
+                "error" => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" =>
+                        "Error al obtener los reportes. Por favor, contacte al administrador.",
                 ],
                 500,
             );
