@@ -3539,6 +3539,7 @@ class CapacitacionController extends Controller
                                 $persona->NOMB_2,
                         ),
                         "DNI" => $persona->NRO_DOCU_IDEN,
+                        "Cargo" => $persona->cargo ?? "Sin asignar",
                         "TipoTrabajador" =>
                             $tipoMap[$persona->PERS_TIPOTRAB] ??
                             $persona->PERS_TIPOTRAB,
