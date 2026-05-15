@@ -175,14 +175,16 @@ class Consulta extends Model
     public static function getPersonalPorSucursal($codSucursal)
     {
         return DB::table("si_solm.dbo.PERSONAL")
+            ->leftJoin("sw_cargos", "si_solm.dbo.PERSONAL.CODI_CARG", "=", "sw_cargos.codigo")
             ->select(
-                "CODI_PERS as codigo",
-                DB::raw("LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre_completo"),
-                "NRO_DOCU_IDEN as dni",
+                "si_solm.dbo.PERSONAL.CODI_PERS as codigo",
+                DB::raw("LTRIM(RTRIM(si_solm.dbo.PERSONAL.APEL_1 + ' ' + ISNULL(si_solm.dbo.PERSONAL.APEL_2, '') + ' ' + si_solm.dbo.PERSONAL.NOMB_1 + ' ' + ISNULL(si_solm.dbo.PERSONAL.NOMB_2, ''))) as nombre_completo"),
+                "si_solm.dbo.PERSONAL.NRO_DOCU_IDEN as dni",
+                "sw_cargos.nombre as cargo",
             )
-            ->where("PERS_VIGENCIA", "SI")
-            ->where("SUCU_CODIGO", $codSucursal)
-            ->orderBy("APEL_1")
+            ->where("si_solm.dbo.PERSONAL.PERS_VIGENCIA", "SI")
+            ->where("si_solm.dbo.PERSONAL.SUCU_CODIGO", $codSucursal)
+            ->orderBy("si_solm.dbo.PERSONAL.APEL_1")
             ->get();
     }
 }

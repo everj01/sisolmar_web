@@ -1697,6 +1697,7 @@ export default document.addEventListener("alpine:init", () => {
                         fecha_matricula: c.fecha_matricula || "",
                         tipo_matricula: "",
                         categoria: c.area,
+                        cargo: personal.cargo || "",
                         estado: c.estado === "sin_iniciar"
                             ? "PENDIENTE"
                             : c.estado === "finalizado"
@@ -1951,12 +1952,12 @@ export default document.addEventListener("alpine:init", () => {
             sheet.getRow(4).height = 8;
 
             const headers = [
-                "#",
+                "It",
                 "Área",
                 "Capacitación",
-                "Fecha inicio",
-                "Fecha fin",
                 "Estado",
+                "Fecha",
+                "Nota",
             ];
 
             const headerRow = sheet.getRow(headerRowNumber);
@@ -1965,24 +1966,25 @@ export default document.addEventListener("alpine:init", () => {
 
             const dataOrdenada = this.recordOrdenado;
             dataOrdenada.forEach((c, i) => {
+                const isPendiente = c.estado === "PENDIENTE";
                 const row = sheet.addRow([
                     i + 1,
                     c.area,
                     c.nombre_curso,
-                    c.fecha_inicio,
-                    c.fecha_final,
                     c.estado,
+                    isPendiente ? "" : c.fecha_inicio,
+                    isPendiente ? "" : "",
                 ]);
                 row.eachCell((cell) => _estiloDatoExcel(cell));
             });
 
             sheet.columns = [
                 { width: 5 },
-                { width: 28 },
+                { width: 30 },
                 { width: 50 },
-                { width: 16 },
-                { width: 16 },
-                { width: 18 },
+                { width: 25 },
+                { width: 25 },
+                { width: 25 },
             ];
 
             sheet.autoFilter = {
@@ -2073,37 +2075,64 @@ export default document.addEventListener("alpine:init", () => {
             doc.setFontSize(10);
             doc.text(subtitle, titleX, 46, { align: "right" });
 
-            const textoListado = `RÉCORD - ${this.personalRecord.length} CURSO(S)`;
+            // DATOS GENERALES Section
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
-            doc.text(textoListado, startX, 56);
-
-            const nombrePersonal = this.nombrePersonal.toUpperCase();
-            doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
-            doc.text(nombrePersonal, startX, 61);
+            doc.text("DATOS GENERALES", startX, 55);
 
-            const periodoLinea = this.textoRangoFechasRecord.toUpperCase();
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            const twPeriodo = pageWidth - startX - 100;
-            const lineasPeriodo = doc.splitTextToSize(periodoLinea, twPeriodo);
-            doc.text(lineasPeriodo, startX, 66);
+            // Personal Info
+            const personal = this.personalOptions.find(
+                (p) => p.codigo == this.selectedPersonal,
+            );
+            const dni = personal ? personal.dni : "";
+            const nombre = personal ? personal.nombre_completo : "";
+            const codigo = personal ? personal.codigo : "";
+            const cargo = personal ? personal.cargo : "";
 
-            const tableStartY =
-                lineasPeriodo.length > 1
-                    ? 66 + lineasPeriodo.length * 4.2 + 4
-                    : 71;
+            doc.autoTable({
+                startY: 58,
+                head: [],
+                body: [
+                    ["N° Documento", dni, "Apellidos y Nombres", nombre],
+                    ["Código Pers.", codigo, "Cargo", cargo],
+                ],
+                theme: "grid",
+                styles: {
+                    fontSize: 8,
+                    textColor: [0, 0, 0],
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
+                    halign: "left",
+                    valign: "middle",
+                },
+                headStyles: {
+                    fillColor: [253, 245, 230],
+                    textColor: [0, 0, 0],
+                    fontStyle: "bold",
+                },
+                columnStyles: {
+                    0: { cellWidth: 30, fontStyle: "bold" },
+                    1: { cellWidth: 40 },
+                    2: { cellWidth: 40, fontStyle: "bold" },
+                    3: { cellWidth: "auto" },
+                },
+                margin: { left: 14, right: 14 },
+            });
+
+            const tableStartY = doc.lastAutoTable.finalY + 5;
 
             const dataOrdenada = this.recordOrdenado;
-            const filas = dataOrdenada.map((c, i) => [
-                i + 1,
-                c.area || "",
-                c.nombre_curso || "",
-                c.fecha_inicio || "",
-                c.fecha_final || "",
-                c.estado || "",
-            ]);
+            const filas = dataOrdenada.map((c, i) => {
+                const isPendiente = c.estado === "PENDIENTE";
+                return [
+                    i + 1,
+                    c.area || "",
+                    c.nombre_curso || "",
+                    c.estado || "",
+                    isPendiente ? "" : (c.fecha_inicio || ""),
+                    isPendiente ? "" : "",
+                ];
+            });
 
             doc.autoTable({
                 startY: tableStartY,
@@ -2112,9 +2141,9 @@ export default document.addEventListener("alpine:init", () => {
                         "It",
                         "Área",
                         "Capacitación",
-                        "Fecha inicio",
-                        "Fecha fin",
                         "Estado",
+                        "Fecha",
+                        "Nota",
                     ],
                 ],
                 body: filas,
@@ -2135,11 +2164,11 @@ export default document.addEventListener("alpine:init", () => {
                 },
                 columnStyles: {
                     0: { cellWidth: 10 },
-                    1: { cellWidth: 28 },
+                    1: { cellWidth: 30 },
                     2: { cellWidth: "auto", halign: "left" },
-                    3: { cellWidth: 22 },
-                    4: { cellWidth: 22 },
-                    5: { cellWidth: 22 },
+                    3: { cellWidth: 25 },
+                    4: { cellWidth: 25 },
+                    5: { cellWidth: 25 },
                 },
                 margin: { left: 14, right: 14 },
             });
