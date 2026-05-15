@@ -3643,6 +3643,7 @@ class CapacitacionController extends Controller
                         "tiene_excel" => !is_null($reporte->archivo_excel),
                         "fecha_creacion" => $reporte->fecha_creacion,
                         "fecha_actualizacion" => $reporte->fecha_actualizacion,
+                        "habilitado" => (bool) $reporte->habilitado,
                     ];
                 });
 
@@ -3661,6 +3662,188 @@ class CapacitacionController extends Controller
                     "success" => false,
                     "message" =>
                         "Error al obtener los reportes. Por favor, contacte al administrador.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function descargarReporte(int $id, string $tipo)
+    {
+        try {
+            $reporte = DB::connection('sqlsrv')
+                ->table('sw_capacitacion_reportes_historial')
+                ->where('id', $id)
+                ->where('habilitado', 1)
+                ->first();
+
+            if (!$reporte) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Reporte no encontrado.",
+                ], 404);
+            }
+
+            $columna = $tipo === 'pdf' ? 'archivo_pdf' : 'archivo_excel';
+            $archivo = $reporte->$columna;
+
+            if (is_null($archivo)) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "El archivo solicitado no existe.",
+                ], 404);
+            }
+
+            $mimeType = $tipo === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            $extension = $tipo === 'pdf' ? '.pdf' : '.xlsx';
+
+            $nombreBase = preg_replace('/\.(pdf|xlsx?)$/i', '', $reporte->nombre_archivo);
+            $nombreDescarga = $nombreBase . $extension;
+
+            return response($archivo)
+                ->header('Content-Type', $mimeType)
+                ->header('Content-Disposition', 'attachment; filename="' . $nombreDescarga . '"');
+        } catch (\Exception $e) {
+            Log::error("Error al descargar reporte", [
+                "error" => $e->getMessage(),
+                "id" => $id,
+                "tipo" => $tipo,
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al descargar el archivo.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function actualizarReporte(Request $request, int $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            "nombre_archivo" => "nullable|string|max:255",
+            "descripcion" => "nullable|string|max:500",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Errores de validación.",
+                    "errors" => $validator->errors(),
+                ],
+                422,
+            );
+        }
+
+        try {
+            $exists = DB::connection('sqlsrv')
+                ->table('sw_capacitacion_reportes_historial')
+                ->where('id', $id)
+                ->where('habilitado', 1)
+                ->exists();
+
+            if (!$exists) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Reporte no encontrado.",
+                ], 404);
+            }
+
+            $setClauses = [];
+            $bindings = [];
+
+            if ($request->filled("nombre_archivo")) {
+                $setClauses[] = "nombre_archivo = ?";
+                $bindings[] = $request->nombre_archivo;
+            }
+            if ($request->has("descripcion")) {
+                $setClauses[] = "descripcion = ?";
+                $bindings[] = $request->descripcion;
+            }
+            $setClauses[] = "fecha_actualizacion = GETDATE()";
+            $bindings[] = $id;
+
+            DB::connection('sqlsrv')->statement(
+                "UPDATE sw_capacitacion_reportes_historial SET " . implode(', ', $setClauses) . " WHERE id = ?",
+                $bindings
+            );
+
+            return response()->json([
+                "success" => true,
+                "message" => "Reporte actualizado correctamente.",
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar reporte", [
+                "error" => $e->getMessage(),
+                "id" => $id,
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al actualizar el reporte.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function actualizarEstadoReporte(Request $request, int $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            "habilitado" => "required|boolean",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Errores de validación.",
+                    "errors" => $validator->errors(),
+                ],
+                422,
+            );
+        }
+
+        try {
+            $exists = DB::connection('sqlsrv')
+                ->table('sw_capacitacion_reportes_historial')
+                ->where('id', $id)
+                ->exists();
+
+            if (!$exists) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Reporte no encontrado.",
+                ], 404);
+            }
+
+            $habilitado = $request->boolean('habilitado') ? 1 : 0;
+
+            DB::connection('sqlsrv')->statement(
+                "UPDATE sw_capacitacion_reportes_historial SET habilitado = ?, fecha_actualizacion = GETDATE() WHERE id = ?",
+                [$habilitado, $id]
+            );
+
+            return response()->json([
+                "success" => true,
+                "message" => $habilitado
+                    ? "Reporte recuperado correctamente."
+                    : "Reporte eliminado correctamente.",
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar estado del reporte", [
+                "error" => $e->getMessage(),
+                "id" => $id,
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al actualizar el reporte.",
                 ],
                 500,
             );

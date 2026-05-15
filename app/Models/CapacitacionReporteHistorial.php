@@ -2,53 +2,49 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-class CapacitacionReporteHistorial extends Model
+class CapacitacionReporteHistorial
 {
-    protected $table = 'sw_capacitacion_reportes_historial';
-
-    protected $connection = 'sqlsrv';
-
-    protected $fillable = [
-        'nombre_archivo',
-        'descripcion',
-        'archivo_pdf',
-        'archivo_excel',
-        'fecha_creacion',
-        'fecha_actualizacion',
-        'habilitado',
-    ];
-
-    protected $casts = [
-        'habilitado' => 'boolean',
-        'fecha_creacion' => 'datetime',
-        'fecha_actualizacion' => 'datetime',
-    ];
-
-    public $timestamps = false;
-
     public static function crearReporte(array $data): int
     {
-        $id = DB::connection('sqlsrv')->table('sw_capacitacion_reportes_historial')->insertGetId([
-            'nombre_archivo' => $data['nombre_archivo'],
-            'descripcion' => $data['descripcion'] ?? '',
-            'archivo_pdf' => $data['archivo_pdf'] ?? null,
-            'archivo_excel' => $data['archivo_excel'] ?? null,
-            'fecha_creacion' => now(),
-            'fecha_actualizacion' => now(),
-            'habilitado' => 1,
-        ]);
+        $existing = DB::connection('sqlsrv')
+            ->table('sw_capacitacion_reportes_historial')
+            ->where('nombre_archivo', $data['nombre_archivo'])
+            ->where('habilitado', 1)
+            ->first();
 
-        return $id;
+        if ($existing) {
+            return (int) $existing->id;
+        }
+
+        $pdfHex = $data['archivo_pdf'] !== null
+            ? 'CONVERT(VARBINARY(MAX), 0x' . bin2hex($data['archivo_pdf']) . ')'
+            : 'NULL';
+
+        $excelHex = $data['archivo_excel'] !== null
+            ? 'CONVERT(VARBINARY(MAX), 0x' . bin2hex($data['archivo_excel']) . ')'
+            : 'NULL';
+
+        $result = DB::connection('sqlsrv')->select(
+            "INSERT INTO sw_capacitacion_reportes_historial
+                (nombre_archivo, descripcion, archivo_pdf, archivo_excel, fecha_creacion, fecha_actualizacion, habilitado)
+             OUTPUT INSERTED.id
+             VALUES
+                (?, ?, {$pdfHex}, {$excelHex}, GETDATE(), GETDATE(), 1)",
+            [
+                $data['nombre_archivo'],
+                $data['descripcion'] ?? '',
+            ]
+        );
+
+        return (int) $result[0]->id;
     }
 
     public static function obtenerReportesHabilitados()
     {
         return DB::connection('sqlsrv')
             ->table('sw_capacitacion_reportes_historial')
-            ->where('habilitado', 1)
             ->orderBy('fecha_creacion', 'desc')
             ->get();
     }

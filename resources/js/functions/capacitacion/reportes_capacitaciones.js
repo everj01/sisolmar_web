@@ -121,6 +121,9 @@ export default document.addEventListener("alpine:init", () => {
         abrirModalRecordPersonal() {
             window.dispatchEvent(new CustomEvent("abrir-record-personal"));
         },
+        abrirModalHistorial() {
+            window.dispatchEvent(new CustomEvent("abrir-historial-reportes"));
+        },
     }));
 
     Alpine.data("modalReportePorCapacitacion", () => ({
@@ -543,8 +546,11 @@ export default document.addEventListener("alpine:init", () => {
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = _blobExcel(buffer);
+            const nombreArchivo = `reporte_${nombreCurso}_${this.selectedEstado}.xlsx`;
 
-            saveAs(blob, `reporte_${nombreCurso}_${this.selectedEstado}.xlsx`);
+            await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+
+            saveAs(blob, nombreArchivo);
 
             Swal.fire(
                 "Éxito",
@@ -701,13 +707,43 @@ export default document.addEventListener("alpine:init", () => {
                 margin: { left: 14, right: 14 },
             });
 
-            doc.save(`reporte_${nombreCurso}_${this.selectedEstado}.pdf`);
+            const nombreArchivo = `reporte_${nombreCurso}_${this.selectedEstado}.pdf`;
+
+            const pdfBlob = doc.output("blob");
+
+            await this.registrarReporteEnHistorial(nombreArchivo, pdfBlob, null);
+
+            doc.save(nombreArchivo);
 
             Swal.fire(
                 "Éxito",
                 "Reporte exportado a PDF correctamente.",
                 "success",
             );
+        },
+
+        async registrarReporteEnHistorial(nombreArchivo, pdfBlob, excelBlob) {
+            try {
+                const formData = new FormData();
+                formData.append("nombre_archivo", nombreArchivo);
+                formData.append("descripcion", "");
+
+                if (pdfBlob) {
+                    formData.append("archivo_pdf", pdfBlob, nombreArchivo.replace(/\.pdf$/i, "") + ".pdf");
+                }
+
+                if (excelBlob) {
+                    formData.append("archivo_excel", excelBlob, nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx");
+                }
+
+                await axios.post("/api/capacitacion/registrar-reporte", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+
+                window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+            } catch (error) {
+                console.error("Error al registrar reporte en historial:", error);
+            }
         },
 
         async obtenerPersonal() {
@@ -1177,6 +1213,9 @@ export default document.addEventListener("alpine:init", () => {
                 .replace(/[^\w\-]+/g, "_")
                 .slice(0, 40);
             const nombreArchivo = `reporte_historial_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+            await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+
             saveAs(blob, nombreArchivo);
 
             Swal.fire(
@@ -1339,9 +1378,13 @@ export default document.addEventListener("alpine:init", () => {
                 .toString()
                 .replace(/[^\w\-]+/g, "_")
                 .slice(0, 40);
-            doc.save(
-                `reporte_historial_${slug}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            );
+            const nombreArchivo = `reporte_historial_${slug}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+            const pdfBlob = doc.output("blob");
+
+            await this.registrarReporteEnHistorial(nombreArchivo, pdfBlob, null);
+
+            doc.save(nombreArchivo);
 
             Swal.fire(
                 "Éxito",
@@ -1453,6 +1496,30 @@ export default document.addEventListener("alpine:init", () => {
             this.sortColumn = null;
             this.sortDirection = null;
             this.cacheReportes = {};
+        },
+
+        async registrarReporteEnHistorial(nombreArchivo, pdfBlob, excelBlob) {
+            try {
+                const formData = new FormData();
+                formData.append("nombre_archivo", nombreArchivo);
+                formData.append("descripcion", "");
+
+                if (pdfBlob) {
+                    formData.append("archivo_pdf", pdfBlob, nombreArchivo.replace(/\.pdf$/i, "") + ".pdf");
+                }
+
+                if (excelBlob) {
+                    formData.append("archivo_excel", excelBlob, nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx");
+                }
+
+                await axios.post("/api/capacitacion/registrar-reporte", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+
+                window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+            } catch (error) {
+                console.error("Error al registrar reporte en historial:", error);
+            }
         },
     }));
 
@@ -1790,6 +1857,30 @@ export default document.addEventListener("alpine:init", () => {
             this.cacheReportes = {};
         },
 
+        async registrarReporteEnHistorial(nombreArchivo, pdfBlob, excelBlob) {
+            try {
+                const formData = new FormData();
+                formData.append("nombre_archivo", nombreArchivo);
+                formData.append("descripcion", "");
+
+                if (pdfBlob) {
+                    formData.append("archivo_pdf", pdfBlob, nombreArchivo.replace(/\.pdf$/i, "") + ".pdf");
+                }
+
+                if (excelBlob) {
+                    formData.append("archivo_excel", excelBlob, nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx");
+                }
+
+                await axios.post("/api/capacitacion/registrar-reporte", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+
+                window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+            } catch (error) {
+                console.error("Error al registrar reporte en historial:", error);
+            }
+        },
+
         volverAFiltros() {
             this.view = "filters";
             this.personalRecord = [];
@@ -2000,6 +2091,9 @@ export default document.addEventListener("alpine:init", () => {
                 .replace(/[^\w\-]+/g, "_")
                 .slice(0, 40);
             const nombreArchivo = `record_capacitaciones_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+            await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+
             saveAs(blob, nombreArchivo);
 
             Swal.fire("Éxito", "Récord exportado a Excel correctamente.", "success");
@@ -2177,11 +2271,265 @@ export default document.addEventListener("alpine:init", () => {
                 .toString()
                 .replace(/[^\w\-]+/g, "_")
                 .slice(0, 40);
-            doc.save(
-                `record_capacitaciones_${slug}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            );
+            const nombreArchivo = `record_capacitaciones_${slug}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+            const pdfBlob = doc.output("blob");
+
+            await this.registrarReporteEnHistorial(nombreArchivo, pdfBlob, null);
+
+            doc.save(nombreArchivo);
 
             Swal.fire("Éxito", "Récord exportado a PDF correctamente.", "success");
+        },
+    }));
+
+    Alpine.data("modalHistorialReportes", () => ({
+        open: false,
+        reportes: [],
+        loading: false,
+        cacheLoaded: false,
+
+        editingId: null,
+        editForm: { nombre_archivo: "", descripcion: "" },
+        savingEdit: false,
+
+        sortColumn: null,
+        sortDirection: null,
+        searchQuery: "",
+        showDeletedOnly: false,
+
+        async init() {
+            window.addEventListener("abrir-historial-reportes", () => {
+                this.abrir();
+            });
+            window.addEventListener("historial-reportes-actualizado", () => {
+                this.cacheLoaded = false;
+                this.sortColumn = null;
+                this.sortDirection = null;
+                this.searchQuery = "";
+                this.showDeletedOnly = false;
+            });
+        },
+
+        async abrir() {
+            this.open = true;
+            if (!this.cacheLoaded) {
+                await this.cargarReportes();
+            }
+        },
+
+        cerrar() {
+            this.open = false;
+            this.sortColumn = null;
+            this.sortDirection = null;
+            this.searchQuery = "";
+            this.showDeletedOnly = false;
+        },
+
+        async cargarReportes() {
+            this.loading = true;
+            try {
+                const response = await axios.get("/api/capacitacion/listar-reportes");
+                if (response.data.success) {
+                    this.reportes = response.data.reportes;
+                    this.cacheLoaded = true;
+                    this.searchQuery = "";
+                }
+            } catch (error) {
+                console.error(error);
+                this.reportes = [];
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        iniciarEdicion(reporte) {
+            this.editingId = reporte.id;
+            this.editForm = {
+                nombre_archivo: reporte.nombre_archivo,
+                descripcion: reporte.descripcion,
+            };
+        },
+
+        cancelarEdicion() {
+            this.editingId = null;
+            this.editForm = { nombre_archivo: "", descripcion: "" };
+        },
+
+        ordenar(columna) {
+            if (this.sortColumn === columna) {
+                if (this.sortDirection === "asc") {
+                    this.sortDirection = "desc";
+                } else if (this.sortDirection === "desc") {
+                    this.sortColumn = null;
+                    this.sortDirection = null;
+                } else {
+                    this.sortDirection = "asc";
+                }
+            } else {
+                this.sortColumn = columna;
+                this.sortDirection = "asc";
+            }
+        },
+
+        get reportesFiltrados() {
+            let resultados = this.reportes;
+
+            if (this.showDeletedOnly) {
+                resultados = resultados.filter((r) => !r.habilitado);
+            }
+
+            if (this.searchQuery.trim()) {
+                const query = this.searchQuery.trim().toLowerCase();
+                resultados = resultados.filter((r) => {
+                    const nombre = (r.nombre_archivo || "").toLowerCase();
+                    const descripcion = (r.descripcion || "").toLowerCase();
+                    const id = String(r.id);
+                    const fecha = this.formatearFecha(r.fecha_creacion).toLowerCase();
+                    return nombre.includes(query) ||
+                        descripcion.includes(query) ||
+                        id.includes(query) ||
+                        fecha.includes(query);
+                });
+            }
+
+            if (!this.sortColumn || !this.sortDirection) {
+                return resultados;
+            }
+
+            return [...resultados].sort((a, b) => {
+                let valA = a[this.sortColumn] || "";
+                let valB = b[this.sortColumn] || "";
+
+                if (this.sortColumn === "fecha_creacion") {
+                    valA = valA ? new Date(valA).getTime() : 0;
+                    valB = valB ? new Date(valB).getTime() : 0;
+                    return this.sortDirection === "asc" ? valA - valB : valB - valA;
+                }
+
+                const cmp = valA.toString().localeCompare(valB.toString(), "es", { sensitivity: "base" });
+                return this.sortDirection === "asc" ? cmp : -cmp;
+            });
+        },
+
+        async guardarEdicion() {
+            if (!this.editingId) return;
+            this.savingEdit = true;
+            try {
+                const response = await axios.put(`/api/capacitacion/actualizar-reporte/${this.editingId}`, {
+                    nombre_archivo: this.editForm.nombre_archivo,
+                    descripcion: this.editForm.descripcion,
+                });
+
+                if (response.data.success) {
+                    const idx = this.reportes.findIndex((r) => r.id === this.editingId);
+                    if (idx !== -1) {
+                        this.reportes[idx].nombre_archivo = this.editForm.nombre_archivo;
+                        this.reportes[idx].descripcion = this.editForm.descripcion;
+                    }
+                    this.cancelarEdicion();
+                    this.cacheLoaded = false;
+                }
+            } catch (error) {
+                console.error("Error al editar reporte:", error);
+                Swal.fire(
+                    "Error",
+                    "No se pudo actualizar el reporte.",
+                    "error",
+                );
+            } finally {
+                this.savingEdit = false;
+            }
+        },
+
+        async cambiarEstado(id, habilitado) {
+            const accion = habilitado ? "recuperar" : "eliminar";
+            const mensaje = habilitado
+                ? "¿Desea recuperar este reporte?"
+                : "¿Desea eliminar este reporte? Podrá recuperarlo luego.";
+
+            try {
+                await Swal.fire({
+                    title: habilitado ? "Recuperar reporte" : "Eliminar reporte",
+                    text: mensaje,
+                    icon: "question",
+                    showCancelButton: true,
+                    confirmButtonColor: habilitado ? "#10b981" : "#ef4444",
+                    confirmButtonText: habilitado ? "Sí, recuperar" : "Sí, eliminar",
+                    cancelButtonText: "Cancelar",
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        const response = await axios.patch(`/api/capacitacion/actualizar-estado-reporte/${id}`, {
+                            habilitado: habilitado,
+                        });
+
+                        if (response.data.success) {
+                            const idx = this.reportes.findIndex((r) => r.id === id);
+                            if (idx !== -1) {
+                                this.reportes[idx].habilitado = habilitado;
+                            }
+                            this.cacheLoaded = false;
+                            Swal.fire(
+                                "Éxito",
+                                response.data.message,
+                                "success",
+                            );
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error(`Error al ${accion} reporte:`, error);
+                Swal.fire(
+                    "Error",
+                    `No se pudo ${accion} el reporte.`,
+                    "error",
+                );
+            }
+        },
+
+        async descargarArchivo(id, tipo) {
+            try {
+                const response = await axios.get(`/api/capacitacion/descargar-reporte/${id}/${tipo}`, {
+                    responseType: "blob",
+                });
+
+                const contentDisposition = response.headers["content-disposition"];
+                let nombreArchivo = `reporte_${id}.${tipo === "pdf" ? "pdf" : "xlsx"}`;
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="?(.+?)"?$/);
+                    if (match) {
+                        nombreArchivo = match[1];
+                    }
+                }
+
+                const blob = new Blob([response.data]);
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = nombreArchivo;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error("Error al descargar archivo:", error);
+                Swal.fire(
+                    "Error",
+                    "No se pudo descargar el archivo. Intente nuevamente.",
+                    "error",
+                );
+            }
+        },
+
+        formatearFecha(fecha) {
+            if (!fecha) return "—";
+            const d = new Date(fecha);
+            const dia = String(d.getDate()).padStart(2, "0");
+            const mes = String(d.getMonth() + 1).padStart(2, "0");
+            const anio = d.getFullYear();
+            const hora = String(d.getHours()).padStart(2, "0");
+            const min = String(d.getMinutes()).padStart(2, "0");
+            return `${dia}/${mes}/${anio} ${hora}:${min}`;
         },
     }));
 });
