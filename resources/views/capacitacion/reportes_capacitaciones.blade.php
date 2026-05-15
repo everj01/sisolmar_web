@@ -79,7 +79,8 @@
                 </div>
                 <h3 class="text-lg font-semibold text-default-900 mb-2">Reporte de capacitaciones</h3>
                 <p class="text-sm text-default-500 leading-relaxed flex-grow mb-4">
-                    Obtenga el listado completo de cursos de capacitación filtrados por sistema de gestión, área responsable y período. Consulte los detalles de cada curso y exporte a Excel o PDF.
+                    Obtenga el listado completo de cursos de capacitación filtrados por sistema de gestión, área
+                    responsable y período. Consulte los detalles de cada curso y exporte a Excel o PDF.
                 </p>
                 <button @click="abrirModalCursosArea()"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm w-full">
@@ -102,7 +103,8 @@
                 <h3 class="text-lg font-semibold text-default-900 mb-2">Reporte de récord de capacitaciones por personal
                 </h3>
                 <p class="text-sm text-default-500 leading-relaxed flex-grow mb-4">
-                    Consulte el historial completo de capacitaciones de un colaborador específico. Seleccione la sucursal, busque por nombre o DNI, y filtre por sistema de gestión, área y estado del curso.
+                    Consulte el historial completo de capacitaciones de un colaborador específico. Seleccione la
+                    sucursal, busque por nombre o DNI, y filtre por sistema de gestión, área y estado del curso.
                 </p>
                 <button @click="abrirModalRecordPersonal()"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm w-full">
@@ -684,7 +686,7 @@
         x-cloak class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         style="background: rgba(36,39,70,0.45);">
 
-        <div :class="view === 'resultados' ? 'max-w-6xl' : 'max-w-xl'"
+        <div :class="view === 'resultados' ? 'max-w-6xl' : 'max-w-4xl'"
             class="flex flex-col w-full bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 animate-fade-in transition-all duration-300">
 
             <div class="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
@@ -715,114 +717,135 @@
                 </button>
             </div>
 
-            <div x-show="view === 'filters'" class="px-6 pb-1 space-y-4">
-                <div>
-                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                        Sistema de gestión <span class="text-danger">*</span>
-                    </label>
-                    <select x-model="selectedSistema" @change="cargarAreas($event.target.value)"
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                        <option value=""
-                            x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')">
-                        </option>
-                        <template x-for="option in sistemas" :key="option.codigo">
-                            <option :value="option.codigo" x-text="option.descripcion"></option>
-                        </template>
-                    </select>
-                </div>
+            <div x-show="view === 'filters'" class="px-6 pb-1">
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Columna izquierda: Filtros de cursos -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="flex-shrink-0 w-1 h-4 bg-primary rounded-full"></div>
+                            <h4 class="text-xs font-semibold text-default-700 uppercase tracking-wide">Filtros de
+                                capacitaciones por área</h4>
+                        </div>
 
-                <div>
-                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                        Área responsable <span class="text-danger">*</span>
-                    </label>
-                    <select x-model="selectedArea" @change="cargarCursos($event.target.value)"
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                        <option value=""
-                            x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')">
-                        </option>
-                        <template x-for="option in areas" :key="option.codModdle">
-                            <option :value="option.codModdle" x-text="option.Area"></option>
-                        </template>
-                    </select>
-                </div>
+                        <div>
+                            <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                Sistema de gestión <span class="text-danger">*</span>
+                            </label>
+                            <select x-model="selectedSistema" @change="cargarAreas($event.target.value)"
+                                class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                                <option value=""
+                                    x-text="loadingSistemas ? 'Cargando sistemas...' : (sistemas.length === 0 ? 'Sin sistemas disponibles' : 'Seleccione')">
+                                </option>
+                                <template x-for="option in sistemas" :key="option.codigo">
+                                    <option :value="option.codigo" x-text="option.descripcion"></option>
+                                </template>
+                            </select>
+                        </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                            Fecha de inicio <span class="text-default-400 font-normal">(opcional)</span>
-                        </label>
-                        <select x-model="selectedFechaInicio" @change="filtrarCursosPorFecha()"
-                            class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                            <option value=""
-                                x-text="!selectedArea ? 'Seleccione' : (fechasInicio.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')">
-                            </option>
-                            <template x-for="option in fechasInicio" :key="option.fecha">
-                                <option :value="option.fecha" x-text="option.fecha"></option>
-                            </template>
-                        </select>
+                        <div>
+                            <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                Área responsable <span class="text-danger">*</span>
+                            </label>
+                            <select x-model="selectedArea" @change="cargarCursos($event.target.value)"
+                                class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                                <option value=""
+                                    x-text="loadingAreas ? 'Cargando áreas...' : (selectedSistema && areas.length === 0 ? 'Sin áreas disponibles' : 'Seleccione')">
+                                </option>
+                                <template x-for="option in areas" :key="option.codModdle">
+                                    <option :value="option.codModdle" x-text="option.Area"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                    Fecha de inicio <span class="text-default-400 font-normal">(opcional)</span>
+                                </label>
+                                <select x-model="selectedFechaInicio" @change="filtrarCursosPorFecha()"
+                                    class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                                    <option value=""
+                                        x-text="!selectedArea ? 'Seleccione' : (fechasInicio.length === 0 ? 'Sin fechas' : 'Todas')">
+                                    </option>
+                                    <template x-for="option in fechasInicio" :key="option.fecha">
+                                        <option :value="option.fecha" x-text="option.fecha"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                    Fecha de fin <span class="text-default-400 font-normal">(opcional)</span>
+                                </label>
+                                <select x-model="selectedFechaFin" @change="filtrarCursosPorFecha()"
+                                    class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                                    <option value=""
+                                        x-text="!selectedArea ? 'Seleccione' : (fechasFin.length === 0 ? 'Sin fechas' : 'Todas')">
+                                    </option>
+                                    <template x-for="option in fechasFin" :key="option.fecha">
+                                        <option :value="option.fecha" x-text="option.fecha"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                            Fecha de fin <span class="text-default-400 font-normal">(opcional)</span>
-                        </label>
-                        <select x-model="selectedFechaFin" @change="filtrarCursosPorFecha()"
-                            class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                            <option value=""
-                                x-text="!selectedArea ? 'Seleccione' : (fechasFin.length === 0 ? 'Sin fechas disponibles' : 'Todas las fechas')">
-                            </option>
-                            <template x-for="option in fechasFin" :key="option.fecha">
-                                <option :value="option.fecha" x-text="option.fecha"></option>
-                            </template>
-                        </select>
+
+                    <!-- Columna derecha: Filtros de personal -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="flex-shrink-0 w-1 h-4 bg-primary rounded-full"></div>
+                            <h4 class="text-xs font-semibold text-default-700 uppercase tracking-wide">Filtros de
+                                personal por sucursal</h4>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                Sucursal <span class="text-danger">*</span>
+                            </label>
+                            <select x-model="selectedSucursal" @change="cargarPersonalPorSucursal()"
+                                class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                                <option value=""
+                                    x-text="loadingSucursales ? 'Cargando sucursales...' : (sucursales.length === 0 ? 'Sin sucursales disponibles' : 'Seleccione Sucursal')">
+                                </option>
+                                <template x-for="option in sucursales" :key="option.codigo">
+                                    <option :value="option.codigo" x-text="option.sucursal"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                Personal <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" x-model="searchPersonal" placeholder="Buscar por nombre o DNI..."
+                                @input="selectedPersonal = ''"
+                                class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mb-2"
+                                x-show="selectedSucursal && !loadingPersonal && personalOptions.length > 0">
+                            <select x-model="selectedPersonal"
+                                class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                                <option value=""
+                                    x-text="!selectedSucursal ? 'Seleccione sucursal primero' : (loadingPersonal ? 'Cargando personal...' : (filteredPersonalOptions.length === 0 ? 'Sin personal disponible' : filteredPersonalOptions.length + ' resultado(s)'))">
+                                </option>
+                                <template x-for="option in filteredPersonalOptions" :key="option.codigo">
+                                    <option :value="option.codigo"
+                                        x-text="option.nombre_completo + ' (' + option.dni + ')'"
+                                        x-show="!searchPersonal || filteredPersonalOptions.length > 0">
+                                    </option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                                Estado <span class="text-danger">*</span>
+                            </label>
+                            <select x-model="selectedEstado" disabled
+                                class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-not-allowed">
+                                <option value="PENDIENTE">PENDIENTE</option>
+                                <option value="APROBADO">APROBADO</option>
+                                <option value="DESAPROBADO">DESAPROBADO</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-
-                <div>
-                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                        Sucursal <span class="text-danger">*</span>
-                    </label>
-                    <select x-model="selectedSucursal" @change="cargarPersonalPorSucursal()"
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                        <option value=""
-                            x-text="loadingSucursales ? 'Cargando sucursales...' : (sucursales.length === 0 ? 'Sin sucursales disponibles' : 'Seleccione Sucursal')">
-                        </option>
-                        <template x-for="option in sucursales" :key="option.codigo">
-                            <option :value="option.codigo" x-text="option.sucursal"></option>
-                        </template>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                        Personal <span class="text-danger">*</span>
-                    </label>
-                    <input type="text" x-model="searchPersonal" placeholder="Buscar por nombre o DNI..."
-                        @input="selectedPersonal = ''"
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mb-2"
-                        x-show="selectedSucursal && !loadingPersonal && personalOptions.length > 0">
-                    <select x-model="selectedPersonal"
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                        <option value=""
-                            x-text="!selectedSucursal ? 'Seleccione sucursal primero' : (loadingPersonal ? 'Cargando personal...' : (filteredPersonalOptions.length === 0 ? 'Sin personal disponible' : filteredPersonalOptions.length + ' resultado(s)'))">
-                        </option>
-                        <template x-for="option in filteredPersonalOptions" :key="option.codigo">
-                            <option :value="option.codigo" x-text="option.nombre_completo + ' (' + option.dni + ')'"
-                                x-show="!searchPersonal || filteredPersonalOptions.length > 0">
-                            </option>
-                        </template>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                        Estado <span class="text-danger">*</span>
-                    </label>
-                    <select x-model="selectedEstado" disabled
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-not-allowed">
-                        <option value="PENDIENTE">PENDIENTE</option>
-                        <option value="APROBADO">APROBADO</option>
-                        <option value="DESAPROBADO">DESAPROBADO</option>
-                    </select>
                 </div>
             </div>
 
@@ -943,12 +966,24 @@
                 </template>
 
                 <template x-if="view === 'resultados'">
-                    <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center justify-between w-full flex-wrap gap-2">
                         <button type="button" @click="volverAFiltros()"
                             class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 transition-all cursor-pointer">
                             <i class="ti ti-arrow-left text-sm"></i>
                             Atrás
                         </button>
+                        <div x-show="personalRecord.length > 0 && !loadingRecord" class="flex items-center gap-2">
+                            <button type="button" @click="exportarExcelRecord()"
+                                class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all cursor-pointer">
+                                <i class="ti ti-file-spreadsheet text-sm"></i>
+                                Exportar Excel
+                            </button>
+                            <button type="button" @click="exportarPDFRecord()"
+                                class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 shadow-sm transition-all cursor-pointer">
+                                <i class="ti ti-file-type-pdf text-sm"></i>
+                                Exportar PDF
+                            </button>
+                        </div>
                     </div>
                 </template>
             </div>

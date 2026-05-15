@@ -1487,6 +1487,8 @@ export default document.addEventListener("alpine:init", () => {
         sortColumn: null,
         sortDirection: null,
 
+        cacheReportes: {},
+
         async init() {
             window.addEventListener("abrir-record-personal", () => {
                 this.abrir();
@@ -1652,6 +1654,23 @@ export default document.addEventListener("alpine:init", () => {
                 return;
             }
 
+            const cacheKey = [
+                personal.dni,
+                this.selectedArea,
+                this.selectedEstado,
+                this.selectedFechaInicio,
+                this.selectedFechaFin,
+            ].join("_");
+
+            if (this.cacheReportes[cacheKey]) {
+                this.personalRecord = this.cacheReportes[cacheKey];
+                this.currentPage = 1;
+                this.sortColumn = null;
+                this.sortDirection = null;
+                this.view = "resultados";
+                return;
+            }
+
             this.loadingRecord = true;
             this.view = "resultados";
             this.personalRecord = [];
@@ -1687,6 +1706,18 @@ export default document.addEventListener("alpine:init", () => {
                         );
                     }
 
+                    if (this.selectedFechaInicio) {
+                        cursos = cursos.filter(
+                            (c) => c.fecha_inicio === this.selectedFechaInicio,
+                        );
+                    }
+
+                    if (this.selectedFechaFin) {
+                        cursos = cursos.filter(
+                            (c) => c.fecha_final === this.selectedFechaFin,
+                        );
+                    }
+
                     if (this.selectedEstado === "PENDIENTE") {
                         cursos = cursos.filter(
                             (c) => c.estado === "PENDIENTE",
@@ -1702,6 +1733,8 @@ export default document.addEventListener("alpine:init", () => {
                     }
 
                     this.personalRecord = cursos;
+
+                    this.cacheReportes[cacheKey] = cursos;
                 } else {
                     this.personalRecord = [];
                 }
@@ -1747,6 +1780,7 @@ export default document.addEventListener("alpine:init", () => {
             this.currentPage = 1;
             this.loadingPersonal = false;
             this.loadingRecord = false;
+            this.cacheReportes = {};
         },
 
         volverAFiltros() {
@@ -1773,19 +1807,7 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         get recordPaginado() {
-            let datos = [...this.personalRecord];
-            if (this.sortColumn && this.sortDirection) {
-                datos.sort((a, b) => {
-                    const valA = (a[this.sortColumn] || "").toString();
-                    const valB = (b[this.sortColumn] || "").toString();
-                    const cmp = valA.localeCompare(valB, "es", { sensitivity: "base" });
-                    return this.sortDirection === "asc" ? cmp : -cmp;
-                });
-            } else {
-                datos.sort((a, b) =>
-                    (a.nombre_curso || "").localeCompare(b.nombre_curso || "", "es", { sensitivity: "base" }),
-                );
-            }
+            const datos = this.recordOrdenado;
             const start = (this.currentPage - 1) * this.perPage;
             const end = start + this.perPage;
             return datos.slice(start, end);
@@ -1815,6 +1837,316 @@ export default document.addEventListener("alpine:init", () => {
         get nombrePersonal() {
             const p = this.personalOptions.find((o) => o.codigo == this.selectedPersonal);
             return p ? p.nombre_completo : "";
+        },
+
+        get textoRangoFechasRecord() {
+            const ini = this.selectedFechaInicio;
+            const fin = this.selectedFechaFin;
+            if (ini && fin) {
+                return `Del ${ini} al ${fin}`;
+            }
+            if (ini) {
+                return `Desde el ${ini}`;
+            }
+            if (fin) {
+                return `Hasta el ${fin}`;
+            }
+            return "Todo el período";
+        },
+
+        get recordOrdenado() {
+            let datos = [...this.personalRecord];
+            if (this.sortColumn && this.sortDirection) {
+                datos.sort((a, b) => {
+                    const valA = (a[this.sortColumn] || "").toString();
+                    const valB = (b[this.sortColumn] || "").toString();
+                    const cmp = valA.localeCompare(valB, "es", { sensitivity: "base" });
+                    return this.sortDirection === "asc" ? cmp : -cmp;
+                });
+            } else {
+                datos.sort((a, b) =>
+                    (a.nombre_curso || "").localeCompare(b.nombre_curso || "", "es", { sensitivity: "base" }),
+                );
+            }
+            return datos;
+        },
+
+        async exportarExcelRecord() {
+            if (!this.personalRecord.length) {
+                Swal.fire("Atención", "No hay registros para exportar.", "warning");
+                return;
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const logoImageId = await _cargarLogoExcel(workbook);
+            const sheet = workbook.addWorksheet("Récord de Capacitaciones");
+
+            const headerRowNumber = 5;
+
+            sheet.getRow(1);
+            sheet.getRow(2);
+            sheet.getRow(3);
+            sheet.getRow(4);
+
+            if (logoImageId !== null) {
+                sheet.addImage(logoImageId, {
+                    tl: { col: 1, row: 0 },
+                    br: { col: 3, row: 2 },
+                    editAs: "absolute",
+                });
+            }
+
+            sheet.getRow(1).height = 50;
+
+            sheet.mergeCells("D1:F1");
+
+            const infoCell = sheet.getCell("D1");
+            infoCell.value = `Personal: ${this.nombrePersonal}`;
+            infoCell.font = {
+                bold: true,
+                size: 13,
+                color: { argb: "FF1F4E79" },
+            };
+            infoCell.alignment = {
+                vertical: "middle",
+                horizontal: "right",
+            };
+
+            sheet.mergeCells("D2:F2");
+
+            const area = this.areas.find(
+                (a) => String(a.codModdle) === String(this.selectedArea),
+            );
+            const nombreArea = area ? area.Area : "Todas las áreas";
+            const areaCell = sheet.getCell("D2");
+            areaCell.value = `Área responsable: ${nombreArea}`;
+            areaCell.font = {
+                size: 11,
+                color: { argb: "FF333333" },
+            };
+            areaCell.alignment = {
+                vertical: "middle",
+                horizontal: "right",
+            };
+
+            sheet.mergeCells("D3:F3");
+
+            const totalCell = sheet.getCell("D3");
+            totalCell.value = `Total: ${this.personalRecord.length} curso(s) · ${this.textoRangoFechasRecord}`;
+            totalCell.font = {
+                size: 11,
+                color: { argb: "FF333333" },
+            };
+            totalCell.alignment = {
+                vertical: "middle",
+                horizontal: "right",
+            };
+
+            sheet.getRow(4).height = 8;
+
+            const headers = [
+                "#",
+                "Área",
+                "Capacitación",
+                "Fecha inicio",
+                "Fecha fin",
+                "Estado",
+            ];
+
+            const headerRow = sheet.getRow(headerRowNumber);
+            headerRow.values = headers;
+            headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
+
+            const dataOrdenada = this.recordOrdenado;
+            dataOrdenada.forEach((c, i) => {
+                const row = sheet.addRow([
+                    i + 1,
+                    c.area,
+                    c.nombre_curso,
+                    c.fecha_inicio,
+                    c.fecha_final,
+                    c.estado,
+                ]);
+                row.eachCell((cell) => _estiloDatoExcel(cell));
+            });
+
+            sheet.columns = [
+                { width: 5 },
+                { width: 28 },
+                { width: 50 },
+                { width: 16 },
+                { width: 16 },
+                { width: 18 },
+            ];
+
+            sheet.autoFilter = {
+                from: `A${headerRowNumber}`,
+                to: `F${headerRowNumber}`,
+            };
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = _blobExcel(buffer);
+
+            const slug = (this.nombrePersonal || "record")
+                .toString()
+                .replace(/[^\w\-]+/g, "_")
+                .slice(0, 40);
+            const nombreArchivo = `record_capacitaciones_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            saveAs(blob, nombreArchivo);
+
+            Swal.fire("Éxito", "Récord exportado a Excel correctamente.", "success");
+        },
+
+        async exportarPDFRecord() {
+            if (!this.personalRecord.length) {
+                Swal.fire("Atención", "No hay registros para exportar.", "warning");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: "landscape",
+                unit: "mm",
+                format: "a4",
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            const sistema = this.sistemas.find(
+                (s) => String(s.codigo) === String(this.selectedSistema),
+            );
+            const area = this.areas.find(
+                (a) => String(a.codModdle) === String(this.selectedArea),
+            );
+
+            const logoSol = await _cargarImagen("/images/logo_sol.png");
+
+            let logoBottomY = 26;
+            const logoWidth = 60;
+            const startX = 14;
+
+            if (logoSol) {
+                const ratio = logoSol.height / logoSol.width;
+                const height = logoWidth * ratio;
+                doc.addImage(logoSol, "PNG", startX, 10, logoWidth, height);
+                logoBottomY = 10 + height;
+            }
+
+            const lineY = logoBottomY + 2;
+            doc.setDrawColor(150, 150, 150);
+            doc.setLineWidth(0.2);
+            doc.line(startX, lineY, startX + 75, lineY);
+
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(7);
+            doc.setTextColor(80, 80, 80);
+            doc.text(
+                "Chimbote: Calle Los Laureles Nº206 Urb. La Caleta",
+                startX,
+                lineY + 4,
+            );
+            doc.text("RUC: 20445414833", startX, lineY + 7);
+
+            const title = sistema ? `${sistema.descripcion.toUpperCase()}` : "";
+            const subtitle = area ? area.Area : "";
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+
+            const titleX = pageWidth - 14;
+            doc.text(title, titleX, 40, { align: "right" });
+            const titleWidth = doc.getTextWidth(title);
+            doc.setLineWidth(0.3);
+            doc.setDrawColor(0, 0, 0);
+            if (titleWidth > 0) {
+                doc.line(titleX - titleWidth, 41, titleX, 41);
+            }
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(subtitle, titleX, 46, { align: "right" });
+
+            const textoListado = `RÉCORD - ${this.personalRecord.length} CURSO(S)`;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text(textoListado, startX, 56);
+
+            const nombrePersonal = this.nombrePersonal.toUpperCase();
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text(nombrePersonal, startX, 61);
+
+            const periodoLinea = this.textoRangoFechasRecord.toUpperCase();
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            const twPeriodo = pageWidth - startX - 100;
+            const lineasPeriodo = doc.splitTextToSize(periodoLinea, twPeriodo);
+            doc.text(lineasPeriodo, startX, 66);
+
+            const tableStartY =
+                lineasPeriodo.length > 1
+                    ? 66 + lineasPeriodo.length * 4.2 + 4
+                    : 71;
+
+            const dataOrdenada = this.recordOrdenado;
+            const filas = dataOrdenada.map((c, i) => [
+                i + 1,
+                c.area || "",
+                c.nombre_curso || "",
+                c.fecha_inicio || "",
+                c.fecha_final || "",
+                c.estado || "",
+            ]);
+
+            doc.autoTable({
+                startY: tableStartY,
+                head: [
+                    [
+                        "It",
+                        "Área",
+                        "Capacitación",
+                        "Fecha inicio",
+                        "Fecha fin",
+                        "Estado",
+                    ],
+                ],
+                body: filas,
+                theme: "grid",
+                styles: {
+                    fontSize: 8,
+                    textColor: [0, 0, 0],
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
+                    halign: "center",
+                    valign: "middle",
+                },
+                headStyles: {
+                    fillColor: [253, 245, 230],
+                    textColor: [0, 0, 0],
+                    fontStyle: "bold",
+                    halign: "center",
+                },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 28 },
+                    2: { cellWidth: "auto", halign: "left" },
+                    3: { cellWidth: 22 },
+                    4: { cellWidth: 22 },
+                    5: { cellWidth: 22 },
+                },
+                margin: { left: 14, right: 14 },
+            });
+
+            const slug = (this.nombrePersonal || "record")
+                .toString()
+                .replace(/[^\w\-]+/g, "_")
+                .slice(0, 40);
+            doc.save(
+                `record_capacitaciones_${slug}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            );
+
+            Swal.fire("Éxito", "Récord exportado a PDF correctamente.", "success");
         },
     }));
 });
