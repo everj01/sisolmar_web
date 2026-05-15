@@ -498,6 +498,7 @@ export default document.addEventListener("alpine:init", () => {
                 "Nombre Completo",
                 "DNI",
                 "Tipo Trabajador",
+                "Cargo",
                 "Estado",
             ];
 
@@ -518,6 +519,7 @@ export default document.addEventListener("alpine:init", () => {
                     p.NombreCompleto,
                     p.DNI,
                     p.TipoTrabajador,
+                    p.Cargo,
                     p.Estado,
                 ]);
 
@@ -530,6 +532,7 @@ export default document.addEventListener("alpine:init", () => {
                 { width: 40 },
                 { width: 15 },
                 { width: 25 },
+                { width: 30 },
                 { width: 15 },
             ];
 
@@ -653,6 +656,7 @@ export default document.addEventListener("alpine:init", () => {
                 p.NombreCompleto || "",
                 p.DNI || "",
                 p.TipoTrabajador || "",
+                p.Cargo || "",
                 p.Estado || "",
             ]);
 
@@ -665,6 +669,7 @@ export default document.addEventListener("alpine:init", () => {
                         "Apellidos y Nombres",
                         "N° Doc.",
                         "Tipo Trabajador",
+                        "Cargo",
                         "Estado",
                     ],
                 ],
@@ -686,11 +691,12 @@ export default document.addEventListener("alpine:init", () => {
                 },
                 columnStyles: {
                     0: { cellWidth: 10 },
-                    1: { cellWidth: 20 },
+                    1: { cellWidth: 18 },
                     2: { cellWidth: "auto", halign: "left" },
-                    3: { cellWidth: 25 },
-                    4: { cellWidth: 35 },
-                    5: { cellWidth: 25 },
+                    3: { cellWidth: 22 },
+                    4: { cellWidth: 28 },
+                    5: { cellWidth: 30 },
+                    6: { cellWidth: 22 },
                 },
                 margin: { left: 14, right: 14 },
             });
