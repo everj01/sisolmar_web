@@ -3720,6 +3720,93 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function descargarReportesZip(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "ids" => "required|array|min:1",
+            "ids.*" => "required|integer",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "success" => false,
+                "message" => "Debe seleccionar al menos un reporte.",
+            ], 422);
+        }
+
+        try {
+            $reportes = DB::connection('sqlsrv')
+                ->table('sw_capacitacion_reportes_historial')
+                ->whereIn('id', $request->ids)
+                ->where('habilitado', 1)
+                ->get();
+
+            if ($reportes->isEmpty()) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "No se encontraron reportes válidos.",
+                ], 404);
+            }
+
+            if (!extension_loaded('zip')) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "La extensión ZIP no está disponible.",
+                ], 500);
+            }
+
+            $zip = new \ZipArchive();
+            $zipPath = storage_path('app/temp/reportes_' . time() . '.zip');
+
+            $zipDir = dirname($zipPath);
+            if (!is_dir($zipDir)) {
+                mkdir($zipDir, 0755, true);
+            }
+
+            $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+            $fileCount = 0;
+            foreach ($reportes as $reporte) {
+                $nombreBase = preg_replace('/\.(pdf|xlsx?)$/i', '', $reporte->nombre_archivo);
+
+                if (!empty($reporte->archivo_pdf)) {
+                    $zip->addFromString($nombreBase . '.pdf', $reporte->archivo_pdf);
+                    $fileCount++;
+                }
+
+                if (!empty($reporte->archivo_excel)) {
+                    $zip->addFromString($nombreBase . '.xlsx', $reporte->archivo_excel);
+                    $fileCount++;
+                }
+            }
+
+            $zip->close();
+
+            if ($fileCount === 0) {
+                @unlink($zipPath);
+                return response()->json([
+                    "success" => false,
+                    "message" => "Los reportes seleccionados no contienen archivos.",
+                ], 404);
+            }
+
+            return response()->download($zipPath, 'reportes_capacitaciones.zip')->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error("Error al descargar reportes en ZIP", [
+                "error" => $e->getMessage(),
+                "ids" => $request->ids,
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al crear el archivo ZIP.",
+                ],
+                500,
+            );
+        }
+    }
+
     public function actualizarReporte(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [

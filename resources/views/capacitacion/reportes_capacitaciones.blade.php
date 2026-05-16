@@ -1261,6 +1261,11 @@
                             <table class="min-w-full text-sm">
                                 <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
                                     <tr>
+                                        <th class="px-4 py-3 text-center font-semibold text-default-700 w-12">
+                                            <input type="checkbox" @change="toggleSeleccionTodos($event.target.checked)"
+                                                :checked="todosSeleccionados"
+                                                class="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary cursor-pointer">
+                                        </th>
                                         <th class="px-4 py-3 text-left font-semibold text-default-700 w-14">#</th>
                                         <th @click="ordenar('nombre_archivo')"
                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
@@ -1291,6 +1296,14 @@
                                     <template x-for="(reporte, index) in reportesFiltrados" :key="reporte.id">
                                         <tr class="hover:bg-default-50 transition-colors"
                                             :class="!reporte.habilitado ? 'bg-default-100/50 opacity-60' : ''">
+                                            <td class="px-4 py-3 text-center">
+                                                <template x-if="reporte.habilitado">
+                                                    <input type="checkbox" :value="reporte.id"
+                                                        @change="toggleSeleccion(reporte.id, $event.target.checked)"
+                                                        :checked="selectedReportes.includes(reporte.id)"
+                                                        class="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary cursor-pointer">
+                                                </template>
+                                            </td>
                                             <td class="px-4 py-3 text-default-500" x-text="index + 1"></td>
 
                                             <template x-if="editingId !== reporte.id">
@@ -1407,6 +1420,20 @@
             </div>
 
             <div class="flex items-center justify-end gap-2 px-6 py-4 mt-2 border-t border-default-100">
+                <div class="flex items-center gap-3 flex-1">
+                    <span x-show="selectedReportes.length > 0"
+                        class="text-sm text-default-600">
+                        <span x-text="selectedReportes.length"></span>
+                        seleccionado(s)
+                    </span>
+                    <button x-show="selectedReportes.length > 0"
+                        @click="descargarSeleccionadosZip()"
+                        :disabled="downloadingZip"
+                        class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ti ti-file-zip text-sm"></i>
+                        <span x-text="downloadingZip ? 'Generando ZIP...' : 'Descargar ZIP'"></span>
+                    </button>
+                </div>
                 <button type="button" @click="cerrar()"
                     class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
                     Cerrar

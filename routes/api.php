@@ -154,6 +154,7 @@ Route::get('/capacitacion/listar-reportes', [CapacitacionController::class, 'lis
 Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
 Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
 Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);
+Route::post('/capacitacion/descargar-reportes-zip', [CapacitacionController::class, 'descargarReportesZip']);
 
 Route::post('/mail/recordatorio-curso/{courseId}', [MailController::class, 'sendRecordatorioCurso']);
 Route::post('/mail/send', [MailController::class, 'send']);

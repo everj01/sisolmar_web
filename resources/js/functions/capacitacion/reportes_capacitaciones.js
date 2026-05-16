@@ -2298,6 +2298,9 @@ export default document.addEventListener("alpine:init", () => {
         searchQuery: "",
         showDeletedOnly: false,
 
+        selectedReportes: [],
+        downloadingZip: false,
+
         async init() {
             window.addEventListener("abrir-historial-reportes", () => {
                 this.abrir();
@@ -2308,6 +2311,7 @@ export default document.addEventListener("alpine:init", () => {
                 this.sortDirection = null;
                 this.searchQuery = "";
                 this.showDeletedOnly = false;
+                this.selectedReportes = [];
             });
         },
 
@@ -2324,6 +2328,7 @@ export default document.addEventListener("alpine:init", () => {
             this.sortDirection = null;
             this.searchQuery = "";
             this.showDeletedOnly = false;
+            this.selectedReportes = [];
         },
 
         async cargarReportes() {
@@ -2410,6 +2415,15 @@ export default document.addEventListener("alpine:init", () => {
                 const cmp = valA.toString().localeCompare(valB.toString(), "es", { sensitivity: "base" });
                 return this.sortDirection === "asc" ? cmp : -cmp;
             });
+        },
+
+        get reportesSeleccionables() {
+            return this.reportesFiltrados.filter((r) => r.habilitado);
+        },
+
+        get todosSeleccionados() {
+            return this.reportesSeleccionables.length > 0 &&
+                this.selectedReportes.length === this.reportesSeleccionables.length;
         },
 
         async guardarEdicion() {
@@ -2518,6 +2532,62 @@ export default document.addEventListener("alpine:init", () => {
                     "No se pudo descargar el archivo. Intente nuevamente.",
                     "error",
                 );
+            }
+        },
+
+        toggleSeleccion(id, seleccionado) {
+            if (seleccionado) {
+                if (!this.selectedReportes.includes(id)) {
+                    this.selectedReportes.push(id);
+                }
+            } else {
+                this.selectedReportes = this.selectedReportes.filter((rId) => rId !== id);
+            }
+        },
+
+        toggleSeleccionTodos(seleccionado) {
+            if (seleccionado) {
+                this.selectedReportes = this.reportesSeleccionables.map((r) => r.id);
+            } else {
+                this.selectedReportes = [];
+            }
+        },
+
+        async descargarSeleccionadosZip() {
+            if (this.selectedReportes.length === 0) return;
+
+            this.downloadingZip = true;
+            try {
+                const response = await axios.post("/api/capacitacion/descargar-reportes-zip", {
+                    ids: this.selectedReportes,
+                }, {
+                    responseType: "blob",
+                });
+
+                const blob = new Blob([response.data], { type: "application/zip" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "reportes_capacitaciones.zip";
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                Swal.fire(
+                    "Éxito",
+                    "Archivo ZIP descargado correctamente.",
+                    "success",
+                );
+            } catch (error) {
+                console.error("Error al descargar ZIP:", error);
+                Swal.fire(
+                    "Error",
+                    "No se pudo generar el archivo ZIP.",
+                    "error",
+                );
+            } finally {
+                this.downloadingZip = false;
             }
         },
 
