@@ -3,91 +3,91 @@ import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 import { jsPDF } from "jspdf";
 
+const seleccionados = new Map(); // CODI_PERS -> rowData - para guardar el personal selecionado
+
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
 new TomSelect('#cargos');
 new TomSelect('#clientes');
-
 
 getPersonal();
 getFolios();
 
 // Tabla de Personas
 const tblPersonas = new Tabulator("#tblPersonas", {
-      height: "380px",
-      layout: "fitColumns",
-      responsiveLayout: "collapse",
-      pagination: true,
-      paginationSize: 10,
-      rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
-      locale: "es",
-      langs: {
-          "es": {
-              "pagination": {
-                  "first": "Primero",
-                  "first_title": "Primera Página",
-                  "last": "Último",
-                  "last_title": "Última Página",
-                  "prev": "Anterior",
-                  "prev_title": "Página Anterior",
-                  "next": "Siguiente",
-                  "next_title": "Página Siguiente",
-                  "all": "Todo"
-              },
-              "data": {
-                  "empty": "No hay datos disponibles"
-              }
-          }
-      },
-      columns: [
-          { title: "Código", field: "CODI_PERS", hozAlign: "center", widthGrow: 1 },
-          { title: "Personal", field: "personal", hozAlign: "left", widthGrow: 3 },
-          { title: "Nro DOC", field: "nroDoc", hozAlign: "center", widthGrow: 1.5 },
-          { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1.2 },
-          {
-              title: "Tipo", field: "TIPOTRAB", hozAlign: "center", widthGrow: 1, headerSort: false,
-              formatter: function (cell) {
-                  const val = cell.getValue();
-                  if (val === 'OPER') return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">OPER</span>`;
-                  if (val === 'ADMIN') return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700">ADMIN</span>`;
-                  return val || '';
-              }
-          },
-          {
-              title: "", field: "select", hozAlign: "center", width: 40, headerSort: false,
-              formatter: function (cell, formatterParams, onRendered) {
-                  const checkbox = document.createElement("input");
-                  checkbox.type = "checkbox";
-                  checkbox.classList.add("form-checkbox", "rounded", "text-dark");
-                  checkbox.checked = cell.getValue() || false;
-                  checkbox.addEventListener("change", function () {
-                      cell.setValue(checkbox.checked);
-                      setTimeout(() => {
-                          tblPersonas.clearFilter();
-                          document.getElementById('buscarPer').value = "";
-                          const allData = tblPersonas.getData();
-                          const selected = allData.filter(row => row.select === true);
-                          const unselected = allData.filter(row => row.select !== true);
-                          tblPersonas.replaceData(selected.concat(unselected));
-                      }, 300);
-                  });
-                  return checkbox;
-              },
-          }
-      ],
-  });
-
+    height: "380px",
+    layout: "fitColumns",
+    responsiveLayout: "collapse",
+    pagination: true,
+    paginationSize: 10,
+    rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
+    locale: "es",
+    langs: {
+        "es": {
+            "pagination": {
+                "first": "Primero",
+                "first_title": "Primera Página",
+                "last": "Último",
+                "last_title": "Última Página",
+                "prev": "Anterior",
+                "prev_title": "Página Anterior",
+                "next": "Siguiente",
+                "next_title": "Página Siguiente",
+                "all": "Todo"
+            },
+            "data": {
+                "empty": "No hay datos disponibles"
+            }
+        }
+    },
+    columns: [
+        { title: "Código", field: "CODI_PERS", hozAlign: "center", widthGrow: 1 },
+        { title: "Personal", field: "personal", hozAlign: "left", widthGrow: 3 },
+        { title: "Nro DOC", field: "nroDoc", hozAlign: "center", widthGrow: 1.5 },
+        { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1.2 },
+        {
+            title: "Tipo", field: "TIPOTRAB", hozAlign: "center", widthGrow: 1, headerSort: false,
+            formatter: function (cell) {
+                const val = cell.getValue();
+                if (val === 'OPER') return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">OPER</span>`;
+                if (val === 'ADMIN') return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700">ADMIN</span>`;
+                return val || '';
+            }
+        },
+        {
+            title: "", field: "select", hozAlign: "center", width: 40, headerSort: false,
+            formatter: function (cell, formatterParams, onRendered) {
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.classList.add("form-checkbox", "rounded", "text-dark");
+                checkbox.checked = cell.getValue() || false;
+                checkbox.addEventListener("change", function () {
+                    cell.setValue(checkbox.checked);
+                    const data = cell.getRow().getData();
+                    if (checkbox.checked) {
+                        seleccionados.set(data.CODI_PERS, data);
+                    } else {
+                        seleccionados.delete(data.CODI_PERS);
+                    }
+                    actualizarContador();
+                });
+                return checkbox;
+            },
+        }
+    ],
+});
 
 // Para activar todos los checkbox del listado de personas
 document.getElementById('select-all-per').addEventListener('change', function () {
     const isChecked = this.checked;
-    const rows = tblPersonas.getRows();
-
-    rows.forEach(row => {
-        const rowCheckbox = row.getCell("select").getElement().querySelector('input[type="checkbox"]');
-        rowCheckbox.checked = isChecked; // Marcar o desmarcar el checkbox de la fila
-        row.getCell("select").setValue(isChecked); // Cambiar el valor de la celda
+    tblPersonas.getRows().forEach(row => {
+        const cb = row.getCell("select").getElement().querySelector('input[type="checkbox"]');
+        cb.checked = isChecked;
+        row.getCell("select").setValue(isChecked);
+        const data = row.getData();
+        isChecked ? seleccionados.set(data.CODI_PERS, data) : seleccionados.delete(data.CODI_PERS);
     });
+    actualizarContador();
 });
 
 // Tabla de Folios
@@ -173,14 +173,14 @@ const tblFolios = new Tabulator("#tblFolios", {
 
 
 // Tabla de Legajos
- const tblLegajos = new Tabulator("#tblLegajos", {
-      height: "100%",
-      layout: "fitColumns",
-      responsiveLayout: "collapse",
-      columns: [
-          { title: "Documento", field: "documento", hozAlign: "left", widthGrow: 1 },
-      ]
-  });
+const tblLegajos = new Tabulator("#tblLegajos", {
+    height: "100%",
+    layout: "fitColumns",
+    responsiveLayout: "collapse",
+    columns: [
+        { title: "Documento", field: "documento", hozAlign: "left", widthGrow: 1 },
+    ]
+});
 
 
 document.getElementById('select-all-fol').addEventListener('change', function () {
@@ -203,21 +203,60 @@ const links = document.querySelectorAll('.card a');
 
 
 function getPersonasSeleccionadas() {
-      return tblPersonas.getRows()
-          .filter(row => row.getCell("select").getValue())
-          .map(row => row.getData());
-  }
+    return [...seleccionados.values()];
+}
 
-  function getFoliosSeleccionados() {
-      return tblFolios.getRows()
-          .filter(row => row.getCell("select").getValue())
-          .map(row => row.getData());
-  }
+function getFoliosSeleccionados() {
+    return tblFolios.getRows()
+        .filter(row => row.getCell("select").getValue())
+        .map(row => row.getData());
+}
 
-  function getModoGenerar() {
-      return document.querySelector('input[name="modoGenerar"]:checked')?.value ?? 'separado';
-  }
+function actualizarContador() {
+    const count = seleccionados.size;
+    document.getElementById('cntSeleccionados').textContent = count;
+    document.getElementById('btnVerSeleccionados').classList.toggle('hidden', count === 0);
+}
 
+
+function renderListaModal(filtro) {
+    const f = filtro.toLowerCase().trim();
+    const lista = [...seleccionados.values()];
+    const resultado = f ? lista.filter(p =>
+        p.personal.toLowerCase().includes(f) || p.CODI_PERS.toLowerCase().includes(f)
+    ) : lista;
+
+    document.getElementById('listaModalSeleccionados').innerHTML = resultado.length
+        ? resultado.map((p, i) => `
+              <li class="py-2.5 flex items-center gap-3">
+                  <span class="w-6 h-6 rounded-full bg-default-100 text-default-500 text-xs font-bold flex items-center justify-center flex-shrink-0">${i + 1}</span>
+                  <span class="font-mono text-xs text-default-400 w-12 flex-shrink-0">${p.CODI_PERS}</span>
+                  <span class="flex-1 text-default-700">${p.personal}</span>
+              </li>`).join('')
+        : `<li class="py-8 text-center text-default-400 text-sm">Sin resultados</li>`;
+}
+
+document.getElementById('btnVerSeleccionados').addEventListener('click', function () {
+    document.getElementById('buscarModalSel').value = '';
+    document.getElementById('cntModalSel').textContent = seleccionados.size;
+    renderListaModal('');
+    const modal = document.getElementById('modalSeleccionados');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setTimeout(() => document.getElementById('buscarModalSel').focus(), 50);
+});
+
+document.getElementById('buscarModalSel').addEventListener('input', function () {
+    renderListaModal(this.value);
+});
+
+document.getElementById('btnCerrarModalSel').addEventListener('click', () => {
+    document.getElementById('modalSeleccionados').classList.replace('flex', 'hidden');
+});
+
+document.getElementById('modalSeleccionados').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.replace('flex', 'hidden');
+});
 links.forEach(link => {
     link.addEventListener('click', function (e) {
         e.preventDefault(); // Prevenir el comportamiento por defecto del enlace
@@ -233,27 +272,27 @@ links.forEach(link => {
 });
 
 // Función para el MOSTRAR LAS CARDS de cada LEGAJO
- document.getElementById("legajo1").addEventListener("click", function () {
-      document.getElementById('personasDiv').classList.remove("hidden");
-      document.getElementById('foliosDiv').classList.remove("hidden");
-      document.getElementById('legajosDiv').classList.add("hidden");
-      document.getElementById('btnLeg2').classList.add("hidden");
-      document.getElementById('btnLeg3').classList.add("hidden");
-      document.getElementById('btnLeg1').classList.remove("hidden");
-      document.getElementById('modoGenerarDiv').classList.remove("hidden");
-      tblPersonas.redraw();
-  });
+document.getElementById("legajo1").addEventListener("click", function () {
+    document.getElementById('personasDiv').classList.remove("hidden");
+    document.getElementById('foliosDiv').classList.remove("hidden");
+    document.getElementById('legajosDiv').classList.add("hidden");
+    document.getElementById('btnLeg2').classList.add("hidden");
+    document.getElementById('btnLeg3').classList.add("hidden");
+    document.getElementById('btnLeg1').classList.remove("hidden");
+    document.getElementById('modoGenerarDiv').classList.remove("hidden");
+    tblPersonas.redraw();
+});
 
-  document.getElementById("legajo2").addEventListener("click", function () {
-      document.getElementById('personasDiv').classList.remove("hidden");
-      document.getElementById('legajosDiv').classList.remove("hidden");
-      document.getElementById('foliosDiv').classList.add("hidden");
-      document.getElementById('btnLeg1').classList.add("hidden");
-      document.getElementById('btnLeg3').classList.add("hidden");
-      document.getElementById('btnLeg2').classList.remove("hidden");
-      document.getElementById('modoGenerarDiv').classList.remove("hidden");
-      tblPersonas.redraw();
-  });
+document.getElementById("legajo2").addEventListener("click", function () {
+    document.getElementById('personasDiv').classList.remove("hidden");
+    document.getElementById('legajosDiv').classList.remove("hidden");
+    document.getElementById('foliosDiv').classList.add("hidden");
+    document.getElementById('btnLeg1').classList.add("hidden");
+    document.getElementById('btnLeg3').classList.add("hidden");
+    document.getElementById('btnLeg2').classList.remove("hidden");
+    document.getElementById('modoGenerarDiv').classList.remove("hidden");
+    tblPersonas.redraw();
+});
 
 
 // document.getElementById("legajo3").addEventListener("click", function () {
@@ -322,26 +361,26 @@ function getLegajos() {
 };
 
 // Función para actualizar la tabla de personas por SUCURSAL
-   function aplicarFiltrosPersonal() {
-      const filtros = [];
-      const sucursalEl = document.getElementById('sucursal');
-      if (sucursalEl.selectedIndex > 0 && sucursalEl.value !== 'TODOS') {
-          filtros.push({ field: 'sucursal', type: '=', value: sucursalEl.value });
-      }
-      const tipo = document.querySelector('input[name="tipoPerFiltro"]:checked')?.value;
-      if (tipo && tipo !== 'TODOS') filtros.push({ field: 'TIPOTRAB', type: '=', value: tipo });
-      const buscar = document.getElementById('buscarPer').value.toLowerCase().trim();
-      if (buscar) filtros.push([
-          { field: 'CODI_PERS', type: 'like', value: buscar },
-          { field: 'personal', type: 'like', value: buscar },
-          { field: 'nroDoc', type: 'like', value: buscar },
-          { field: 'sucursal', type: 'like', value: buscar },
-      ]);
-      filtros.length > 0 ? tblPersonas.setFilter(filtros) : tblPersonas.clearFilter();
-  }
+function aplicarFiltrosPersonal() {
+    const filtros = [];
+    const sucursalEl = document.getElementById('sucursal');
+    if (sucursalEl.selectedIndex > 0 && sucursalEl.value !== 'TODOS') {
+        filtros.push({ field: 'sucursal', type: '=', value: sucursalEl.value });
+    }
+    const tipo = document.querySelector('input[name="tipoPerFiltro"]:checked')?.value;
+    if (tipo && tipo !== 'TODOS') filtros.push({ field: 'TIPOTRAB', type: '=', value: tipo });
+    const buscar = document.getElementById('buscarPer').value.toLowerCase().trim();
+    if (buscar) filtros.push([
+        { field: 'CODI_PERS', type: 'like', value: buscar },
+        { field: 'personal', type: 'like', value: buscar },
+        { field: 'nroDoc', type: 'like', value: buscar },
+        { field: 'sucursal', type: 'like', value: buscar },
+    ]);
+    filtros.length > 0 ? tblPersonas.setFilter(filtros) : tblPersonas.clearFilter();
+}
 
-  document.getElementById('sucursal').addEventListener('change', aplicarFiltrosPersonal);
-  document.querySelectorAll('input[name="tipoPerFiltro"]').forEach(r => r.addEventListener('change', aplicarFiltrosPersonal));
+document.getElementById('sucursal').addEventListener('change', aplicarFiltrosPersonal);
+document.querySelectorAll('input[name="tipoPerFiltro"]').forEach(r => r.addEventListener('change', aplicarFiltrosPersonal));
 
 // Función para actualizar la tabla de folios por TIPO
 function filterTableByTipoFolio() {
@@ -355,7 +394,7 @@ document.querySelectorAll('input[name="tipo_folio"]').forEach(radio => {
 });
 
 // Función para BUSCAR
- document.getElementById("buscarPer").addEventListener("keyup", aplicarFiltrosPersonal);
+document.getElementById("buscarPer").addEventListener("keyup", aplicarFiltrosPersonal);
 
 document.getElementById("buscarFol").addEventListener("keyup", function () {
     let valor = this.value.toLowerCase().trim();
@@ -369,69 +408,69 @@ document.getElementById("buscarFol").addEventListener("keyup", function () {
 });
 
 // Función para el BOTON GENERAR PDF
-  document.getElementById("btnLeg1").addEventListener("click", async function () {
-      const personas = getPersonasSeleccionadas();
-      const folios   = getFoliosSeleccionados();
+document.getElementById("btnLeg1").addEventListener("click", async function () {
+    const personas = getPersonasSeleccionadas();
+    const folios = getFoliosSeleccionados();
 
-      if (personas.length === 0) {
-          Swal.fire('Atención', 'Seleccione al menos una persona.', 'warning');
-          return;
-      }
-      if (folios.length === 0) {
-          Swal.fire('Atención', 'Seleccione al menos un folio.', 'warning');
-          return;
-      }
+    if (personas.length === 0) {
+        Swal.fire('Atención', 'Seleccione al menos una persona.', 'warning');
+        return;
+    }
+    if (folios.length === 0) {
+        Swal.fire('Atención', 'Seleccione al menos un folio.', 'warning');
+        return;
+    }
 
-      if (getModoGenerar() === 'unico') {
-          await getArchivosXPersonas(personas, folios);
-      } else {
-          for (const persona of personas) {
-              try {
-                  await getArchivosXPersona_uno(persona.CODI_PERS, folios, 1);
-              } catch (e) {
-                  console.warn("Falló para persona:", persona.CODI_PERS);
-              }
-          }
-      }
-  });
+    if (getModoGenerar() === 'unico') {
+        await getArchivosXPersonas(personas, folios);
+    } else {
+        for (const persona of personas) {
+            try {
+                await getArchivosXPersona_uno(persona.CODI_PERS, folios, 1);
+            } catch (e) {
+                console.warn("Falló para persona:", persona.CODI_PERS);
+            }
+        }
+    }
+});
 
 
- document.getElementById("btnLeg2").addEventListener("click", async function () {
-      const personas = getPersonasSeleccionadas();
+document.getElementById("btnLeg2").addEventListener("click", async function () {
+    const personas = getPersonasSeleccionadas();
 
-      if (personas.length === 0) {
-          Swal.fire('Atención', 'Seleccione al menos una persona.', 'warning');
-          return;
-      }
+    if (personas.length === 0) {
+        Swal.fire('Atención', 'Seleccione al menos una persona.', 'warning');
+        return;
+    }
 
-      const cliente = document.getElementById('clientes').value;
-      const cargo   = document.getElementById('cargos').value;
+    const cliente = document.getElementById('clientes').value;
+    const cargo = document.getElementById('cargos').value;
 
-      if (!cliente || !cargo) {
-          Swal.fire('Atención', 'Seleccione cliente y cargo.', 'warning');
-          return;
-      }
+    if (!cliente || !cargo) {
+        Swal.fire('Atención', 'Seleccione cliente y cargo.', 'warning');
+        return;
+    }
 
-      const foliosData = await getFoliosClienteCargo(cliente, cargo);
-      const folios = foliosData.map(f => ({ nombre: f.folio, codigo: f.codigo }));
+    const foliosData = await getFoliosClienteCargo(cliente, cargo);
+    const folios = foliosData.map(f => ({ nombre: f.folio, codigo: f.codigo }));
 
-      if (folios.length === 0) {
-          Swal.fire('Atención', 'No hay folios configurados para ese cliente y cargo.', 'warning');
-          return;
-      }
+    if (folios.length === 0) {
+        Swal.fire('Atención', 'No hay folios configurados para ese cliente y cargo.', 'warning');
+        return;
+    }
 
-      if (getModoGenerar() === 'unico') {
-          await getArchivosXPersonas(personas, folios);
-      } else {
-          for (const persona of personas) {
-              try {
-                  await getArchivosXPersona_uno(persona.CODI_PERS, folios, 1);
-              } catch (e) {
-                  console.warn("Falló para persona:", persona.CODI_PERS);
-              }
-          }
-      }
-  });
+    if (getModoGenerar() === 'unico') {
+        await getArchivosXPersonas(personas, folios);
+    } else {
+        for (const persona of personas) {
+            try {
+                await getArchivosXPersona_uno(persona.CODI_PERS, folios, 1);
+            } catch (e) {
+                console.warn("Falló para persona:", persona.CODI_PERS);
+            }
+        }
+    }
+});
 
 
 
@@ -598,10 +637,10 @@ async function getArchivosXPersona_uno(codPersonal, selectedFolios, tipo) {
     }
 
     try {
-         const response = await axios.post(`${VITE_URL_APP}/api/get-folios-persona_uno`, {
-                codPersona: codPersonal,
-                folios: selectedFolios,
-            });
+        const response = await axios.post(`${VITE_URL_APP}/api/get-folios-persona_uno`, {
+            codPersona: codPersonal,
+            folios: selectedFolios,
+        });
 
         // ⏳ Espera que se genere y descargue el PDF
         await generarPDF(response.data);
@@ -615,18 +654,18 @@ async function getArchivosXPersona_uno(codPersonal, selectedFolios, tipo) {
 
 
 
-  async function getArchivosXPersonas(selectedPersonas, selectedFolios) {
-      try {
-           const response = await axios.post(`${VITE_URL_APP}/api/get-folios-personas`, {
+async function getArchivosXPersonas(selectedPersonas, selectedFolios) {
+    try {
+        const response = await axios.post(`${VITE_URL_APP}/api/get-folios-personas`, {
             personas: selectedPersonas,
             folios: selectedFolios,
         });
-          await generarPDF(response.data);
-      } catch (error) {
-          Swal.fire('Error', 'No se pudo obtener los archivos.', 'error');
-          console.error("Error en getArchivosXPersonas:", error);
-      }
-  }
+        await generarPDF(response.data);
+    } catch (error) {
+        Swal.fire('Error', 'No se pudo obtener los archivos.', 'error');
+        console.error("Error en getArchivosXPersonas:", error);
+    }
+}
 
 // Función para obtener los folios por persona
 function getDocsObligatorios(codigo) {

@@ -28,7 +28,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
     Route::get('/get-personal', [FileController::class, 'getPersonal']);
     Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
-    Route::get('/reportes', [FileController::class, 'ViewReportes'])->name('reportes');
+  
     Route::get('/reporte/folios-por-vencer-cliente', [ReporteController::class, 'foliosPorVencerXCliente']);
     Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
     Route::get('/usuario', [LoginController::class, 'getUsuarioSession']);

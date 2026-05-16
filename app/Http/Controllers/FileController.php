@@ -48,17 +48,7 @@ class FileController extends Controller
         return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
-    public function ViewReportes()
-    {
-        $clientes = FileControl::getClientes();
-        $sucursales = FileControl::getSucursales();
-        $cargos = FileControl::getCargos();
-        $tiposPersonal = Reporte::getTiposPersonal();
-        $categoriasCarnet = Reporte::getCategoriasCarnet();
-
-        return view('file_control.reportes', compact(
-            'clientes', 'sucursales', 'cargos', 'tiposPersonal', 'categoriasCarnet'));
-    }
+  
 
     public function getCargosXCliente(Request $request)
     {
