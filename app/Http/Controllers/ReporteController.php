@@ -10,10 +10,14 @@ class ReporteController extends Controller
 {
     public function index()
     {
+       $clientes = FileControl::getClientes();
         $sucursales = FileControl::getSucursales();
-        $clientes = FileControl::getClientes();
+        $cargos = FileControl::getCargos();
+        $tiposPersonal = Reporte::getTiposPersonal();
+        $categoriasCarnet = Reporte::getCategoriasCarnet();
 
-        return view('file_control.reportes', compact('sucursales', 'clientes'));
+        return view('file_control.reportes', compact(
+            'clientes', 'sucursales', 'cargos', 'tiposPersonal', 'categoriasCarnet'));
     }
 
     public function foliosPendientesPorSucursal(Request $request)
@@ -91,6 +95,24 @@ class ReporteController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+
+      public function carnet(Request $request)
+    {
+        $sucursal  = $request->get('sucursal',  'T');
+        $tipoPers  = $request->get('tipo_pers', 'T');
+        $vigencia  = $request->get('vigencia',  'T');
+        $estado    = $request->get('estado',    'T');
+        $categoria = $request->get('categoria');
+
+        if (!$categoria) {
+            return response()->json(['error' => 'Categoría requerida'], 422);
+        }
+
+        $datos = Reporte::getCarnet($sucursal, $tipoPers, $vigencia, $estado, (int) $categoria);
+
+        return response()->json($datos);
     }
 
     public function foliosPorVencerXCliente(Request $request)

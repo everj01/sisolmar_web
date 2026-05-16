@@ -8,16 +8,14 @@ use App\Models\Cargo;
 use App\Models\FileControl;
 use App\Models\Folio;
 use App\Models\Matricula;
-use App\Models\Personal;
+use App\Models\Reporte;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use DB;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+
 
 class FileController extends Controller
 {
@@ -55,8 +53,11 @@ class FileController extends Controller
         $clientes = FileControl::getClientes();
         $sucursales = FileControl::getSucursales();
         $cargos = FileControl::getCargos();
+        $tiposPersonal = Reporte::getTiposPersonal();
+        $categoriasCarnet = Reporte::getCategoriasCarnet();
 
-        return view('file_control.reportes', compact('clientes', 'sucursales', 'cargos', 'clientes_sisolm'));
+        return view('file_control.reportes', compact(
+            'clientes', 'sucursales', 'cargos', 'tiposPersonal', 'categoriasCarnet'));
     }
 
     public function getCargosXCliente(Request $request)

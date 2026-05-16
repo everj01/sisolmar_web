@@ -59,7 +59,7 @@ Route::middleware(['auth'])->group(function () {
     // ─── RUTAS /api/* (antes en api.php) ─────────────────────────────────────
     Route::prefix('api')->group(function () {
 
-        Route::get('/reporte/estado-legajos', [FileController::class, 'getEstadoLegajos']);
+    
 
         // Usuarios
         Route::get('/get-usuarios', [UsuarioController::class, 'getUsuarios']);
@@ -185,6 +185,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
         Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
         Route::get('/reporte/folios-pendientes-registro', [ReporteController::class, 'foliosPendientesRegistro']);
+            Route::get('/reporte/estado-legajos', [FileController::class, 'getEstadoLegajos']);
+        Route::get('/reporte/carnet', [ReporteController::class, 'carnet']);
 
         // Biométrico
         Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);

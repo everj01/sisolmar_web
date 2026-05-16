@@ -80,6 +80,39 @@
             background: #94a3b8;
             border-radius: 3px;
         }
+
+        /* Sticky header + scrollbar para tablas de reporte */
+        .tabla-reporte thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            box-shadow: 0 1px 0 #d1d5db;
+            /* Fix borde que desaparece con border-collapse + sticky */
+        }
+
+        .tabla-scroll {
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        .tabla-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .tabla-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .tabla-scroll::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 3px;
+        }
+
+        .tabla-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
     </style>
 @endsection
 
@@ -90,7 +123,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-style@0.8.13/dist/xlsx.full.min.js"></script>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 pt-8">
 
@@ -104,8 +137,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios vigentes en el sistema con
                     su clasificación.</p>
                 <button type="button" id="btnReporteFoliosVigentes" class="mt-3 inline-flex items-center
-               gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                   gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -121,8 +154,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios pendientes por
                     sucursal.</p>
                 <button type="button" id="btnReporteFoliosPendientesSucursal" class="mt-3 inline-flex
-              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -137,8 +170,8 @@
                 </h3>
                 <p class="mt-2 text-default-500">Genera el reporte de folios Por Vencer.</p>
                 <button type="button" id="btnReporteFoliosPorVencer" class="mt-3 inline-flex
-              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -154,8 +187,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios que aún no han sido
                     escaneados.</p>
                 <button type="button" id="btnReporteFoliosPendientesEscaneo" class="mt-3 inline-flex
-              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -171,8 +204,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios que aún no han sido
                     registrados en el sistema.</p>
                 <button type="button" id="btnReporteFoliosPendientesRegistro" class="mt-3 inline-flex
-              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -188,8 +221,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de documentos según su estado de
                     vigencia.</p>
                 <button type="button" id="btnReporteVigenciaDocumentos" class="mt-3 inline-flex
-              items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -204,7 +237,7 @@
                 </h3>
                 <p class="mt-2 text-default-500">Genera el reporte de carnets del personal.</p>
                 <button type="button" id="btnReporteCarnet" class="mt-3 inline-flex items-center gap-x-1
-               text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
+                   text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -220,8 +253,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de certificados registrados en el
                     sistema.</p>
                 <button type="button" id="btnReporteCertificados" class="mt-3 inline-flex items-center
-              gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-              hover:text-primary-800">
+                  gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                  hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -675,22 +708,93 @@
     </div>
 
     <!-- ====== MODAL: Carnet ====== -->
-    <div id="modalCarnet" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div class="flex items-center justify-between p-5 border-b border-default-200">
+    <div id="modalCarnet" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl mx-4 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
                 <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
                     <i class='bx bx-id-card text-primary text-xl'></i>
-                    Filtros – Carnet
+                    Carnet
                 </h5>
                 <button class="btnCerrarModal text-default-400 hover:text-default-600">
                     <i class='bx bx-x text-2xl'></i>
                 </button>
             </div>
-            <div class="p-6">
-                <p class="text-default-500 text-sm">Próximamente...</p>
-                <div class="mt-6 flex justify-end">
-                    <button
-                        class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cerrar</button>
+            <div class="p-5 flex-shrink-0 border-b border-default-100">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">
+                            Categoría <span class="text-danger">*</span>
+                        </label>
+                        <select id="filtroCarnetCategoria" class="form-select">
+                            <option value="">— Seleccionar —</option>
+                            @foreach($categoriasCarnet as $cat)
+                                <option value="{{ $cat->CATE_CODIGO }}">{{ $cat->CATE_DESCRIPCION }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Sucursal</label>
+                        <select id="filtroCarnetSucursal" class="form-select">
+                            <option value="T">Todas</option>
+                            @foreach($sucursales as $sucursal)
+                                @if(!$loop->first)
+                                    <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Tipo de Personal</label>
+                        <select id="filtroCarnetTipoPers" class="form-select">
+                            <option value="T">Todos</option>
+                            @foreach($tiposPersonal as $tipo)
+                                <option value="{{ $tipo->TIPE_CODIGO }}">{{ $tipo->TIPE_DESCRIPCION }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Vigencia del personal</label>
+                        <select id="filtroCarnetVigencia" class="form-select">
+                            <option value="T">Todos</option>
+                            <option value="SI">Vigente</option>
+                            <option value="NO">No vigente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Estado del carnet</label>
+                        <select id="filtroCarnetEstado" class="form-select">
+                            <option value="T">Todos</option>
+                            <option value="1">Activo</option>
+                            <option value="2">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2 items-end">
+                        <button
+                            class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                        <button id="btnGenerarCarnet"
+                            class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                            <i class="bx bx-search-alt-2"></i> Generar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Resultados -->
+            <div id="resultadosCarnet" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+                <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                    <span id="totalCarnet" class="text-sm text-default-600 font-medium"></span>
+                    <div class="flex gap-2">
+                        <button id="btnExportExcelCarnet"
+                            class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                            <i class="bx bx-spreadsheet"></i> Excel
+                        </button>
+                        <button id="btnExportPdfCarnet"
+                            class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                            <i class="bx bxs-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-auto flex-1">
+                    <div id="tablaCarnet"></div>
                 </div>
             </div>
         </div>
