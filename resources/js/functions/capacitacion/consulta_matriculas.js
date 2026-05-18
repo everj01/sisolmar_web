@@ -506,7 +506,7 @@ function renderizarTablaCursos(cursos) {
                 <td class="px-3 py-2 text-sm">${escapeHtml(curso.nombre)}</td>
                 <td class="px-3 py-2 text-center">
                     <button type="button" class="btn-ver-matriculas px-3 py-1 rounded bg-primary text-white hover:bg-primary/80 transition-colors text-sm"
-                        data-curso-id="${curso.codigo}" data-curso-nombre="${escapeHtml(curso.nombre)}" data-curso-codigo="${curso.codigoCurso}" data-curso-responsable="${escapeHtml(curso.nombre_responsable || '')}">
+                        data-curso-id="${curso.codigo}" data-curso-nombre="${escapeHtml(curso.nombre)}" data-curso-codigo="${curso.codigoCurso}" data-curso-responsable="${escapeHtml(curso.nombre_responsable || '')}" data-curso-dirigido="${curso.dirigido_a || ''}" data-curso-tipo="${curso.tipo_curso || ''}">
                         Ver
                     </button>
                 </td>
@@ -560,12 +560,16 @@ function manejarClickTablaCursos(e) {
         const cursoNombre = btn.dataset.cursoNombre;
         const cursoCodigo = btn.dataset.cursoCodigo;
         const cursoResponsable = btn.dataset.cursoResponsable;
+        const cursoDirigido = btn.dataset.cursoDirigido;
+        const cursoTipo = btn.dataset.cursoTipo;
 
         seleccionarCurso({
             codigo: cursoId,
             nombre: cursoNombre,
             codigo_curso: cursoCodigo,
-            nombre_responsable: cursoResponsable
+            nombre_responsable: cursoResponsable,
+            dirigido_a: cursoDirigido,
+            tipo_curso: cursoTipo
         });
         return;
     }
@@ -607,6 +611,7 @@ async function seleccionarCurso(curso) {
     document.getElementById('infoCursoSeleccionadoTitulo').textContent = curso.nombre;
     document.getElementById('infoCursoSeleccionado').innerHTML = `
         <span class="font-bold text-gray-700">Código:</span> ${curso.codigo_curso}<br>
+        <span class="font-bold text-gray-700">Plan:</span> ${curso.tipo_curso || '-'}<br>
         <span class="font-bold text-gray-700">Responsable:</span> ${curso.nombre_responsable || 'Sin asignar'}
     `;
 
@@ -1064,6 +1069,18 @@ function configurarEventos() {
             // Actualizar UI del Modal
             document.getElementById('nombreCursoModal').textContent = cursoSeleccionado.nombre;
             cursoActualParaMatricula = cursoSeleccionado.codigo;
+
+            // Mostrar/ocultar botón de matrícula automática según dirigido_a
+            const btnAuto = document.getElementById('btnMatriculaAutomatica');
+            const btnAutoText = document.getElementById('btnMatriculaAutomaticaText');
+            const dirigido = cursoSeleccionado.dirigido_a;
+            if (dirigido && ['1', '2', '3'].includes(String(dirigido))) {
+                const labels = { '1': 'Todos', '2': 'Pers. Adm.', '3': 'Pers. Operativo' };
+                btnAutoText.textContent = `Matricular automáticamente (${labels[String(dirigido)]})`;
+                btnAuto.classList.remove('hidden');
+            } else {
+                btnAuto.classList.add('hidden');
+            }
 
             // Limpiar estados previos
             personasSeleccionadas.clear();

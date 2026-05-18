@@ -813,8 +813,7 @@
                 <!-- Información del curso (Simplificado para modal pequeño) -->
                 <div class="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded text-[13px]">
                     <span class="font-semibold inline-block mr-1">Curso:</span>
-                    <span id="nombreCursoModal"
-                        class="inline-block truncate align-bottom max-w-[80%]">Cargando...</span>
+                    <span id="nombreCursoModal" class="inline-block truncate align-bottom max-w-[80%]">Cargando...</span>
                 </div>
 
                 <!-- Selector de Programación -->
@@ -897,10 +896,16 @@
 
             <!-- Footer -->
             <div class="flex justify-between items-center gap-2 px-4 py-2 bg-gray-50 border-t border-default-200">
-                <button class="btn bg-gray-200 hover:bg-gray-300 text-[13px] px-4 py-1.5"
-                    data-hs-overlay="#modal-registro">
-                    Cancelar
-                </button>
+                <div class="flex items-center gap-2">
+                    <button id="btnMatriculaAutomatica"
+                        class="btn bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] px-4 py-1.5 shadow-sm hidden">
+                        <i class="i-tabler-bolt mr-1"></i> <span id="btnMatriculaAutomaticaText">Matricular automáticamente</span>
+                    </button>
+                    <button class="btn bg-gray-200 hover:bg-gray-300 text-[13px] px-4 py-1.5"
+                        data-hs-overlay="#modal-registro">
+                        Cancelar
+                    </button>
+                </div>
                 <button id="btnGuardarMatricula"
                     class="btn bg-success hover:bg-success/90 text-white text-[13px] px-6 py-1.5 shadow-sm">
                     Matricular

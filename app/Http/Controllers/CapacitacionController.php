@@ -30,7 +30,7 @@ class CapacitacionController extends Controller
 {
     public function index(Request $request, ?string $op = null): JsonResponse
     {
-        $query = Cursos::query();
+        $query = Cursos::with('tipoCurso');
 
         if (!is_null($op)) {
             $query->where("habilitado", $op);
@@ -77,6 +77,7 @@ class CapacitacionController extends Controller
                 "tiene_vigente" => in_array($curso->codigo, $cursosVigentes),
                 "codigo_moodle" => $curso->codigo_moodle,
                 "dirigido_a" => $curso->dirigido_a,
+                "tipo_curso" => $curso->tipoCurso?->descripcion,
             ];
         });
 
@@ -721,6 +722,7 @@ class CapacitacionController extends Controller
                         $courseId,
                         $request->input("aplica_evaluacion", 0),
                         $request->input("preguntas_word"),
+                        (int) ($request->cantidad_preguntas ?? 0),
                     );
                 }
             } catch (\Throwable $e) {
@@ -1290,6 +1292,7 @@ class CapacitacionController extends Controller
         int $courseId,
         int $aplicaEvaluacion,
         ?string $preguntasWordStr,
+        int $cantidadPreguntas = 0,
     ): void {
         if (!$aplicaEvaluacion || !$preguntasWordStr) {
             return;
@@ -1299,6 +1302,34 @@ class CapacitacionController extends Controller
 
         if (empty($preguntas)) {
             return;
+        }
+
+        // Selección aleatoria: N/2 básicas + N/2 complementarias
+        if ($cantidadPreguntas > 0) {
+            $mitad = intdiv($cantidadPreguntas, 2);
+
+            $basicas = array_values(
+                array_filter($preguntas, fn($p) => ($p['tipo'] ?? '') === 'A'),
+            );
+            $complementarias = array_values(
+                array_filter($preguntas, fn($p) => ($p['tipo'] ?? '') === 'B'),
+            );
+
+            shuffle($basicas);
+            shuffle($complementarias);
+
+            $preguntas = array_merge(
+                array_slice($basicas, 0, $mitad),
+                array_slice($complementarias, 0, $mitad),
+            );
+
+            if (empty($preguntas)) {
+                Log::warning(
+                    "syncPreguntasWord: no se pudo seleccionar {$cantidadPreguntas} preguntas " .
+                    "(básicas: " . count($basicas) . ", complementarias: " . count($complementarias) . ")",
+                );
+                return;
+            }
         }
 
         $quizRow = DB::connection("mysql_grupoihb")->select(
