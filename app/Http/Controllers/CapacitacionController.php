@@ -76,6 +76,7 @@ class CapacitacionController extends Controller
                 "proyeccion_anios" => $curso->proyeccion_anios,
                 "tiene_vigente" => in_array($curso->codigo, $cursosVigentes),
                 "codigo_moodle" => $curso->codigo_moodle,
+                "dirigido_a" => $curso->dirigido_a,
             ];
         });
 
