@@ -122,9 +122,9 @@ class CapacitacionController extends Controller
         $validator = Validator::make($request->all(), [
             "nombre" => "required|string|max:100",
             "tipo_curso" =>
-                "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
+            "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
             "area_conocimiento" =>
-                "required|exists:sw_capacitacion_areas,codigo",
+            "required|exists:sw_capacitacion_areas,codigo",
             "area_responsable" => "nullable|integer",
             "es_periodico" => "required|integer|in:0,1",
             "frecuencia" => "nullable|string",
@@ -140,7 +140,7 @@ class CapacitacionController extends Controller
             "obligatorio_alta" => "nullable|integer|in:0,1",
             "cod_responsable" => "nullable|string|max:20",
             "target_group" =>
-                "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
+            "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
             "cod_moodle_area" => "nullable|integer",
             "dirigido_a" => "nullable|integer",
         ]);
@@ -246,9 +246,9 @@ class CapacitacionController extends Controller
                                 "periodo" => $fechaItem["periodo"],
                                 "tipo" => "REGULAR",
                                 "fecha_inicio" =>
-                                    $fechaItem["inicio"] . "T00:00:00.000",
+                                $fechaItem["inicio"] . "T00:00:00.000",
                                 "fecha_final" =>
-                                    $fechaItem["final"] . "T23:59:59.000",
+                                $fechaItem["final"] . "T23:59:59.000",
                                 "fecha_creacion" => date("Y-m-d\TH:i:s.000"),
                                 "habilitado" => 1,
                             ]);
@@ -311,9 +311,9 @@ class CapacitacionController extends Controller
                         "nota_minima" => (int) ($request->nota ?? 0),
                         "intentos" => (int) ($request->intentos ?? 0),
                         "cantidad_preguntas" =>
-                            (int) ($request->cantidad_preguntas ?? 0),
+                        (int) ($request->cantidad_preguntas ?? 0),
                         "preguntas_balotario" =>
-                            (int) ($request->preguntas_balotario ?? 0),
+                        (int) ($request->preguntas_balotario ?? 0),
                         "fecha_modificacion" => date("Y-m-d\TH:i:s.000"),
                     ]);
                 } else {
@@ -331,9 +331,9 @@ class CapacitacionController extends Controller
                         "file_nombre_original" => null,
                         "intentos" => (int) ($request->intentos ?? 0),
                         "cantidad_preguntas" =>
-                            (int) ($request->cantidad_preguntas ?? 0),
+                        (int) ($request->cantidad_preguntas ?? 0),
                         "preguntas_balotario" =>
-                            (int) ($request->preguntas_balotario ?? 0),
+                        (int) ($request->preguntas_balotario ?? 0),
                         "fecha_creacion" => date("Y-m-d\TH:i:s.000"),
                     ]);
                 }
@@ -442,7 +442,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al actualizar el curso. Por favor, contacte al administrador.",
+                    "Error al actualizar el curso. Por favor, contacte al administrador.",
                 ],
                 500,
             );
@@ -467,7 +467,7 @@ class CapacitacionController extends Controller
         return response()->json([
             "success" => true,
             "message" =>
-                "Curso y exámenes relacionados actualizados correctamente",
+            "Curso y exámenes relacionados actualizados correctamente",
         ]);
     }
 
@@ -509,7 +509,7 @@ class CapacitacionController extends Controller
             return response()->json([
                 "success" => true,
                 "message" =>
-                    "El curso y todos sus registros han sido ELIMINADOS permanentemente.",
+                "El curso y todos sus registros han sido ELIMINADOS permanentemente.",
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -521,7 +521,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "No se pudo eliminar el curso permanentemente debido a registros dependientes (ej: asistencias).",
+                    "No se pudo eliminar el curso permanentemente debido a registros dependientes (ej: asistencias).",
                 ],
                 500,
             );
@@ -534,9 +534,9 @@ class CapacitacionController extends Controller
             $validator = Validator::make($request->all(), [
                 "nombre" => "required|string|max:100",
                 "tipo_curso" =>
-                    "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
+                "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
                 "area_conocimiento" =>
-                    "required|exists:sw_capacitacion_areas,codigo",
+                "required|exists:sw_capacitacion_areas,codigo",
                 "area_responsable" => "nullable|integer",
                 "es_periodico" => "required|integer|in:0,1",
                 "frecuencia" => "nullable|string",
@@ -547,7 +547,7 @@ class CapacitacionController extends Controller
                 "tiempo" => "nullable|required_if:aplica_evaluacion,1|integer",
                 "nota" => "nullable|required_if:aplica_evaluacion,1|integer",
                 "intentos" =>
-                    "nullable|required_if:aplica_evaluacion,1|integer",
+                "nullable|required_if:aplica_evaluacion,1|integer",
                 "archivo" => "nullable|file|max:51200",
                 "sucursales_asignadas" => "nullable|array",
                 "sucursales_asignadas.*" => "integer|exists:sw_clientes,codigo",
@@ -555,7 +555,7 @@ class CapacitacionController extends Controller
                 "obligatorio_alta" => "nullable|integer|in:0,1",
                 "cod_responsable" => "nullable|string|max:20",
                 "target_group" =>
-                    "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
+                "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
                 "cod_moodle_area" => "nullable|integer",
                 "dirigido_a" => "nullable|integer",
                 "image_portada" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
@@ -603,7 +603,7 @@ class CapacitacionController extends Controller
                     [
                         "success" => false,
                         "message" =>
-                            "Error al registrar el curso en la base de datos.",
+                        "Error al registrar el curso en la base de datos.",
                     ],
                     500,
                 );
@@ -629,7 +629,7 @@ class CapacitacionController extends Controller
                         [
                             "success" => false,
                             "message" =>
-                                "Error al registrar el examen en la base de datos.",
+                            "Error al registrar el examen en la base de datos.",
                         ],
                         500,
                     );
@@ -751,7 +751,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Ocurrió un error al registrar el curso. Por favor, contacte al administrador.",
+                    "Ocurrió un error al registrar el curso. Por favor, contacte al administrador.",
                 ],
                 500,
             );
@@ -1053,7 +1053,7 @@ class CapacitacionController extends Controller
                         "moodlewsrestformat" => "json",
                         "courses[0][id]" => $courseId,
                         "courses[0][courseformatoptions][0][name]" =>
-                            "overviewfiles_filemanager",
+                        "overviewfiles_filemanager",
                         "courses[0][courseformatoptions][0][value]" => $draftItemId,
                     ],
                 );
@@ -1326,7 +1326,7 @@ class CapacitacionController extends Controller
             if (empty($preguntas)) {
                 Log::warning(
                     "syncPreguntasWord: no se pudo seleccionar {$cantidadPreguntas} preguntas " .
-                    "(básicas: " . count($basicas) . ", complementarias: " . count($complementarias) . ")",
+                        "(básicas: " . count($basicas) . ", complementarias: " . count($complementarias) . ")",
                 );
                 return;
             }
@@ -1392,8 +1392,8 @@ class CapacitacionController extends Controller
             // Validar Límite de Periodicidad Anual
             $limit =
                 $curso->periodicidad && $curso->periodicidad > 0
-                    ? $curso->periodicidad
-                    : 1;
+                ? $curso->periodicidad
+                : 1;
 
             // Determinar año objetivo
             $targetYear = substr($periodoCalculado, 0, 4);
@@ -1505,7 +1505,7 @@ class CapacitacionController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 "codigo" =>
-                    "required|integer|exists:sw_cursos_programacion,codigo",
+                "required|integer|exists:sw_cursos_programacion,codigo",
                 "cod_cursos" => "required|integer|exists:sw_cursos,codigo",
                 // 'periodo'       => 'required|date_format:Y-m', // Ya no requerido
                 "tipo" => "required|in:REGULAR,EXTEMPORANEO",
@@ -1736,7 +1736,7 @@ class CapacitacionController extends Controller
                 return [
                     "codigo" => $row->codigo,
                     "descripcion" =>
-                        $row->abreviatura ?? ($row->razon_social ?? ""),
+                    $row->abreviatura ?? ($row->razon_social ?? ""),
                 ];
             })
             ->sortBy("codigo")
@@ -1810,7 +1810,7 @@ class CapacitacionController extends Controller
             return response()->json([
                 "success" => true,
                 "message" =>
-                    "Programación creada exitosamente. Ahora puede matricular personal desde la pestaña de Matrículas.",
+                "Programación creada exitosamente. Ahora puede matricular personal desde la pestaña de Matrículas.",
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1822,7 +1822,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al procesar la apertura de ciclo: " .
+                    "Error al procesar la apertura de ciclo: " .
                         $e->getMessage(),
                 ],
                 500,
@@ -1914,7 +1914,7 @@ class CapacitacionController extends Controller
                     [
                         "success" => false,
                         "message" =>
-                            "moodle_backup.xml no contiene la sección <information>.",
+                        "moodle_backup.xml no contiene la sección <information>.",
                     ],
                     400,
                 );
@@ -2019,7 +2019,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al procesar la plantilla. Verifique el archivo e inténtelo nuevamente.",
+                    "Error al procesar la plantilla. Verifique el archivo e inténtelo nuevamente.",
                 ],
                 500,
             );
@@ -2035,7 +2035,7 @@ class CapacitacionController extends Controller
         $validator = Validator::make($request->all(), [
             "cursoId" => "required|integer|exists:sw_cursos,codigo",
             "programacionId" =>
-                "required|integer|exists:sw_cursos_programacion,codigo",
+            "required|integer|exists:sw_cursos_programacion,codigo",
             "personalIds" => "required|array|max:100",
             "personalIds.*" => "required|string",
         ]);
@@ -2061,7 +2061,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "No puede matricular más de 100 personas por operación.",
+                    "No puede matricular más de 100 personas por operación.",
                 ],
                 422,
             );
@@ -2119,9 +2119,9 @@ class CapacitacionController extends Controller
                         "fecha_matricula" => $matricula->fecha_matricula,
                         "estado" => $matricula->estado ?? "MATRICULADO",
                         "tipo_matricula" =>
-                            $matricula->tipo_matricula ?? "VIRTUAL",
+                        $matricula->tipo_matricula ?? "VIRTUAL",
                         "origen_matricula" =>
-                            $matricula->origen_matricula ?? "INTRANET",
+                        $matricula->origen_matricula ?? "INTRANET",
                     ];
                 });
 
@@ -2189,7 +2189,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al obtener el historial de capacitaciones",
+                    "Error al obtener el historial de capacitaciones",
                 ],
                 500,
             );
@@ -2597,9 +2597,7 @@ class CapacitacionController extends Controller
 
                             foreach ($externalSucursales as $es) {
                                 if (isset($es->codigo_sucursal)) {
-                                    $sucursalClienteNameMap[
-                                        trim($es->codigo_sucursal)
-                                    ] = $clientName;
+                                    $sucursalClienteNameMap[trim($es->codigo_sucursal)] = $clientName;
                                 }
                             }
                         }
@@ -2693,7 +2691,7 @@ class CapacitacionController extends Controller
                         "cod_personal" => $id,
                         "dni" => $dni ?? "N/A",
                         "nombre_completo" =>
-                            $p->nombre_completo ??
+                        $p->nombre_completo ??
                             "Personal no encontrado (Retirado)",
                         "correo" => $p->correo ?? "N/A",
                         "cargo" => $p->cargo ?? "N/A",
@@ -2703,10 +2701,10 @@ class CapacitacionController extends Controller
                         "prog_fecha_inicio" => $m->prog_fecha_inicio,
                         "prog_fecha_final" => $m->prog_fecha_final,
                         "sucursal" =>
-                            isset($p->SUCU_CODIGO) &&
+                        isset($p->SUCU_CODIGO) &&
                             isset($sucursalesMap[$p->SUCU_CODIGO])
-                                ? $sucursalesMap[$p->SUCU_CODIGO]
-                                : "Sin sede",
+                            ? $sucursalesMap[$p->SUCU_CODIGO]
+                            : "Sin sede",
                         "moodle_user_id" => $moodleUserId,
                     ];
                 })
@@ -2727,7 +2725,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al cargar matrículas: " . $e->getMessage(),
+                    "Error al cargar matrículas: " . $e->getMessage(),
                 ],
                 500,
             );
@@ -2867,7 +2865,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al obtener áreas encargadas: " .
+                    "Error al obtener áreas encargadas: " .
                         $e->getMessage(),
                 ],
                 500,
@@ -2888,7 +2886,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al obtener áreas por sistema: " .
+                    "Error al obtener áreas por sistema: " .
                         $e->getMessage(),
                 ],
                 500,
@@ -2957,7 +2955,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al obtener cursos por categoría: " .
+                    "Error al obtener cursos por categoría: " .
                         $e->getMessage(),
                 ],
                 500,
@@ -2986,7 +2984,7 @@ class CapacitacionController extends Controller
                     [
                         "success" => false,
                         "message" =>
-                            "El formato .doc es antiguo. Por favor guarda el archivo como .docx para permitir la extracción por estilos.",
+                        "El formato .doc es antiguo. Por favor guarda el archivo como .docx para permitir la extracción por estilos.",
                     ],
                     422,
                 );
@@ -2999,7 +2997,7 @@ class CapacitacionController extends Controller
                     [
                         "success" => false,
                         "message" =>
-                            "El archivo no se pudo encontrar en el servidor.",
+                        "El archivo no se pudo encontrar en el servidor.",
                     ],
                     400,
                 );
@@ -3009,11 +3007,22 @@ class CapacitacionController extends Controller
             $preguntas = [];
             $currentPregunta = null;
 
+            $orangeColors = [
+                "FF8C00", "FFA500", "F97316", "FF6600", "FF7F00", "FF4500",
+                "ED7D31", "F4B183", "C0504D", "FFC000", "BF8F00",
+            ];
+            $blueColors = [
+                "0000FF", "0066CC", "3B82F6", "1E90FF", "0055CC", "003399",
+                "4169E1", "0000CD", "0070C0", "2E75B6", "00B0F0",
+                "4472C4", "5B9BD5", "1F4E79",
+            ];
+
             foreach ($phpWord->getSections() as $section) {
                 foreach ($section->getElements() as $element) {
                     $text = "";
                     $isCorrectByStyle = false;
                     $isCorrectByColor = false;
+                    $questionTipo = null;
                     $type = get_class($element);
 
                     // 1. Obtener Estilo del Párrafo
@@ -3044,7 +3053,7 @@ class CapacitacionController extends Controller
                                     $font = $child->getFontStyle();
                                     if ($font) {
                                         $color = $font->getColor();
-                                        // Detectar verdes comunes
+                                        // Detectar verdes comunes (respuesta correcta)
                                         if (
                                             $color &&
                                             (strpos($color, "00B0") !== false ||
@@ -3056,6 +3065,30 @@ class CapacitacionController extends Controller
                                                 ]))
                                         ) {
                                             $isCorrectByColor = true;
+                                        }
+                                        // Detectar naranja (básica) y azul (complementaria)
+                                        if ($color) {
+                                            $colorUpper = strtoupper($color);
+                                            foreach ($orangeColors as $oc) {
+                                                if (strpos($colorUpper, $oc) !== false) {
+                                                    $questionTipo = "A";
+                                                    break;
+                                                }
+                                            }
+                                            if ($questionTipo === null) {
+                                                foreach ($blueColors as $bc) {
+                                                    if (strpos($colorUpper, $bc) !== false) {
+                                                        $questionTipo = "B";
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if ($questionTipo === null) {
+                                                Log::debug("procesarExamenWord: color no reconocido", [
+                                                    "color" => $color,
+                                                    "texto" => mb_substr($text, 0, 60),
+                                                ]);
+                                            }
                                         }
                                     }
                                 }
@@ -3098,7 +3131,7 @@ class CapacitacionController extends Controller
                             "opciones" => [],
                             "respuesta_correcta" => $respuestaCandidata, // Valor por defecto
                             "manual_correct_found" => false, // Flag para saber si ya encontramos la rpta por color/estilo
-                            "tipo" => "multiple",
+                            "tipo" => $questionTipo ?? "A",
                         ];
                     }
                     // 4. IDENTIFICAR OPCIÓN
@@ -3136,7 +3169,7 @@ class CapacitacionController extends Controller
                 "preguntas" => $preguntas,
                 "total" => count($preguntas),
                 "debug_info" =>
-                    "Procesado con detección de Estilos (RightAnswer)",
+                "Procesado con detección de Estilos (RightAnswer)",
             ]);
         } catch (\Exception $e) {
             Log::error(
@@ -3200,7 +3233,7 @@ class CapacitacionController extends Controller
             return response()->json([
                 "success" => true,
                 "message" =>
-                    "Examen guardado correctamente con " .
+                "Examen guardado correctamente con " .
                     count($request->preguntas) .
                     " preguntas.",
             ]);
@@ -3348,7 +3381,7 @@ class CapacitacionController extends Controller
             return response()->json([
                 "success" => true,
                 "message" =>
-                    "Usuario desmatriculado correctamente" .
+                "Usuario desmatriculado correctamente" .
                     ($moodleUserId
                         ? " y sincronizado con Moodle"
                         : " (Solo local, no se encontró ID Moodle)"),
@@ -3438,7 +3471,7 @@ class CapacitacionController extends Controller
                         "username" => $u->username ?? "", // ← agregar
                         "estado" => "SIN_INICIAR",
                         "enrolment_start_date" =>
-                            $u->enrolment_start_date ?? null,
+                        $u->enrolment_start_date ?? null,
                     ],
                     $sinIniciar,
                 ),
@@ -3449,7 +3482,7 @@ class CapacitacionController extends Controller
                         "username" => $u->username ?? "", // ← agregar
                         "estado" => "EN_PROGRESO",
                         "enrolment_start_date" =>
-                            $u->enrolment_start_date ?? null,
+                        $u->enrolment_start_date ?? null,
                     ],
                     $enProgreso,
                 ),
@@ -3495,7 +3528,7 @@ class CapacitacionController extends Controller
                     "course_corto" => $c->course_corto ?? "",
                     "area" => $c->course_categoria ?? "",
                     "fecha_inicio_matricula" =>
-                        $c->fecha_inicio_matricula ?? null,
+                    $c->fecha_inicio_matricula ?? null,
                     "fecha_fin_matricula" => $c->fecha_fin_matricula ?? null,
                     "fecha_matricula" => $c->fecha_matricula ?? null,
                     "ultimo_acceso" => $c->ultimo_acceso ?? null,
@@ -3601,7 +3634,7 @@ class CapacitacionController extends Controller
                         "DNI" => $persona->NRO_DOCU_IDEN,
                         "Cargo" => $persona->cargo ?? "Sin asignar",
                         "TipoTrabajador" =>
-                            $tipoMap[$persona->PERS_TIPOTRAB] ??
+                        $tipoMap[$persona->PERS_TIPOTRAB] ??
                             $persona->PERS_TIPOTRAB,
                         "Estado" => "SIN INICIAR",
                     ];
@@ -3682,7 +3715,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al registrar el reporte. Por favor, contacte al administrador.",
+                    "Error al registrar el reporte. Por favor, contacte al administrador.",
                 ],
                 500,
             );
@@ -3720,7 +3753,7 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" =>
-                        "Error al obtener los reportes. Por favor, contacte al administrador.",
+                    "Error al obtener los reportes. Por favor, contacte al administrador.",
                 ],
                 500,
             );
