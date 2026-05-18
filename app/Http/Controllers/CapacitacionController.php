@@ -2864,6 +2864,33 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function getAreasPCA(): JsonResponse
+    {
+        try {
+            $areas = DB::table('sw_curso_areas')
+                ->select('codigo', 'nombre', 'codModdle')
+                ->where('habilitado', 1)
+                ->whereNotNull('codModdle')
+                ->where('codModdle', '!=', '')
+                ->orderBy('codigo')
+                ->get()
+                ->map(fn($a) => [
+                    'codArea' => (string) $a->codigo,
+                    'Area' => $a->nombre,
+                    'codModdle' => (string) $a->codModdle,
+                ]);
+            return response()->json([
+                'success' => true,
+                'areas' => $areas,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener áreas PCA: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getCursosPorCategoria(int $categoryId): JsonResponse
     {
         try {

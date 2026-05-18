@@ -491,10 +491,12 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.areaConocimiento = curso.area_conocimiento ?? "";
                 alpineData.area = curso.area_conocimiento ?? "";
 
-                if (curso.area_conocimiento) {
+                if (alpineData.tipoCurso == '6') {
+                    alpineData.cargarAreasResponsablesPCA();
+                } else if (curso.area_conocimiento) {
                     alpineData.cargarAreasResponsables(curso.area_conocimiento);
-                    alpineData.areaResponsable = curso.area ?? "";
                 }
+                alpineData.areaResponsable = curso.area ?? "";
 
                 alpineData.frecuencia = curso.frecuencia ?? "";
 
@@ -519,7 +521,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.sucursalesAsignadas = curso.sucursales || [];
 
                 if (alpineData.tipoCurso == '6') {
-                    alpineData.clientesAsignados = curso.sucursales || [];
+                    alpineData.clienteSeleccionado = curso.sucursales?.[0] || '';
                 } else if (alpineData.tipoCurso == '7') {
                     alpineData.areasAsignadas = curso.sucursales || [];
                 }
@@ -703,8 +705,8 @@ window.editarFormGestionCurso = (e) => {
     if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
         alpineData.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
     }
-    if (alpineData.tipoCurso == '6' && alpineData.clientesAsignados.length > 0) {
-        alpineData.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
+    if (alpineData.tipoCurso == '6' && alpineData.clienteSeleccionado) {
+        formData.append('sucursales_asignadas[]', alpineData.clienteSeleccionado);
     }
     if (alpineData.tipoCurso == '7' && alpineData.areasAsignadas.length > 0) {
         alpineData.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
@@ -843,6 +845,17 @@ window.formCursoGestion = function () {
             } catch (e) {
                 console.error("Error cargando áreas responsables:", e);
                 this.lastSistemaId = null;
+            }
+        },
+        async cargarAreasResponsablesPCA() {
+            try {
+                const res = await axios.get(`${VITE_URL_APP}/api/get-areas-pca`);
+                if (res.data && res.data.success && Array.isArray(res.data.areas)) {
+                    this.areasResponsables = res.data.areas;
+                }
+                this.lastSistemaId = null;
+            } catch (e) {
+                console.error("Error cargando áreas para PCA:", e);
             }
         },
         areasEncargadas: [],
@@ -1066,7 +1079,7 @@ window.formCursoGestion = function () {
         },
 
         clientesDisponibles: [],
-        clientesAsignados: [],
+        clienteSeleccionado: '',
         empresasDisponibles: [],
         areasAsignadas: [],
         busquedaCliente: '',
@@ -1102,7 +1115,21 @@ window.formCursoGestion = function () {
 
         init() {
             this.$watch('areaConocimiento', (val) => {
-                this.cargarAreasResponsables(val);
+                if (this.tipoCurso != '6') {
+                    this.cargarAreasResponsables(val);
+                }
+            });
+
+            this.$watch('tipoCurso', (val) => {
+                if (val == '6') {
+                    this.areaConocimiento = '';
+                    this.area = '';
+                    this.cargarAreasResponsablesPCA();
+                } else {
+                    this.areasResponsables = [];
+                    this.areaResponsable = '';
+                    this.lastSistemaId = null;
+                }
             });
             // Cargar sucursales dinámicamente al iniciar
             axios.get(`${VITE_URL_APP}/api/get-sucursales`)
@@ -1181,7 +1208,7 @@ window.formCursoGestion = function () {
             this.esPAC = false;
             this.sucursalesAsignadas = [];
             this.busquedaSucursal = '';
-            this.clientesAsignados = [];
+            this.clienteSeleccionado = '';
             this.areasAsignadas = [];
             this.busquedaCliente = '';
             this.busquedaAreaPCI = '';
@@ -1230,8 +1257,8 @@ window.formCursoGestion = function () {
             }
 
             // Validaciones específicas PCU (6) y PCI (7)
-            if (this.tipoCurso == '6' && this.clientesAsignados.length === 0) {
-                Swal.fire('Atención', 'Debe asignar al menos un cliente para cursos PCU', 'warning');
+            if (this.tipoCurso == '6' && !this.clienteSeleccionado) {
+                Swal.fire('Atención', 'Debe seleccionar un cliente para cursos PCU', 'warning');
                 return;
             }
             if (this.tipoCurso == '7' && this.areasAsignadas.length === 0) {
@@ -1303,8 +1330,8 @@ window.formCursoGestion = function () {
                 this.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
             }
 
-            if (this.tipoCurso == '6' && this.clientesAsignados.length > 0) {
-                this.clientesAsignados.forEach(c => formData.append('sucursales_asignadas[]', c));
+            if (this.tipoCurso == '6' && this.clienteSeleccionado) {
+                formData.append('sucursales_asignadas[]', this.clienteSeleccionado);
             }
 
             if (this.tipoCurso == '7' && this.areasAsignadas.length > 0) {

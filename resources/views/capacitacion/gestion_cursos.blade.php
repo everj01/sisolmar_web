@@ -625,7 +625,7 @@
                                                 </template>
                                             </div>
 
-                                            <!-- Selector PCU (Clientes) -->
+                                            <!-- Selector PCA (Clientes) -->
                                             <div x-show="tipoCurso == '6'" x-transition
                                                 class="mt-4 bg-blue-50/50 border border-blue-100 rounded-lg p-5">
                                                 <label
@@ -648,9 +648,9 @@
                                                         <template x-for="clie in clientesFiltrados" :key="clie.codigo">
                                                             <label
                                                                 class="flex items-start space-x-2 cursor-pointer hover:bg-slate-50 p-2 rounded-md border border-transparent hover:border-slate-200 transition-all">
-                                                                <input type="checkbox" :value="clie.codigo"
-                                                                    x-model="clientesAsignados"
-                                                                    class="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                <input type="radio" :value="clie.codigo"
+                                                                    x-model="clienteSeleccionado"
+                                                                    class="mt-0.5 w-4 h-4 rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
                                                                 <span class="text-sm font-medium text-gray-700">
                                                                     <span x-text="clie.codigo"
                                                                         class="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded mr-1"></span>
@@ -747,7 +747,7 @@
                                         </div>
 
                                         <!-- Sistema de gestión -->
-                                        <div>
+                                        <div x-show="tipoCurso != '6'">
                                             <label
                                                 class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
                                                 Sistema de gestión <span class="text-danger">*</span>
@@ -918,7 +918,33 @@
                                             <div x-data="{
                                                     open: false,
                                                     searchTerm: '',
-                                                    options: {{ Js::from($dirigidos->map(fn($d) => ['codigo' => $d->codigo, 'texto' => $d->texto])->values()->toArray()) }},
+                                                    _fullOptions: {{ Js::from($dirigidos->map(fn($d) => ['codigo' => $d->codigo, 'texto' => $d->texto])->values()->toArray()) }},
+                                                    get options() {
+                                                        const tc = this.tipoCurso;
+                                                        const clSel = this.clienteSeleccionado;
+
+                                                        if (tc == '5') {
+                                                            return this._fullOptions.filter(opt =>
+                                                                opt.texto === 'Todos' || opt.texto === 'Personal Operativo' || opt.texto === 'Personal Administrativo'
+                                                            );
+                                                        }
+
+                                                        if (tc == '6') {
+                                                            const clientes = this.clientesDisponibles || [];
+                                                            const cliente = clientes.find(c => c.codigo == clSel);
+                                                            if (cliente && cliente.descripcion && (cliente.descripcion.toLowerCase().includes('linea 2') || cliente.descripcion.toLowerCase().includes('línea 2'))) {
+                                                                return this._fullOptions.filter(opt =>
+                                                                    opt.texto === 'Todos' || opt.texto === 'PTSA' || opt.texto === 'Estaciones'
+                                                                );
+                                                            } else if (clSel) {
+                                                                const base = this._fullOptions.filter(opt => opt.texto === 'Todos');
+                                                                base.push({ codigo: 'OTROS', texto: 'Otros' });
+                                                                return base;
+                                                            }
+                                                        }
+
+                                                        return this._fullOptions;
+                                                    },
                                                     get filteredOptions() {
                                                         if (this.searchTerm === '') return this.options;
                                                         return this.options.filter(opt =>

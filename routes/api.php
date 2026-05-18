@@ -139,6 +139,7 @@ Route::get('/get-cursos-por-categoria/{categoryId}', [CapacitacionController::cl
 Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
 Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
 Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
+Route::get('/get-areas-pca', [CapacitacionController::class, 'getAreasPCA']);
 Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
 Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
