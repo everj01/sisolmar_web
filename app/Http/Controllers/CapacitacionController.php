@@ -76,6 +76,7 @@ class CapacitacionController extends Controller
                 "proyeccion_anios" => $curso->proyeccion_anios,
                 "tiene_vigente" => in_array($curso->codigo, $cursosVigentes),
                 "codigo_moodle" => $curso->codigo_moodle,
+                "cod_cliente" => $curso->cod_cliente,
                 "dirigido_a" => $curso->dirigido_a,
                 "tipo_curso" => $curso->tipoCurso?->descripcion,
             ];
@@ -95,6 +96,10 @@ class CapacitacionController extends Controller
             ->pluck("sucursal");
 
         $curso->sucursales = $sucursales;
+
+        if ($curso->tipo_curso != 6) {
+            unset($curso->cod_cliente);
+        }
 
         if ($curso->cod_responsable) {
             $resp = DB::connection("sqlsrv")->selectOne(
@@ -583,10 +588,28 @@ class CapacitacionController extends Controller
 
             DB::beginTransaction();
 
+            $codClienteLegacy = null;
+            if (
+                $request->input("tipo_curso") == "6" &&
+                $request->has("sucursales_asignadas") &&
+                is_array($request->sucursales_asignadas) &&
+                count($request->sucursales_asignadas) > 0
+            ) {
+                $clienteId = $request->sucursales_asignadas[0];
+                $cliente = DB::table("sw_clientes")
+                    ->select("cod_legacy")
+                    ->where("codigo", $clienteId)
+                    ->first();
+                if ($cliente) {
+                    $codClienteLegacy = (string) $cliente->cod_legacy;
+                }
+            }
+
             $curso = Cursos::create([
                 "nombre" => $request->nombre,
                 "codigo_curso" => $this->generateCourseCode(),
                 "tipo_curso" => $request->tipo_curso,
+                "cod_cliente" => $codClienteLegacy,
                 "area_conocimiento" => $request->area_conocimiento,
                 "area" => $request->area_responsable,
                 "periodicidad" => $this->calculatePeriodicidad(
@@ -2364,29 +2387,6 @@ class CapacitacionController extends Controller
                     "total_capacitaciones" => $matriculasCounts[$codigo] ?? 0,
                 ];
             }, $rawPersonal);
-
-            // --- NUEVO: FILTRO INTELIGENTE PAC ---
-            if ($request->filled("cursoId")) {
-                $cursoId = $request->cursoId;
-                // Obtener sucursales asignadas al curso
-                $sucursalesPermitidas = DB::table("sw_curso_sucursales")
-                    ->where("curso_codigo", $cursoId)
-                    ->pluck("sucursal")
-                    ->map(fn($s) => strtoupper(trim($s))) // Normalizar
-                    ->toArray();
-
-                if (!empty($sucursalesPermitidas)) {
-                    $personal = array_filter($personal, function ($item) use (
-                        $sucursalesPermitidas,
-                    ) {
-                        return in_array(
-                            strtoupper(trim($item["sucursal"])),
-                            $sucursalesPermitidas,
-                        );
-                    });
-                }
-            }
-            // -------------------------------------
 
             // 4. Filtrado opcional del lado del servidor
             $termino = strtolower($request->input("q", ""));
