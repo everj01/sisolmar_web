@@ -207,7 +207,7 @@ class CapacitacionController extends Controller
                 "cod_responsable" => $request->input("cod_responsable"),
                 "target_group" => $request->input("target_group", "TODOS"),
                 "descripcion" => $request->input("descripcion"),
-                "dirigido_a" => $request->input("dirigido_a"),
+                "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? null : $request->input("dirigido_a"),
                 "fecha_modificacion" => date("Y-m-d\TH:i:s.000"),
             ]);
 
@@ -601,7 +601,7 @@ class CapacitacionController extends Controller
                 "cod_responsable" => $request->input("cod_responsable"),
                 "target_group" => $request->input("target_group", "TODOS"),
                 "descripcion" => $request->input("descripcion"),
-                "dirigido_a" => $request->input("dirigido_a"),
+                "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? null : $request->input("dirigido_a"),
                 "fecha_creacion" => date("Y-m-d\TH:i:s.000"),
             ]);
 
