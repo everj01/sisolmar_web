@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use App\Jobs\DispatchMatriculaBatchJob;
+use App\Jobs\MatriculaMasivaJob;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Matricula;
 use App\Models\Consulta;
@@ -2140,13 +2140,9 @@ class CapacitacionController extends Controller
         // Obtener el ID del usuario autenticado
         $usuarioId = Auth::id();
 
-        // Ejecutamos el proceso de matriculación sincrónicamente.
-        DispatchMatriculaBatchJob::dispatchSync(
-            $cursoId,
-            $programacionId,
-            $personalIds,
-            $usuarioId,
-        );
+        // Ejecutamos el proceso de matriculación estàndar.
+        MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId)->dispatchSync();
+
 
         return response()->json([
             "success" => true,

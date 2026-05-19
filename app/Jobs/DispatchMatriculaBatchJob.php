@@ -16,196 +16,192 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-class DispatchMatriculaBatchJob implements ShouldQueue
+class MatriculaMasivaJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected int $cursoCodigo;
-    protected string $programacionCodigo;
-    protected array $personalIds;
-    protected int $usuarioId;
+    private const MODO_ESTANDAR       = 'estandar';
+    private const MODO_POR_TIPO_CURSO = 'por_tipo_curso';
 
-    /**
-     * Create a new job instance.
-     *
-     * @param int $cursoCodigo
-     * @param string $programacionCodigo
-     * @param array $personalIds
-     * @param int $usuarioId
-     */
-    public function __construct(int $cursoCodigo, string $programacionCodigo, array $personalIds, int $usuarioId)
-    {
-        $this->cursoCodigo = $cursoCodigo;
+    protected string $modo;
+    protected int    $cursoCodigo;
+    protected string $programacionCodigo;
+    protected array  $personalIds;
+    protected int    $usuarioId;
+
+    // ----------------------------------------------------------------
+    // Constructor privado — usar los named constructors de abajo
+    // ----------------------------------------------------------------
+    private function __construct(
+        string $modo,
+        int    $cursoCodigo,
+        string $programacionCodigo,
+        int    $usuarioId,
+        array  $personalIds = []
+    ) {
+        $this->modo               = $modo;
+        $this->cursoCodigo        = $cursoCodigo;
         $this->programacionCodigo = $programacionCodigo;
-        $this->personalIds = $personalIds;
-        $this->usuarioId = $usuarioId;
+        $this->usuarioId          = $usuarioId;
+        $this->personalIds        = $personalIds;
     }
 
-    /**
-     * Execute the job.
-     */
+    // ----------------------------------------------------------------
+    // Named constructors (puntos de entrada)
+    // ----------------------------------------------------------------
+
+    public static function estandar(
+        int    $cursoCodigo,
+        string $programacionCodigo,
+        array  $personalIds,
+        int    $usuarioId
+    ): static {
+        return new static(
+            self::MODO_ESTANDAR,
+            $cursoCodigo,
+            $programacionCodigo,
+            $usuarioId,
+            $personalIds
+        );
+    }
+
+    public static function porTipoCurso(
+        int    $cursoCodigo,
+        string $programacionCodigo,
+        int    $usuarioId
+    ): static {
+        return new static(
+            self::MODO_POR_TIPO_CURSO,
+            $cursoCodigo,
+            $programacionCodigo,
+            $usuarioId
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Handle principal — enruta al modo correcto
+    // ----------------------------------------------------------------
     public function handle(): void
     {
-        Log::info("Iniciando DispatchMatriculaBatchJob para curso {$this->cursoCodigo}", [
-            'total_personas' => count($this->personalIds),
-            'programacion' => $this->programacionCodigo
-        ]);
-
         $curso = Cursos::find($this->cursoCodigo);
-        $prog = CursoProgramacion::where('codigo', $this->programacionCodigo)
+        $prog  = CursoProgramacion::where('codigo', $this->programacionCodigo)
             ->orWhere('codigo_programacion', $this->programacionCodigo)
             ->first();
 
         if (!$curso || !$prog) {
-            Log::error("No se encontró el curso o la programación para el Job", [
-                'curso_id' => $this->cursoCodigo,
-                'programacion_id' => $this->programacionCodigo
+            Log::error("MatriculaMasivaJob: no se encontró el curso o la programación.", [
+                'curso_id'        => $this->cursoCodigo,
+                'programacion_id' => $this->programacionCodigo,
+                'modo'            => $this->modo,
             ]);
             return;
         }
 
-        $enviados = 0;
-        $fallidos = 0;
-        $totalPersonas = count($this->personalIds);
+        match ($this->modo) {
+            self::MODO_ESTANDAR       => $this->ejecutarEstandar($curso, $prog),
+            self::MODO_POR_TIPO_CURSO => $this->ejecutarPorTipoCurso($curso, $prog),
+        };
+    }
+
+    // ----------------------------------------------------------------
+    // Modo estándar — procesa la lista de personalIds recibida
+    // ----------------------------------------------------------------
+    private function ejecutarEstandar(Cursos $curso, CursoProgramacion $prog): void
+    {
+        if (empty($this->personalIds)) {
+            Log::warning("MatriculaMasivaJob [estandar]: lista de personal vacía.", [
+                'curso_id' => $this->cursoCodigo,
+            ]);
+            return;
+        }
+
+        $this->procesarLote($this->personalIds, $curso, $prog);
+    }
+
+    // ----------------------------------------------------------------
+    // Modo por tipo de curso — resuelve el personal y luego procesa
+    // ----------------------------------------------------------------
+    private function ejecutarPorTipoCurso(Cursos $curso, CursoProgramacion $prog): void
+    {
+        $tipoCurso = strtoupper(trim((string) $curso->tipo_curso));
+
+        $personalIds = match ($tipoCurso) {
+            'PCA'   => $this->resolverPersonalPCA($curso),
+            default => $this->resolverPersonalPorDefecto($curso),
+        };
+
+        if (empty($personalIds)) {
+            Log::warning("MatriculaMasivaJob [por_tipo_curso]: no se obtuvo personal para tipo '{$tipoCurso}'.", [
+                'curso_id' => $this->cursoCodigo,
+            ]);
+            return;
+        }
+
+        $this->procesarLote($personalIds, $curso, $prog);
+    }
+
+    // ----------------------------------------------------------------
+    // Resolvers de personal por tipo
+    // ----------------------------------------------------------------
+
+    private function resolverPersonalPCA(Cursos $curso): array
+    {
+        $codCliente = trim((string) $curso->cod_cliente);
+
+        if (empty($codCliente)) {
+            Log::error("MatriculaMasivaJob PCA: el curso {$this->cursoCodigo} no tiene cod_cliente asignado.");
+            return [];
+        }
 
         try {
-            $chunks = array_chunk($this->personalIds, 100);
+            $rows = DB::select(
+                "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?",
+                [$codCliente]
+            );
 
-            foreach ($chunks as $chunk) {
+            $ids = array_map(fn($row) => $row->codigo, $rows);
+
+            Log::info("MatriculaMasivaJob PCA: {$codCliente} retornó " . count($ids) . " personas (curso {$this->cursoCodigo}).");
+
+            return $ids;
+        } catch (\Exception $e) {
+            Log::error("MatriculaMasivaJob PCA: error ejecutando SP. " . $e->getMessage(), [
+                'cod_cliente' => $codCliente,
+                'curso_id'    => $this->cursoCodigo,
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Punto de extensión para futuros tipos de curso.
+     * Agregar un nuevo caso en el match de ejecutarPorTipoCurso
+     * y su resolver correspondiente aquí abajo.
+     */
+    private function resolverPersonalPorDefecto(Cursos $curso): array
+    {
+        Log::warning("MatriculaMasivaJob: tipo_curso '{$curso->tipo_curso}' no tiene resolver implementado.", [
+            'curso_id' => $this->cursoCodigo,
+        ]);
+        return [];
+    }
+
+    // ----------------------------------------------------------------
+    // Función base compartida — procesa un lote de personalIds
+    // ----------------------------------------------------------------
+    private function procesarLote(array $personalIds, Cursos $curso, CursoProgramacion $prog): void
+    {
+        $enviados      = 0;
+        $fallidos      = 0;
+        $totalPersonas = count($personalIds);
+
+        try {
+            foreach (array_chunk($personalIds, 100) as $chunk) {
                 foreach ($chunk as $codPersonal) {
-                    $codPersonal = str_pad(trim((string)$codPersonal), 5, '0', STR_PAD_LEFT);
+                    $codPersonal = str_pad(trim((string) $codPersonal), 5, '0', STR_PAD_LEFT);
                     if (empty($codPersonal) || $codPersonal === '00000') continue;
 
-                    try {
-                        $existe = Matricula::where('cod_curso', $this->cursoCodigo)
-                            ->where('cod_programacion', $prog->codigo_programacion)
-                            ->where('cod_personal', $codPersonal)
-                            ->exists();
-
-                        if (!$existe) {
-                            Matricula::create([
-                                'cod_curso' => $this->cursoCodigo,
-                                'cod_programacion' => $prog->codigo_programacion,
-                                'cod_personal' => $codPersonal,
-                                'usuario_id' => $this->usuarioId,
-                                'fecha_matricula' => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
-                                'estado' => Matricula::ESTADO_MATRICULADO,
-                                'tipo_matricula' => 'MASIVA',
-                                'origen_matricula' => 'SISTEMA',
-                            ]);
-                        }
-
-                        $personal = Personal::where('CODI_PERS', $codPersonal)->first();
-                        if ($personal) {
-                            $dni = trim($personal->NRO_DOCU_IDEN);
-                            if ($dni) {
-                                $moodleUser = DB::connection('mysql_grupoihb')->table('mdl_user')
-                                    ->where('username', $dni)
-                                    ->orWhere('idnumber', $dni)
-                                    ->first();
-
-                                if (!$moodleUser) {
-                                    $firstname = trim(($personal->NOMB_1 ?? '') . ' ' . ($personal->NOMB_2 ?? ''));
-                                    $lastname = trim(($personal->APEL_1 ?? '') . ' ' . ($personal->APEL_2 ?? ''));
-                                    $email = !empty($personal->PERS_EMAIL) ? trim($personal->PERS_EMAIL) : "{$dni}@sisolmar.com";
-                                    
-                                    $resUser = DB::connection('mysql_grupoihb')->select(
-                                        "SELECT F_USER_crear(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) AS user_id",
-                                        [
-                                            $dni, 
-                                            'Gpo$olSEE_1@', 
-                                            $firstname, 
-                                            $lastname, 
-                                            $email, 
-                                            '', 
-                                            '', 
-                                            '', 
-                                            '', 
-                                            ''
-                                        ]
-                                    );
-                                    $moodleUserId = $resUser[0]->user_id;
-                                } else {
-                                    $moodleUserId = $moodleUser->id;
-                                }
-
-                                if ($moodleUserId <= 0) {
-                                    Log::error("Error al crear/obtener usuario en Moodle para DNI {$dni}. Error code: {$moodleUserId}");
-                                    $fallidos++;
-                                    continue;
-                                }
-
-                                $fInic = Carbon::parse($prog->fecha_inicio)->format('Y-m-d H:i:s');
-                                $fFin  = Carbon::parse($prog->fecha_final)->format('Y-m-d H:i:s');
-
-                                $moodleCourseRef = $curso->codigo_moodle ?: $curso->codigo_curso;
-                                
-                                $courseMoodle = DB::connection('mysql_grupoihb')->table('mdl_course')
-                                    ->where('id', $moodleCourseRef)
-                                    ->orWhere('idnumber', $moodleCourseRef)
-                                    ->first(['id', 'idnumber', 'category']);
-                                
-                                $moodleCourseIdNumber = (string)($courseMoodle ? $courseMoodle->idnumber : $moodleCourseRef);
-
-                                if ($courseMoodle) {
-                                    $context = DB::connection('mysql_grupoihb')->table('mdl_context')
-                                        ->where('contextlevel', 50) // 50 = Curso
-                                        ->where('instanceid', $courseMoodle->id)
-                                        ->first();
-
-                                    if (!$context) {
-                                        $categoryContext = DB::connection('mysql_grupoihb')->table('mdl_context')
-                                            ->where('contextlevel', 40)
-                                            ->where('instanceid', $courseMoodle->category)
-                                            ->first();
-
-                                        $contextId = DB::connection('mysql_grupoihb')->table('mdl_context')->insertGetId([
-                                            'contextlevel' => 50,
-                                            'instanceid'   => $courseMoodle->id,
-                                            'path'         => '',
-                                            'depth'        => 0,
-                                            'locked'       => 0
-                                        ]);
-
-                                        $path = ($categoryContext ? $categoryContext->path : '/1') . '/' . $contextId;
-                                        $depth = ($categoryContext ? $categoryContext->depth : 1) + 1;
-
-                                        DB::connection('mysql_grupoihb')->table('mdl_context')
-                                            ->where('id', $contextId)
-                                            ->update(['path' => $path, 'depth' => $depth]);
-                                            
-                                        Log::info("Contexto Moodle generado para curso ID: {$courseMoodle->id}");
-                                    }
-                                }
-
-                                DB::connection('mysql_grupoihb')->select(
-                                    "SELECT F_USER_matricula2(?, ?, ?, ?, ?, ?, ?, ?, ?) AS result",
-                                    [
-                                        $moodleUserId, 
-                                        $moodleCourseIdNumber, 
-                                        $fInic, 
-                                        $fFin, 
-                                        '', 
-                                        '', 
-                                        '', 
-                                        '', 
-                                        5
-                                    ]
-                                );
-                                $enviados++;
-                            } else {
-                                Log::warning("Personal {$codPersonal} no tiene DNI registrado.");
-                                $fallidos++;
-                            }
-                        } else {
-                            Log::warning("No se encontró registro de Personal para ID: {$codPersonal}");
-                            $fallidos++;
-                        }
-
-                    } catch (\Exception $e) {
-                        $fallidos++;
-                        Log::error("Error procesando persona {$codPersonal} en Job: " . $e->getMessage());
-                    }
+                    $this->procesarPersona($codPersonal, $curso, $prog, $enviados, $fallidos);
                 }
             }
 
@@ -218,12 +214,165 @@ class DispatchMatriculaBatchJob implements ShouldQueue
                 $fallidos
             );
 
-            Log::info("Finalizado exitosamente DispatchMatriculaBatchJob para curso {$this->cursoCodigo}. Éxitos: {$enviados}, Fallos: {$fallidos}");
+            Log::info("MatriculaMasivaJob [{$this->modo}] finalizado. Éxitos: {$enviados}, Fallos: {$fallidos}", [
+                'curso_id' => $this->cursoCodigo,
+            ]);
         } catch (\Exception $e) {
-            Log::error("Error crítico en DispatchMatriculaBatchJob: " . $e->getMessage(), [
-                'curso' => $this->cursoCodigo,
-                'trace' => $e->getTraceAsString()
+            Log::error("MatriculaMasivaJob [{$this->modo}] error crítico: " . $e->getMessage(), [
+                'curso_id' => $this->cursoCodigo,
+                'trace'    => $e->getTraceAsString(),
             ]);
         }
+    }
+
+    // ----------------------------------------------------------------
+    // Función base — procesa un único personal (matrícula + Moodle)
+    // ----------------------------------------------------------------
+    private function procesarPersona(
+        string           $codPersonal,
+        Cursos           $curso,
+        CursoProgramacion $prog,
+        int              &$enviados,
+        int              &$fallidos
+    ): void {
+        try {
+            $existe = Matricula::where('cod_curso', $this->cursoCodigo)
+                ->where('cod_programacion', $prog->codigo_programacion)
+                ->where('cod_personal', $codPersonal)
+                ->exists();
+
+            if (!$existe) {
+                Matricula::create([
+                    'cod_curso'        => $this->cursoCodigo,
+                    'cod_programacion' => $prog->codigo_programacion,
+                    'cod_personal'     => $codPersonal,
+                    'usuario_id'       => $this->usuarioId,
+                    'fecha_matricula'  => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
+                    'estado'           => Matricula::ESTADO_MATRICULADO,
+                    'tipo_matricula'   => 'MASIVA',
+                    'origen_matricula' => 'SISTEMA',
+                ]);
+            }
+
+            $personal = Personal::where('CODI_PERS', $codPersonal)->first();
+
+            if (!$personal) {
+                Log::warning("MatriculaMasivaJob: no se encontró Personal para ID: {$codPersonal}");
+                $fallidos++;
+                return;
+            }
+
+            $dni = trim($personal->NRO_DOCU_IDEN);
+
+            if (empty($dni)) {
+                Log::warning("MatriculaMasivaJob: Personal {$codPersonal} no tiene DNI registrado.");
+                $fallidos++;
+                return;
+            }
+
+            $moodleUserId = $this->resolverUsuarioMoodle($personal, $dni);
+
+            if ($moodleUserId <= 0) {
+                Log::error("MatriculaMasivaJob: error al crear/obtener usuario Moodle para DNI {$dni}. Code: {$moodleUserId}");
+                $fallidos++;
+                return;
+            }
+
+            $this->matricularEnMoodle($moodleUserId, $curso, $prog);
+            $enviados++;
+        } catch (\Exception $e) {
+            $fallidos++;
+            Log::error("MatriculaMasivaJob: error procesando persona {$codPersonal}: " . $e->getMessage());
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // Obtiene o crea el usuario en Moodle
+    // ----------------------------------------------------------------
+    private function resolverUsuarioMoodle(Personal $personal, string $dni): int
+    {
+        $moodleUser = DB::connection('mysql_grupoihb')->table('mdl_user')
+            ->where('username', $dni)
+            ->orWhere('idnumber', $dni)
+            ->first();
+
+        if ($moodleUser) {
+            return $moodleUser->id;
+        }
+
+        $firstname = trim(($personal->NOMB_1 ?? '') . ' ' . ($personal->NOMB_2 ?? ''));
+        $lastname  = trim(($personal->APEL_1 ?? '') . ' ' . ($personal->APEL_2 ?? ''));
+        $email     = !empty($personal->PERS_EMAIL)
+            ? trim($personal->PERS_EMAIL)
+            : "{$dni}@sisolmar.com";
+
+        $res = DB::connection('mysql_grupoihb')->select(
+            "SELECT F_USER_crear(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) AS user_id",
+            [$dni, 'Gpo$olSEE_1@', $firstname, $lastname, $email, '', '', '', '', '']
+        );
+
+        return $res[0]->user_id;
+    }
+
+    // ----------------------------------------------------------------
+    // Matricula al usuario en el curso de Moodle
+    // ----------------------------------------------------------------
+    private function matricularEnMoodle(int $moodleUserId, Cursos $curso, CursoProgramacion $prog): void
+    {
+        $moodleCourseRef = $curso->codigo_moodle ?: $curso->codigo_curso;
+
+        $courseMoodle = DB::connection('mysql_grupoihb')->table('mdl_course')
+            ->where('id', $moodleCourseRef)
+            ->orWhere('idnumber', $moodleCourseRef)
+            ->first(['id', 'idnumber', 'category']);
+
+        $moodleCourseIdNumber = (string) ($courseMoodle ? $courseMoodle->idnumber : $moodleCourseRef);
+
+        if ($courseMoodle) {
+            $this->garantizarContextoMoodle($courseMoodle);
+        }
+
+        $fInic = Carbon::parse($prog->fecha_inicio)->format('Y-m-d H:i:s');
+        $fFin  = Carbon::parse($prog->fecha_final)->format('Y-m-d H:i:s');
+
+        DB::connection('mysql_grupoihb')->select(
+            "SELECT F_USER_matricula2(?, ?, ?, ?, ?, ?, ?, ?, ?) AS result",
+            [$moodleUserId, $moodleCourseIdNumber, $fInic, $fFin, '', '', '', '', 5]
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Garantiza que el contexto de Moodle exista para el curso
+    // ----------------------------------------------------------------
+    private function garantizarContextoMoodle(object $courseMoodle): void
+    {
+        $context = DB::connection('mysql_grupoihb')->table('mdl_context')
+            ->where('contextlevel', 50)
+            ->where('instanceid', $courseMoodle->id)
+            ->first();
+
+        if ($context) return;
+
+        $categoryContext = DB::connection('mysql_grupoihb')->table('mdl_context')
+            ->where('contextlevel', 40)
+            ->where('instanceid', $courseMoodle->category)
+            ->first();
+
+        $contextId = DB::connection('mysql_grupoihb')->table('mdl_context')->insertGetId([
+            'contextlevel' => 50,
+            'instanceid'   => $courseMoodle->id,
+            'path'         => '',
+            'depth'        => 0,
+            'locked'       => 0,
+        ]);
+
+        $path  = ($categoryContext ? $categoryContext->path : '/1') . '/' . $contextId;
+        $depth = ($categoryContext ? $categoryContext->depth : 1) + 1;
+
+        DB::connection('mysql_grupoihb')->table('mdl_context')
+            ->where('id', $contextId)
+            ->update(['path' => $path, 'depth' => $depth]);
+
+        Log::info("MatriculaMasivaJob: contexto Moodle generado para curso ID: {$courseMoodle->id}");
     }
 }
