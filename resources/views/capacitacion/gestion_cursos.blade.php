@@ -402,7 +402,7 @@
                                                             <input type="text" x-model="query"
                                                                 @input="search()"
                                                                 class="w-full border-none bg-transparent p-1 text-sm focus:ring-0 outline-none text-gray-700"
-                                                                placeholder="Buscar por nombre, DNI o cargo...">
+                                                                placeholder="Buscar por nombre, DNI o área...">
                                                         </div>
 
                                                         <div
@@ -415,7 +415,7 @@
                                                                 DNI</div>
                                                             <div
                                                                 class="w-24 shrink-0 text-center border-l border-gray-200">
-                                                                Cargo</div>
+                                                                Área</div>
                                                             <div
                                                                 class="w-24 shrink-0 text-center border-l border-gray-200">
                                                                 Sucursal</div>
@@ -435,7 +435,7 @@
                                                                     <div class="w-20 shrink-0 text-center text-gray-500 font-mono text-[11px]"
                                                                         x-text="p.dni"></div>
                                                                     <div class="w-24 shrink-0 text-center text-gray-600 font-semibold text-[11px] truncate"
-                                                                        x-text="p.cargo || 'N/A'"></div>
+                                                                        x-text="p.area || 'N/A'"></div>
                                                                     <div class="w-24 shrink-0 text-center text-gray-400 text-[11px] truncate"
                                                                         x-text="p.sucursal || 'N/A'"></div>
                                                                 </div>

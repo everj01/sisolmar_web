@@ -1806,7 +1806,7 @@ window.searchablePersonnel = function () {
                 this.results = this.jefaturasCache.filter(p =>
                     (p.nombre_completo || '').toLowerCase().includes(q) ||
                     (p.dni || '').includes(q) ||
-                    (p.cargo || '').toLowerCase().includes(q)
+                    (p.area || '').toLowerCase().includes(q)
                 );
             }
         },

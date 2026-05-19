@@ -2395,13 +2395,15 @@ class CapacitacionController extends Controller
             $raw = DB::connection("sqlsrv")->select("EXEC si_solm.dbo.SP_LISTAR_JEFATURAS_AREAS");
 
             $personal = array_map(function ($j) {
+                $cargoRaw = trim($j->CARGO ?? '');
+                $area = preg_replace('/^JEFE\s+DE\s+/i', '', $cargoRaw);
                 return [
                     "codigo"          => trim($j->CODIGO ?? ''),
                     "nombre_completo" => trim($j->NOMBRE_COMPLETO ?? ''),
                     "dni"             => trim($j->DNI ?? ''),
                     "correo"          => trim($j->CORREO ?? ''),
                     "sucursal"        => trim($j->SUCURSAL ?? ''),
-                    "cargo"           => trim($j->CARGO ?? ''),
+                    "area"            => trim($area),
                 ];
             }, $raw);
 
