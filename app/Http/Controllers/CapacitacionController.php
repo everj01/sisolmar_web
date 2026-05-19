@@ -124,7 +124,7 @@ class CapacitacionController extends Controller
             "tipo_curso" =>
             "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
             "area_conocimiento" =>
-            "required_unless:tipo_curso,6|exists:sw_capacitacion_areas,codigo",
+            "nullable|exists:sw_capacitacion_areas,codigo",
             "area_responsable" => "nullable|integer",
             "es_periodico" => "required|integer|in:0,1",
             "frecuencia" => "nullable|string",
@@ -144,6 +144,10 @@ class CapacitacionController extends Controller
             "cod_moodle_area" => "nullable|integer",
             "dirigido_a" => "nullable",
         ]);
+
+        $validator->sometimes("area_conocimiento", "required", function ($input) {
+            return in_array($input->tipo_curso, [5, 7]);
+        });
 
         if ($validator->fails()) {
             return response()->json(
@@ -536,7 +540,7 @@ class CapacitacionController extends Controller
                 "tipo_curso" =>
                 "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
                 "area_conocimiento" =>
-                "required_unless:tipo_curso,6|exists:sw_capacitacion_areas,codigo",
+                "nullable|exists:sw_capacitacion_areas,codigo",
                 "area_responsable" => "nullable|integer",
                 "es_periodico" => "required|integer|in:0,1",
                 "frecuencia" => "nullable|string",
@@ -561,6 +565,10 @@ class CapacitacionController extends Controller
                 "image_portada" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
                 "image_afiche" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
             ]);
+
+            $validator->sometimes("area_conocimiento", "required", function ($input) {
+                return in_array($input->tipo_curso, [5, 7]);
+            });
 
             if ($validator->fails()) {
                 return response()->json(
