@@ -1307,11 +1307,11 @@
             x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100">
 
-            <div class="card w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden"
+            <div class="card w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden"
                 @click.away="closeModal()">
                 <div class="card-header bg-white border-b border-gray-100">
                     <div class="flex items-center justify-between">
-                        <h4 class="card-title">Aperturar 1er Ciclo: <span x-text="cursoNombre"
+                        <h4 class="card-title">Aperturar el curso: <span x-text="cursoNombre"
                                 class="text-primary font-bold"></span></h4>
                         <button type="button" @click="closeModal()" title="Cerrar y volver a Registro"
                             class="btn btn-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
@@ -1321,43 +1321,42 @@
                 </div>
 
                 <div class="card-body">
-                    <div class="flex flex-col h-full min-h-[400px]">
-                        <div class="flex-grow flex flex-col items-center pt-8">
+                    <div class="flex flex-col h-full min-h-[300px]">
+                        <div class="flex-grow flex flex-col items-center pt-6">
                             <div
-                                class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mb-6">
-                                <i class="bx bx-calendar-star text-primary text-3xl"></i>
+                                class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-5">
+                                <i class="bx bx-calendar-event text-primary text-2xl"></i>
+                            </div>
+
+                            <div class="w-full max-w-sm mb-4">
+                                <label for="fecha_inicio_modal"
+                                    class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
+                                    de inicio de capacitación</label>
+                                <input type="date" x-model="fechaInicio" id="fecha_inicio_modal"
+                                    :min="fechaMinima"
+                                    class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                             </div>
 
                             <div
-                                class="bg-blue-50 border border-blue-100 rounded-lg p-5 mb-8 w-full max-w-lg shadow-sm">
+                                class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 w-full max-w-lg shadow-sm">
                                 <div class="flex">
                                     <div class="flex-shrink-0 mt-0.5">
                                         <i class="bx bx-info-circle text-blue-500 text-xl"></i>
                                     </div>
                                     <div class="ml-3">
-                                        <h3 class="text-sm font-medium text-blue-800">Sobre la Programación Manual
+                                        <h3 class="text-sm font-medium text-blue-800">Matrícula Automática
                                         </h3>
-                                        <p class="text-sm text-blue-700 mt-2">
-                                            Selecciona el <strong>mes de la campaña</strong>.
-                                            El curso se habilitará desde el primer hasta el último día de ese mes.
-                                            Se matriculará masivamente a todo el personal activo asignado.
+                                        <p class="text-sm text-blue-700 mt-1">
+                                            Al aperturar el curso, se matriculará <strong>automáticamente</strong> a
+                                            <span x-text="dirigidoLabel"></span> según la configuración del curso.
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="w-full max-w-sm mb-4">
-                                <label for="fecha_inicio_modal"
-                                    class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Mes
-                                    de
-                                    la Campaña (Año y Mes)</label>
-                                <input type="month" x-model="fechaInicio" id="fecha_inicio_modal"
-                                    class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-lg sm:leading-6">
-                            </div>
-
                             <!-- NUEVO: Filtros Grupales (Punto 11) -->
                             <div x-show="!incluirAutomatico" x-transition
-                                class="w-full max-w-lg mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
+                                class="w-full max-w-lg mt-2 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
                                 <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">
                                         <i class="bx bx-filter-alt mr-1"></i> Criterios de Selección
@@ -1422,18 +1421,20 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-center w-full gap-4 py-8 mt-6 border-t border-gray-100">
-                        <button type="button" @click="guardarApertura()" :disabled="cargando"
-                            class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white transition-colors px-6 shadow-sm disabled:opacity-50">
-                            <span x-show="!cargando" class="flex items-center"><i
-                                    class="bx bx-calendar-star text-base mr-2"></i> Aperturar Ciclo</span>
-                            <span x-show="cargando" class="flex items-center"><i
-                                    class="bx bx-loader-alt bx-spin text-base mr-2"></i> Procesando...</span>
-                        </button>
-                        <button type="button" @click="closeModal()" :disabled="cargando"
-                            class="btn rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-6 disabled:opacity-50">
-                            Cancelar
-                        </button>
+                    <div class="flex flex-col items-center w-full gap-4 py-6 mt-4 border-t border-gray-100">
+                        <div class="flex justify-center w-full gap-4">
+                            <button type="button" @click="guardarApertura()" :disabled="cargando"
+                                class="btn rounded-full bg-primary text-white hover:bg-primary-600 transition-colors px-8 shadow-sm disabled:opacity-50">
+                                <span x-show="!cargando" class="flex items-center"><i
+                                        class="bx bx-calendar-plus text-base mr-2"></i> Aperturar el curso</span>
+                                <span x-show="cargando" class="flex items-center"><i
+                                        class="bx bx-loader-alt bx-spin text-base mr-2"></i> Procesando...</span>
+                            </button>
+                            <button type="button" @click="closeModal()" :disabled="cargando"
+                                class="btn rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-6 disabled:opacity-50">
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2040,6 +2041,7 @@
             codigoCurso: null,
             cursoNombre: '',
             tipoCursoId: '',
+            dirigidoA: '',
             fechaInicio: '',
             clientesAsignados: [],
             empresasAsignadas: [],
@@ -2053,6 +2055,19 @@
                 sucursales: [],
                 clientes: [],
                 areas: []
+            },
+
+            get fechaMinima() {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            },
+
+            get dirigidoLabel() {
+                const labels = { '1': 'todo el personal', '2': 'personal administrativo', '3': 'personal operativo' };
+                return labels[String(this.dirigidoA)] || 'todo el personal activo';
             },
 
             async init() {
@@ -2076,6 +2091,7 @@
                 this.codigoCurso = data.codigo;
                 this.cursoNombre = data.nombre;
                 this.tipoCursoId = data.tipo_curso || '';
+                this.dirigidoA = data.dirigido_a || '';
 
                 // Reset filtros
                 this.selectedSucursal = '';
@@ -2083,10 +2099,7 @@
                 this.selectedArea = '';
                 this.listaDNIPaste = '';
 
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                this.fechaInicio = `${yyyy}-${mm}`;
+                this.fechaInicio = this.fechaMinima;
 
                 window.dispatchEvent(new CustomEvent('cambiar-panel', {
                     detail: {
@@ -2108,6 +2121,7 @@
                 this.codigoCurso = null;
                 this.cursoNombre = '';
                 this.tipoCursoId = '';
+                this.dirigidoA = '';
                 this.fechaInicio = '';
                 this.selectedSucursal = '';
                 this.selectedCliente = '';
@@ -2119,7 +2133,7 @@
                     window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                         detail: {
                             titulo: "Atención",
-                            mensaje: "Debe seleccionar un mes de campaña.",
+                            mensaje: "Debe seleccionar una fecha de inicio.",
                             tipo: "warning"
                         }
                     }));

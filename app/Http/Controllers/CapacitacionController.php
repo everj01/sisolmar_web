@@ -1758,7 +1758,7 @@ class CapacitacionController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 "cod_cursos" => "required|integer|exists:sw_cursos,codigo",
-                "fecha_inicio" => "required|date_format:Y-m",
+                "fecha_inicio" => "required|date|after_or_equal:today",
             ]);
 
             if ($validator->fails()) {
@@ -1776,10 +1776,22 @@ class CapacitacionController extends Controller
 
             $curso = Cursos::findOrFail($request->cod_cursos);
 
-            $fechaBase = Carbon::parse($request->fecha_inicio . "-01");
+            $fechaBase = Carbon::parse($request->fecha_inicio);
             $periodo = $fechaBase->format("Y-m");
-            $fInicio = $fechaBase->startOfMonth()->format("Y-m-d\TH:i:s.000");
-            $fFinal = $fechaBase->endOfMonth()->format("Y-m-d\TH:i:s.000");
+            $fInicio = $fechaBase->format("Y-m-d\TH:i:s.000");
+            $startTimestamp = $fechaBase->timestamp;
+
+            $endDate = match ($curso->frecuencia) {
+                "BIMESTRAL" => $fechaBase->copy()->addMonths(2),
+                "TRIMESTRAL" => $fechaBase->copy()->addMonths(3),
+                "CUATRIMESTRAL" => $fechaBase->copy()->addMonths(4),
+                "SEMESTRAL" => $fechaBase->copy()->addMonths(6),
+                "ANUAL" => $fechaBase->copy()->addYear(),
+                default => $fechaBase->copy()->addMonth(),
+            };
+            $endDate = $endDate->endOfDay();
+            $fFinal = $endDate->format("Y-m-d\TH:i:s.000");
+            $endTimestamp = $endDate->timestamp;
 
             $lastCod = CursoProgramacion::orderBy(
                 "codigo_programacion",
@@ -1804,6 +1816,32 @@ class CapacitacionController extends Controller
                 "fecha_creacion" => now()->format("Y-m-d\TH:i:s.000"),
                 "habilitado" => 1,
             ]);
+
+            if ($curso->codigo_moodle) {
+                try {
+                    $http = app()->isProduction()
+                        ? Http::asForm()
+                        : Http::withoutVerifying()->asForm();
+
+                    $http->post(
+                        config("services.moodle.url") .
+                            "/webservice/rest/server.php",
+                        [
+                            "wstoken" => config("services.moodle.ws_token"),
+                            "wsfunction" => "core_course_update_courses",
+                            "moodlewsrestformat" => "json",
+                            "courses[0][id]" => $curso->codigo_moodle,
+                            "courses[0][startdate]" => $startTimestamp,
+                            "courses[0][enddate]" => $endTimestamp,
+                        ],
+                    );
+                } catch (\Throwable $e) {
+                    Log::error("Error al actualizar fechas en Moodle", [
+                        "error" => $e->getMessage(),
+                        "courseId" => $curso->codigo_moodle,
+                    ]);
+                }
+            }
 
             DB::commit();
 

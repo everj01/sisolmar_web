@@ -393,7 +393,7 @@ window.renderTablaCursos = function (data) {
                         ${curso.tiene_vigente
                         ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
                         : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" 
-                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}' } }))"`}>
+                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}', dirigido_a: '${curso.dirigido_a || ''}' } }))"`}>
                         <i class="bx bx-calendar-star text-base"></i>
                     </button>
                     

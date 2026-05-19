@@ -1070,18 +1070,6 @@ function configurarEventos() {
             document.getElementById('nombreCursoModal').textContent = cursoSeleccionado.nombre;
             cursoActualParaMatricula = cursoSeleccionado.codigo;
 
-            // Mostrar/ocultar botón de matrícula automática según dirigido_a
-            const btnAuto = document.getElementById('btnMatriculaAutomatica');
-            const btnAutoText = document.getElementById('btnMatriculaAutomaticaText');
-            const dirigido = cursoSeleccionado.dirigido_a;
-            if (dirigido && ['1', '2', '3'].includes(String(dirigido))) {
-                const labels = { '1': 'Todos', '2': 'Pers. Adm.', '3': 'Pers. Operativo' };
-                btnAutoText.textContent = `Matricular automáticamente (${labels[String(dirigido)]})`;
-                btnAuto.classList.remove('hidden');
-            } else {
-                btnAuto.classList.add('hidden');
-            }
-
             // Limpiar estados previos
             personasSeleccionadas.clear();
             actualizarContadorSeleccionados();
