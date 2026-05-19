@@ -816,6 +816,14 @@
                     <span id="nombreCursoModal" class="inline-block truncate align-bottom max-w-[80%]">Cargando...</span>
                 </div>
 
+                <!-- Alerta Curso PCA con Filtrado de Cliente Automático -->
+                <div id="alertClientePCA" class="hidden mb-3 p-2.5 bg-amber-50 border-l-4 border-amber-500 rounded-md text-[12px] text-amber-900 shadow-sm transition-all duration-300">
+                    <div class="flex items-center">
+                        <i class="i-tabler-info-circle text-base text-amber-600 mr-2 flex-shrink-0"></i>
+                        <span>Este es un curso de tipo <strong>PCA</strong>. El personal se ha filtrado automáticamente para el cliente: <strong id="nombreClientePCA" class="text-amber-700 bg-amber-100/60 px-1.5 py-0.5 rounded ml-1 font-semibold">...</strong></span>
+                    </div>
+                </div>
+
                 <!-- Selector de Programación -->
                 <div class="mb-3">
                     <label for="slcProgramacionMatriculaModal" class="block text-xs font-medium text-gray-700 mb-1">
@@ -839,7 +847,7 @@
                 </div>
 
                 <!-- Filtrar por tipo de personal -->
-                <div class="mb-3">
+                <div id="containerFiltroTipoPersonal" class="mb-3">
                     <label class="block text-xs font-medium text-gray-700 mb-1">
                         Filtrar por tipo de personal
                     </label>

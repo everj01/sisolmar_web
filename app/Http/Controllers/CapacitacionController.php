@@ -2269,6 +2269,11 @@ class CapacitacionController extends Controller
     public function buscarPersonalCapacitacion(Request $request): JsonResponse
     {
         try {
+            Log::info("buscarPersonalCapacitacion llamado", [
+                'params' => $request->all(),
+                'codCliente' => $request->input('codCliente')
+            ]);
+
             // 1. Obtener personal de la fuente oficial (si_solm.dbo.PERSONAL)
             $tipoTrabMap = [
                 "01" => "Operativo",
@@ -2277,19 +2282,30 @@ class CapacitacionController extends Controller
                 "05" => "Administrativo",
                 "06" => "Especial",
             ];
-            $rawPersonal = DB::connection("sqlsrv")->select("
-                SELECT
-                    P.CODI_PERS as codigo,
-                    LTRIM(RTRIM(P.APEL_1 + ' ' + ISNULL(P.APEL_2, '') + ' ' + P.NOMB_1 + ' ' + ISNULL(P.NOMB_2, ''))) as personal,
-                    P.NRO_DOCU_IDEN as nroDoc,
-                    S.SUCU_ABREVIATURA as sucursal,
-                    P.PERS_TIPOTRAB as TIPOTRAB,
-                    P.PERS_VIGENCIA as VIGENCIA,
-                    P.PERS_EMAIL as email
-                FROM si_solm.dbo.PERSONAL P
-                LEFT JOIN dbo.sw_MIGRA_SISO_SUCURSAL S ON P.SUCU_CODIGO = S.SUCU_CODIGO
-                WHERE P.PERS_VIGENCIA = 'SI'
-            ");
+
+            $codCliente = $request->input("codCliente");
+
+            if (!empty($codCliente) && $codCliente !== "undefined" && $codCliente !== "null") {
+                $rawPersonal = DB::connection("sqlsrv")->select("EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?", [$codCliente]);
+            } else {
+                $rawPersonal = DB::connection("sqlsrv")->select("
+                    SELECT
+                        P.CODI_PERS as codigo,
+                        LTRIM(RTRIM(P.APEL_1 + ' ' + ISNULL(P.APEL_2, '') + ' ' + P.NOMB_1 + ' ' + ISNULL(P.NOMB_2, ''))) as personal,
+                        P.NRO_DOCU_IDEN as nroDoc,
+                        S.SUCU_ABREVIATURA as sucursal,
+                        P.PERS_TIPOTRAB as TIPOTRAB,
+                        P.PERS_VIGENCIA as VIGENCIA,
+                        P.PERS_EMAIL as email
+                    FROM si_solm.dbo.PERSONAL P
+                    LEFT JOIN dbo.sw_MIGRA_SISO_SUCURSAL S ON P.SUCU_CODIGO = S.SUCU_CODIGO
+                    WHERE P.PERS_VIGENCIA = 'SI'
+                ");
+            }
+
+            Log::info("Resultados de rawPersonal obtenidos", [
+                'count' => count($rawPersonal)
+            ]);
 
             // Se unifica el mapeo y el filtro de búsqueda en una sola pasada.
             $personal = [];
@@ -2385,6 +2401,7 @@ class CapacitacionController extends Controller
                         $matriculadosEnCurso,
                     ),
                     "total_capacitaciones" => $matriculasCounts[$codigo] ?? 0,
+                    "cliente_nombre" => $p->cliente_nombre ?? null,
                 ];
             }, $rawPersonal);
 
@@ -2512,7 +2529,7 @@ class CapacitacionController extends Controller
 
     public function vistaGestionCursos(): View
     {
-        $dirigidos = \App\Models\Consulta::obtenerDirigidos();
+        $dirigidos = Consulta::obtenerDirigidos();
         return view("capacitacion.gestion_cursos", compact("dirigidos"));
     }
 

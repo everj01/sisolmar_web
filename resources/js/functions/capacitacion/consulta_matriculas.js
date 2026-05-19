@@ -506,7 +506,7 @@ function renderizarTablaCursos(cursos) {
                 <td class="px-3 py-2 text-sm">${escapeHtml(curso.nombre)}</td>
                 <td class="px-3 py-2 text-center">
                     <button type="button" class="btn-ver-matriculas px-3 py-1 rounded bg-primary text-white hover:bg-primary/80 transition-colors text-sm"
-                        data-curso-id="${curso.codigo}" data-curso-nombre="${escapeHtml(curso.nombre)}" data-curso-codigo="${curso.codigoCurso}" data-curso-responsable="${escapeHtml(curso.nombre_responsable || '')}" data-curso-dirigido="${curso.dirigido_a || ''}" data-curso-tipo="${curso.tipo_curso || ''}">
+                        data-curso-id="${curso.codigo}" data-curso-nombre="${escapeHtml(curso.nombre)}" data-curso-codigo="${curso.codigoCurso}" data-curso-responsable="${escapeHtml(curso.nombre_responsable || '')}" data-curso-dirigido="${curso.dirigido_a || ''}" data-curso-tipo="${curso.tipo_curso || ''}" data-curso-cliente="${curso.cod_cliente || ''}">
                         Ver
                     </button>
                 </td>
@@ -562,6 +562,7 @@ function manejarClickTablaCursos(e) {
         const cursoResponsable = btn.dataset.cursoResponsable;
         const cursoDirigido = btn.dataset.cursoDirigido;
         const cursoTipo = btn.dataset.cursoTipo;
+        const cursoCliente = btn.dataset.cursoCliente;
 
         seleccionarCurso({
             codigo: cursoId,
@@ -569,7 +570,8 @@ function manejarClickTablaCursos(e) {
             codigo_curso: cursoCodigo,
             nombre_responsable: cursoResponsable,
             dirigido_a: cursoDirigido,
-            tipo_curso: cursoTipo
+            tipo_curso: cursoTipo,
+            cod_cliente: cursoCliente
         });
         return;
     }
@@ -1070,7 +1072,19 @@ function configurarEventos() {
             document.getElementById('nombreCursoModal').textContent = cursoSeleccionado.nombre;
             cursoActualParaMatricula = cursoSeleccionado.codigo;
 
-            // Limpiar estados previos
+            // Alerta PCA
+            const alertPCA = document.getElementById('alertClientePCA');
+            const labelCliente = document.getElementById('nombreClientePCA');
+            if (alertPCA) {
+                if (cursoSeleccionado.tipo_curso === 'PCA') {
+                    alertPCA.classList.remove('hidden');
+                    if (labelCliente) labelCliente.textContent = 'Cargando...';
+                } else {
+                    alertPCA.classList.add('hidden');
+                }
+            }
+
+             // Limpiar estados previos
             personasSeleccionadas.clear();
             actualizarContadorSeleccionados();
             const selectSucursal = document.getElementById("slcFiltroSucursalModal");
@@ -1239,6 +1253,8 @@ async function autoSeleccionarCurso() {
                 nombre: c.nombre,
                 codigo_curso: c.codigo_curso,
                 nombre_responsable: c.nombre_responsable || '',
+                tipo_curso: c.tipo_curso,
+                cod_cliente: c.cod_cliente
             });
         }
     } catch (e) {
@@ -1310,10 +1326,15 @@ async function cargarPersonalModal(cursoId) {
     const slcSucursal = document.getElementById("slcFiltroSucursalModal");
     if (slcSucursal) slcSucursal.value = "";
 
+    let ajaxParams = { cursoId: cursoId, pagination: "off" };
+    if (cursoSeleccionado && cursoSeleccionado.tipo_curso === 'PCA') {
+        ajaxParams.codCliente = cursoSeleccionado.cod_cliente;
+    }
+
     // Inicializar Tabulator Modal
     tblPersonalMatriculaModal = new Tabulator("#tblPersonalMatriculaModal", {
         ajaxURL: `/api/buscar-personal-capacitacion`,
-        ajaxParams: { cursoId: cursoId, pagination: "off" },
+        ajaxParams: ajaxParams,
         ajaxResponse: function (url, params, response) {
             return response.personal || response;
         },
@@ -1364,6 +1385,19 @@ async function cargarPersonalModal(cursoId) {
     tblPersonalMatriculaModal.on("dataLoaded", (data) => {
         poblarFiltroSucursalModal(data);
         actualizarContadoresModal(data);
+
+        // Si es curso PCA y hay datos, extraer el cliente_nombre del personal y pintarlo
+        if (cursoSeleccionado && cursoSeleccionado.tipo_curso === 'PCA') {
+            const labelCliente = document.getElementById('nombreClientePCA');
+            if (labelCliente) {
+                if (data && data.length > 0) {
+                    const primerCliente = data.find(d => d.cliente_nombre);
+                    labelCliente.textContent = primerCliente ? primerCliente.cliente_nombre : 'N/A';
+                } else {
+                    labelCliente.textContent = 'Sin personal activo';
+                }
+            }
+        }
     });
 }
 
@@ -1413,7 +1447,15 @@ function configurarFiltroTipoPersonalModal() {
                 if (val === "TODOS") {
                     tblPersonalMatriculaModal.clearFilter();
                 } else {
-                    tblPersonalMatriculaModal.setFilter("tipo_label", "=", val);
+                    tblPersonalMatriculaModal.setFilter(data => {
+                        const label = (data.tipo_label || data.cargo || "").toUpperCase();
+                        if (val === "ADMIN") {
+                            return label === "ADMIN" || label === "ADMINISTRATIVO";
+                        } else if (val === "OPER") {
+                            return label === "OPER" || label === "OPERATIVO";
+                        }
+                        return false;
+                    });
                 }
             }
         });
