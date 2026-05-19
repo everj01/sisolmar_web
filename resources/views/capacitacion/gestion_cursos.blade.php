@@ -394,7 +394,7 @@
                                                         x-transition:enter="transition ease-out duration-100"
                                                         x-transition:enter-start="opacity-0 scale-95"
                                                         x-transition:enter-end="opacity-100 scale-100"
-                                                        class="absolute z-[100] mt-1 left-0 w-full min-w-[480px] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+                                                        class="absolute z-[100] mt-1 left-0 w-full min-w-[580px] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col">
 
                                                         <div
                                                             class="p-3 border-b bg-gradient-to-r from-indigo-50 to-white flex items-center gap-2">
