@@ -1564,8 +1564,7 @@
                     <div
                         style="display:flex;align-items:center;gap:0.5rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:0.625rem;padding:0.5rem 0.875rem">
                         <i class="bx bx-info-circle" style="color:#3b82f6;font-size:1rem"></i>
-                        <span style="font-size:0.7rem;color:#1d4ed8;font-weight:600">Las preguntas se guardarán
-                            automáticamente al crear o actualizar el curso</span>
+                        <span style="font-size:0.7rem;color:#1d4ed8;font-weight:600">Se guardarán las modificaciones al hacer click en "Confirmar cambios"</span>
                     </div>
                     <div style="display:flex;gap:0.75rem">
                         <button type="button" @click="mostrarModal=false"
@@ -1574,10 +1573,17 @@
                             onmouseout="this.style.background='transparent'">
                             Cerrar
                         </button>
+                        <button type="button" @click="undoChanges()"
+                            style="padding:0.6rem 1.25rem;border-radius:0.75rem;font-size:0.75rem;font-weight:700;color:#d97706;background:transparent;border:1px solid #fcd34d;cursor:pointer;transition:all 0.2s"
+                            onmouseover="this.style.background='#fffbeb'"
+                            onmouseout="this.style.background='transparent'">
+                            <i class="bx bx-undo" style="margin-right:0.35rem"></i>
+                            Deshacer cambios
+                        </button>
                         <button type="button" @click="mostrarModal=false"
                             style="padding:0.6rem 1.75rem;border-radius:0.75rem;font-size:0.75rem;font-weight:900;color:#fff;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 15px -3px rgba(37,99,235,0.5);transition:all 0.2s;text-transform:uppercase;letter-spacing:0.05em">
                             <i class="bx bxs-check-circle"></i>
-                            Confirmar Vista Previa
+                            Confirmar cambios
                         </button>
                     </div>
                 </div>
@@ -1590,14 +1596,20 @@
         return {
             mostrarModal: false,
             preguntas: [],
+            preguntasOriginales: [],
             codCursoActual: null,
             archivoNombre: '',
 
             abrirModalWord(preguntas, cursoId, examenId, nombreArc) {
                 this.preguntas = Array.isArray(preguntas) ? preguntas : [];
+                this.preguntasOriginales = Array.isArray(preguntas) ? JSON.parse(JSON.stringify(preguntas)) : [];
                 this.codCursoActual = cursoId;
                 this.archivoNombre = nombreArc || '';
                 this.mostrarModal = true;
+            },
+
+            undoChanges() {
+                this.preguntas = JSON.parse(JSON.stringify(this.preguntasOriginales));
             },
 
             chr(code) {
