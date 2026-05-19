@@ -1344,12 +1344,27 @@
                                         <i class="bx bx-info-circle text-blue-500 text-xl"></i>
                                     </div>
                                     <div class="ml-3">
-                                        <h3 class="text-sm font-medium text-blue-800">Matrícula Automática
-                                        </h3>
-                                        <p class="text-sm text-blue-700 mt-1">
-                                            Al aperturar el curso, se matriculará <strong>automáticamente</strong> a
-                                            <span x-text="dirigidoLabel"></span> según la configuración del curso.
-                                        </p>
+                                        <template x-if="!esDirigidoOtros">
+                                            <div>
+                                                <h3 class="text-sm font-medium text-blue-800">Matrícula Automática
+                                                </h3>
+                                                <p class="text-sm text-blue-700 mt-1">
+                                                    Al aperturar el curso, se matriculará <strong>automáticamente</strong> a
+                                                    <span x-text="dirigidoLabel"></span> según la configuración del curso.
+                                                </p>
+                                            </div>
+                                        </template>
+                                        <template x-if="esDirigidoOtros">
+                                            <div>
+                                                <h3 class="text-sm font-medium text-amber-800">Matrícula Manual
+                                                </h3>
+                                                <p class="text-sm text-amber-700 mt-1">
+                                                    Deberá matricular <strong>manualmente</strong> al personal del cliente
+                                                    <strong><span x-text="selectedClienteNombre"></span></strong> desde la
+                                                    pestaña de Matrículas.
+                                                </p>
+                                            </div>
+                                        </template>
                                     </div>
                                 </div>
                             </div>
@@ -2065,9 +2080,18 @@
                 return `${yyyy}-${mm}-${dd}`;
             },
 
+            get selectedClienteNombre() {
+                const cliente = this.combosApertura.clientes?.find(c => String(c.codigo) === String(this.selectedCliente));
+                return cliente ? cliente.nombre : '—';
+            },
+
+            get esDirigidoOtros() {
+                return String(this.dirigidoA) === 'OTROS';
+            },
+
             get dirigidoLabel() {
                 const labels = { '1': 'todo el personal', '2': 'personal administrativo', '3': 'personal operativo' };
-                return labels[String(this.dirigidoA)] || 'todo el personal activo';
+                return labels[String(this.dirigidoA)] || '';
             },
 
             async init() {
