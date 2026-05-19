@@ -2389,6 +2389,37 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function listarJefaturas(): JsonResponse
+    {
+        try {
+            $raw = DB::connection("sqlsrv")->select("EXEC si_solm.dbo.SP_LISTAR_JEFATURAS_AREAS");
+
+            $personal = array_map(function ($j) {
+                return [
+                    "codigo"          => trim($j->CODIGO ?? ''),
+                    "nombre_completo" => trim($j->NOMBRE_COMPLETO ?? ''),
+                    "dni"             => trim($j->DNI ?? ''),
+                    "correo"          => trim($j->CORREO ?? ''),
+                    "sucursal"        => trim($j->SUCURSAL ?? ''),
+                    "cargo"           => trim($j->CARGO ?? ''),
+                ];
+            }, $raw);
+
+            return response()->json([
+                "success" => true,
+                "personal" => $personal,
+                "total" => count($personal),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al listar jefaturas: " . $e->getMessage());
+            return response()->json([
+                "success" => false,
+                "message" => "Error al cargar jefaturas",
+                "error" => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getCombosApertura(): JsonResponse
     {
         try {

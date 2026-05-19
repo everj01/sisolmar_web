@@ -1771,33 +1771,47 @@ window.searchablePersonnel = function () {
         open: false,
         query: '',
         results: [],
+        jefaturasCache: [],
         loading: false,
         error: null,
         toggle() {
             this.open = !this.open;
-            if (this.open && (this.results.length === 0 || this.query.length > 0)) {
-                this.search();
+            if (this.open) {
+                if (this.jefaturasCache.length === 0) {
+                    this.cargarJefaturas();
+                } else if (this.query.length > 0) {
+                    this.filtrarLocal();
+                }
             }
         },
-        search() {
+        cargarJefaturas() {
             this.loading = true;
             this.error = null;
-            const params = {
-                tipo_responsable: 'ADMINISTRATIVO_5'
-            };
-            if (this.query.length > 0) {
-                params.q = this.query;
-            }
-
-            axios.get(`${VITE_URL_APP}/api/buscar-personal-capacitacion`, { params })
+            axios.get(`${VITE_URL_APP}/api/listar-jefaturas`)
                 .then(res => {
-                    this.results = res.data.personal || [];
+                    this.jefaturasCache = res.data.personal || [];
+                    this.filtrarLocal();
                 })
                 .catch(err => {
                     console.error(err);
-                    this.error = 'Error al cargar la lista. Verifique la consola.';
+                    this.error = 'Error al cargar jefaturas. Verifique la consola.';
                 })
                 .finally(() => this.loading = false);
+        },
+        filtrarLocal() {
+            const q = this.query.toLowerCase().trim();
+            if (!q) {
+                this.results = this.jefaturasCache;
+            } else {
+                this.results = this.jefaturasCache.filter(p =>
+                    (p.nombre_completo || '').toLowerCase().includes(q) ||
+                    (p.dni || '').includes(q) ||
+                    (p.cargo || '').toLowerCase().includes(q)
+                );
+            }
+        },
+        search() {
+            this.filtrarLocal();
         },
         select(p) {
             const formElement = document.querySelector('[x-data^="formCursoGestion"]');

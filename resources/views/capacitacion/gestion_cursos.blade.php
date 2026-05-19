@@ -400,9 +400,9 @@
                                                             class="p-3 border-b bg-gradient-to-r from-indigo-50 to-white flex items-center gap-2">
                                                             <i class="bx bx-search text-indigo-400 text-lg"></i>
                                                             <input type="text" x-model="query"
-                                                                @input.debounce.300ms="search()"
+                                                                @input="search()"
                                                                 class="w-full border-none bg-transparent p-1 text-sm focus:ring-0 outline-none text-gray-700"
-                                                                placeholder="Buscar por nombre o DNI...">
+                                                                placeholder="Buscar por nombre, DNI o cargo...">
                                                         </div>
 
                                                         <div
@@ -414,7 +414,10 @@
                                                                 class="w-20 shrink-0 text-center border-l border-gray-200">
                                                                 DNI</div>
                                                             <div
-                                                                class="w-28 shrink-0 text-center border-l border-gray-200">
+                                                                class="w-24 shrink-0 text-center border-l border-gray-200">
+                                                                Cargo</div>
+                                                            <div
+                                                                class="w-24 shrink-0 text-center border-l border-gray-200">
                                                                 Sucursal</div>
                                                         </div>
 
@@ -431,7 +434,9 @@
                                                                         x-text="p.nombre_completo"></div>
                                                                     <div class="w-20 shrink-0 text-center text-gray-500 font-mono text-[11px]"
                                                                         x-text="p.dni"></div>
-                                                                    <div class="w-28 shrink-0 text-center text-gray-400 text-[11px] truncate"
+                                                                    <div class="w-24 shrink-0 text-center text-gray-600 font-semibold text-[11px] truncate"
+                                                                        x-text="p.cargo || 'N/A'"></div>
+                                                                    <div class="w-24 shrink-0 text-center text-gray-400 text-[11px] truncate"
                                                                         x-text="p.sucursal || 'N/A'"></div>
                                                                 </div>
                                                             </template>
@@ -458,7 +463,7 @@
                                                             class="bg-indigo-600 px-4 py-1.5 text-[10px] text-white font-semibold flex justify-between items-center">
                                                             <span class="flex items-center gap-1">
                                                                 <i class="bx bx-check-shield text-xs"></i>
-                                                                ADMINISTRATIVOS ACTIVOS
+                                                                JEFATURAS
                                                             </span>
                                                             <span class="bg-white/20 px-2 py-0.5 rounded text-[10px]"
                                                                 x-text="results.length + ' RESULTADOS'"></span>
