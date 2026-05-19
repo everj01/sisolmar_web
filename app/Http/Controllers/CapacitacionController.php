@@ -207,7 +207,7 @@ class CapacitacionController extends Controller
                 "cod_responsable" => $request->input("cod_responsable"),
                 "target_group" => $request->input("target_group", "TODOS"),
                 "descripcion" => $request->input("descripcion"),
-                "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? null : $request->input("dirigido_a"),
+                "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? 0 : $request->input("dirigido_a"),
                 "fecha_modificacion" => date("Y-m-d\TH:i:s.000"),
             ]);
 
@@ -601,7 +601,7 @@ class CapacitacionController extends Controller
                 "cod_responsable" => $request->input("cod_responsable"),
                 "target_group" => $request->input("target_group", "TODOS"),
                 "descripcion" => $request->input("descripcion"),
-                "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? null : $request->input("dirigido_a"),
+                "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? 0 : $request->input("dirigido_a"),
                 "fecha_creacion" => date("Y-m-d\TH:i:s.000"),
             ]);
 
@@ -1743,6 +1743,7 @@ class CapacitacionController extends Controller
             ->map(function ($row) {
                 return [
                     "codigo" => $row->codigo,
+                    "cod_legacy" => $row->cod_legacy,
                     "descripcion" =>
                     $row->abreviatura ?? ($row->razon_social ?? ""),
                 ];
@@ -3087,13 +3088,33 @@ class CapacitacionController extends Controller
             $currentPregunta = null;
 
             $orangeColors = [
-                "FF8C00", "FFA500", "F97316", "FF6600", "FF7F00", "FF4500",
-                "ED7D31", "F4B183", "C0504D", "FFC000", "BF8F00",
+                "FF8C00",
+                "FFA500",
+                "F97316",
+                "FF6600",
+                "FF7F00",
+                "FF4500",
+                "ED7D31",
+                "F4B183",
+                "C0504D",
+                "FFC000",
+                "BF8F00",
             ];
             $blueColors = [
-                "0000FF", "0066CC", "3B82F6", "1E90FF", "0055CC", "003399",
-                "4169E1", "0000CD", "0070C0", "2E75B6", "00B0F0",
-                "4472C4", "5B9BD5", "1F4E79",
+                "0000FF",
+                "0066CC",
+                "3B82F6",
+                "1E90FF",
+                "0055CC",
+                "003399",
+                "4169E1",
+                "0000CD",
+                "0070C0",
+                "2E75B6",
+                "00B0F0",
+                "4472C4",
+                "5B9BD5",
+                "1F4E79",
             ];
 
             foreach ($phpWord->getSections() as $section) {

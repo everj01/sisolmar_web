@@ -2086,7 +2086,7 @@
             },
 
             get esDirigidoOtros() {
-                return String(this.dirigidoA) === 'OTROS';
+                return String(this.dirigidoA) === 'OTROS' || String(this.dirigidoA) === '0';
             },
 
             get dirigidoLabel() {

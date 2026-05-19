@@ -500,6 +500,8 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
                 alpineData.frecuencia = curso.frecuencia ?? "";
 
+                alpineData.dirigido = curso.dirigido_a === 0 ? 'OTROS' : (curso.dirigido_a ?? '');
+
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
