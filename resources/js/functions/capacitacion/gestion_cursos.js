@@ -1266,7 +1266,9 @@ window.formCursoGestion = function () {
                 return;
             }
 
-            const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
+            const camposObligatorios = this.tipoCurso == '6'
+                ? ['nombre', 'tipoCurso']
+                : ['nombre', 'tipoCurso', 'areaConocimiento'];
 
             const vacio = camposObligatorios.some(campo => {
                 const valor = this[campo];
