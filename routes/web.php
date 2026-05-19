@@ -185,9 +185,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
         Route::get('/reporte/folios-por-vencer', [ReporteController::class, 'foliosPorVencer']);
         Route::get('/reporte/folios-pendientes-registro', [ReporteController::class, 'foliosPendientesRegistro']);
-            Route::get('/reporte/estado-legajos', [FileController::class, 'getEstadoLegajos']);
+        Route::get('/reporte/estado-legajos', [FileController::class, 'getEstadoLegajos']);
         Route::get('/reporte/carnet', [ReporteController::class, 'carnet']);
 
+        Route::get('/reporte/vigencia-dni', [ReporteController::class, 'vigenciaDni']);
+        Route::get('/reporte/vigencia-brevete', [ReporteController::class, 'vigenciaBrevete']);
+        Route::get('/reporte/categorias-brevete', [ReporteController::class, 'categoriasBrevete']);
+
+        Route::get('/reporte/certificados', [ReporteController::class, 'certificados']);
+        
         // Biométrico
         Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
 

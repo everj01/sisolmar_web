@@ -10,14 +10,19 @@ class ReporteController extends Controller
 {
     public function index()
     {
-       $clientes = FileControl::getClientes();
+        $clientes = FileControl::getClientes();
         $sucursales = FileControl::getSucursales();
         $cargos = FileControl::getCargos();
         $tiposPersonal = Reporte::getTiposPersonal();
         $categoriasCarnet = Reporte::getCategoriasCarnet();
+        $clasesBrevete = Reporte::getClasesBrevete();
+        $categoriasBrevete = Reporte::getCategoriasBrevete();
+        $certificados = Reporte::getCertificados();
 
         return view('file_control.reportes', compact(
-            'clientes', 'sucursales', 'cargos', 'tiposPersonal', 'categoriasCarnet'));
+            'clientes', 'sucursales', 'cargos', 'tiposPersonal', 'categoriasCarnet',
+            'clasesBrevete', 'categoriasBrevete', 'certificados'
+        ));
     }
 
     public function foliosPendientesPorSucursal(Request $request)
@@ -97,16 +102,15 @@ class ReporteController extends Controller
         }
     }
 
-
-      public function carnet(Request $request)
+    public function carnet(Request $request)
     {
-        $sucursal  = $request->get('sucursal',  'T');
-        $tipoPers  = $request->get('tipo_pers', 'T');
-        $vigencia  = $request->get('vigencia',  'T');
-        $estado    = $request->get('estado',    'T');
+        $sucursal = $request->get('sucursal', 'T');
+        $tipoPers = $request->get('tipo_pers', 'T');
+        $vigencia = $request->get('vigencia', 'T');
+        $estado = $request->get('estado', 'T');
         $categoria = $request->get('categoria');
 
-        if (!$categoria) {
+        if (! $categoria) {
             return response()->json(['error' => 'Categoría requerida'], 422);
         }
 
@@ -127,5 +131,65 @@ class ReporteController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function vigenciaDni(Request $request)
+    {
+        $sucursal = $request->get('sucursal');
+        $tipoPers = $request->get('tipo_pers', 'A');
+        $vigente = $request->get('vigente', 'NO');
+
+        if (! $sucursal) {
+            return response()->json(['error' => 'Sucursal requerida'], 422);
+        }
+
+        [$tipo1, $tipo2] = $tipoPers === 'O' ? ['01', '03'] : ['02', '05'];
+
+        return response()->json(Reporte::getVigenciaDni($sucursal, $tipo1, $tipo2, $vigente));
+    }
+
+    public function vigenciaBrevete(Request $request)
+    {
+        $sucursal = $request->get('sucursal');
+        $tipoPers = $request->get('tipo_pers', 'A');
+        $vigente = $request->get('vigente', 'NO');
+        $clase = $request->get('clase', 'T');
+        $categoria = $request->get('categoria', 'T');
+
+        if (! $sucursal) {
+            return response()->json(['error' => 'Sucursal requerida'], 422);
+        }
+
+        [$tipo1, $tipo2] = $tipoPers === 'O' ? ['01', '03'] : ['02', '05'];
+
+        return response()->json(Reporte::getVigenciaBrevete($sucursal, $tipo1, $tipo2, $clase, $categoria, $vigente));
+    }
+
+    public function categoriasBrevete(Request $request)
+    {
+        return response()->json(Reporte::getCategoriasBrevete($request->get('cod_clase')));
+    }
+
+    public function certificados(Request $request)
+    {
+        $sucursal = $request->get('sucursal', 'T');
+        $tipoPers = $request->get('tipo_pers', 'T');
+        $vigencia = $request->get('vigencia', 'T');
+        $estado = $request->get('estado', 'T');
+        $requisito = $request->get('certificado');
+        $fechaVenc = $request->get('fecha_venc');
+
+        if (! $requisito) {
+            return response()->json(['error' => 'Certificado requerido'], 422);
+        }
+        if (! $fechaVenc) {
+            return response()->json(['error' => 'Fecha de vencimiento requerida'], 422);
+        }
+
+        $fecha = \Carbon\Carbon::parse($fechaVenc)->format('d/m/Y');
+
+        return response()->json(
+            Reporte::getCertificadosReporte($sucursal, $tipoPers, $vigencia, $estado, $requisito, $fecha)
+        );
     }
 }

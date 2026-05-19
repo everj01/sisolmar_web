@@ -9,6 +9,9 @@ import { init as initFoliosPorVencer } from './reportes/folios-por-vencer.js';
 import { init as initFoliosPendientesEscaneo, limpiarSelectorPersonalEscaneo } from './reportes/folios-pendientes-escaneo.js';
 import { init as initFoliosPendientesRegistro, limpiarSelectorPersonalRegistro } from './reportes/folios-pendientes-registro.js';
 import { init as initCarnet } from './reportes/carnet.js';
+import { init as initVigenciaDocumentos } from './reportes/vigencia-documentos.js';
+import { init as initCertificados } from './reportes/certificados.js';
+
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -44,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'resultadosFoliosPorVencer',
             'resultadosEscaneo',
             'resultadosRegistro',
-            'resultadosCarnet'
+            'resultadosCarnet',
+            'resultadosVigencia'
         ].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
@@ -101,4 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initFoliosPendientesEscaneo();
     initFoliosPendientesRegistro();
     initCarnet();
+    initVigenciaDocumentos();
+    initCertificados();
 });

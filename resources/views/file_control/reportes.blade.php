@@ -137,8 +137,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios vigentes en el sistema con
                     su clasificación.</p>
                 <button type="button" id="btnReporteFoliosVigentes" class="mt-3 inline-flex items-center
-                   gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                       gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -154,8 +154,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios pendientes por
                     sucursal.</p>
                 <button type="button" id="btnReporteFoliosPendientesSucursal" class="mt-3 inline-flex
-                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                      items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -170,8 +170,8 @@
                 </h3>
                 <p class="mt-2 text-default-500">Genera el reporte de folios Por Vencer.</p>
                 <button type="button" id="btnReporteFoliosPorVencer" class="mt-3 inline-flex
-                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                      items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -187,8 +187,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios que aún no han sido
                     escaneados.</p>
                 <button type="button" id="btnReporteFoliosPendientesEscaneo" class="mt-3 inline-flex
-                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                      items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -204,8 +204,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de folios que aún no han sido
                     registrados en el sistema.</p>
                 <button type="button" id="btnReporteFoliosPendientesRegistro" class="mt-3 inline-flex
-                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                      items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -221,8 +221,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de documentos según su estado de
                     vigencia.</p>
                 <button type="button" id="btnReporteVigenciaDocumentos" class="mt-3 inline-flex
-                  items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                      items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -237,7 +237,7 @@
                 </h3>
                 <p class="mt-2 text-default-500">Genera el reporte de carnets del personal.</p>
                 <button type="button" id="btnReporteCarnet" class="mt-3 inline-flex items-center gap-x-1
-                   text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
+                       text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -253,8 +253,8 @@
                 <p class="mt-2 text-default-500">Genera el reporte de certificados registrados en el
                     sistema.</p>
                 <button type="button" id="btnReporteCertificados" class="mt-3 inline-flex items-center
-                  gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                  hover:text-primary-800">
+                      gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
+                      hover:text-primary-800">
                     Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
                 </button>
             </div>
@@ -685,23 +685,181 @@
         </div>
     </div>
 
+    <!-- ====== MODAL: Visor DNI ====== -->
+    <div id="modalVisorDNI" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/70 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between p-4 border-b border-default-200 flex-shrink-0">
+                <div>
+                    <h5 class="text-sm font-semibold text-default-800 flex items-center gap-2">
+                        <i class='bx bx-id-card text-primary text-lg'></i>
+                        <span id="visorDniNombre">—</span>
+                    </h5>
+                    <p class="text-xs text-default-500 mt-0.5">Código: <span id="visorDniCodigo">—</span></p>
+                </div>
+                <button id="btnCerrarVisorDNI" class="text-default-400 hover:text-default-600">
+                    <i class='bx bx-x text-2xl'></i>
+                </button>
+            </div>
+            <div class="p-5 overflow-auto flex-1">
+                <div id="visorDniCargando" class="flex flex-col items-center justify-center py-10 gap-3">
+                   
+                    <span class="text-sm text-default-500">Cargando imágenes...</span>
+                </div>
+                <div id="visorDniImagen" class="hidden">
+                    <div class="mb-2 flex items-center gap-2">
+                        <span id="visorDniBadge"
+                            class="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">ANVERSO</span>
+                    </div>
+                    <img id="visorDniImg" class="w-full rounded-lg shadow border border-default-200 cursor-zoom-in"
+                        style="max-height:360px;object-fit:contain" alt="DNI">
+                    <div class="mt-3">
+                        <button id="btnVisorToggle"
+                            class="text-xs px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed">
+                            Ver reverso
+                        </button>
+                    </div>
+                </div>
+                <div id="visorDniError" class="hidden text-center py-10">
+                    <i class='bx bx-error-circle text-3xl text-warning mb-2 block'></i>
+                    <span class="text-sm text-default-500">No se encontró imagen para este personal.</span>
+                </div>
+            </div>
+            <div class="p-4 border-t border-default-100 flex-shrink-0">
+                <button id="btnVolverVisor"
+                    class="w-full px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">
+                    ← Volver al reporte
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ====== MODAL: Vigencia de Documentos ====== -->
-    <div id="modalVigenciaDocumentos" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div class="flex items-center justify-between p-5 border-b border-default-200">
+    <div id="modalVigenciaDocumentos" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-7xl mx-4 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
                 <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
                     <i class='bx bx-time-five text-success text-xl'></i>
-                    Filtros – Vigencia de Documentos
+                    Vigencia de Documentos
                 </h5>
                 <button class="btnCerrarModal text-default-400 hover:text-default-600">
                     <i class='bx bx-x text-2xl'></i>
                 </button>
             </div>
-            <div class="p-6">
-                <p class="text-default-500 text-sm">Próximamente...</p>
-                <div class="mt-6 flex justify-end">
+            <div class="p-5 flex-shrink-0 border-b border-default-100">
+                <!-- Fila 1: Documento, Sucursal, Tipo Personal -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">
+                            Documento <span class="text-danger">*</span>
+                        </label>
+                        <select id="filtroVigDocumento" class="form-select">
+                            <option value="">— Seleccionar —</option>
+                            <option value="DNI">DNI</option>
+                            <option value="BREVETE">BREVETE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">
+                            Sucursal <span class="text-danger">*</span>
+                        </label>
+                        <select id="filtroVigSucursal" class="form-select">
+                            <option value="">— Seleccionar —</option>
+                            @foreach($sucursales as $sucursal)
+                                @if($loop->first)
+                                    @continue
+                                @endif
+                                <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">
+                            Tipo de Personal <span class="text-danger">*</span>
+                        </label>
+                        <select id="filtroVigTipoPers" class="form-select">
+                            <option value="">— Seleccionar —</option>
+                            <option value="A">Administrativo</option>
+                            <option value="O">Operativo</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Fila 2: Radio estado + botón Memorandum -->
+                <div class="flex flex-wrap items-end gap-6 mb-4">
+                    <div>
+                        <label class="text-default-800 text-sm font-medium mb-2 block">Estado</label>
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="filtroVigEstado" value="SI" checked class="form-radio">
+                                <span class="text-sm">Vigentes</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="filtroVigEstado" value="NO" class="form-radio">
+                                <span class="text-sm">Vencidos</span>
+                            </label>
+
+                        </div>
+                    </div>
+                    <div class="ml-auto flex flex-col items-end gap-1">
+                        <button id="btnMemorandum" type="button" disabled
+                            class="px-4 py-2 rounded-lg border border-default-200 text-default-400 bg-default-50 text-sm cursor-not-allowed flex items-center gap-1">
+                            <i class='bx bx-file'></i> Memorandum
+                        </button>
+                        <span id="msgMemorandum" class="hidden text-xs text-warning flex items-center gap-1">
+                            <i class='bx bx-info-circle'></i> Formato no disponible
+                        </span>
+                    </div>
+                </div>
+                <!-- Fila 3: Filtros de Brevete (ocultos por defecto) -->
+                <div id="filtrosBreveteDiv" class="hidden mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-default-800 text-sm font-medium mb-2 block">Clase de Brevete</label>
+                            <select id="filtroVigClase" class="form-select">
+                                <option value="T">Todos</option>
+                                @foreach($clasesBrevete as $clase)
+                                    <option value="{{ $clase->nombre }}" data-cod="{{ $clase->codigo }}">{{ $clase->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-default-800 text-sm font-medium mb-2 block">Categoría de Brevete</label>
+                            <select id="filtroVigCategoria" class="form-select">
+                                <option value="T">Todas</option>
+                                @foreach($categoriasBrevete as $cat)
+                                    <option value="{{ $cat->nombre }}">{{ $cat->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- Botones -->
+                <div class="flex justify-end gap-2">
                     <button
-                        class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cerrar</button>
+                        class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                    <button id="btnGenerarVigencia"
+                        class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                        <i class="bx bx-search-alt-2"></i> Generar
+                    </button>
+                </div>
+            </div>
+            <!-- Resultados -->
+            <div id="resultadosVigencia" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+                <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                    <span id="totalVigencia" class="text-sm text-default-600 font-medium"></span>
+                    <div class="flex gap-2">
+                        <button id="btnExportExcelVigencia"
+                            class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                            <i class="bx bx-spreadsheet"></i> Excel
+                        </button>
+                        <button id="btnExportPdfVigencia"
+                            class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                            <i class="bx bxs-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-auto flex-1">
+                    <div id="tablaVigencia"></div>
                 </div>
             </div>
         </div>
@@ -801,26 +959,105 @@
     </div>
 
     <!-- ====== MODAL: Certificados ====== -->
-    <div id="modalCertificados" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div class="flex items-center justify-between p-5 border-b border-default-200">
-                <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
-                    <i class='bx bxs-award text-warning text-xl'></i>
-                    Filtros – Certificados
-                </h5>
-                <button class="btnCerrarModal text-default-400 hover:text-default-600">
-                    <i class='bx bx-x text-2xl'></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <p class="text-default-500 text-sm">Próximamente...</p>
-                <div class="mt-6 flex justify-end">
-                    <button
-                        class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div id="modalCertificados" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl mx-4 flex flex-col max-h-[90vh]">
+          <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
+              <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
+                  <i class='bx bx-certification text-primary text-xl'></i>
+                  Certificados
+              </h5>
+              <button class="btnCerrarModal text-default-400 hover:text-default-600">
+                  <i class='bx bx-x text-2xl'></i>
+              </button>
+          </div>
+          <div class="p-5 flex-shrink-0 border-b border-default-100">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                  <div>
+                      <label class="text-default-800 text-sm font-medium mb-2 block">
+                          Sucursal <span class="text-danger">*</span>
+                      </label>
+                      <select id="filtroCertSucursal" class="tom-select">
+                          <option value="">— Seleccionar —</option>
+                          @foreach($sucursales as $sucursal)
+                              @if($loop->first) @continue @endif
+                              <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                          @endforeach
+                      </select>
+                  </div>
+                  <div>
+                      <label class="text-default-800 text-sm font-medium mb-2 block">
+                          Tipo de Personal <span class="text-danger">*</span>
+                      </label>
+                      <select id="filtroCertTipoPers" class="tom-select">
+                          <option value="T">Todos</option>
+                          @foreach($tiposPersonal as $tipo)
+                              <option value="{{ $tipo->TIPE_CODIGO }}">{{ $tipo->TIPE_DESCRIPCION }}</option>
+                          @endforeach
+                      </select>
+                  </div>
+                  <div>
+                      <label class="text-default-800 text-sm font-medium mb-2 block">
+                          Certificado <span class="text-danger">*</span>
+                      </label>
+                      <select id="filtroCertCertificado" class="tom-select">
+                          <option value="">— Seleccionar —</option>
+                          @foreach($certificados as $cert)
+                              <option value="{{ $cert->REQU_CODIGO }}">{{ $cert->REQU_DESCRIPCION }}</option>
+                          @endforeach
+                      </select>
+                  </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                  <div>
+                      <label class="text-default-800 text-sm font-medium mb-2 block">Vigencia</label>
+                      <select id="filtroCertVigencia" class="tom-select">
+                          <option value="T">Todos</option>
+                          <option value="SI">Sí</option>
+                          <option value="NO">No</option>
+                      </select>
+                  </div>
+                  <div>
+                      <label class="text-default-800 text-sm font-medium mb-2 block">Estado</label>
+                       <select id="filtroCertEstado" class="tom-select">
+                            <option value="T">Todos</option>
+                            <option value="SI">Activo</option>
+                            <option value="NO">Inactivo</option>
+                        </select>
+                  </div>
+                  <div>
+                      <label class="text-default-800 text-sm font-medium mb-2 block">Vencimiento al</label>
+                      <input type="date" id="filtroCertFechaVenc" class="form-input" value="{{ date('Y-m-d') }}">
+                  </div>
+              </div>
+              <div class="flex justify-end gap-2">
+                  <button class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                  <button id="btnGenerarCertificados"
+                      class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                      <i class="bx bx-search-alt-2"></i> Generar
+                  </button>
+              </div>
+          </div>
+          <!-- Resultados -->
+          <div id="resultadosCertificados" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+              <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                  <span id="totalCertificados" class="text-sm text-default-600 font-medium"></span>
+                  <div class="flex gap-2">
+                      <button id="btnExportExcelCertificados"
+                          class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                          <i class="bx bx-spreadsheet"></i> Excel
+                      </button>
+                      <button id="btnExportPdfCertificados"
+                          class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                          <i class="bx bxs-file-pdf"></i> PDF
+                      </button>
+                  </div>
+              </div>
+              <div class="overflow-auto flex-1">
+                  <div id="tablaCertificados"></div>
+              </div>
+          </div>
+      </div>
+  </div>
 
     <!-- ====== MODAL: Constancias de Entrega ====== -->
     <div id="modalConstanciasEntrega" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
