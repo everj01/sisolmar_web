@@ -31,7 +31,7 @@ class Kernel extends ConsoleKernel
                  });
 
         $schedule->command('app:enviar-recordatorios-curso')
-                 ->twiceMonthly(1, 15)
+                 ->monthly()
                  ->at('08:45')
                  ->withoutOverlapping()
                  ->onSuccess(function () {
