@@ -253,7 +253,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 { title: "DNI", field: "dni", width: 110, hozAlign: "center", headerSort: false },
                 { title: "Nombre Completo", field: "nombre_completo", minWidth: 250 },
                 {
-                    title: "Cargo", field: "cargo", width: 150, headerSort: false,
+                    title: "Tipo de trabajador", field: "cargo", width: 150, headerSort: true,
                     formatter: function (cell) {
                         return `<span class="text-xs text-gray-600">${cell.getValue() || ''}</span>`;
                     }

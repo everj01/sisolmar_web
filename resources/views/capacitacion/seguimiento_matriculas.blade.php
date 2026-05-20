@@ -329,7 +329,7 @@ body {
                     </div>
 
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-default-700">Tipo de cargo</label>
+                        <label class="text-xs font-medium text-default-700">Tipo de trabajador</label>
                         <div class="relative">
                             <i
                                 class="ti ti-briefcase absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
