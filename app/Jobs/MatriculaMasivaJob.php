@@ -123,10 +123,11 @@ class MatriculaMasivaJob implements ShouldQueue
     // ----------------------------------------------------------------
     private function ejecutarPorTipoCurso(Cursos $curso, CursoProgramacion $prog): void
     {
-        $tipoCurso = strtoupper(trim((string) $curso->tipo_curso));
+        $tipoCurso = strtoupper(trim($curso->tipoCurso?->descripcion ?? ''));
 
         $personalIds = match ($tipoCurso) {
             'PCA'   => $this->resolverPersonalPCA($curso),
+            'PCE'   => $this->resolverPersonalPCE($curso),
             default => $this->resolverPersonalPorDefecto($curso),
         };
 
@@ -153,6 +154,11 @@ class MatriculaMasivaJob implements ShouldQueue
             return [];
         }
 
+        if (trim((string) $curso->dirigido_a) === '0') {
+            Log::info("MatriculaMasivaJob PCA: dirigido_a es OTROS, se omite auto-matriculación (curso {$this->cursoCodigo}).");
+            return [];
+        }
+
         try {
             $rows = DB::select(
                 "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?",
@@ -168,6 +174,60 @@ class MatriculaMasivaJob implements ShouldQueue
             Log::error("MatriculaMasivaJob PCA: error ejecutando SP. " . $e->getMessage(), [
                 'cod_cliente' => $codCliente,
                 'curso_id'    => $this->cursoCodigo,
+            ]);
+            return [];
+        }
+    }
+
+    private function resolverPersonalPCE(Cursos $curso): array
+    {
+        $dirigido = trim((string) $curso->dirigido_a);
+
+        if (empty($dirigido)) {
+            Log::warning("MatriculaMasivaJob PCE: el curso {$this->cursoCodigo} no tiene dirigido_a.", [
+                'curso_id' => $this->cursoCodigo,
+            ]);
+            return [];
+        }
+
+        $dirigidoToTipos = [
+            '1' => [null],          // todos -> llama al SP sin filtrar
+            '2' => ['02', '05'],    // administrativo
+            '3' => ['01', '03'],    // operativo
+        ];
+
+        $tipos = $dirigidoToTipos[$dirigido] ?? null;
+
+        if ($tipos === null) {
+            Log::warning("MatriculaMasivaJob PCE: dirigido_a '{$dirigido}' no reconocido.", [
+                'curso_id' => $this->cursoCodigo,
+            ]);
+            return [];
+        }
+
+        try {
+            $allIds = [];
+
+            foreach ($tipos as $tipoTrab) {
+                $rows = DB::select(
+                    "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_SOLMAR] @TIPOTRAB = ?",
+                    [$tipoTrab]
+                );
+
+                foreach ($rows as $row) {
+                    $allIds[] = $row->codigo;
+                }
+            }
+
+            $allIds = array_unique(array_values($allIds));
+
+            Log::info("MatriculaMasivaJob PCE: dirigido_a={$dirigido} retornó " . count($allIds) . " personas (curso {$this->cursoCodigo}).");
+
+            return $allIds;
+        } catch (\Exception $e) {
+            Log::error("MatriculaMasivaJob PCE: error ejecutando SP. " . $e->getMessage(), [
+                'dirigido_a' => $dirigido,
+                'curso_id'   => $this->cursoCodigo,
             ]);
             return [];
         }

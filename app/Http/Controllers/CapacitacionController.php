@@ -1877,10 +1877,48 @@ class CapacitacionController extends Controller
 
             DB::commit();
 
+            $autoEnrollAttempted = false;
+            $autoEnrollOk = true;
+
+            try {
+                $usuarioId = Auth::id();
+                if (!$usuarioId) {
+                    throw new \RuntimeException('Auth::id() retornó null');
+                }
+
+                $tipoDesc = strtoupper(trim($curso->tipoCurso?->descripcion ?? ''));
+
+                if ($tipoDesc === 'PCE') {
+                    $autoEnrollAttempted = true;
+                    dispatch(MatriculaMasivaJob::porTipoCurso(
+                        $curso->codigo,
+                        (string) $newCode,
+                        $usuarioId,
+                    ));
+                } elseif ($tipoDesc === 'PCA' && (string) $curso->dirigido_a !== '0') {
+                    $autoEnrollAttempted = true;
+                    dispatch(MatriculaMasivaJob::porTipoCurso(
+                        $curso->codigo,
+                        (string) $newCode,
+                        $usuarioId,
+                    ));
+                }
+            } catch (\Throwable $e) {
+                $autoEnrollOk = false;
+                Log::error("Error en matriculación automática al crear programación", [
+                    'curso_id' => $curso->codigo,
+                    'error'    => $e->getMessage(),
+                ]);
+            }
+
+            $message = 'Programación creada exitosamente.';
+            if ($autoEnrollAttempted && !$autoEnrollOk) {
+                $message .= ' Sin embargo, hubo un problema con la matriculación automática.';
+            }
+
             return response()->json([
                 "success" => true,
-                "message" =>
-                "Programación creada exitosamente. Ahora puede matricular personal desde la pestaña de Matrículas.",
+                "message" => $message,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -2141,7 +2179,7 @@ class CapacitacionController extends Controller
         $usuarioId = Auth::id();
 
         // Ejecutamos el proceso de matriculación estàndar.
-        MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId)->dispatchSync();
+        dispatch_sync(MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId));
 
 
         return response()->json([
