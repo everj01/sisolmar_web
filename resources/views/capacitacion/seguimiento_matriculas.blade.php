@@ -270,16 +270,6 @@ body {
                         </div>
                         <div class="w-px h-10 bg-default-200"></div>
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                                <i class="ti ti-circle-check text-lg text-green-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-default-800">Completados</p>
-                                <p class="text-[10px] text-default-500">Aprobados</p>
-                            </div>
-                        </div>
-                        <div class="w-px h-10 bg-default-200"></div>
-                        <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center">
                                 <i class="ti ti-mail text-lg text-sky-600"></i>
                             </div>
@@ -304,12 +294,6 @@ body {
                             <span>Usuarios en progreso</span>
                         </div>
 
-                        <div @click="abrirInfo('Aprobados y desaprobados', 'Muestra el resultado final de los participantes que completaron el curso. Los aprobados son quienes cumplieron con los requisitos mínimos; los desaprobados no alcanzaron la nota o estándar requerido.')"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-green-50 transition-colors">
-                            <i class="ti ti-circle-check text-xs text-green-600"></i>
-                            <span>Aprobados y desaprobados</span>
-                        </div>
-
                         <div @click="abrirInfo('Notificaciones por correo', mensajes.notificaciones)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-sky-50 transition-colors">
                             <i class="ti ti-mail text-xs text-sky-600"></i>
@@ -319,10 +303,12 @@ body {
                 </div>
 
                 <!-- Columna de filtros y búsquedas -->
-                <div class="flex flex-col gap-3 xl:w-[30%] bg-white rounded-xl p-4 border border-default-200/60 shadow-sm">
+                <div
+                    class="flex flex-col gap-3 xl:w-[30%] bg-white rounded-xl p-4 border border-default-200/60 shadow-sm">
                     <div class="flex items-center gap-2 pb-2 border-b border-default-200">
                         <div class="w-1 h-4 bg-primary rounded-full"></div>
-                        <span class="text-xs font-semibold text-default-700 uppercase tracking-wide">Filtros de personal</span>
+                        <span class="text-xs font-semibold text-default-700 uppercase tracking-wide">Filtros de
+                            personal</span>
                     </div>
 
                     <div class="flex flex-col gap-1.5">
@@ -439,13 +425,10 @@ body {
             </div>
 
             <!-- Tab 1: Cursos registrados -->
-            <div x-show="tabActivo === 'cursos'"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 translate-y-2"
-                x-transition:enter-end="opacity-100 translate-y-0"
+            <div x-show="tabActivo === 'cursos'" x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-2">
+                x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
                     <div class="relative">
@@ -460,12 +443,9 @@ body {
 
             <!-- Tab 2: Lista de personal -->
             <div x-show="tabActivo === 'personal'" class="min-h-[400px]"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 translate-y-2"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-2">
+                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2"
+                x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
                 </div>
@@ -478,16 +458,11 @@ body {
 <!-- Modal detalle de curso -->
 <div id="modal-detalle-curso" x-data="modalCurso()" x-show="open" x-cloak
     class="fixed inset-0 z-[80] flex items-center justify-center p-4"
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100"
-    x-transition:leave-end="opacity-0"
-    style="background: rgba(36,39,70,0.45);">
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div
-        class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-2xl border border-default-200 bg-white transition-all duration-300"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-2xl border border-default-200 bg-white transition-all duration-300"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -503,8 +478,7 @@ body {
                     <i class="ti ti-book text-lg"></i>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate"
-                        x-text="curso.nombre">
+                    <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate" x-text="curso.nombre">
                         Cargando...</h3>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                         <p class="text-[10px] font-bold text-primary uppercase tracking-widest"
@@ -536,7 +510,7 @@ body {
 
         <!-- Stats Cards -->
         <div class="px-6 pt-5 pb-2">
-            <div class="grid grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 gap-3">
                 <!-- Total Matriculados -->
                 <div class="text-center p-3 rounded-xl bg-default-50 border border-default-200/60">
                     <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
@@ -554,60 +528,6 @@ body {
                     </div>
                     <p class="text-[9px] text-default-500 uppercase tracking-widest font-bold mb-0.5">Sin iniciar</p>
                     <p class="text-2xl font-bold text-amber-600" x-text="curso.totalSinIniciar">0</p>
-                </div>
-
-                <!-- En Curso -->
-                <div class="text-center p-3 rounded-xl bg-green-50 border border-green-200/50 cursor-pointer hover:shadow-md transition-shadow"
-                    @click="abrirModalUsuarios('en curso')">
-                    <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mx-auto mb-2">
-                        <i class="ti ti-player-play text-xl text-green-600"></i>
-                    </div>
-                    <p class="text-[9px] text-default-500 uppercase tracking-widest font-bold mb-0.5">En curso</p>
-                    <p class="text-2xl font-bold text-green-600" x-text="curso.totalEnProgreso">0</p>
-                </div>
-
-                <!-- Completados -->
-                <div class="text-center p-3 rounded-xl bg-blue-50 border border-blue-200/50">
-                    <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mx-auto mb-2">
-                        <i class="ti ti-circle-check text-xl text-blue-600"></i>
-                    </div>
-                    <p class="text-[9px] text-default-500 uppercase tracking-widest font-bold mb-0.5">Completados</p>
-                    <p class="text-2xl font-bold text-blue-600" x-text="curso.totalCompletados">0</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="px-6 py-3">
-            <div class="flex items-center justify-between mb-1.5">
-                <span class="text-[10px] font-bold text-default-500 uppercase tracking-widest">Progreso general del curso</span>
-                <span class="text-xs font-bold text-primary" x-text="curso.porcentajeProgreso + '%'">0%</span>
-            </div>
-            <div class="w-full h-3 bg-default-100 rounded-full overflow-hidden">
-                <div class="h-full rounded-full transition-all duration-700 ease-out flex"
-                    :style="'width: ' + curso.porcentajeProgreso + '%'">
-                    <template x-if="curso.totalEnProgreso > 0">
-                        <div class="h-full bg-gradient-to-r from-green-400 to-green-500"
-                            :style="'width: ' + (curso.total > 0 ? (curso.totalEnProgreso / curso.total * 100) : 0) + '%'"></div>
-                    </template>
-                    <template x-if="curso.totalCompletados > 0">
-                        <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500"
-                            :style="'width: ' + (curso.total > 0 ? (curso.totalCompletados / curso.total * 100) : 0) + '%'"></div>
-                    </template>
-                </div>
-            </div>
-            <div class="flex items-center gap-4 mt-2">
-                <div class="flex items-center gap-1.5">
-                    <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
-                    <span class="text-[9px] text-default-500 font-medium">Sin iniciar</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                    <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
-                    <span class="text-[9px] text-default-500 font-medium">En curso</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                    <div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
-                    <span class="text-[9px] text-default-500 font-medium">Completados</span>
                 </div>
             </div>
         </div>
@@ -648,16 +568,11 @@ body {
 <!-- Modal con lista de usuarios -->
 <div id="modal-lista-usuarios" x-data="modalListaUsuarios()" x-show="open" x-cloak
     class="fixed inset-0 z-[90] flex items-center justify-center p-4"
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100"
-    x-transition:leave-end="opacity-0"
-    style="background: rgba(36,39,70,0.45);">
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div
-        class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-3xl border border-default-200 bg-white transition-all duration-300"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-3xl border border-default-200 bg-white transition-all duration-300"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -678,11 +593,22 @@ body {
             </button>
         </div>
 
+        <!-- Buscador -->
+        <div class="px-6 pt-4 pb-2">
+            <div class="relative">
+                <i
+                    class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                <input x-model="busqueda" placeholder="Buscar por nombre o DNI..."
+                    class="w-full pl-9 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50" />
+            </div>
+        </div>
+
         <div class="p-6 custom-scrollbar max-h-[500px] overflow-y-auto">
-            <div x-show="cargado && usuarios.length > 0">
+            <div x-show="cargado && usuariosFiltrados.length > 0">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-default-200 text-xs font-semibold text-default-500 uppercase tracking-widest">
+                        <tr
+                            class="border-b border-default-200 text-xs font-semibold text-default-500 uppercase tracking-widest">
                             <th class="text-left py-3 px-2 w-10">#</th>
                             <th class="text-left py-3 px-2">Nombre</th>
                             <th class="text-left py-3 px-2">Correo</th>
@@ -690,7 +616,7 @@ body {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-default-100">
-                        <template x-for="(user, index) in usuarios" :key="index">
+                        <template x-for="(user, index) in usuariosFiltrados" :key="index">
                             <tr class="hover:bg-default-50 transition-colors">
                                 <td class="py-3 px-2 text-default-400 text-xs font-mono" x-text="index + 1"></td>
                                 <td class="py-3 px-2 font-medium text-default-800 cursor-pointer hover:text-primary transition-colors"
@@ -715,7 +641,8 @@ body {
                 </table>
             </div>
             <div x-show="!cargado" class="text-center py-10 text-default-400 text-sm">Cargando usuarios...</div>
-            <div x-show="cargado && usuarios.length === 0" class="text-center py-10 text-default-400 text-sm">No se
+            <div x-show="cargado && usuariosFiltrados.length === 0" class="text-center py-10 text-default-400 text-sm">
+                No se
                 encontraron usuarios</div>
         </div>
 
@@ -731,16 +658,11 @@ body {
 <!-- Modal informativo -->
 <div id="modal-info" x-data="modalInfo()" x-show="open" x-cloak
     class="fixed inset-0 z-[100] flex items-center justify-center p-4"
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100"
-    x-transition:leave-end="opacity-0"
-    style="background: rgba(36,39,70,0.45);">
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div
-        class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-lg border border-default-200 bg-white transition-all duration-300"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-lg border border-default-200 bg-white transition-all duration-300"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -775,16 +697,11 @@ body {
 <!-- Modal de usuario encontrado -->
 <div id="modal-usuario" x-data="modalUsuario()" x-show="open" x-cloak
     class="fixed inset-0 z-[100] flex items-center justify-center p-4"
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100"
-    x-transition:leave-end="opacity-0"
-    style="background: rgba(36,39,70,0.45);">
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div
-        class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-5xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-5xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -851,7 +768,8 @@ body {
                             <i class="ti ti-briefcase text-sm text-primary"></i>
                         </div>
                         <div class="min-w-0">
-                            <p class="text-[9px] text-default-400 uppercase tracking-wider font-bold">Cargo</p>
+                            <p class="text-[9px] text-default-400 uppercase tracking-wider font-bold">Tipo de trabajador
+                            </p>
                             <p class="text-xs font-semibold text-default-700 truncate"
                                 x-text="personal.cargo || 'No registrado'"></p>
                         </div>
@@ -884,26 +802,6 @@ body {
                     <div class="text-center px-2">
                         <p class="text-lg font-bold text-green-500" x-text="countByEstado('en_curso')">0</p>
                         <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">En curso</p>
-                    </div>
-                    <div class="text-center px-2">
-                        <p class="text-lg font-bold text-blue-500" x-text="countByEstado('finalizado')">0</p>
-                        <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">Finalizados</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Barra de progreso -->
-            <div class="mt-3" x-show="cursosCargado && cursos.length > 0">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-[9px] font-bold text-default-400 uppercase tracking-widest">Avance general</span>
-                    <span class="text-xs font-bold text-primary" x-text="porcentajeAvance + '%'">0%</span>
-                </div>
-                <div class="w-full h-2 bg-default-100 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full transition-all duration-700 ease-out flex">
-                        <div class="h-full bg-gradient-to-r from-green-400 to-green-500"
-                            :style="'width: ' + (cursos.length > 0 ? (countByEstado('en_curso') / cursos.length * 100) : 0) + '%'"></div>
-                        <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500"
-                            :style="'width: ' + (cursos.length > 0 ? (countByEstado('finalizado') / cursos.length * 100) : 0) + '%'"></div>
                     </div>
                 </div>
             </div>
@@ -942,12 +840,6 @@ body {
                                 : 'px-3 py-1.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-semibold hover:bg-green-100 transition-all'">
                             <i class="ti ti-player-play mr-0.5"></i> En curso
                         </button>
-                        <button type="button" @click="filtroEstado = 'finalizado'"
-                            :class="filtroEstado === 'finalizado'
-                                ? 'px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[10px] font-semibold transition-all'
-                                : 'px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-semibold hover:bg-blue-100 transition-all'">
-                            <i class="ti ti-circle-check mr-0.5"></i> Finalizados
-                        </button>
                     </div>
                     <div class="flex-1"></div>
                     <div class="relative">
@@ -983,7 +875,6 @@ body {
                             <tr
                                 class="border-b border-default-200 text-[10px] font-semibold text-default-500 uppercase tracking-widest">
                                 <th class="text-left py-2.5 px-3 w-10">#</th>
-                                <th class="text-left py-2.5 px-3 w-24">Código</th>
                                 <th class="text-left py-2.5 px-3">Nombre del curso</th>
                                 <th class="text-center py-2.5 px-3 w-32">Estado</th>
                                 <th class="text-center py-2.5 px-3 w-32">Último acceso</th>
@@ -995,14 +886,7 @@ body {
                                 <tr class="hover:bg-default-50 transition-colors">
                                     <td class="py-2.5 px-3 text-default-400 text-xs font-mono" x-text="index + 1"></td>
                                     <td class="py-2.5 px-3">
-                                        <span class="inline-block px-2 py-0.5 rounded-md bg-primary/5 text-primary text-[10px] font-semibold"
-                                            x-text="c.course_codigo"></span>
-                                    </td>
-                                    <td class="py-2.5 px-3">
                                         <p class="font-medium text-default-800 text-xs" x-text="c.course_nombre"></p>
-                                        <template x-if="c.area">
-                                            <p class="text-[9px] text-default-400 mt-0.5" x-text="c.area"></p>
-                                        </template>
                                     </td>
                                     <td class="py-2.5 px-3 text-center">
                                         <span x-show="c.estado === 'en_curso'"
@@ -1064,7 +948,7 @@ body {
                         : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs shadow-sm'">
                     <i :class="enCooldown() ? 'ti ti-clock mr-1.5' : 'ti ti-mail mr-1.5'"></i>
                     <span
-                        x-text="enCooldown() ? 'Espera ' + tiempoRestanteCooldown() : 'Notificar pendientes'"></span>
+                        x-text="enCooldown() ? 'Espera ' + tiempoRestanteCooldown() : 'Notificar sobre cursos pendientes'"></span>
                 </button>
                 <button type="button" @click="cerrar()"
                     class="px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-600 hover:bg-default-200 transition-all text-xs cursor-pointer">
@@ -1114,10 +998,12 @@ window.modalCurso = function() {
                 .then(res => {
                     this.curso.totalSinIniciar = res.data.total_sin_iniciar;
                     this.curso.totalEnProgreso = res.data.total_en_progreso;
-                    this.curso.totalCompletados = Math.max(0, this.curso.total - res.data.total_sin_iniciar - res.data.total_en_progreso);
-                    this.curso.porcentajeProgreso = this.curso.total > 0
-                        ? Math.round(((this.curso.totalEnProgreso + this.curso.totalCompletados) / this.curso.total) * 100)
-                        : 0;
+                    this.curso.totalCompletados = Math.max(0, this.curso.total - res.data.total_sin_iniciar -
+                        res.data.total_en_progreso);
+                    this.curso.porcentajeProgreso = this.curso.total > 0 ?
+                        Math.round(((this.curso.totalEnProgreso + this.curso.totalCompletados) / this.curso
+                            .total) * 100) :
+                        0;
                 })
                 .catch(() => {
                     this.curso.totalSinIniciar = 'Error';
@@ -1142,7 +1028,7 @@ window.modalCurso = function() {
         },
 
         abrirModalUsuarios(tipo = '') {
-            const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?.[0];
+            const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?. [0];
             if (modalUsuarios) {
                 modalUsuarios.mostrar(this.curso.nombre, this.curso.codigo_moodle, this._fetchUsuarios, this
                     ._sendMail, tipo);
@@ -1161,9 +1047,20 @@ window.modalListaUsuarios = function() {
         titulo: '',
         cursoId: null,
         usuarios: [],
+        busqueda: '',
         cargado: false,
         notificados: {},
         _cooldownMs: 5 * 60 * 60 * 1000,
+
+        get usuariosFiltrados() {
+            if (!this.busqueda) return this.usuarios;
+            const q = this.busqueda.toLowerCase().trim();
+            return this.usuarios.filter(u =>
+                (u.full_name || '').toLowerCase().includes(q) ||
+                (u.username || '').toLowerCase().includes(q) ||
+                (u.idnumber || '').toLowerCase().includes(q)
+            );
+        },
 
         _guardarNotificados() {
             localStorage.setItem('notificados_correo', JSON.stringify(this.notificados));

@@ -362,7 +362,7 @@ class MatriculaMasivaJob implements ShouldQueue
 
         $firstname = trim(($personal->NOMB_1 ?? '') . ' ' . ($personal->NOMB_2 ?? ''));
         $lastname  = trim(($personal->APEL_1 ?? '') . ' ' . ($personal->APEL_2 ?? ''));
-        $email     = !empty($personal->PERS_EMAIL)
+        $email     = !empty(trim($personal->PERS_EMAIL ?? '')) && filter_var(trim($personal->PERS_EMAIL), FILTER_VALIDATE_EMAIL)
             ? trim($personal->PERS_EMAIL)
             : "{$dni}@sisolmar.com";
 
