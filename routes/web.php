@@ -193,7 +193,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reporte/categorias-brevete', [ReporteController::class, 'categoriasBrevete']);
 
         Route::get('/reporte/certificados', [ReporteController::class, 'certificados']);
-        
+
         // Biométrico
         Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
 
