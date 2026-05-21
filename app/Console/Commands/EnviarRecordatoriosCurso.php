@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Mail\RecordatorioCursoMail;
+use App\Mail\RecordatorioCursosPendientesMail;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -10,67 +11,71 @@ use Illuminate\Support\Facades\Mail;
 
 class EnviarRecordatoriosCurso extends Command
 {
-    protected $signature = 'app:enviar-recordatorios-curso';
+    protected $signature = 'app:enviar-recordatorios-curso
+                            {--dry-run : Muestra cuántos correos se enviarían sin enviarlos}';
 
-    protected $description = 'Envía correos recordatorios a matriculados que no han iniciado, por cada curso con pendientes';
+    protected $description = 'Envía correos recordatorios a matriculados que no han iniciado sus cursos';
 
-    public function handle()
+    public function handle(): int
     {
+        $isDryRun    = $this->option('dry-run');
         $totalEnviados = 0;
-        $totalErrores = 0;
+        $totalErrores  = 0;
 
-        $this->info('Obteniendo cursos con matriculados sin iniciar...');
-
-        $cursos = DB::connection('mysql_grupoihb')->select(
-            'CALL SP_OBTENER_CURSOS_CON_NO_INICIADOS()'
+        $registros = DB::connection('mysql_grupoihb')->select(
+            'CALL SP_OBTENER_RECORDATORIOS_PENDIENTES()'
         );
 
-        if (empty($cursos)) {
-            $this->info('No se encontraron cursos con matriculados sin iniciar.');
-            return;
+        if (empty($registros)) {
+            $this->info('¡Increíble! No hay matriculados pendientes.');
+            return self::SUCCESS;
         }
 
-        $this->info("Se encontraron " . count($cursos) . " curso(s) con pendientes.");
+        $porUsuario = collect($registros)->groupBy('user_id');
 
-        foreach ($cursos as $curso) {
-            $courseId = $curso->course_id;
-            $courseName = $curso->course_name ?? "ID {$courseId}";
+        $this->info("{$porUsuario->count()} usuario(s) con cursos pendientes.");
 
-            $this->info("Procesando curso: {$courseName} (ID: {$courseId})...");
+        $bar = $this->output->createProgressBar($porUsuario->count());
+        $bar->start();
 
-            $usuarios = DB::connection('mysql_grupoihb')->select(
-                'CALL SP_OBTENER_MATRICULADOS_SIN_INICIAR(?)',
-                [$courseId]
-            );
+        foreach ($porUsuario as $userId => $cursos) {
+            $usuario   = $cursos->first();
+            $totalCursos = $cursos->count();
 
-            if (empty($usuarios)) {
-                $this->info("  Sin usuarios pendientes para este curso.");
-                continue;
-            }
+            try {
+                if (!$isDryRun) {
+                    $mailable = $totalCursos === 1
+                        ? new RecordatorioCursoMail($usuario, $cursos->first())
+                        : new RecordatorioCursosPendientesMail($usuario, $cursos->all());
 
-            $cursoEnviados = 0;
-            $cursoErrores = 0;
-
-            foreach ($usuarios as $usuario) {
-                try {
-                    Mail::to($usuario->email)
-                        ->queue(
-                            new RecordatorioCursoMail($usuario)
-                        );
-
-                    $cursoEnviados++;
-                } catch (\Exception $e) {
-                    $cursoErrores++;
-                    Log::error("Error enviando recordatorio a {$usuario->email}: " . $e->getMessage());
+                    Mail::to($usuario->email)->queue($mailable);
                 }
+
+                $totalEnviados++;
+            } catch (\Throwable $e) {
+                $totalErrores++;
+                Log::error("Error encolando recordatorio para usuario {$userId} ({$usuario->email}): {$e->getMessage()}");
             }
 
-            $totalEnviados += $cursoEnviados;
-            $totalErrores += $cursoErrores;
-
-            $this->info("  {$courseName}: {$cursoEnviados} encolados, {$cursoErrores} errores");
+            $bar->advance();
         }
 
-        $this->info("Proceso completado. Enviados: {$totalEnviados}, Errores: {$totalErrores}");
+        $bar->finish();
+        $this->newLine(2);
+
+        $this->table(
+            ['Métrica', 'Total'],
+            [
+                ['Usuarios procesados', $porUsuario->count()],
+                ['Correos encolados',   $totalEnviados],
+                ['Errores',             $totalErrores],
+            ]
+        );
+
+        if ($isDryRun) {
+            $this->warn('Modo dry-run: no se encoló ningún correo.');
+        }
+
+        return self::SUCCESS;
     }
 }
