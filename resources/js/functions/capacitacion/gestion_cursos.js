@@ -657,6 +657,11 @@ window.editarFormGestionCurso = (e) => {
     if (!formElement || !window.Alpine) return;
     const alpineData = Alpine.$data(formElement);
 
+    if (!alpineData.codResponsable) {
+        Swal.fire('Atención', 'Debe seleccionar un responsable para el curso', 'warning');
+        return;
+    }
+
     // Validación de campos obligatorios antes de actualizar
     const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
     const vacio = camposObligatorios.some(campo => !alpineData[campo]);
@@ -1179,6 +1184,14 @@ window.formCursoGestion = function () {
         //     // Depurado: Esto funcionaba con el select, pero ahora preferimos checkEsPACByText para radios
         // },
 
+        get formularioCompleto() {
+            const nombreOk = this.nombre?.trim().length > 0;
+            const tipoOk = this.tipoCurso?.length > 0;
+            const responsableOk = this.codResponsable?.length > 0;
+            const areaOk = this.tipoCurso == '6' || this.areaConocimiento?.length > 0;
+            return nombreOk && tipoOk && responsableOk && areaOk;
+        },
+
         checkEsPACByText(text) {
             if (!text) return;
             this.esPAC = text.toUpperCase().includes('PAC');
@@ -1265,6 +1278,11 @@ window.formCursoGestion = function () {
             }
             if (this.tipoCurso == '7' && this.areasAsignadas.length === 0) {
                 Swal.fire('Atención', 'Debe asignar al menos un área operativa para cursos PCI', 'warning');
+                return;
+            }
+
+            if (!this.codResponsable) {
+                Swal.fire('Atención', 'Debe seleccionar un responsable para el curso', 'warning');
                 return;
             }
 

@@ -372,7 +372,7 @@
                                         <!-- Responsable del curso -->
                                         <div>
                                             <label class="text-gray-800 text-sm font-medium inline-block mb-1.5">
-                                                Responsable del curso
+                                                Responsable del curso <span class="text-danger">*</span>
                                             </label>
 
                                             <div class="flex items-center gap-2" x-data="searchablePersonnel()">

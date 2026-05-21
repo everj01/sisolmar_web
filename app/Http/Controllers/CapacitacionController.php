@@ -143,7 +143,7 @@ class CapacitacionController extends Controller
             "archivo" => "nullable|file|max:51200",
             "aplica_evaluacion" => "nullable|integer|in:0,1",
             "obligatorio_alta" => "nullable|integer|in:0,1",
-            "cod_responsable" => "nullable|string|max:20",
+            "cod_responsable" => "required|string|max:20",
             "target_group" =>
             "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
             "cod_moodle_area" => "nullable|integer",
@@ -562,7 +562,7 @@ class CapacitacionController extends Controller
                 "sucursales_asignadas.*" => "integer|exists:sw_clientes,codigo",
                 "aplica_evaluacion" => "nullable|integer|in:0,1",
                 "obligatorio_alta" => "nullable|integer|in:0,1",
-                "cod_responsable" => "nullable|string|max:20",
+                "cod_responsable" => "required|string|max:20",
                 "target_group" =>
                 "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
                 "cod_moodle_area" => "nullable|integer",
