@@ -92,7 +92,7 @@ class Consulta extends Model
     public static function obtenerProgramacionesVigentes()
     {
         return DB::table("sw_cursos_programacion as cp")
-            ->join("sw_cursos as c", "c.codigo", "=", "cp.cod_cursos")
+            ->join("sw_cursos as c", "c.codigo", "=", "cp.cod_curso")
             ->select(
                 "cp.*",
                 "c.codigo_curso",

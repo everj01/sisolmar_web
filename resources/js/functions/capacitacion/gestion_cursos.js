@@ -1780,7 +1780,7 @@ window.formProgramacionGestion = function () {
             }
 
             const formData = {
-                cod_cursos: this.codigoCurso,
+                cod_curso: this.codigoCurso,
                 tipo: this.tipo,
                 fecha_inicio: this.fechaInicio,
                 fecha_final: this.fechaFinal,

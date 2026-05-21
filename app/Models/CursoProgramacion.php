@@ -18,7 +18,7 @@ class CursoProgramacion extends Model
 
     protected $fillable = [
         'codigo_programacion',
-        'cod_cursos',
+        'cod_curso',
         'fecha_inicio',
         'fecha_final',
         'periodo',
@@ -35,7 +35,7 @@ class CursoProgramacion extends Model
 
     public function curso()
     {
-        return $this->belongsTo(Cursos::class, 'cod_cursos', 'codigo');
+        return $this->belongsTo(Cursos::class, 'cod_curso', 'codigo');
     }
 
     public function matriculas()
@@ -52,7 +52,7 @@ class CursoProgramacion extends Model
 
     public function scopeDelCurso($query, $cursoId)
     {
-        return $query->where('cod_cursos', $cursoId);
+        return $query->where('cod_curso', $cursoId);
     }
 
     public function scopeHabilitados($query)

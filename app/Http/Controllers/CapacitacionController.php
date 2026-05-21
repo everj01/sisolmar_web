@@ -47,7 +47,7 @@ class CapacitacionController extends Controller
         $cursosVigentes = DB::table("sw_cursos_programacion")
             ->where("estado_periodo", "VIGENTE")
             ->where("habilitado", 1)
-            ->pluck("cod_cursos")
+            ->pluck("cod_curso")
             ->toArray();
 
         $cursos = $query->get()->map(function ($curso) use ($cursosVigentes) {
@@ -220,7 +220,7 @@ class CapacitacionController extends Controller
 
                     foreach ($fechasArray as $fechaItem) {
                         $existe = CursoProgramacion::where(
-                            "cod_cursos",
+                            "cod_curso",
                             $curso->codigo,
                         )
                             ->where("periodo", $fechaItem["periodo"])
@@ -236,7 +236,7 @@ class CapacitacionController extends Controller
                                     "0",
                                     STR_PAD_LEFT,
                                 ),
-                                "cod_cursos" => $curso->codigo,
+                                "cod_curso" => $curso->codigo,
                                 "periodo" => $fechaItem["periodo"],
                                 "tipo" => "REGULAR",
                                 "fecha_inicio" =>
@@ -489,7 +489,7 @@ class CapacitacionController extends Controller
             }
 
             // 3. Delete Programaciones
-            CursoProgramacion::where("cod_cursos", $curso->codigo)->delete();
+            CursoProgramacion::where("cod_curso", $curso->codigo)->delete();
 
             // 4. Delete Asistencias / Matriculados / Notas ?
             // Esto asume que si estaba eliminado, no tiene matriculas o si las tiene se borran (normalmente dependen del codigo_programacion).
@@ -877,7 +877,7 @@ class CapacitacionController extends Controller
                     "0",
                     STR_PAD_LEFT,
                 ),
-                "cod_cursos" => $curso->codigo,
+                "cod_curso" => $curso->codigo,
                 "periodo" => $fechaItem["periodo"],
                 "tipo" => "REGULAR",
                 "fecha_inicio" => $fechaItem["inicio"] . "T00:00:00.000",
@@ -1361,7 +1361,7 @@ class CapacitacionController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                "cod_cursos" => "required|integer|exists:sw_cursos,codigo",
+                "cod_curso" => "required|integer|exists:sw_cursos,codigo",
                 // 'periodo'       => 'required|date_format:Y-m', // Ya no es requerido por input
                 "tipo" => "required|in:REGULAR,EXTEMPORANEO",
                 "fecha_inicio" => "required|date",
@@ -1382,7 +1382,7 @@ class CapacitacionController extends Controller
 
             DB::beginTransaction();
 
-            $curso = Cursos::where("codigo", $request->cod_cursos)->first();
+            $curso = Cursos::where("codigo", $request->cod_curso)->first();
             if (!$curso) {
                 return response()->json(
                     [
@@ -1410,7 +1410,7 @@ class CapacitacionController extends Controller
 
             // Contar programaciones NO eliminadas (habilitado=1) en ese AÑO
             $countProgramaciones = CursoProgramacion::where(
-                "cod_cursos",
+                "cod_curso",
                 $curso->codigo,
             )
                 ->where("habilitado", 1)
@@ -1439,10 +1439,10 @@ class CapacitacionController extends Controller
 
             // Validación de Unicidad Compuesta: Curso + Periodo + Tipo
             // Evita duplicar el mismo tipo de curso en el mismo mes
-            $existe = CursoProgramacion::where("cod_cursos", $curso->codigo)
+            $existe = CursoProgramacion::where("cod_curso", $curso->codigo)
                 ->where("periodo", $periodoCalculado)
                 ->where("tipo", $request->tipo)
-                ->where("habilitado", 1) // Ignore deleted records
+                ->where("habilitado", 1)
                 ->exists();
 
             if ($existe) {
@@ -1471,7 +1471,7 @@ class CapacitacionController extends Controller
 
             $programacion = CursoProgramacion::create([
                 "codigo_programacion" => (string) $newCode,
-                "cod_cursos" => (int) $curso->codigo,
+                "cod_curso" => (int) $curso->codigo,
                 "periodo" => $periodoCalculado,
                 "tipo" => $request->tipo,
                 "fecha_inicio" => $fechaInicio,
@@ -1516,7 +1516,7 @@ class CapacitacionController extends Controller
             $validator = Validator::make($request->all(), [
                 "codigo" =>
                 "required|integer|exists:sw_cursos_programacion,codigo",
-                "cod_cursos" => "required|integer|exists:sw_cursos,codigo",
+                "cod_curso" => "required|integer|exists:sw_cursos,codigo",
                 // 'periodo'       => 'required|date_format:Y-m', // Ya no requerido
                 "tipo" => "required|in:REGULAR,EXTEMPORANEO",
                 "fecha_inicio" => "required|date",
@@ -1567,8 +1567,8 @@ class CapacitacionController extends Controller
 
             // Validar unicidad (excluyendo la propia programación)
             $existe = CursoProgramacion::where(
-                "cod_cursos",
-                $request->cod_cursos,
+                "cod_curso",
+                $request->cod_curso,
             )
                 ->where("periodo", $periodoCalculado)
                 ->where("tipo", $request->tipo)
@@ -1589,7 +1589,7 @@ class CapacitacionController extends Controller
 
             // Actualizar campos
             $programacion->update([
-                "cod_cursos" => (int) $request->cod_cursos,
+                "cod_curso" => (int) $request->cod_curso,
                 "periodo" => $periodoCalculado,
                 "tipo" => $request->tipo,
                 "fecha_inicio" => $fechaInicio,
@@ -1695,7 +1695,7 @@ class CapacitacionController extends Controller
         }
 
         $programaciones = CursoProgramacion::with("curso")
-            ->where("cod_cursos", $curso->codigo)
+            ->where("cod_curso", $curso->codigo)
             ->where("habilitado", 1)
             ->get();
 
@@ -1710,7 +1710,7 @@ class CapacitacionController extends Controller
             return [
                 "codigo" => $prog->codigo,
                 "codigo_programacion" => $prog->codigo_programacion,
-                "cod_cursos" => $prog->cod_cursos,
+                "cod_curso" => $prog->cod_curso,
                 "fecha_inicio" => $prog->fecha_inicio,
                 "fecha_final" => $prog->fecha_final,
                 "fecha_inicio_texto" => Carbon::parse(
@@ -1768,7 +1768,7 @@ class CapacitacionController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                "cod_cursos" => "required|integer|exists:sw_cursos,codigo",
+                "cod_curso" => "required|integer|exists:sw_cursos,codigo",
                 "fecha_inicio" => "required|date|after_or_equal:today",
             ]);
 
@@ -1785,7 +1785,7 @@ class CapacitacionController extends Controller
 
             DB::beginTransaction();
 
-            $curso = Cursos::findOrFail($request->cod_cursos);
+            $curso = Cursos::findOrFail($request->cod_curso);
 
             $fechaBase = Carbon::parse($request->fecha_inicio);
             $periodo = $fechaBase->format("Y-m");
@@ -1819,7 +1819,7 @@ class CapacitacionController extends Controller
 
             CursoProgramacion::create([
                 "codigo_programacion" => (string) $newCode,
-                "cod_cursos" => (int) $curso->codigo,
+                "cod_curso" => (int) $curso->codigo,
                 "periodo" => $periodo,
                 "tipo" => "REGULAR",
                 "fecha_inicio" => $fInicio,

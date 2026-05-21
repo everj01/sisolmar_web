@@ -216,7 +216,7 @@ window.gestionProgramacion = async (op, cod) => {
                 if (alpineComponent) {
                     console.log('Asignando valores al componente Alpine con codigo:', prog.codigo);
                     alpineComponent.codigo = prog.codigo;
-                    alpineComponent.codigoCurso = prog.cod_cursos;
+                    alpineComponent.codigoCurso = prog.cod_curso;
                     alpineComponent.fechaInicio = prog.fecha_inicio.split(' ')[0];
                     alpineComponent.fechaFinal = prog.fecha_final.split(' ')[0];
                     alpineComponent.habilitado = prog.habilitado;
@@ -312,7 +312,7 @@ window.formProgramacionGestion = () => {
             }
 
             const formData = new FormData();
-            formData.append('cod_cursos', this.codigoCurso || window.cursoSeleccionado);
+            formData.append('cod_curso', this.codigoCurso || window.cursoSeleccionado);
             formData.append('fecha_inicio', this.fechaInicio);
             formData.append('fecha_final', this.fechaFinal);
             formData.append('habilitado', this.habilitado);
@@ -367,7 +367,7 @@ window.actualizarProgramacion = async (e, alpineComponent) => {
 
     const formData = new FormData();
     formData.append('codigo', alpineComponent.codigo);
-    formData.append('cod_cursos', alpineComponent.codigoCurso || window.cursoSeleccionado);
+    formData.append('cod_curso', alpineComponent.codigoCurso || window.cursoSeleccionado);
     formData.append('fecha_inicio', alpineComponent.fechaInicio);
     formData.append('fecha_final', alpineComponent.fechaFinal);
     formData.append('habilitado', alpineComponent.habilitado);

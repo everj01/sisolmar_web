@@ -2202,7 +2202,7 @@
                     if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
 
                     const payload = {
-                        cod_cursos: this.codigoCurso,
+                        cod_curso: this.codigoCurso,
                         fecha_inicio: this.fechaInicio,
                         incluir_automatico: this.incluirAutomatico,
                         sucursal_codigo: this.selectedSucursal,

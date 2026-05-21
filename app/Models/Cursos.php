@@ -46,7 +46,7 @@ class Cursos extends Model
 
     public function programaciones()
     {
-        return $this->hasMany(CursoProgramacion::class, 'cod_cursos', 'codigo');
+        return $this->hasMany(CursoProgramacion::class, 'cod_curso', 'codigo');
     }
 
     public function tipoCurso()

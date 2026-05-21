@@ -20,17 +20,17 @@ class Kernel extends ConsoleKernel
                 Log::error('Error al ejecutar el comando de envío de alertas de caducidad.');
             });
 
-        $schedule->command('capacitacion:clonar-vencidos')
+        $schedule->command('capacitacion:procesar-cursos-periodicos')
             ->dailyAt('00:00')
             ->withoutOverlapping()
             ->onSuccess(function () {
-                Log::info('Comando de clonación de cursos ejecutado exitosamente.');
+                Log::info('Comando de procesamiento de cursos periódicos ejecutado exitosamente.');
             })
             ->onFailure(function () {
-                Log::error('Error al ejecutar el comando de clonación de cursos.');
+                Log::error('Error al ejecutar el comando de procesamiento de cursos periódicos.');
             });
 
-        $schedule->command('app:enviar-recordatorios-curso')
+        $schedule->command('capacitacion:enviar-recordatorios-curso')
             ->monthly()
             ->at('08:45')
             ->withoutOverlapping()
