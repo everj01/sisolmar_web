@@ -173,29 +173,15 @@ class CapacitacionController extends Controller
 
             $periodicidadVal = 0;
             if ($request->input("es_periodico") == 1) {
-                switch ($request->input("frecuencia")) {
-                    case "MENSUAL":
-                        $periodicidadVal = 12;
-                        break;
-                    case "BIMESTRAL":
-                        $periodicidadVal = 6;
-                        break;
-                    case "TRIMESTRAL":
-                        $periodicidadVal = 4;
-                        break;
-                    case "CUATRIMESTRAL":
-                        $periodicidadVal = 3;
-                        break;
-                    case "SEMESTRAL":
-                        $periodicidadVal = 2;
-                        break;
-                    case "ANUAL":
-                        $periodicidadVal = 1;
-                        break;
-                    default:
-                        $periodicidadVal = 0;
-                        break;
-                }
+                $periodicidadVal = match ($request->input("frecuencia")) {
+                    "MENSUAL" => 1,
+                    "BIMESTRAL" => 2,
+                    "TRIMESTRAL" => 3,
+                    "CUATRIMESTRAL" => 4,
+                    "SEMESTRAL" => 6,
+                    "ANUAL" => 12,
+                    default => 0,
+                };
             }
 
             $curso->update([
@@ -806,22 +792,15 @@ class CapacitacionController extends Controller
         if ($esPeriodico != 1) {
             return 0;
         }
-        switch ($frecuencia) {
-            case "MENSUAL":
-                return 12;
-            case "BIMESTRAL":
-                return 6;
-            case "TRIMESTRAL":
-                return 4;
-            case "CUATRIMESTRAL":
-                return 3;
-            case "SEMESTRAL":
-                return 2;
-            case "ANUAL":
-                return 1;
-            default:
-                return 0;
-        }
+        return match ($frecuencia) {
+            "MENSUAL" => 1,
+            "BIMESTRAL" => 2,
+            "TRIMESTRAL" => 3,
+            "CUATRIMESTRAL" => 4,
+            "SEMESTRAL" => 6,
+            "ANUAL" => 12,
+            default => 0,
+        };
     }
 
     private function saveSucursales(int $cursoCodigo, array $sucursales): void
@@ -1421,9 +1400,10 @@ class CapacitacionController extends Controller
             );
 
             // Validar Límite de Periodicidad Anual
+            // periodicidad = meses por ciclo (ej: 3 = trimestral), límite = 12 / meses_por_ciclo
             $limit =
                 $curso->periodicidad && $curso->periodicidad > 0
-                ? $curso->periodicidad
+                ? intdiv(12, $curso->periodicidad)
                 : 1;
 
             // Determinar año objetivo
