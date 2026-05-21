@@ -588,7 +588,7 @@ class CapacitacionController extends Controller
             }
 
             $curso = Cursos::create([
-                "nombre" => $request->nombre,
+                "nombre" => $request->nombre . ' | ' . date('Y-m'),
                 "codigo_curso" => $this->generateCourseCode(),
                 "tipo_curso" => $request->tipo_curso,
                 "cod_cliente" => $codClienteLegacy,
