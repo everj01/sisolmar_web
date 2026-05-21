@@ -33,7 +33,6 @@ class Cursos extends Model
         'target_group',
         'codigo_moodle',
         'descripcion',
-        'proyeccion_anios',
         'dirigido_a',
         'cod_cliente',
     ];
