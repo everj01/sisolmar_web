@@ -2569,7 +2569,7 @@ class CapacitacionController extends Controller
                     "sw_cursos_programacion as prog",
                     "m.cod_programacion",
                     "=",
-                    "prog.codigo",
+                    "prog.codigo_programacion"
                 )
                 ->where("m.cod_curso", "=", $cursoId)
                 ->select([
@@ -3532,24 +3532,30 @@ class CapacitacionController extends Controller
     {
         $cursos = DB::select("
             SELECT
-                c.codigo,
-                c.codigo_curso,
-                c.nombre,
-                c.codigo_moodle,
-                c.cod_responsable,
-                c.fecha_creacion,
-                ISNULL(mat.total_matriculados, 0) as total_matriculados
-            FROM sw_cursos c
-            LEFT JOIN (
-                SELECT cod_curso, COUNT(*) as total_matriculados
-                FROM sw_matriculas
-                GROUP BY cod_curso
-            ) mat ON c.codigo = mat.cod_curso
-            WHERE c.habilitado = 1
-            AND c.codigo_moodle IS NOT NULL
-            AND c.codigo_moodle != ''
-            AND c.codigo_moodle != 0
-            ORDER BY c.fecha_creacion DESC
+            c.codigo,
+            c.codigo_curso,
+            c.nombre,
+            c.codigo_moodle,
+            c.cod_responsable,
+            c.fecha_creacion,
+            ISNULL(mat.total_matriculados, 0) as total_matriculados,
+            prog.periodo,
+            prog.fecha_inicio,
+            prog.fecha_final,
+            prog.tipo
+        FROM sw_cursos c
+        LEFT JOIN (
+            SELECT cod_curso, COUNT(*) as total_matriculados
+            FROM sw_matriculas
+            WHERE estado = 'MATRICULADO'
+            GROUP BY cod_curso
+        ) mat ON c.codigo = mat.cod_curso
+        LEFT JOIN sw_cursos_programacion prog ON c.codigo = prog.cod_curso AND prog.estado_periodo = 'VIGENTE'
+        WHERE c.habilitado = 1
+        AND c.codigo_moodle IS NOT NULL
+        AND c.codigo_moodle != ''
+        AND c.codigo_moodle != 0
+        ORDER BY c.fecha_creacion DESC
         ");
 
         $result = array_map(function ($curso) {
@@ -3566,6 +3572,16 @@ class CapacitacionController extends Controller
                 $nombreResponsable = $resp->nombre ?? "";
             }
 
+            $programacion = null;
+            if ($curso->periodo) {
+                $programacion = [
+                    "periodo" => $curso->periodo,
+                    "fecha_inicio" => $curso->fecha_inicio,
+                    "fecha_final" => $curso->fecha_final,
+                    "tipo" => $curso->tipo,
+                ];
+            }
+
             return [
                 "codigo" => $curso->codigo,
                 "codigo_curso" => $curso->codigo_curso,
@@ -3574,6 +3590,7 @@ class CapacitacionController extends Controller
                 "responsable" => $nombreResponsable,
                 "total_matriculados" => (int) $curso->total_matriculados,
                 "fecha_creacion" => $curso->fecha_creacion,
+                "programacion" => $programacion,
             ];
         }, $cursos);
 

@@ -621,7 +621,6 @@ async function seleccionarCurso(curso) {
     document.getElementById('slcFiltroProgramacion').disabled = false;
 
     document.getElementById('estadoVacio').style.display = 'none';
-    document.getElementById('estadisticasMatriculas').style.display = 'grid';
     document.getElementById('filtrosMatriculaContainer').style.display = 'grid';
     document.getElementById('contenedorTblMatriculas').style.display = 'block';
 
@@ -641,6 +640,13 @@ async function seleccionarCurso(curso) {
 
     // Resaltar fila seleccionada (usando el helper compatible con DataTable)
     marcarCursoSeleccionadoVisualmente();
+
+    const selectEstado = document.getElementById('slcFiltroEstado');
+    if (selectEstado) {
+        selectEstado.value = 'MATRICULADO';
+    }
+
+    window.filtroEstadoActivo = null;
 
     await cargarMatriculas(curso.codigo);
 }
@@ -664,7 +670,14 @@ async function cargarMatriculas(cursoId) {
         if (response.data.success) {
             matriculasData = response.data.matriculas;
             actualizarEstadisticas(matriculasData);
-            actualizarTabulator(matriculasData);
+            
+            const isNewView = !!document.getElementById('activeFiltersContainer');
+            if (isNewView) {
+                aplicarFiltrosCombine();
+            } else {
+                actualizarTabulator(matriculasData);
+            }
+            
             document.getElementById('badgeTotalMatriculas').textContent = `Total: ${response.data.total}`;
             if (response.data.total > 0) {
                 document.getElementById('btnExportarExcel').classList.remove('hidden');
@@ -711,12 +724,6 @@ function actualizarEstadisticas(matriculas) {
                 estados.matriculados++;
         }
     });
-
-    // Actualizar textos
-    document.getElementById('countMatriculados').textContent = estados.matriculados;
-    document.getElementById('countEnProgreso').textContent = estados.enProgreso;
-    document.getElementById('countAprobados').textContent = estados.aprobados;
-    document.getElementById('countReprobados').textContent = estados.reprobados;
 
     // Poblar filtros
     poblarFiltroProgramaciones(matriculas);
@@ -966,6 +973,15 @@ function configurarEventos() {
         selectSede.addEventListener('change', aplicarFiltrosCombine);
     }
 
+    // 2.2 Filtro Estado Dropdown (Matrículas Tab 2)
+    const selectEstado = document.getElementById('slcFiltroEstado');
+    if (selectEstado) {
+        selectEstado.addEventListener('change', () => {
+            window.filtroEstadoActivo = null;
+            aplicarFiltrosCombine();
+        });
+    }
+
     // 3. Búsqueda y Filtros de Personal (Historial Tab 1)
     const txtBusquedaPersonal = document.getElementById('txtBusquedaPersonal');
     const filtroSucursalPersonal = document.getElementById('filtroSucursalPersonal');
@@ -988,33 +1004,6 @@ function configurarEventos() {
             buscarPersonal(termino, 100, sucursal);
         });
     }
-
-    // 3. Filtros Cards Estado
-    // Agregamos cursor pointer a los cards
-    const cards = document.querySelectorAll('#estadisticasMatriculas > div');
-    cards.forEach(card => {
-        card.style.cursor = 'pointer';
-        card.title = "Click para filtrar por este estado";
-        card.addEventListener('click', () => {
-            // Determinar qué estado filtrar basándonos en el ID del contador hijo
-            const childId = card.querySelector('p[id^="count"]').id;
-            let estadoFilter = '';
-
-            // Resetear estilos de selección previos
-            cards.forEach(c => c.classList.remove('ring-2', 'ring-offset-1', 'ring-indigo-500'));
-
-            if (window.filtroEstadoActivo === childId) {
-                // Si ya estaba activo, desactivar (toggle off)
-                window.filtroEstadoActivo = null;
-            } else {
-                // Activar nuevo filtro
-                window.filtroEstadoActivo = childId;
-                card.classList.add('ring-2', 'ring-offset-1', 'ring-indigo-500');
-            }
-
-            aplicarFiltrosCombine();
-        });
-    });
 
     // Exportar Excel
     document.getElementById('btnExportarExcel').addEventListener('click', async () => {
@@ -1206,20 +1195,20 @@ function aplicarFiltrosCombine() {
         activeTags.push(`<span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] border border-indigo-100">🏢 ${sedeVal}</span>`);
     }
 
-    // 4. Filtro Estado (desde las cards)
-    if (window.filtroEstadoActivo) {
-        let label = '';
+    // 3.5 Filtro Estado Dropdown
+    const selectEstadoVal = document.getElementById('slcFiltroEstado')?.value || '';
+    if (selectEstadoVal) {
         filtrados = filtrados.filter(m => {
             const st = m.estado || 'MATRICULADO';
-            switch (window.filtroEstadoActivo) {
-                case 'countMatriculados': label = 'MATRICULADOS'; return true;
-                case 'countEnProgreso': label = 'EN PROGRESO'; return st === 'EN_PROGRESO';
-                case 'countAprobados': label = 'APROBADOS'; return st === 'APROBADO' || st === 'COMPLETADO';
-                case 'countReprobados': label = 'REPROBADOS'; return st === 'REPROBADO';
-                default: return true;
+            if (selectEstadoVal === 'MATRICULADO') {
+                return st === 'MATRICULADO';
+            } else if (selectEstadoVal === 'FINALIZADO') {
+                return st === 'FINALIZADO';
             }
+            return true;
         });
-        if (label) activeTags.push(`<span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] border border-emerald-100 font-bold">⭐ ${label}</span>`);
+        const text = document.getElementById('slcFiltroEstado').selectedOptions[0].text;
+        activeTags.push(`<span class="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] border border-amber-100 font-bold">📋 ${text}</span>`);
     }
 
     if (tagsContainer) {

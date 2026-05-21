@@ -640,46 +640,10 @@
                 </div>
             </div>
 
-            <!-- Estadísticas rápidas -->
-            <div class="grid grid-cols-4 gap-2 mb-4" id="estadisticasMatriculas" style="display: none;">
-                <div
-                    class="px-3 py-2 bg-primary rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
-                    <div>
-                        <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">En Rol</p>
-                        <p class="text-lg font-black mt-0.5 leading-none" id="countMatriculados">0</p>
-                    </div>
-                    <i class="i-tabler-users text-lg opacity-50"></i>
-                </div>
-                <div
-                    class="px-3 py-2 bg-warning rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
-                    <div>
-                        <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">Cursando</p>
-                        <p class="text-lg font-black mt-0.5 leading-none" id="countEnProgreso">0</p>
-                    </div>
-                    <i class="i-tabler-hourglass text-lg opacity-50"></i>
-                </div>
-                <div
-                    class="px-3 py-2 bg-success rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
-                    <div>
-                        <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">Logrado</p>
-                        <p class="text-lg font-black mt-0.5 leading-none" id="countAprobados">0</p>
-                    </div>
-                    <i class="i-tabler-award text-lg opacity-50"></i>
-                </div>
-                <div
-                    class="px-3 py-2 bg-danger rounded-xl shadow-sm text-white flex items-center justify-between overflow-hidden">
-                    <div>
-                        <p class="text-[9px] font-bold uppercase tracking-tighter opacity-80 leading-none">Fallo</p>
-                        <p class="text-lg font-black mt-0.5 leading-none" id="countReprobados">0</p>
-                    </div>
-                    <i class="i-tabler-square-x text-lg opacity-50"></i>
-                </div>
-            </div>
-
             <!-- Buscador y Filtros Avanzados -->
             <div class="space-y-4 mb-6" id="filtrosMatriculaContainer" style="display: none;">
                 <div
-                    class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                    class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                     <div class="relative">
                         <i
                             class="i-tabler-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg z-10"></i>
@@ -760,6 +724,14 @@
                                 <option value="">Todas las Sedes</option>
                             </select>
                         </div>
+                    </div>
+                    <div class="relative">
+                        <select id="slcFiltroEstado"
+                            class="form-select w-full py-2.5 rounded-xl border-gray-200 shadow-sm focus:ring-primary/20">
+                            <option value="">Todos los Estados</option>
+                            <option value="MATRICULADO">MATRICULADO</option>
+                            <option value="FINALIZADO">FINALIZADO</option>
+                        </select>
                     </div>
                 </div>
 
@@ -978,7 +950,10 @@
 
 @section('script')
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
-<script>window.cursoAutoSelectId = '{{ $cursoId ?? '' }}';</script>
+<script>
+    window.cursoAutoSelectId = '{{ $cursoId ?? '
+    ' }}';
+</script>
 @endsection
 
 @vite(['resources/js/functions/capacitacion/consulta_matriculas.js'])

@@ -390,6 +390,7 @@ class MatriculaMasivaJob implements ShouldQueue
 
         if ($courseMoodle) {
             $this->garantizarContextoMoodle($courseMoodle);
+            $this->garantizarEnrolManualMoodle($courseMoodle);
         }
 
         $fInic = Carbon::parse($prog->fecha_inicio)->format('Y-m-d H:i:s');
@@ -434,5 +435,37 @@ class MatriculaMasivaJob implements ShouldQueue
             ->update(['path' => $path, 'depth' => $depth]);
 
         Log::info("MatriculaMasivaJob: contexto Moodle generado para curso ID: {$courseMoodle->id}");
+    }
+
+    private function garantizarEnrolManualMoodle(object $courseMoodle): void
+    {
+        $enrol = DB::connection('mysql_grupoihb')->table('mdl_enrol')
+            ->where('courseid', $courseMoodle->id)
+            ->where('enrol', 'manual')
+            ->first();
+
+        if ($enrol) {
+            if ($enrol->customint1 != 1) {
+                DB::connection('mysql_grupoihb')->table('mdl_enrol')
+                    ->where('id', $enrol->id)
+                    ->update([
+                        'customint1'   => 1,
+                        'timemodified' => now()->timestamp,
+                    ]);
+            }
+            return;
+        }
+
+        DB::connection('mysql_grupoihb')->table('mdl_enrol')->insert([
+            'enrol'        => 'manual',
+            'status'       => 0,
+            'courseid'     => $courseMoodle->id,
+            'sortorder'    => 0,
+            'customint1'   => 1,
+            'timecreated'  => now()->timestamp,
+            'timemodified' => now()->timestamp,
+        ]);
+
+        Log::info("MatriculaMasivaJob: enrol manual creado para curso ID: {$courseMoodle->id}");
     }
 }

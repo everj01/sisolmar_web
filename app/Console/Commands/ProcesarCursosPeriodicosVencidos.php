@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class ProcesarCursosPeriodicosVencidosCommand extends Command
+class ProcesarCursosPeriodicosVencidos extends Command
 {
     /**
      * The name and signature of the console command.
@@ -49,7 +49,6 @@ class ProcesarCursosPeriodicosVencidosCommand extends Command
             DB::beginTransaction();
 
             try {
-
                 $fechaProximaClonacion = Carbon::parse(
                     $programacion->fecha_proxima_clonacion
                 );
@@ -64,6 +63,14 @@ class ProcesarCursosPeriodicosVencidosCommand extends Command
                         'estado_periodo'     => 'CERRADO',
                         'fecha_modificacion' => now()->format('Y-m-d\TH:i:s.000')
                     ]);
+
+                    DB::table('sw_matriculas')
+                        ->where('cod_programacion', $programacion->codigo_programacion)
+                        ->whereIn('estado', ['MATRICULADO', 'PENDIENTE'])
+                        ->update([
+                            'estado'     => 'FINALIZADO',
+                            'updated_at' => now()->format('Y-m-d H:i:s'),
+                        ]);
                 }
 
                 $lastProg = CursoProgramacion::orderBy(
@@ -124,6 +131,28 @@ class ProcesarCursosPeriodicosVencidosCommand extends Command
                 $this->info(
                     "   -> Programación {$newProgCod} creada correctamente."
                 );
+
+                // Suspender en Moodle fuera de la transacción
+                $moodleCourseId = DB::connection('mysql_grupoihb')
+                    ->table('mdl_course')
+                    ->where('idnumber', $programacion->codigo_curso)
+                    ->orWhere('id', $programacion->codigo_curso)
+                    ->value('id');
+
+                if ($moodleCourseId) {
+                    DB::connection('mysql_grupoihb')
+                        ->table('mdl_user_enrolments as ue')
+                        ->join('mdl_enrol as e', 'e.id', '=', 'ue.enrolid')
+                        ->where('e.courseid', $moodleCourseId)
+                        ->where('ue.timeend', '<=', now()->timestamp)
+                        ->where('ue.status', 0)
+                        ->update([
+                            'ue.status'       => 1,
+                            'ue.timemodified' => now()->timestamp,
+                        ]);
+
+                    $this->info("   -> Matriculados suspendidos en Moodle.");
+                }
 
                 Log::info(
                     "Curso {$programacion->codigo_curso} procesado correctamente.",

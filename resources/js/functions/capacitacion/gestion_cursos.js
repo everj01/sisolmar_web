@@ -1209,11 +1209,11 @@ window.formCursoGestion = function () {
 
         get formularioCompleto() {
             const nombreOk = this.nombre?.trim().length > 0;
-            const tipoOk = this.tipoCurso?.length > 0;
+            const tipoOk = this.tipoCurso !== undefined && this.tipoCurso !== null && this.tipoCurso !== '';
             const responsableOk = this.codResponsable?.length > 0;
-            const areaResponsableOk = this.areaResponsable?.length > 0;
+            const areaResponsableOk = this.areaResponsable !== undefined && this.areaResponsable !== null && this.areaResponsable !== '';
             const dirigidoOk = this.dirigido?.length > 0;
-            const areaOk = this.tipoCurso == '6' || this.areaConocimiento?.length > 0;
+            const areaOk = this.tipoCurso == '6' || (this.areaConocimiento !== undefined && this.areaConocimiento !== null && this.areaConocimiento !== '');
 
             let examenOk = true;
             if (this.aplicaEvaluacion) {
@@ -1225,6 +1225,29 @@ window.formCursoGestion = function () {
             }
 
             return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && examenOk;
+        },
+
+        get tituloCamposFaltantes() {
+            const faltantes = [];
+
+            if (!this.nombre?.trim()) faltantes.push('Nombre del curso');
+            if (!this.codResponsable) faltantes.push('Responsable');
+            if (this.tipoCurso === undefined || this.tipoCurso === null || this.tipoCurso === '') faltantes.push('Plan de capacitación');
+            if (this.areaResponsable === undefined || this.areaResponsable === null || this.areaResponsable === '') faltantes.push('Área responsable');
+            if (!this.dirigido) faltantes.push('Dirigido a');
+            if (this.tipoCurso != '6' && (this.areaConocimiento === undefined || this.areaConocimiento === null || this.areaConocimiento === '')) faltantes.push('Área de conocimiento');
+
+            if (this.aplicaEvaluacion) {
+                if (parseInt(this.limiteTiempo) < 5) faltantes.push('Tiempo de examen (mín. 5 min)');
+                if (parseFloat(this.nota) < 5) faltantes.push('Nota mínima (mín. 5)');
+                if (parseInt(this.intentos) < 1) faltantes.push('Intentos (mín. 1)');
+                if (parseInt(this.cantidadPreguntas) < 5) faltantes.push('Cant. preguntas (mín. 5)');
+                if (parseInt(this.preguntasBalotario) < 5) faltantes.push('Balotario (mín. 5)');
+            }
+
+            if (faltantes.length === 0) return 'Completa los campos requeridos';
+
+            return 'Faltan: ' + faltantes.join(', ');
         },
 
         checkEsPACByText(text) {

@@ -500,6 +500,12 @@ body {
                             <span x-text="'Creado: ' + curso.fechaCreacion"></span>
                         </p>
                     </template>
+                    <template x-if="curso.programacion">
+                        <p class="text-[10px] text-default-400 mt-0.5">
+                            <i class="ti ti-calendar-stats text-[9px] mr-0.5"></i>
+                            <span x-text="'Programación actual: ' + formatearFecha(curso.programacion.fecha_inicio) + ' - ' + formatearFecha(curso.programacion.fecha_final)"></span>
+                        </p>
+                    </template>
                 </div>
             </div>
             <button type="button" @click="cerrar()"
@@ -552,15 +558,21 @@ body {
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
-            <button type="button" @click="cerrar()"
-                class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
-                Cerrar
-            </button>
-            <button type="button" @click="cerrar()"
-                class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer">
-                Entendido
-            </button>
+        <div class="flex justify-between items-center gap-2 py-4 px-6 border-t border-default-100">
+            <div class="flex items-center gap-1.5 text-[10px] text-default-400">
+                <i class="ti ti-info-circle text-default-300 text-xs"></i>
+                <span>Si un matriculado es <strong class="text-default-500">profesor</strong> del curso, no se contabiliza como estudiante pendiente.</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" @click="cerrar()"
+                    class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                    Cerrar
+                </button>
+                <button type="button" @click="cerrar()"
+                    class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer">
+                    Entendido
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -975,7 +987,8 @@ window.modalCurso = function() {
             totalSinIniciar: 0,
             totalEnProgreso: 0,
             totalCompletados: 0,
-            porcentajeProgreso: 0
+            porcentajeProgreso: 0,
+            programacion: null
         },
 
         mostrar(data, fetchUsuarios, sendMail) {
@@ -987,6 +1000,7 @@ window.modalCurso = function() {
             this.curso.codigoInterno = data.codigo;
             this.curso.responsable = data.responsable || '';
             this.curso.fechaCreacion = this.formatearFechaCreacion(data.fecha_creacion);
+            this.curso.programacion = data.programacion || null;
             this.curso.total = data.total_matriculados;
             this.curso.totalSinIniciar = '...';
             this.curso.totalEnProgreso = '...';
@@ -1022,6 +1036,19 @@ window.modalCurso = function() {
                     month: 'short',
                     year: 'numeric'
                 });
+            } catch {
+                return '';
+            }
+        },
+
+        formatearFecha(fecha) {
+            if (!fecha) return '';
+            try {
+                const d = new Date(fecha);
+                const dia = String(d.getDate()).padStart(2, '0');
+                const mes = String(d.getMonth() + 1).padStart(2, '0');
+                const anio = d.getFullYear();
+                return dia + '/' + mes + '/' + anio;
             } catch {
                 return '';
             }

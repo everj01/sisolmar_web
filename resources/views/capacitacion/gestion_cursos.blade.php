@@ -1244,12 +1244,15 @@
                                         <i class="bx bx-x text-lg"></i>
                                         Cancelar
                                     </button>
-                                    <button type="submit" id="btnGestion" @click="registrar"
-                                        :disabled="!formularioCompleto"
-                                        class="btn h-10 px-6 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-600 transition-all shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                                        <i class="bx bx-save text-lg"></i>
-                                        Registrar Curso
-                                    </button>
+                                    <span :title="!formularioCompleto ? tituloCamposFaltantes : ''">
+                                        <button type="submit" id="btnGestion" @click="registrar"
+                                            :disabled="!formularioCompleto"
+                                            class="btn h-10 px-6 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-600 transition-all shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            :class="!formularioCompleto ? 'pointer-events-none' : ''">
+                                            <i class="bx bx-save text-lg"></i>
+                                            Registrar Curso
+                                        </button>
+                                    </span>
                                     <button type="button" id="btnGestionEditar" onclick="editarFormGestionCurso()"
                                         class="hidden h-10 px-6 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-md shadow-amber/20 flex items-center gap-2">
                                         <i class="bx bx-pencil text-lg"></i>
