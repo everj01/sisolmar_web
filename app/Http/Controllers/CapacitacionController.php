@@ -129,15 +129,17 @@ class CapacitacionController extends Controller
             "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
             "area_conocimiento" =>
             "nullable|exists:sw_capacitacion_areas,codigo",
-            "area_responsable" => "nullable|integer",
+            "area_responsable" => "required|integer",
             "es_periodico" => "required|integer|in:0,1",
             "frecuencia" => "nullable|string",
             "fechas_generadas" => "nullable|string",
             "nombre_exa" => "nullable|string",
             "descripcion" => "nullable|string",
-            "tiempo" => "nullable|required_if:aplica_evaluacion,1|integer",
-            "nota" => "nullable|required_if:aplica_evaluacion,1|integer",
-            "intentos" => "nullable|required_if:aplica_evaluacion,1|integer",
+            "tiempo" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
+            "nota" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
+            "intentos" => "nullable|required_if:aplica_evaluacion,1|integer|min:1",
+            "cantidad_preguntas" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
+            "preguntas_balotario" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
             "archivo" => "nullable|file|max:51200",
             "aplica_evaluacion" => "nullable|integer|in:0,1",
             "obligatorio_alta" => "nullable|integer|in:0,1",
@@ -145,7 +147,7 @@ class CapacitacionController extends Controller
             "target_group" =>
             "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
             "cod_moodle_area" => "nullable|integer",
-            "dirigido_a" => "nullable",
+            "dirigido_a" => "required",
         ]);
 
         $validator->sometimes("area_conocimiento", "required", function ($input) {
@@ -529,16 +531,18 @@ class CapacitacionController extends Controller
                 "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
                 "area_conocimiento" =>
                 "nullable|exists:sw_capacitacion_areas,codigo",
-                "area_responsable" => "nullable|integer",
+                "area_responsable" => "required|integer",
                 "es_periodico" => "required|integer|in:0,1",
                 "frecuencia" => "nullable|string",
             "fechas_generadas" => "nullable|string",
             "nombre_exa" => "nullable|string",
                 "descripcion" => "nullable|string",
-                "tiempo" => "nullable|required_if:aplica_evaluacion,1|integer",
-                "nota" => "nullable|required_if:aplica_evaluacion,1|integer",
+                "tiempo" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
+                "nota" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
                 "intentos" =>
-                "nullable|required_if:aplica_evaluacion,1|integer",
+                "nullable|required_if:aplica_evaluacion,1|integer|min:1",
+                "cantidad_preguntas" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
+                "preguntas_balotario" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
                 "archivo" => "nullable|file|max:51200",
                 "sucursales_asignadas" => "nullable|array",
                 "sucursales_asignadas.*" => "integer|exists:sw_clientes,codigo",
@@ -548,7 +552,7 @@ class CapacitacionController extends Controller
                 "target_group" =>
                 "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
                 "cod_moodle_area" => "nullable|integer",
-                "dirigido_a" => "nullable",
+                "dirigido_a" => "required",
                 "image_portada" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
                 "image_afiche" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
             ]);

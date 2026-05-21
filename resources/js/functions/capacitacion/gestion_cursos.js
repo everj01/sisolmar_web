@@ -662,6 +662,16 @@ window.editarFormGestionCurso = (e) => {
         return;
     }
 
+    if (!alpineData.areaResponsable) {
+        Swal.fire('Atención', 'Debe seleccionar un área responsable', 'warning');
+        return;
+    }
+
+    if (!alpineData.dirigido) {
+        Swal.fire('Atención', 'Debe seleccionar a quién va dirigido el curso', 'warning');
+        return;
+    }
+
     // Validación de campos obligatorios antes de actualizar
     const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
     const vacio = camposObligatorios.some(campo => !alpineData[campo]);
@@ -669,6 +679,19 @@ window.editarFormGestionCurso = (e) => {
     if (vacio) {
         Swal.fire('Atención', 'Debe completar los campos obligatorios (*)', 'warning');
         return;
+    }
+
+    // Validación de examen (mínimos)
+    if (alpineData.aplicaEvaluacion) {
+        const tiempoOk = parseInt(alpineData.limiteTiempo) >= 5;
+        const notaOk = parseFloat(alpineData.nota) >= 5;
+        const intentosOk = parseInt(alpineData.intentos) >= 1;
+        const preguntasOk = parseInt(alpineData.cantidadPreguntas) >= 5;
+        const balotarioOk = parseInt(alpineData.preguntasBalotario) >= 5;
+        if (!tiempoOk || !notaOk || !intentosOk || !preguntasOk || !balotarioOk) {
+            Swal.fire('Atención', 'Complete correctamente los datos del examen: Tiempo (mín. 5 min), Nota mínima (mín. 5), Intentos (mín. 1), Cant. preguntas (mín. 5) y Balotario (mín. 5)', 'warning');
+            return;
+        }
     }
 
     const data = {
@@ -1188,8 +1211,20 @@ window.formCursoGestion = function () {
             const nombreOk = this.nombre?.trim().length > 0;
             const tipoOk = this.tipoCurso?.length > 0;
             const responsableOk = this.codResponsable?.length > 0;
+            const areaResponsableOk = this.areaResponsable?.length > 0;
+            const dirigidoOk = this.dirigido?.length > 0;
             const areaOk = this.tipoCurso == '6' || this.areaConocimiento?.length > 0;
-            return nombreOk && tipoOk && responsableOk && areaOk;
+
+            let examenOk = true;
+            if (this.aplicaEvaluacion) {
+                examenOk = parseInt(this.limiteTiempo) >= 5
+                    && parseFloat(this.nota) >= 5
+                    && parseInt(this.intentos) >= 1
+                    && parseInt(this.cantidadPreguntas) >= 5
+                    && parseInt(this.preguntasBalotario) >= 5;
+            }
+
+            return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && examenOk;
         },
 
         checkEsPACByText(text) {
@@ -1286,6 +1321,16 @@ window.formCursoGestion = function () {
                 return;
             }
 
+            if (!this.areaResponsable) {
+                Swal.fire('Atención', 'Debe seleccionar un área responsable', 'warning');
+                return;
+            }
+
+            if (!this.dirigido) {
+                Swal.fire('Atención', 'Debe seleccionar a quién va dirigido el curso', 'warning');
+                return;
+            }
+
             const camposObligatorios = this.tipoCurso == '6'
                 ? ['nombre', 'tipoCurso']
                 : ['nombre', 'tipoCurso', 'areaConocimiento'];
@@ -1300,13 +1345,15 @@ window.formCursoGestion = function () {
                 return
             }
 
-            // Validación separada para campos del examen (deben ser > 0 cuando aplica evaluación)
+            // Validación separada para campos del examen (mínimos según requerimientos)
             if (this.aplicaEvaluacion) {
-                const tiempoOk = parseInt(this.limiteTiempo) > 0;
-                const notaOk = parseFloat(this.nota) > 0;
-                const intentosOk = parseInt(this.intentos) > 0;
-                if (!tiempoOk || !notaOk || !intentosOk) {
-                    Swal.fire('Atención', 'Debe completar los datos del examen (Tiempo, Nota mínima e Intentos deben ser mayores a 0)', 'warning');
+                const tiempoOk = parseInt(this.limiteTiempo) >= 5;
+                const notaOk = parseFloat(this.nota) >= 5;
+                const intentosOk = parseInt(this.intentos) >= 1;
+                const preguntasOk = parseInt(this.cantidadPreguntas) >= 5;
+                const balotarioOk = parseInt(this.preguntasBalotario) >= 5;
+                if (!tiempoOk || !notaOk || !intentosOk || !preguntasOk || !balotarioOk) {
+                    Swal.fire('Atención', 'Complete correctamente los datos del examen: Tiempo (mín. 5 min), Nota mínima (mín. 5), Intentos (mín. 1), Cant. preguntas (mín. 5) y Balotario (mín. 5)', 'warning');
                     return;
                 }
             }

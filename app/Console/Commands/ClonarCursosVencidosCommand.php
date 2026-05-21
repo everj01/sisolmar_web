@@ -5,8 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Cursos;
 use App\Models\CursoProgramacion;
-use App\Models\Matricula;
-use App\Models\Personal;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +23,7 @@ class ClonarCursosVencidosCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Clona los cursos periódicos cuyo tiempo de validez ha expirado, abriendo la ventana de ejecución de 1 mes.';
+    protected $description = 'Clona la configuración de cursos periódicos vencidos creando una programación PENDIENTE para revisión del administrador.';
 
     /**
      * Execute the console command.
@@ -86,7 +84,7 @@ class ClonarCursosVencidosCommand extends Command
                 
                 DB::beginTransaction();
                 try {
-                    // Cerrar el periodo anterior usando Eloquent para disparar eventos
+                    // Cerrar el periodo anterior
                     $progModel = CursoProgramacion::where('codigo_programacion', $programacion->codigo_programacion)->first();
                     if ($progModel) {
                         $progModel->update([
@@ -99,63 +97,32 @@ class ClonarCursosVencidosCommand extends Command
                     $lastProg = CursoProgramacion::orderBy('codigo_programacion', 'desc')->first();
                     $newProgCod = $lastProg ? str_pad(intval($lastProg->codigo_programacion) + 1, 4, '0', STR_PAD_LEFT) : '1000';
 
-                    // Ventana de ejecución de exactamente 1 mes:
-                    $nuevaFechaInicio = $hoy->copy()->startOfDay();
-                    $nuevaFechaFinal = $hoy->copy()->addMonth()->endOfDay();
-                    $nuevoPeriodo = $nuevaFechaInicio->format('Y-m');
+                    // Calcular nuevo período desde la fecha de próxima clonación
+                    $nuevoPeriodo = $fechaProximaClonacion->format('Y-m');
 
-                    // Crear la nueva programación VIGENTE
+                    // Actualizar el nombre del curso con el nuevo período
+                    $baseNombre = preg_replace('/\s*\|\s*\d{4}-\d{2}$/', '', $programacion->curso_nombre);
+                    $nuevoNombre = $baseNombre . ' | ' . $nuevoPeriodo;
+                    Cursos::where('codigo', $programacion->id_curso)
+                        ->update(['nombre' => $nuevoNombre]);
+
+                    // Crear la nueva programación PENDIENTE (no se apertura ni matricula automáticamente)
                     $nuevaProgramacion = CursoProgramacion::create([
                         'codigo_programacion' => $newProgCod,
                         'cod_cursos'    => $programacion->id_curso,
                         'periodo'       => $nuevoPeriodo,
                         'tipo'          => 'REGULAR',
-                        'estado_periodo'=> 'VIGENTE',
-                        'fecha_inicio'  => $nuevaFechaInicio->format('Y-m-d\TH:i:s.000'),
-                        'fecha_final'   => $nuevaFechaFinal->format('Y-m-d\TH:i:s.000'),
+                        'estado_periodo'=> 'PENDIENTE',
+                        'fecha_inicio'  => $fechaProximaClonacion->copy()->startOfDay()->format('Y-m-d\TH:i:s.000'),
+                        'fecha_final'   => $fechaProximaClonacion->copy()->endOfMonth()->endOfDay()->format('Y-m-d\TH:i:s.000'),
                         'fecha_creacion'=> now()->format('Y-m-d\TH:i:s.000'),
                         'habilitado'    => 1,
                     ]);
 
-                    // 4. Lógica de Matriculación: Extraer sucursales asignadas
-                    $sucursalesAsignadas = DB::table('sw_curso_sucursales')
-                        ->where('curso_codigo', $programacion->id_curso)
-                        ->pluck('sucursal')
-                        ->toArray();
-
-                    $personalQuery = Personal::where('ESTA_ACTI', 1);
-
-                    if (!empty($sucursalesAsignadas)) {
-                        $personalQuery->whereIn('SUCU_CODIGO', $sucursalesAsignadas);
-                    }
-
-                    $personalActivo = $personalQuery->get();
-                    $insertData = [];
-                    $fechaMatricula = now()->format('Y-m-d\TH:i:s.000');
-
-                    foreach ($personalActivo as $persona) {
-                        $insertData[] = [
-                            'cod_curso' => $programacion->id_curso,
-                            'cod_programacion' => $newProgCod,
-                            'cod_personal' => $persona->CODI_PERS,
-                            'usuario_id' => null,
-                            'fecha_matricula' => $fechaMatricula,
-                            'estado' => Matricula::ESTADO_MATRICULADO ?? 'MATRICULADO',
-                            'tipo_matricula' => 'AUTOMATICA',
-                            'origen_matricula' => 'CRON',
-                            'habilitado' => 1
-                        ];
-                    }
-
-                    $chunks = array_chunk($insertData, 200);
-                    foreach ($chunks as $chunk) {
-                        Matricula::insert($chunk);
-                    }
-
                     DB::commit();
                     $clonados++;
-                    $this->info("      -> Creada Prog: {$newProgCod}. Matriculados: " . count($insertData));
-                    Log::info("Curso {$programacion->codigo_curso} clonado a {$newProgCod}. Alumnos: " . count($insertData));
+                    $this->info("      -> Creada Prog PENDIENTE: {$newProgCod}. Curso renombrado a: {$nuevoNombre}");
+                    Log::info("Curso {$programacion->codigo_curso} clonado a PENDIENTE {$newProgCod}. Nuevo nombre: {$nuevoNombre}");
 
                 } catch (\Exception $e) {
                     DB::rollBack();
