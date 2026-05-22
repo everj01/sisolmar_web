@@ -1079,9 +1079,19 @@ function configurarEventos() {
             const selectSucursal = document.getElementById("slcFiltroSucursalModal");
             if (selectSucursal) selectSucursal.value = "";
 
-            // Cargar datos
-            await cargarProgramacionesModal(cursoSeleccionado.codigo);
-            await cargarPersonalModal(cursoSeleccionado.codigo);
+            // Cargar programaciones y obtener la VIGENTE seleccionada por defecto
+            const progId = await cargarProgramacionesModal(cursoSeleccionado.codigo);
+            await cargarPersonalModal(cursoSeleccionado.codigo, progId);
+
+            // Al cambiar la programación, recargar personal con el nuevo programacionId
+            const selProg = document.getElementById("slcProgramacionMatriculaModal");
+            if (selProg && !selProg.dataset.listenerMatricula) {
+                selProg.addEventListener("change", async function () {
+                    const nuevoProgId = this.value || '';
+                    await cargarPersonalModal(cursoSeleccionado.codigo, nuevoProgId);
+                });
+                selProg.dataset.listenerMatricula = "true";
+            }
         });
     }
 
@@ -1258,18 +1268,27 @@ async function autoSeleccionarCurso() {
 
 async function cargarProgramacionesModal(cursoId) {
     const select = document.getElementById("slcProgramacionMatriculaModal");
-    if (!select) return;
+    if (!select) return null;
 
     select.innerHTML = '<option value="">Cargando...</option>';
     select.disabled = true;
 
     try {
         const res = await axios.get(`/api/get-curso-programacion/${cursoId}`);
-        select.innerHTML = '<option value="">-- Seleccione programación --</option>';
+        select.innerHTML = '<option value="" disabled selected>-- Seleccione programación --</option>';
         select.disabled = false;
 
+        let vigenteSeleccionado = null;
+
         if (res.data.success && res.data.programaciones?.length > 0) {
-            res.data.programaciones.forEach(prog => {
+            // Ordenar: VIGENTES primero, luego por fecha más reciente
+            const programaciones = [...res.data.programaciones].sort((a, b) => {
+                if (a.estado_periodo === 'VIGENTE' && b.estado_periodo !== 'VIGENTE') return -1;
+                if (a.estado_periodo !== 'VIGENTE' && b.estado_periodo === 'VIGENTE') return 1;
+                return new Date(b.fecha_inicio) - new Date(a.fecha_inicio);
+            });
+
+            programaciones.forEach(prog => {
                 const fi = new Date(prog.fecha_inicio).toLocaleDateString();
                 const ff = new Date(prog.fecha_final).toLocaleDateString();
                 const codigo = prog.codigo;
@@ -1288,8 +1307,15 @@ async function cargarProgramacionesModal(cursoId) {
 
                 if (esPasada) {
                     option.disabled = true;
-                    option.style.backgroundColor = "#e5e7eb"; // Gris claro visual
+                    option.style.backgroundColor = "#e5e7eb";
                     option.style.color = "#9ca3af";
+                }
+
+                // Auto-seleccionar la más reciente VIGENTE que no haya pasado
+                if (!esPasada && prog.estado_periodo === 'VIGENTE' && !vigenteSeleccionado) {
+                    option.selected = true;
+                    select.value = codigo;
+                    vigenteSeleccionado = codigo;
                 }
 
                 select.appendChild(option);
@@ -1297,13 +1323,16 @@ async function cargarProgramacionesModal(cursoId) {
         } else {
             select.innerHTML = '<option value="">Sin programaciones activas</option>';
         }
+
+        return vigenteSeleccionado;
     } catch (err) {
         console.error("Error programaciones:", err);
         select.innerHTML = '<option value="">Error al cargar</option>';
+        return null;
     }
 }
 
-async function cargarPersonalModal(cursoId) {
+async function cargarPersonalModal(cursoId, programacionId) {
     // Si ya existe instancia, destruir
     if (tblPersonalMatriculaModal) {
         tblPersonalMatriculaModal.destroy();
@@ -1315,7 +1344,7 @@ async function cargarPersonalModal(cursoId) {
     const slcSucursal = document.getElementById("slcFiltroSucursalModal");
     if (slcSucursal) slcSucursal.value = "";
 
-    let ajaxParams = { cursoId: cursoId, pagination: "off" };
+    let ajaxParams = { cursoId: cursoId, programacionId: programacionId || '', pagination: "off" };
     if (cursoSeleccionado && cursoSeleccionado.tipo_curso === 'PCA') {
         ajaxParams.codCliente = cursoSeleccionado.cod_cliente;
     }

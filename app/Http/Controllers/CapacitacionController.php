@@ -534,8 +534,8 @@ class CapacitacionController extends Controller
                 "area_responsable" => "required|integer",
                 "es_periodico" => "required|integer|in:0,1",
                 "frecuencia" => "nullable|string",
-            "fechas_generadas" => "nullable|string",
-            "nombre_exa" => "nullable|string",
+                "fechas_generadas" => "nullable|string",
+                "nombre_exa" => "nullable|string",
                 "descripcion" => "nullable|string",
                 "tiempo" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
                 "nota" => "nullable|required_if:aplica_evaluacion,1|integer|min:5",
@@ -1722,6 +1722,7 @@ class CapacitacionController extends Controller
                 "periodo" => $prog->periodo,
                 "tipo" => $prog->tipo,
                 "habilitado" => $prog->habilitado,
+                "estado_periodo" => $prog->estado_periodo,
                 "curso" => $prog->curso, // Si se necesita
             ];
         });
@@ -1764,6 +1765,7 @@ class CapacitacionController extends Controller
             ->get();
         return response()->json($empresas);
     }
+
     public function storeProgramacionManual(Request $request): JsonResponse
     {
         try {
@@ -1800,33 +1802,62 @@ class CapacitacionController extends Controller
                 "ANUAL" => $fechaBase->copy()->addYear(),
                 default => $fechaBase->copy()->addMonth(),
             };
+
             $endDate = $endDate->endOfDay();
+
             $fFinal = $endDate->format("Y-m-d\TH:i:s.000");
             $endTimestamp = $endDate->timestamp;
 
-            $lastCod = CursoProgramacion::orderBy(
-                "codigo_programacion",
-                "desc",
-            )->first();
-            $newCode = $lastCod
-                ? str_pad(
-                    intval($lastCod->codigo_programacion) + 1,
-                    4,
-                    "0",
-                    STR_PAD_LEFT,
-                )
-                : "1001";
+            $programacionPendiente = CursoProgramacion::where(
+                "cod_curso",
+                $curso->codigo,
+            )
+                ->where("estado_periodo", "PENDIENTE")
+                ->first();
 
-            CursoProgramacion::create([
-                "codigo_programacion" => (string) $newCode,
-                "cod_curso" => (int) $curso->codigo,
-                "periodo" => $periodo,
-                "tipo" => "REGULAR",
-                "fecha_inicio" => $fInicio,
-                "fecha_final" => $fFinal,
-                "fecha_creacion" => now()->format("Y-m-d\TH:i:s.000"),
-                "habilitado" => 1,
-            ]);
+            if ($programacionPendiente) {
+
+                $programacionPendiente->update([
+                    "periodo" => $periodo,
+                    "fecha_inicio" => $fInicio,
+                    "fecha_final" => $fFinal,
+                    "estado_periodo" => "VIGENTE",
+                    "fecha_modificacion" => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)")
+                ]);
+
+                $newCode = $programacionPendiente->codigo_programacion;
+
+                $mensajeAccion =
+                    "Programación pendiente reutilizada exitosamente.";
+            } else {
+
+                $lastCod = CursoProgramacion::orderBy(
+                    "codigo_programacion",
+                    "desc",
+                )->first();
+
+                $newCode = $lastCod
+                    ? str_pad(
+                        intval($lastCod->codigo_programacion) + 1,
+                        4,
+                        "0",
+                        STR_PAD_LEFT,
+                    )
+                    : "1001";
+
+                CursoProgramacion::create([
+                    "codigo_programacion" => (string) $newCode,
+                    "cod_curso" => (int) $curso->codigo,
+                    "periodo" => $periodo,
+                    "tipo" => "REGULAR",
+                    "fecha_inicio" => $fInicio,
+                    "fecha_final" => $fFinal,
+                    "fecha_creacion" => now()->format("Y-m-d\TH:i:s.000"),
+                    "habilitado" => 1,
+                ]);
+
+                $mensajeAccion = "Programación creada exitosamente.";
+            }
 
             if ($curso->codigo_moodle) {
                 try {
@@ -1861,21 +1892,31 @@ class CapacitacionController extends Controller
 
             try {
                 $usuarioId = Auth::id();
+
                 if (!$usuarioId) {
-                    throw new \RuntimeException('Auth::id() retornó null');
+                    throw new \RuntimeException("Auth::id() retornó null");
                 }
 
-                $tipoDesc = strtoupper(trim($curso->tipoCurso?->descripcion ?? ''));
+                $tipoDesc = strtoupper(
+                    trim($curso->tipoCurso?->descripcion ?? ""),
+                );
 
-                if ($tipoDesc === 'PCE') {
+                if ($tipoDesc === "PCE") {
+
                     $autoEnrollAttempted = true;
+
                     dispatch(MatriculaMasivaJob::porTipoCurso(
                         $curso->codigo,
                         (string) $newCode,
                         $usuarioId,
                     ));
-                } elseif ($tipoDesc === 'PCA' && (string) $curso->dirigido_a !== '0') {
+                } elseif (
+                    $tipoDesc === "PCA" &&
+                    (string) $curso->dirigido_a !== "0"
+                ) {
+
                     $autoEnrollAttempted = true;
+
                     dispatch(MatriculaMasivaJob::porTipoCurso(
                         $curso->codigo,
                         (string) $newCode,
@@ -1883,16 +1924,23 @@ class CapacitacionController extends Controller
                     ));
                 }
             } catch (\Throwable $e) {
+
                 $autoEnrollOk = false;
-                Log::error("Error en matriculación automática al crear programación", [
-                    'curso_id' => $curso->codigo,
-                    'error'    => $e->getMessage(),
-                ]);
+
+                Log::error(
+                    "Error en matriculación automática al crear programación",
+                    [
+                        "curso_id" => $curso->codigo,
+                        "error" => $e->getMessage(),
+                    ],
+                );
             }
 
-            $message = 'Programación creada exitosamente.';
+            $message = $mensajeAccion;
+
             if ($autoEnrollAttempted && !$autoEnrollOk) {
-                $message .= ' Sin embargo, hubo un problema con la matriculación automática.';
+                $message .=
+                    " Sin embargo, hubo un problema con la matriculación automática.";
             }
 
             return response()->json([
@@ -1900,11 +1948,14 @@ class CapacitacionController extends Controller
                 "message" => $message,
             ]);
         } catch (\Exception $e) {
+
             DB::rollBack();
+
             Log::error("Error storeProgramacionManual", [
                 "error" => $e->getMessage(),
                 "line" => $e->getLine(),
             ]);
+
             return response()->json(
                 [
                     "success" => false,
@@ -2282,52 +2333,154 @@ class CapacitacionController extends Controller
     public function buscarPersonalCapacitacion(Request $request): JsonResponse
     {
         try {
-            Log::info("buscarPersonalCapacitacion llamado", [
-                'params' => $request->all(),
-                'codCliente' => $request->input('codCliente')
-            ]);
-
-            // 1. Obtener personal de la fuente oficial (si_solm.dbo.PERSONAL)
             $tipoTrabMap = [
                 "01" => "Operativo",
                 "02" => "Administrativo",
                 "03" => "Operativo",
                 "05" => "Administrativo",
                 "06" => "Especial",
+                "ADMIN" => "Administrativo",
+                "OPER" => "Operativo",
             ];
 
             $codCliente = $request->input("codCliente");
 
-            if (!empty($codCliente) && $codCliente !== "undefined" && $codCliente !== "null") {
-                $rawPersonal = DB::connection("sqlsrv")->select("EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?", [$codCliente]);
+            if (
+                !empty($codCliente) &&
+                $codCliente !== "undefined" &&
+                $codCliente !== "null"
+            ) {
+                $rawPersonal = DB::connection("sqlsrv")->select(
+                    "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?",
+                    [$codCliente],
+                );
             } else {
                 $rawPersonal = DB::connection("sqlsrv")->select("
-                    SELECT
-                        P.CODI_PERS as codigo,
-                        LTRIM(RTRIM(P.APEL_1 + ' ' + ISNULL(P.APEL_2, '') + ' ' + P.NOMB_1 + ' ' + ISNULL(P.NOMB_2, ''))) as personal,
-                        P.NRO_DOCU_IDEN as nroDoc,
-                        S.SUCU_ABREVIATURA as sucursal,
-                        P.PERS_TIPOTRAB as TIPOTRAB,
-                        P.PERS_VIGENCIA as VIGENCIA,
-                        P.PERS_EMAIL as email
-                    FROM si_solm.dbo.PERSONAL P
-                    LEFT JOIN dbo.sw_MIGRA_SISO_SUCURSAL S ON P.SUCU_CODIGO = S.SUCU_CODIGO
-                    WHERE P.PERS_VIGENCIA = 'SI'
-                ");
+                SELECT
+                    P.CODI_PERS as codigo,
+                    LTRIM(RTRIM(
+                        P.APEL_1 + ' ' +
+                        ISNULL(P.APEL_2, '') + ' ' +
+                        P.NOMB_1 + ' ' +
+                        ISNULL(P.NOMB_2, '')
+                    )) as personal,
+                    P.NRO_DOCU_IDEN as nroDoc,
+                    S.SUCU_ABREVIATURA as sucursal,
+                    P.PERS_TIPOTRAB as TIPOTRAB,
+                    P.PERS_VIGENCIA as VIGENCIA,
+                    P.PERS_EMAIL as email
+                FROM si_solm.dbo.PERSONAL P
+                LEFT JOIN dbo.sw_MIGRA_SISO_SUCURSAL S
+                    ON P.SUCU_CODIGO = S.SUCU_CODIGO
+                WHERE P.PERS_VIGENCIA = 'SI'
+            ");
             }
 
-            Log::info("Resultados de rawPersonal obtenidos", [
-                'count' => count($rawPersonal)
-            ]);
+            // -------------------------------------------------------------
+            // Conteo global de capacitaciones
+            // -------------------------------------------------------------
 
-            // Se unifica el mapeo y el filtro de búsqueda en una sola pasada.
-            $personal = [];
+            $matriculasCounts = DB::table("sw_matriculas as m")
+                ->join("sw_cursos as c", "m.cod_curso", "=", "c.codigo")
+                ->select("m.cod_personal", DB::raw("COUNT(*) as total"))
+                ->groupBy("m.cod_personal")
+                ->pluck("total", "m.cod_personal")
+                ->toArray();
+
+            // -------------------------------------------------------------
+            // VALIDAR MATRÍCULA SOLO EN LA PROGRAMACIÓN ACTUAL
+            // -------------------------------------------------------------
+
+            $matriculadosEnCurso = [];
+
+            $cursoId = $request->input("cursoId");
+            $programacionId = $request->input("programacionId");
+
+            if (!empty($cursoId) && !empty($programacionId)) {
+                try {
+                    // Resolver la programación por codigo (PK) o codigo_programacion
+                    $prog = CursoProgramacion::where("codigo", $programacionId)
+                        ->orWhere("codigo_programacion", $programacionId)
+                        ->first();
+
+                    $codProgramacion = $prog?->codigo_programacion;
+
+                    if ($codProgramacion) {
+                        $matriculadosEnCurso = Matricula::where(
+                            "cod_curso",
+                            $cursoId,
+                        )
+                            ->where("cod_programacion", $codProgramacion)
+                            ->pluck("cod_personal")
+                            ->map(fn($id) => (string) trim($id))
+                            ->toArray();
+                    }
+                } catch (\Exception $e) {
+                    Log::error(
+                        "Error verificando matrículas de programación: " .
+                            $e->getMessage(),
+                    );
+
+                    $matriculadosEnCurso = [];
+                }
+            }
+
+            // -------------------------------------------------------------
+            // FILTROS REQUEST
+            // -------------------------------------------------------------
+
             $searchTerm = strtoupper(trim($request->input("q", "")));
+            $sucursalFiltro = strtoupper(
+                trim($request->input("sucursal", "")),
+            );
+
+            // -------------------------------------------------------------
+            // MAPEO FINAL
+            // -------------------------------------------------------------
+
+            $personal = [];
 
             foreach ($rawPersonal as $p) {
-                $nombre = strtoupper($p->personal);
-                $dni = $p->nroDoc;
-                $cod = $p->codigo;
+                $codigo = trim(
+                    $p->CODI_PERS ??
+                        $p->codi_pers ??
+                        $p->codigo ??
+                        "",
+                );
+
+                $nombre = strtoupper(
+                    trim(
+                        $p->personal ??
+                            $p->nombre ??
+                            $p->nombre_completo ??
+                            "Desconocido",
+                    ),
+                );
+
+                $dni = trim(
+                    $p->nroDoc ??
+                        $p->dni ??
+                        $p->NRO_DOCU_IDEN ??
+                        "",
+                );
+
+                $cargoRaw = trim(
+                    $p->cargo ??
+                        $p->desc_cargo ??
+                        $p->TIPOTRAB ??
+                        "N/A",
+                );
+
+                $sucursal = trim($p->sucursal ?? "N/A");
+
+                $email = trim($p->email ?? "");
+
+                $tipoLabel =
+                    $tipoTrabMap[$cargoRaw] ?? $cargoRaw ?? "DESCONOCIDO";
+
+                // -----------------------------------------
+                // FILTRO BÚSQUEDA
+                // -----------------------------------------
 
                 if ($searchTerm !== "") {
                     if (
@@ -2338,70 +2491,22 @@ class CapacitacionController extends Controller
                     }
                 }
 
-                $personal[] = [
-                    "codigo" => trim($cod),
-                    "nombre_completo" => $nombre,
-                    "dni" => $dni,
-                    "cargo" => $p->TIPOTRAB ?? "N/A", // Usar TIPOTRAB del resultado SQL
-                    "sucursal" => $p->sucursal ?? "N/A",
-                ];
-            }
-            // -------------------------------------------------------------
+                // -----------------------------------------
+                // FILTRO SUCURSAL
+                // -----------------------------------------
 
-            // 2. Cargar conteos de matrículas (Optimizado: una sola query para todos)
-            // Se usa el JOIN con sw_cursos para que coincida exactamente con las filas del Historial (Modal)
-            $matriculasCounts = DB::table("sw_matriculas as m")
-                ->join("sw_cursos as c", "m.cod_curso", "=", "c.codigo")
-                ->select("m.cod_personal", DB::raw("count(*) as total"))
-                ->groupBy("m.cod_personal")
-                ->pluck("total", "m.cod_personal")
-                ->toArray();
-
-            // --- VERIFICAR MATRÍCULA EN CURSO ACTUAL (SAFE) ---
-            $matriculadosEnCurso = [];
-            if ($request->filled("cursoId")) {
-                try {
-                    $cursoId = $request->cursoId;
-                    // Obtener códigos de personal ya matriculados en este curso
-                    // Se usa try-catch y query simple para evitar 500 errors si faltan columnas
-                    $matriculadosEnCurso = Matricula::where(
-                        "cod_curso",
-                        $cursoId,
-                    )
-                        ->pluck("cod_personal")
-                        ->map(fn($id) => (string) $id)
-                        ->toArray();
-                } catch (\Exception $e) {
-                    Log::error(
-                        "Error verificando enrollments: " . $e->getMessage(),
-                    );
-                    $matriculadosEnCurso = [];
+                if (
+                    !empty($sucursalFiltro) &&
+                    strtoupper($sucursal) !== $sucursalFiltro
+                ) {
+                    continue;
                 }
-            }
-            // ------------------------------------------
 
-            // 3. Mapear resultados en memoria
-            $personal = array_map(function ($p) use (
-                $matriculasCounts,
-                $matriculadosEnCurso,
-                $tipoTrabMap,
-            ) {
-                // Estandarización de campos
-                $codigo =
-                    $p->CODI_PERS ?? ($p->codi_pers ?? ($p->codigo ?? ""));
-                $nombre =
-                    $p->personal ??
-                    ($p->nombre ?? ($p->nombre_completo ?? "Desconocido"));
-                $dni = $p->nroDoc ?? ($p->dni ?? ($p->NRO_DOCU_IDEN ?? ""));
-                // Se lee desde cargo o TIPOTRAB, ya que SW_LISTAR_PERSONAL_X_SUCURSAL devuelve TIPOTRAB con "ADMIN"/"OPER"
-                $cargo =
-                    $p->cargo ?? ($p->desc_cargo ?? ($p->TIPOTRAB ?? "N/A"));
-                $sucursal = $p->sucursal ?? "N/A";
-                $email = $p->email ?? "";
+                // -----------------------------------------
+                // RESULTADO FINAL
+                // -----------------------------------------
 
-                $tipoLabel = $tipoTrabMap[$cargo] ?? "DESCONOCIDO";
-
-                return [
+                $personal[] = [
                     "codigo" => $codigo,
                     "nombre_completo" => $nombre,
                     "dni" => $dni,
@@ -2413,41 +2518,16 @@ class CapacitacionController extends Controller
                         (string) $codigo,
                         $matriculadosEnCurso,
                     ),
-                    "total_capacitaciones" => $matriculasCounts[$codigo] ?? 0,
-                    "cliente_nombre" => $p->cliente_nombre ?? null,
+                    "total_capacitaciones" =>
+                    $matriculasCounts[$codigo] ?? 0,
+                    "cliente_nombre" =>
+                    $p->cliente_nombre ?? null,
                 ];
-            }, $rawPersonal);
-
-            // 4. Filtrado opcional del lado del servidor
-            $termino = strtolower($request->input("q", ""));
-            if (!empty($termino)) {
-                $personal = array_filter($personal, function ($item) use (
-                    $termino,
-                ) {
-                    return str_contains(
-                        strtolower($item["nombre_completo"] ?? ""),
-                        $termino,
-                    ) || str_contains(strval($item["dni"] ?? ""), $termino);
-                });
             }
-
-            // Filtrado por sucursal
-            $sucursal = $request->input("sucursal", "");
-            if (!empty($sucursal)) {
-                $personal = array_filter($personal, function ($item) use (
-                    $sucursal,
-                ) {
-                    return strtoupper(trim($item["sucursal"])) ===
-                        strtoupper(trim($sucursal));
-                });
-            }
-
-            // Re-indexar array después de filtrar
-            $personal = array_values($personal);
 
             return response()->json([
                 "success" => true,
-                "personal" => $personal,
+                "personal" => array_values($personal),
                 "total" => count($personal),
             ]);
         } catch (\Exception $e) {
@@ -2455,6 +2535,7 @@ class CapacitacionController extends Controller
                 "Error al buscar personal para capacitación: " .
                     $e->getMessage(),
             );
+
             return response()->json(
                 [
                     "success" => false,
@@ -3542,7 +3623,11 @@ class CapacitacionController extends Controller
             prog.periodo,
             prog.fecha_inicio,
             prog.fecha_final,
-            prog.tipo
+            prog.tipo,
+            prog_pend.periodo as periodo_pend,
+            prog_pend.fecha_inicio as fecha_inicio_pend,
+            prog_pend.fecha_final as fecha_final_pend,
+            prog_pend.tipo as tipo_pend
         FROM sw_cursos c
         LEFT JOIN (
             SELECT cod_curso, COUNT(*) as total_matriculados
@@ -3551,6 +3636,7 @@ class CapacitacionController extends Controller
             GROUP BY cod_curso
         ) mat ON c.codigo = mat.cod_curso
         LEFT JOIN sw_cursos_programacion prog ON c.codigo = prog.cod_curso AND prog.estado_periodo = 'VIGENTE'
+        LEFT JOIN sw_cursos_programacion prog_pend ON c.codigo = prog_pend.cod_curso AND prog_pend.estado_periodo = 'PENDIENTE'
         WHERE c.habilitado = 1
         AND c.codigo_moodle IS NOT NULL
         AND c.codigo_moodle != ''
@@ -3578,7 +3664,18 @@ class CapacitacionController extends Controller
                     "periodo" => $curso->periodo,
                     "fecha_inicio" => $curso->fecha_inicio,
                     "fecha_final" => $curso->fecha_final,
+
                     "tipo" => $curso->tipo,
+                ];
+            }
+
+            $programacionPendiente = null;
+            if ($curso->periodo_pend) {
+                $programacionPendiente = [
+                    "periodo" => $curso->periodo_pend,
+                    "fecha_inicio" => $curso->fecha_inicio_pend,
+                    "fecha_final" => $curso->fecha_final_pend,
+                    "tipo" => $curso->tipo_pend,
                 ];
             }
 
@@ -3591,6 +3688,7 @@ class CapacitacionController extends Controller
                 "total_matriculados" => (int) $curso->total_matriculados,
                 "fecha_creacion" => $curso->fecha_creacion,
                 "programacion" => $programacion,
+                "programacion_pendiente" => $programacionPendiente,
             ];
         }, $cursos);
 
