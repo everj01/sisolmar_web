@@ -254,6 +254,7 @@ class MatriculaMasivaJob implements ShouldQueue
         $enviados      = 0;
         $fallidos      = 0;
         $totalPersonas = count($personalIds);
+        $matriculados = [];
 
         try {
             foreach (array_chunk($personalIds, 100) as $chunk) {
@@ -261,8 +262,23 @@ class MatriculaMasivaJob implements ShouldQueue
                     $codPersonal = str_pad(trim((string) $codPersonal), 5, '0', STR_PAD_LEFT);
                     if (empty($codPersonal) || $codPersonal === '00000') continue;
 
+                    $antes = $enviados;
                     $this->procesarPersona($codPersonal, $curso, $prog, $enviados, $fallidos);
+
+                    if ($enviados > $antes) {
+                        $matriculados[] = $codPersonal;
+                    }
                 }
+            }
+
+            $fechaInicio = Carbon::parse($prog->fecha_inicio)->format('d/m/Y');
+
+            foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
+                EnviarCorreosBienvenidaJob::dispatch(
+                    personalIds: $chunkCorreos,
+                    nombreCurso: $curso->nombre,
+                    fechaInicio: $fechaInicio,
+                )->onQueue('correos');
             }
 
             NotificacionMatricula::crearNotificacionMultiplesFallos(

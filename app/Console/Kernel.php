@@ -20,16 +20,6 @@ class Kernel extends ConsoleKernel
                 Log::error('Error al ejecutar el comando de envío de alertas de caducidad.');
             });
 
-        $schedule->command('capacitacion:procesar-cursos-periodicos')
-            ->dailyAt('00:00')
-            ->withoutOverlapping()
-            ->onSuccess(function () {
-                Log::info('Comando de procesamiento de cursos periódicos ejecutado exitosamente.');
-            })
-            ->onFailure(function () {
-                Log::error('Error al ejecutar el comando de procesamiento de cursos periódicos.');
-            });
-
         $schedule->command('capacitacion:enviar-recordatorios-curso')
             ->monthly()
             ->at('08:45')
@@ -40,6 +30,16 @@ class Kernel extends ConsoleKernel
             })
             ->onFailure(function () {
                 Log::error('Error al ejecutar el comando de recordatorios de curso.');
+            });
+
+        $schedule->command('capacitacion:procesar-cursos-periodicos')
+            ->dailyAt('09:30')
+            ->withoutOverlapping()
+            ->onSuccess(function () {
+                Log::info('Comando de procesamiento de cursos periódicos ejecutado exitosamente.');
+            })
+            ->onFailure(function () {
+                Log::error('Error al ejecutar el comando de procesamiento de cursos periódicos.');
             });
     }
 
