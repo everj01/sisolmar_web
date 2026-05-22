@@ -929,9 +929,11 @@
                                                         const clSel = this.clienteSeleccionado;
 
                                                         if (tc == '5') {
-                                                            return this._fullOptions.filter(opt =>
+                                                            const base = this._fullOptions.filter(opt =>
                                                                 opt.texto === 'Todos' || opt.texto === 'Personal Operativo' || opt.texto === 'Personal Administrativo'
                                                             );
+                                                            base.push({ codigo: 'OTROS', texto: 'Otros' });
+                                                            return base;
                                                         }
 
                                                         if (tc == '6') {

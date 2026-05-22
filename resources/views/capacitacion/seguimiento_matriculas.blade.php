@@ -506,6 +506,14 @@ body {
                             <span x-text="'Programación actual: ' + formatearFecha(curso.programacion.fecha_inicio) + ' - ' + formatearFecha(curso.programacion.fecha_final)"></span>
                         </p>
                     </template>
+                    <template x-if="!curso.programacion && curso.programacion_pendiente">
+                        <div class="mt-1">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <i class="ti ti-clock text-[9px]"></i>
+                                Tiene una programación pendiente sin iniciar
+                            </span>
+                        </div>
+                    </template>
                 </div>
             </div>
             <button type="button" @click="cerrar()"
@@ -988,7 +996,8 @@ window.modalCurso = function() {
             totalEnProgreso: 0,
             totalCompletados: 0,
             porcentajeProgreso: 0,
-            programacion: null
+            programacion: null,
+            programacion_pendiente: null
         },
 
         mostrar(data, fetchUsuarios, sendMail) {
@@ -1001,6 +1010,7 @@ window.modalCurso = function() {
             this.curso.responsable = data.responsable || '';
             this.curso.fechaCreacion = this.formatearFechaCreacion(data.fecha_creacion);
             this.curso.programacion = data.programacion || null;
+            this.curso.programacion_pendiente = data.programacion_pendiente || null;
             this.curso.total = data.total_matriculados;
             this.curso.totalSinIniciar = '...';
             this.curso.totalEnProgreso = '...';

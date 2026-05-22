@@ -61,7 +61,7 @@ class ProcesarCursosPeriodicosVencidos extends Command
                 if ($progModel) {
                     $progModel->update([
                         'estado_periodo'     => 'CERRADO',
-                        'fecha_modificacion' => now()->format('Y-m-d\TH:i:s.000')
+                        'fecha_modificacion' => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
                     ]);
 
                     DB::table('sw_matriculas')
@@ -69,7 +69,7 @@ class ProcesarCursosPeriodicosVencidos extends Command
                         ->whereIn('estado', ['MATRICULADO', 'PENDIENTE'])
                         ->update([
                             'estado'     => 'FINALIZADO',
-                            'updated_at' => now()->format('Y-m-d H:i:s'),
+                            'updated_at' => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
                         ]);
                 }
 
@@ -109,18 +109,9 @@ class ProcesarCursosPeriodicosVencidos extends Command
                     'tipo'                => 'REGULAR',
                     'estado_periodo'      => 'PENDIENTE',
 
-                    'fecha_inicio'        => $fechaProximaClonacion
-                        ->copy()
-                        ->startOfDay()
-                        ->format('Y-m-d\TH:i:s.000'),
-
-                    'fecha_final'         => $fechaProximaClonacion
-                        ->copy()
-                        ->endOfMonth()
-                        ->endOfDay()
-                        ->format('Y-m-d\TH:i:s.000'),
-
-                    'fecha_creacion'      => now()->format('Y-m-d\TH:i:s.000'),
+                    'fecha_inicio'        => DB::raw("CONVERT(datetime, '" . $fechaProximaClonacion->copy()->startOfDay()->format('Y-m-d H:i:s') . "', 120)"),
+                    'fecha_final'         => DB::raw("CONVERT(datetime, '" . $fechaProximaClonacion->copy()->addMonth()->subSecond()->format('Y-m-d H:i:s') . "', 120)"),
+                    'fecha_creacion'      => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
                     'habilitado'          => 1,
                 ]);
 
