@@ -123,26 +123,32 @@ class ProcesarCursosPeriodicosVencidos extends Command
                     "   -> Programación {$newProgCod} creada correctamente."
                 );
 
-                // Suspender en Moodle fuera de la transacción
-                $moodleCourseId = DB::connection('mysql_grupoihb')
-                    ->table('mdl_course')
-                    ->where('idnumber', $programacion->codigo_curso)
-                    ->orWhere('id', $programacion->codigo_curso)
-                    ->value('id');
+                $moodleCourseId = $programacion->codigo_moodle ?: null;
 
                 if ($moodleCourseId) {
+                    $courseCtxId = DB::connection('mysql_grupoihb')
+                        ->table('mdl_context')
+                        ->where('contextlevel', 50)
+                        ->where('instanceid', $moodleCourseId)
+                        ->value('id');
+
                     DB::connection('mysql_grupoihb')
                         ->table('mdl_user_enrolments as ue')
                         ->join('mdl_enrol as e', 'e.id', '=', 'ue.enrolid')
+                        ->leftJoin('mdl_role_assignments as ra', function ($j) use ($courseCtxId) {
+                            $j->on('ra.userid', '=', 'ue.userid')
+                              ->where('ra.contextid', $courseCtxId)
+                              ->whereIn('ra.roleid', [3, 4]);
+                        })
                         ->where('e.courseid', $moodleCourseId)
-                        ->where('ue.timeend', '<=', now()->timestamp)
                         ->where('ue.status', 0)
+                        ->whereNull('ra.id')
                         ->update([
                             'ue.status'       => 1,
                             'ue.timemodified' => now()->timestamp,
                         ]);
 
-                    $this->info("   -> Matriculados suspendidos en Moodle.");
+                    $this->info("   -> Matriculados suspendidos en Moodle (profesor intacto).");
                 }
 
                 Log::info(
