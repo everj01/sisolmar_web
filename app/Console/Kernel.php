@@ -21,8 +21,7 @@ class Kernel extends ConsoleKernel
             });
 
         $schedule->command('capacitacion:enviar-recordatorios-curso')
-            ->monthly()
-            ->at('08:45')
+            ->cron('45 8 */2 * *')
             ->withoutOverlapping()
             ->runInBackground()
             ->onSuccess(function () {
