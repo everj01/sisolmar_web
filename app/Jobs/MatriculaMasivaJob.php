@@ -412,8 +412,8 @@ class MatriculaMasivaJob implements ShouldQueue
         $fFin  = Carbon::parse($prog->fecha_final)->format('Y-m-d H:i:s');
 
         DB::connection('mysql_grupoihb')->select(
-            "SELECT F_USER_matricula2(?, ?, ?, ?, ?, ?, ?, ?, ?) AS result",
-            [$moodleUserId, $moodleCourseIdNumber, $fInic, $fFin, '', '', '', '', 5]
+            "SELECT F_Matricular_R(?, ?, ?, ?, ?) AS result",
+            [$moodleUserId, $moodleCourseIdNumber, $fInic, $fFin, 5]
         );
     }
 
