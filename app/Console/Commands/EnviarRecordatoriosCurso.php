@@ -21,6 +21,7 @@ class EnviarRecordatoriosCurso extends Command
         $isDryRun    = $this->option('dry-run');
         $totalEnviados = 0;
         $totalErrores  = 0;
+        $totalOmitidos = 0;
 
         $registros = DB::connection('mysql_grupoihb')->select(
             'CALL SP_OBTENER_RECORDATORIOS_PENDIENTES()'
@@ -40,15 +41,53 @@ class EnviarRecordatoriosCurso extends Command
 
         foreach ($porUsuario as $userId => $cursos) {
             $usuario   = $cursos->first();
-            $totalCursos = $cursos->count();
 
             try {
+                $cursosValidos = $cursos->filter(function ($curso) use ($userId) {
+                    $memoCount = DB::table('memo_recordatorios')
+                        ->where('user_id', $userId)
+                        ->where('course_id', $curso->course_id)
+                        ->count();
+
+                    return $memoCount < 3;
+                });
+
+                if ($cursosValidos->isEmpty()) {
+                    $totalOmitidos++;
+                    $bar->advance();
+                    continue;
+                }
+
+                $numeroMemo = $cursosValidos->map(function ($curso) use ($userId) {
+                    return DB::table('memo_recordatorios')
+                        ->where('user_id', $userId)
+                        ->where('course_id', $curso->course_id)
+                        ->count() + 1;
+                })->max();
+
                 if (!$isDryRun) {
-                    $mailable = $totalCursos === 1
-                        ? new RecordatorioCursoMail($usuario, $cursos->first())
-                        : new RecordatorioCursosPendientesMail($usuario, $cursos->all());
+                    $mailable = $cursosValidos->count() === 1
+                        ? new RecordatorioCursoMail($usuario, $cursosValidos->first(), $numeroMemo)
+                        : new RecordatorioCursosPendientesMail($usuario, $cursosValidos->values()->all(), $numeroMemo);
 
                     Mail::to($usuario->email)->queue($mailable);
+
+                    foreach ($cursosValidos as $curso) {
+                        $memoCount = DB::table('memo_recordatorios')
+                            ->where('user_id', $userId)
+                            ->where('course_id', $curso->course_id)
+                            ->count();
+
+                        DB::table('memo_recordatorios')->insert([
+                            'user_id'     => $userId,
+                            'full_name'   => $usuario->full_name,
+                            'email'       => $usuario->email,
+                            'course_id'   => $curso->course_id,
+                            'course_name' => $curso->course_name,
+                            'numero_memo' => $memoCount + 1,
+                            'enviado_at'  => now(),
+                        ]);
+                    }
                 }
 
                 $totalEnviados++;
@@ -68,6 +107,7 @@ class EnviarRecordatoriosCurso extends Command
             [
                 ['Usuarios procesados', $porUsuario->count()],
                 ['Correos encolados',   $totalEnviados],
+                ['Omitidos (límite 3)', $totalOmitidos],
                 ['Errores',             $totalErrores],
             ]
         );
