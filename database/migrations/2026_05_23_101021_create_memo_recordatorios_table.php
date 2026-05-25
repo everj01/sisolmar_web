@@ -11,15 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('memo_recordatorios', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->string('full_name');
-            $table->string('email');
-            $table->unsignedTinyInteger('numero_memo');
-            $table->timestamp('enviado_at')->useCurrent();
+        Schema::create('SW_MEMO_RECORDATORIOS', function (Blueprint $table) {
+            $table->ID();
+            $table->unsignedBigInteger('NRO_DOCU_IDEN');
+            $table->unsignedBigInteger('MOODLE_USER_ID');
+            $table->string('NOMBRE_COMPLETO');
+            $table->unsignedTinyInteger('NUM_MEMO');
+            $table->timestamp('FECHA_ENVIO')->useCurrent();
+            $table->index('NRO_DOCU_IDEN');
+        });
 
-            $table->unique(['user_id', 'numero_memo']);
+        Schema::create('SW_MEMO_RECORDATORIOS_CURSOS', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('MEMO_RECORDATORIO_ID');
+            $table->unsignedBigInteger('CODIGO_MOODLE')->nullable();
+            $table->string('NOMBRE_CURSO');
+            $table->foreign('MEMO_RECORDATORIO_ID')
+                ->references('id')
+                ->on('SW_MEMO_RECORDATORIOS')
+                ->onDelete('cascade');
+            $table->index('MEMO_RECORDATORIO_ID');
         });
     }
 
@@ -28,6 +39,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('memo_recordatorios_cursos');
         Schema::dropIfExists('memo_recordatorios');
     }
 };
