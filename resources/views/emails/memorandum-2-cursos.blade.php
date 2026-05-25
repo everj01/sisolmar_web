@@ -15,6 +15,23 @@
             font-size: 10pt;
             color: #000;
             padding: 22px 44px 25px 44px;
+            background-color: white;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+
+            background: url("{{ public_path('images/logo_sol.png') }}") no-repeat center center;
+            background-size: 450px;
+
+            opacity: 0.08;
+            z-index: -1;
         }
 
         /* ── Marca de agua ── */
@@ -98,15 +115,6 @@
             font-weight: bold;
         }
 
-        .hl {
-            background-color: #FFE500;
-        }
-
-        .ul {
-            text-decoration: underline;
-            font-weight: bold;
-        }
-
         /* ── Separador ── */
         .hr {
             border-top: 1.5px solid #000;
@@ -171,8 +179,6 @@
 </head>
 
 <body>
-    <div class="watermark">S E C U R I T Y</div>
-
     <table class="header">
         <tr>
             <td style="width: 50%;">
@@ -187,14 +193,14 @@
     <div class="line-azul"></div>
     <div class="line-naranja"></div>
 
-    <div class="titulo">MEMORANDUM N°01-2026-RRHH</div>
+    <div class="titulo">MEMORANDUM N°02-2026-RRHH</div>
 
     <table class="campos">
         <tr>
             <td class="lbl">Para</td>
             <td class="sep">:</td>
             <td>
-                <span class="hl ul">{{ $nombreCompleto }}</span><br>
+                <span>{{ $nombreCompleto }}</span><br>
             </td>
         </tr>
         <tr>
@@ -208,30 +214,29 @@
         <tr>
             <td class="lbl">Fecha</td>
             <td class="sep">:</td>
-            <td><span class="hl">{{ $fecha }}</span></td>
+            <td><span>{{ $fechaActual }}</span></td>
         </tr>
         <tr>
             <td class="lbl">Asunto</td>
             <td class="sep">:</td>
             <td>Sanción Administrativa – Amonestación</td>
         </tr>
+
+        <tr>
+            <td class="lbl">Referencias</td>
+            <td class="sep">:</td>
+            <td>Memo. N° 01-2026-RRHH, {{ $fechaPrimerMEMO }}</td>
+        </tr>
     </table>
 
     <div class="hr"></div>
 
     <p>
-        En atención a lo dispuesto en el Reglamento Interno de Trabajo, su contrato
-        laboral vigente y las directivas internas de la empresa, es obligación de todo el
-        personal de SOL SECURITY S.A.C. desempeñar sus funciones con diligencia,
-        responsabilidad, disciplina y obediencia, cumpliendo estrictamente con las
-        disposiciones emitidas y comunicadas oportunamente.
+        En relación a la amonestación disciplinaria de la referencia, se ha verificado en el Sistema de Información Personal – SIP, que usted no cumplió con lo dispuesto, pese a haber sido debidamente notificado.
     </p>
 
     <p>
-        En tal sentido, esta Jefatura ha tomado conocimiento que, <span class="ul">usted no ha cumplido
-            con los módulos de instrucción asignados</span>, conforme al <strong>Plan Anual de
-            Capacitación 2026</strong> aprobado por la empresa, siendo sus pendientes los
-        siguientes:
+        Lamentamos que usted mantenga pendientes los siguientes módulos de instrucción asignados, conforme al <strong>Plan Anual de Capacitación</strong> aprobado por la empresa:
     </p>
 
     <ul class="cursos">
@@ -241,42 +246,19 @@
     </ul>
 
     <p>
-        Cabe precisar que los mismos se encuentran habilitados para Ud. en el Sistema
-        de Información Personal – SIP, Sección de Capacitaciones – Aula Virtual AV
-        desde el <strong>01 de Abril de 2026</strong>, siendo oportuno recordar que usted cuenta con el
-        usuario y clave correspondientes.
+        Cabe señalar que, de acuerdo con lo establecido en el <strong>artículo 25° del Decreto Supremo N° 003-97-TR – Ley de Productividad y Competitividad Laboral, constituye falta grave “el incumplimiento de las obligaciones de trabajo que supone el quebrantamiento de la buena fe laboral ocasionando perjuicio a la empresa”.</strong>
     </p>
 
     <p>
-        Este incumplimiento constituye una vulneración a lo previsto en el <strong>artículo 25°,
-            inciso a) del D.S. N°003-97-TR</strong>, que señala lo siguiente:
-    </p>
-
-    <p class="art">
-        a) El incumplimiento de las obligaciones de trabajo que supone el
-        quebrantamiento de la buena fe laboral, la reiterada resistencia a las
-        órdenes relacionadas con las labores, la reiterada paralización
-        intempestiva de labores y la inobservancia del Reglamento Interno de
-        Trabajo o del Reglamento de Seguridad e Higiene Industrial, aprobados o
-        expedidos, según corresponda, por la autoridad competente que revistan
-        gravedad.
-
+        Asimismo, esta conducta contraviene lo dispuesto en el <strong>Capítulo V, artículo 20°, inciso b)</strong> del Reglamento Interno de Trabajo de SOL SECURITY S.A.C., que establece como obligación esencial de todo trabajador cumplir con las órdenes, directivas e instrucciones impartidas por sus superiores jerárquicos.
     </p>
 
     <p>
-        Por lo expuesto, esta Jefatura, cumpliendo con lo establecido por la empresa,
-        procede a sancionarlo con esta <strong>AMONESTACIÓN</strong>, otorgándole un plazo de 48
-        horas, contadas a partir de la recepción del presente documento, para que Ud.
-        cumpla con su obligación pendiente.
-
+        Por lo expuesto, esta Jefatura, procede a sancionarlo con esta <strong>SEGUNDA AMONESTACIÓN</strong>, otorgándole un nuevo plazo de 48 horas a partir de la fecha de entrega a través de su Sistema de Información Personal - SIP, para que Ud. cumpla con su obligación pendiente.
     </p>
 
     <p>
-        Se deja expresa constancia de que, de persistir en la conducta observada, su
-        accionar será considerado como reincidencia, lo que conllevará a la adopción de
-        medidas disciplinarias más severas, conforme a la normativa laboral vigente y al
-        Reglamento Interno de Trabajo de la empresa.
-
+        Se deja expresa constancia de que, de persistir en la conducta observada, su accionar será considerado como reincidencia, lo que conllevará a la adopción de medidas disciplinarias más severas, conforme a la normativa laboral vigente y al Reglamento Interno de Trabajo de la empresa.
     </p>
 
     <div class="firma">

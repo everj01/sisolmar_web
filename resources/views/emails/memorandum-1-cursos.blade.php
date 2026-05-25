@@ -15,20 +15,23 @@
             font-size: 10pt;
             color: #000;
             padding: 22px 44px 25px 44px;
+            background-color: white;
+            position: relative;
         }
 
-        /* ── Marca de agua ── */
-        .watermark {
+        body::before {
+            content: "";
             position: fixed;
-            bottom: 110px;
-            left: -10px;
-            right: -10px;
-            text-align: center;
-            font-size: 80pt;
-            font-weight: bold;
-            color: rgba(0, 0, 0, 0.055);
-            letter-spacing: 14px;
-            z-index: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+
+            background: url("{{ public_path('images/logo_sol.png') }}") no-repeat center center;
+            background-size: 450px;
+
+            opacity: 0.08;
+            z-index: -1;
         }
 
         /* ── Header logos (tabla HTML en vez de display:table) ── */
@@ -98,15 +101,6 @@
             font-weight: bold;
         }
 
-        .hl {
-            background-color: #FFE500;
-        }
-
-        .ul {
-            text-decoration: underline;
-            font-weight: bold;
-        }
-
         /* ── Separador ── */
         .hr {
             border-top: 1.5px solid #000;
@@ -171,8 +165,6 @@
 </head>
 
 <body>
-    <div class="watermark">S E C U R I T Y</div>
-
     <table class="header">
         <tr>
             <td style="width: 50%;">
@@ -187,7 +179,7 @@
     <div class="line-azul"></div>
     <div class="line-naranja"></div>
 
-    <div class="titulo">MEMORANDUM N°02-2026-RRHH</div>
+    <div class="titulo">MEMORANDUM N°01-2026-RRHH</div>
 
     <table class="campos">
         <tr>
@@ -210,6 +202,7 @@
             <td class="sep">:</td>
             <td><span class="hl">{{ $fecha }}</span></td>
         </tr>
+
         <tr>
             <td class="lbl">Asunto</td>
             <td class="sep">:</td>
