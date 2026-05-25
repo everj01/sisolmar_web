@@ -18,82 +18,77 @@ class EnviarRecordatoriosCurso extends Command
 
     public function handle(): int
     {
-        $isDryRun    = $this->option('dry-run');
+        $isDryRun = $this->option('dry-run');
+
         $totalEnviados = 0;
         $totalErrores  = 0;
-        $totalOmitidos = 0;
 
-        $registros = DB::connection('mysql_grupoihb')->select(
-            'CALL SP_OBTENER_RECORDATORIOS_PENDIENTES()'
-        );
+        $registros = DB::connection('mysql_grupoihb')
+            ->select('CALL SP_OBTENER_RECORDATORIOS_PENDIENTES(?)', [date('Y')]);
 
         if (empty($registros)) {
-            $this->info('¡Increíble! No hay matriculados pendientes.');
+            $this->info('Sin pendientes.');
             return self::SUCCESS;
         }
 
         $porUsuario = collect($registros)->groupBy('user_id');
 
-        $this->info("{$porUsuario->count()} usuario(s) con cursos pendientes.");
+        $this->info("{$porUsuario->count()} usuario(s) con pendientes.");
 
         $bar = $this->output->createProgressBar($porUsuario->count());
         $bar->start();
 
         foreach ($porUsuario as $userId => $cursos) {
-            $usuario   = $cursos->first();
+            $usuario = $cursos->first();
 
             try {
-                $cursosValidos = $cursos->filter(function ($curso) use ($userId) {
-                    $memoCount = DB::table('memo_recordatorios')
-                        ->where('user_id', $userId)
-                        ->where('course_id', $curso->course_id)
-                        ->count();
+                $ultimoMemo = DB::table('SW_MEMO_RECORDATORIOS')
+                    ->where('MOODLE_USER_ID', $userId)
+                    ->max('NUM_MEMO');
 
-                    return $memoCount < 3;
-                });
+                $siguienteMemo = match ((int) $ultimoMemo) {
+                    1 => 2,
+                    2 => 3,
+                    3 => 1,
+                    default => 1,
+                };
 
-                if ($cursosValidos->isEmpty()) {
-                    $totalOmitidos++;
-                    $bar->advance();
-                    continue;
-                }
+                $memoId = DB::table('SW_MEMO_RECORDATORIOS')->insertGetId([
+                    'NRO_DOCU_IDEN'  => $usuario->username,
+                    'MOODLE_USER_ID' => $userId,
+                    'NOMBRE_COMPLETO' => $usuario->full_name,
+                    'NUM_MEMO'       => $siguienteMemo,
+                    'FECHA_ENVIO' => now()->format('Y-m-d H:i:s'),
+                ]);
 
-                $numeroMemo = $cursosValidos->map(function ($curso) use ($userId) {
-                    return DB::table('memo_recordatorios')
-                        ->where('user_id', $userId)
-                        ->where('course_id', $curso->course_id)
-                        ->count() + 1;
-                })->max();
+                $insertCursos = $cursos->map(fn($curso) => [
+                    'MEMO_RECORDATORIO_ID' => $memoId,
+                    'CODIGO_MOODLE'        => $curso->course_id,
+                    'NOMBRE_CURSO'         => $curso->course_name,
+                ])->toArray();
+
+                DB::table('SW_MEMO_RECORDATORIOS_CURSOS')->insert($insertCursos);
 
                 if (!$isDryRun) {
-                    $mailable = $cursosValidos->count() === 1
-                        ? new RecordatorioCursoMail($usuario, $cursosValidos->first(), $numeroMemo)
-                        : new RecordatorioCursosPendientesMail($usuario, $cursosValidos->values()->all(), $numeroMemo);
+                    $mailable = $cursos->count() === 1
+                        ? new RecordatorioCursoMail(
+                            $usuario,
+                            $cursos->first(),
+                            $siguienteMemo
+                        )
+                        : new RecordatorioCursosPendientesMail(
+                            $usuario,
+                            $cursos->values()->all(),
+                            $siguienteMemo
+                        );
 
                     Mail::to($usuario->email)->queue($mailable);
-
-                    foreach ($cursosValidos as $curso) {
-                        $memoCount = DB::table('memo_recordatorios')
-                            ->where('user_id', $userId)
-                            ->where('course_id', $curso->course_id)
-                            ->count();
-
-                        DB::table('memo_recordatorios')->insert([
-                            'user_id'     => $userId,
-                            'full_name'   => $usuario->full_name,
-                            'email'       => $usuario->email,
-                            'course_id'   => $curso->course_id,
-                            'course_name' => $curso->course_name,
-                            'numero_memo' => $memoCount + 1,
-                            'enviado_at'  => now(),
-                        ]);
-                    }
                 }
 
                 $totalEnviados++;
             } catch (\Throwable $e) {
                 $totalErrores++;
-                Log::error("Error encolando recordatorio para usuario {$userId} ({$usuario->email}): {$e->getMessage()}");
+                Log::error("Error usuario {$userId}: {$e->getMessage()}");
             }
 
             $bar->advance();
@@ -105,15 +100,14 @@ class EnviarRecordatoriosCurso extends Command
         $this->table(
             ['Métrica', 'Total'],
             [
-                ['Usuarios procesados', $porUsuario->count()],
-                ['Correos encolados',   $totalEnviados],
-                ['Omitidos (límite 3)', $totalOmitidos],
-                ['Errores',             $totalErrores],
+                ['Usuarios', $porUsuario->count()],
+                ['Enviados', $totalEnviados],
+                ['Errores', $totalErrores],
             ]
         );
 
         if ($isDryRun) {
-            $this->warn('Modo dry-run: no se encoló ningún correo.');
+            $this->warn('Dry-run activo');
         }
 
         return self::SUCCESS;
