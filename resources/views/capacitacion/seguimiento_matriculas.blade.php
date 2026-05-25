@@ -5,206 +5,351 @@ use Carbon\Traits\Date;
 @section('css')
 <!-- Estilos -->
 <style>
-[x-cloak] {
-    display: none !important;
-}
+    [x-cloak] {
+        display: none !important;
+    }
 
-.card-hover {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+    /* ─────────────────────────────────────────────────────────────
+   Layout general
+───────────────────────────────────────────────────────────── */
 
-.card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
-}
+    body {
+        height: 100vh !important;
+        overflow: hidden !important;
+        background: #f8fafc;
+    }
 
-.custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
-}
+    .page-content {
+        height: 100vh !important;
+        overflow-y: auto !important;
+    }
 
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-}
+    /* ─────────────────────────────────────────────────────────────
+   Hover cards
+───────────────────────────────────────────────────────────── */
 
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
+    .card-hover {
+        transition:
+            transform .22s ease,
+            box-shadow .22s ease,
+            border-color .22s ease;
+    }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 10px;
-}
+    .card-hover:hover {
+        transform: translateY(-3px);
+        box-shadow:
+            0 10px 30px rgba(15, 23, 42, .08),
+            0 2px 6px rgba(15, 23, 42, .04);
+    }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
-}
+    /* ─────────────────────────────────────────────────────────────
+   Scrollbar global
+───────────────────────────────────────────────────────────── */
 
-/* ── Tabulator base ─────────────────────────────────────────── */
-.tabulator {
-    border: none !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    background: transparent !important;
-}
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, .35) transparent;
+    }
 
-/* ── Header ─────────────────────────────────────────────────── */
-.tabulator-header {
-    background-color: #f8fafc !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-bottom: 2px solid #e2e8f0 !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    font-size: 10px !important;
-}
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
 
-.tabulator-header .tabulator-col {
-    background: transparent !important;
-    border-right: none !important;
-}
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-/* ── Filas ───────────────────────────────────────────────────── */
-.tabulator-row {
-    border-bottom: 1px solid #f1f5f9 !important;
-    border-left: none !important;
-    border-right: none !important;
-    background: transparent !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, .35);
+        border-radius: 999px;
+    }
 
-.tabulator-row:last-child {
-    border-bottom: none !important;
-}
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(100, 116, 139, .5);
+    }
 
-.tabulator-row .tabulator-cell {
-    padding-top: 10.5px !important;
-    padding-bottom: 6px !important;
-    vertical-align: middle !important;
-    border-right: none !important;
-}
+    /* ─────────────────────────────────────────────────────────────
+   TABULATOR
+───────────────────────────────────────────────────────────── */
 
-#tblCursos td {
-    padding-top: 10.5px !important;
-    padding-bottom: 6px !important;
-    vertical-align: middle !important;
-}
+    .tabulator {
+        border: 1px solid rgba(226, 232, 240, .8) !important;
+        border-radius: 18px !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
 
-.tabulator-row:hover {
-    background-color: rgba(var(--tw-color-primary), 0.05) !important;
-    box-shadow: inset 4px 0 0 0 rgb(var(--tw-color-primary)) !important;
-}
+        box-shadow:
+            0 1px 2px rgba(15, 23, 42, .03),
+            0 10px 30px rgba(15, 23, 42, .04) !important;
 
-.tabulator-tableholder {
-    overflow-x: hidden !important;
-}
+        font-size: 13px !important;
+    }
 
-/* ── Footer ──────────────────────────────────────────────────── */
-.tabulator-footer {
-    border-top: 2px solid #e2e8f0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-bottom: none !important;
-    padding: 12px 12px 20px 12px !important;
-    background-color: #ffffff !important;
-    text-align: center !important;
-}
+    /* ───────────────── Header ───────────────── */
 
-.tabulator-footer-contents {
-    flex-direction: column !important;
-    align-items: left !important;
-    justify-content: left !important;
-    gap: 5px !important;
-}
+    .tabulator-header {
+        background:
+            linear-gradient(to bottom,
+                #fcfcfd 0%,
+                #f8fafc 100%) !important;
 
-.tabulator-footer .tabulator-paginator {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    margin-bottom: 8px !important;
-}
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: 1px solid #eef2f7 !important;
 
-.tabulator-footer .tabulator-page-counter {
-    display: block !important;
-    width: 100% !important;
-    color: #374151 !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    margin-top: 10px !important;
-}
+        padding: 4px 0 !important;
+    }
 
-.tabulator-footer select.tabulator-page-size {
-    padding: 5px 30px 5px 12px !important;
-    border-radius: 10px !important;
-    border: 1px solid #e5e7eb !important;
-    background-color: #fff !important;
-    font-weight: 600 !important;
-    color: #374151 !important;
-    appearance: none !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
-    background-position: right 0.6rem center !important;
-    background-repeat: no-repeat !important;
-    background-size: 1.2em 1.2em !important;
-    min-width: 80px !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
-}
+    .tabulator-header .tabulator-col {
+        background: transparent !important;
+        border-right: none !important;
+        min-height: 48px !important;
+    }
 
-.tabulator-footer select.tabulator-page-size:hover {
-    border-color: #3b82f6 !important;
-}
+    .tabulator-header .tabulator-col-content {
+        padding: 12px 14px !important;
+    }
 
-.tabulator-footer .tabulator-page {
-    border-radius: 8px !important;
-    padding: 6px 12px !important;
-    border: 1px solid #e5e7eb !important;
-    background: #fff !important;
-    color: #4b5563 !important;
-    font-weight: 700 !important;
-    transition: all 0.2s !important;
-    margin: 0 2px !important;
-}
+    .tabulator-header .tabulator-col-title {
+        width: 100% !important;
 
-.tabulator-footer .tabulator-page.active {
-    background-color: #1e40af !important;
-    border-color: #1e40af !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 6px -1px rgba(30, 64, 175, 0.3) !important;
-}
+        text-align: center !important;
 
-.tabulator-footer .tabulator-page:hover:not(.active) {
-    background-color: #f9fafb !important;
-    border-color: #d1d5db !important;
-}
+        font-size: 10px !important;
+        font-weight: 800 !important;
 
-/* Fix para doble scrollbar */
-body {
-    height: 100vh !important;
-    overflow: hidden !important;
-}
+        letter-spacing: .12em !important;
+        text-transform: uppercase !important;
 
-.page-content {
-    height: 100vh !important;
-    overflow-y: auto !important;
-}
+        color: #64748b !important;
+    }
 
-/* Ajuste para tabla sin registros */
-.tabulator-placeholder {
-    min-height: 80px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
+    /* Flechas sort */
 
-.tabulator-placeholder span {
-    color: #94a3b8 !important;
-    font-size: 0.875rem !important;
-    font-weight: 500 !important;
-}
+    .tabulator-col-sorter {
+        color: #94a3b8 !important;
+    }
+
+    /* ───────────────── Tabla ───────────────── */
+
+    .tabulator-tableholder {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, .35) transparent;
+    }
+
+    .tabulator-tableholder::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .tabulator-tableholder::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .tabulator-tableholder::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, .35);
+        border-radius: 999px;
+    }
+
+    /* ───────────────── Rows ───────────────── */
+
+    .tabulator-row {
+        background: #ffffff !important;
+
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: 1px solid #f8fafc !important;
+
+        transition:
+            background .18s ease,
+            transform .18s ease,
+            box-shadow .18s ease !important;
+    }
+
+    .tabulator-row:last-child {
+        border-bottom: none !important;
+    }
+
+    .tabulator-row:hover {
+        background:
+            linear-gradient(to right,
+                rgba(59, 130, 246, .04),
+                rgba(59, 130, 246, .01)) !important;
+
+        box-shadow:
+            inset 3px 0 0 #2563eb !important;
+    }
+
+    /* ───────────────── Cells ───────────────── */
+
+    .tabulator-row .tabulator-cell {
+        border-right: none !important;
+
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+
+        vertical-align: middle !important;
+
+        color: #1e293b !important;
+    }
+
+    /* ───────────────── Footer ───────────────── */
+
+    .tabulator-footer {
+        background: #ffffff !important;
+
+        border-top: 1px solid #eef2f7 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+
+        padding: 14px 18px !important;
+    }
+
+    /* Contenido footer */
+
+    .tabulator-footer-contents {
+        display: flex !important;
+
+        align-items: center !important;
+        justify-content: space-between !important;
+
+        flex-wrap: wrap !important;
+
+        gap: 12px !important;
+    }
+
+    /* Counter */
+
+    .tabulator-footer .tabulator-page-counter {
+        color: #475569 !important;
+
+        font-size: 12px !important;
+        font-weight: 700 !important;
+    }
+
+    /* Paginador */
+
+    .tabulator-footer .tabulator-paginator {
+        display: flex !important;
+
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    /* Select */
+
+    .tabulator-footer select.tabulator-page-size {
+        height: 38px !important;
+
+        padding: 0 36px 0 14px !important;
+
+        border-radius: 12px !important;
+        border: 1px solid #e2e8f0 !important;
+
+        background-color: #ffffff !important;
+
+        font-size: 12px !important;
+        font-weight: 700 !important;
+
+        color: #334155 !important;
+
+        appearance: none !important;
+
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.7' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+
+        background-position: right .7rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 1.1em 1.1em !important;
+
+        transition:
+            border-color .18s ease,
+            box-shadow .18s ease !important;
+    }
+
+    .tabulator-footer select.tabulator-page-size:hover {
+        border-color: #93c5fd !important;
+    }
+
+    .tabulator-footer select.tabulator-page-size:focus {
+        outline: none !important;
+
+        border-color: #3b82f6 !important;
+
+        box-shadow:
+            0 0 0 3px rgba(59, 130, 246, .12) !important;
+    }
+
+    /* Botones páginas */
+
+    .tabulator-footer .tabulator-page {
+        min-width: 36px !important;
+        height: 36px !important;
+
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        border-radius: 11px !important;
+
+        border: 1px solid #e2e8f0 !important;
+
+        background: #ffffff !important;
+
+        color: #475569 !important;
+
+        font-size: 12px !important;
+        font-weight: 700 !important;
+
+        transition:
+            all .18s ease !important;
+    }
+
+    .tabulator-footer .tabulator-page:hover:not(.active) {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+
+        transform: translateY(-1px);
+    }
+
+    .tabulator-footer .tabulator-page.active {
+        background:
+            linear-gradient(135deg,
+                #2563eb 0%,
+                #1d4ed8 100%) !important;
+
+        border-color: #1d4ed8 !important;
+
+        color: #ffffff !important;
+
+        box-shadow:
+            0 6px 16px rgba(37, 99, 235, .25) !important;
+    }
+
+    /* ───────────────── Placeholder ───────────────── */
+
+    .tabulator-placeholder {
+        min-height: 110px !important;
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        background: #ffffff !important;
+    }
+
+    .tabulator-placeholder span {
+        color: #94a3b8 !important;
+
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
 </style>
 @endsection
 @section('content')
@@ -278,6 +423,16 @@ body {
                                 <p class="text-[10px] text-default-500">por correo</p>
                             </div>
                         </div>
+                        <div class="w-px h-10 bg-default-200"></div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                                <i class="ti ti-notes text-lg text-purple-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-default-800">MEMOs</p>
+                                <p class="text-[10px] text-default-500">seguimiento por nivel</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Info badges -->
@@ -299,6 +454,12 @@ body {
                             <i class="ti ti-mail text-xs text-sky-600"></i>
                             <span>Notificaciones por correo</span>
                         </div>
+
+                        <div @click="abrirInfo('MEMOs por nivel', mensajes.memos)"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-purple-50 transition-colors">
+                            <i class="ti ti-notes text-xs text-purple-600"></i>
+                            <span>MEMOs por nivel</span>
+                        </div>
                     </div>
                 </div>
 
@@ -316,11 +477,11 @@ body {
                         <div class="relative">
                             <i
                                 class="ti ti-building-store absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                            <select id="filtroSucursalPersonal" :disabled="tabActivo !== 'personal'"
+                            <select id="filtroSucursalPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
                                 style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
                            !bg-white !text-default-700 !appearance-none cursor-pointer
                            focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
-                                :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' }">
+                                :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
                                 <option value="">Todas las sucursales</option>
                             </select>
                             <i
@@ -333,11 +494,11 @@ body {
                         <div class="relative">
                             <i
                                 class="ti ti-briefcase absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                            <select id="filtroTipoPersonal" :disabled="tabActivo !== 'personal'"
+                            <select id="filtroTipoPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
                                 style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
                            !bg-white !text-default-700 !appearance-none cursor-pointer
                            focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
-                                :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' }">
+                                :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
                                 <option value="">Todos los tipos</option>
                                 <option value="Administrativo">Administrativo</option>
                                 <option value="Operativo">Operativo</option>
@@ -354,10 +515,12 @@ body {
                                 class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
                             <input x-ref="inputBuscar" x-model="query" @input="search(); posicionarDropdown()"
                                 @focus="posicionarDropdown()" @keydown.enter.stop="seleccionarPrimerResultado()"
-                                @click.away="open = false" placeholder="Buscar por DNI o nombres..." class="w-full pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg
+                                @click.away="open = false" :disabled="tabActivo === 'memos'"
+                                placeholder="Buscar por DNI o nombres..." class="w-full pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg
                 !bg-white !text-default-700 placeholder:text-default-300
                 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50
-                transition-shadow duration-150" />
+                transition-shadow duration-150"
+                                :class="{ '!cursor-not-allowed opacity-60': tabActivo === 'memos' }" />
 
                             <div x-ref="dropdown" x-show="open && results.length > 0" x-cloak
                                 x-transition:enter="transition ease-out duration-100"
@@ -401,7 +564,7 @@ body {
         </div>
     </div>
 
-    <!-- Listado de cursos / Personal -->
+    <!-- Listado de cursos / Personal / Memos Enviados -->
     <div class="px-6 pb-6">
         <div class="rounded-2xl border border-default-200/60 bg-white shadow-sm p-6">
             <!-- Tab Navigation -->
@@ -421,6 +584,14 @@ body {
                     : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-users text-sm"></i>
                     Lista de personal
+                </button>
+                <button
+                    @click="tabActivo = 'memos'; setTimeout(() => { if (window.tabulatorMemos) window.tabulatorMemos.redraw(true) }, 100)"
+                    :class="tabActivo === 'memos'
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    <i class="ti ti-notes text-sm"></i>
+                    MEMOs enviados
                 </button>
             </div>
 
@@ -450,6 +621,124 @@ body {
                     <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
                 </div>
                 <div id="tblPersonalSeguimiento" class="w-full"></div>
+            </div>
+
+            <!-- Tab 3: Lista de MEMOs enviados (por nivel) -->
+            <div x-show="tabActivo === 'memos'" class="min-h-[400px]"
+                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2"
+                x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
+                <div class="flex items-center justify-between mb-2.5">
+                    <h2 class="text-base font-bold text-default-900">MEMOs enviados a personal</h2>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div x-data="memosStats()" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <!-- MEMOs de nivel uno enviados -->
+                        <div
+                            @click="filtrarNivel(1)"
+                            :class="nivelActivo === 1
+                                ? 'rounded-xl border-2 border-blue-400 bg-blue-50/40 shadow-md ring-2 ring-blue-200/50 cursor-pointer transition-all duration-200 -translate-y-0.5'
+                                : 'rounded-xl border border-primary/20 bg-white shadow-sm cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-blue-300'">
+                            <div class="flex items-center gap-3 px-4 py-3 border-b border-primary/10 bg-gradient-to-r from-blue-50/80 to-transparent">
+                                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                    <i class="ti ti-info-circle text-blue-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-bold text-blue-800">Nivel uno</h3>
+                                    <p class="text-[10px] text-blue-500">Informativo</p>
+                                </div>
+                            </div>
+                            <div class="px-4 py-3 flex items-center justify-between">
+                                <span class="text-[11px] text-default-500">Total enviados</span>
+                                <span class="text-lg font-bold text-blue-600"
+                                    x-text="totalNivelUno"></span>
+                            </div>
+                        </div>
+
+                        <!-- MEMOs de nivel dos enviados -->
+                        <div @click="filtrarNivel(2)"
+                            :class="nivelActivo === 2
+                                ? 'rounded-xl border-2 border-orange-400 bg-orange-50/40 shadow-md ring-2 ring-orange-200/50 cursor-pointer transition-all duration-200 -translate-y-0.5'
+                                : 'rounded-xl border border-primary/20 bg-white shadow-sm cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-orange-300'">
+                            <div class="flex items-center gap-3 px-4 py-3 border-b border-orange-100 bg-gradient-to-r from-orange-50/80 to-transparent">
+                                <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                                    <i class="ti ti-alert-triangle text-orange-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-bold text-orange-800">Nivel dos</h3>
+                                    <p class="text-[10px] text-orange-500">Advertencia</p>
+                                </div>
+                            </div>
+                            <div class="px-4 py-3 flex items-center justify-between">
+                                <span class="text-[11px] text-default-500">Total enviados</span>
+                                <span class="text-lg font-bold text-orange-600"
+                                    x-text="totalNivelDos"></span>
+                            </div>
+                        </div>
+
+                        <!-- MEMOs de nivel tres enviados -->
+                        <div @click="filtrarNivel(3)"
+                            :class="nivelActivo === 3
+                                ? 'rounded-xl border-2 border-red-400 bg-red-50/40 shadow-md ring-2 ring-red-200/50 cursor-pointer transition-all duration-200 -translate-y-0.5'
+                                : 'rounded-xl border border-primary/20 bg-white shadow-sm cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-red-300'">
+                            <div class="flex items-center gap-3 px-4 py-3 border-b border-red-100 bg-gradient-to-r from-red-50/80 to-transparent">
+                                <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                                    <i class="ti ti-bell-ringing text-red-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-bold text-red-800">Nivel tres</h3>
+                                    <p class="text-[10px] text-red-500">Crítico</p>
+                                </div>
+                            </div>
+                            <div class="px-4 py-3 flex items-center justify-between">
+                                <span class="text-[11px] text-default-500">Total enviados</span>
+                                <span class="text-lg font-bold text-red-600"
+                                    x-text="totalNivelTres"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full flex flex-col gap-2">
+                        <div class="flex flex-col md:flex-row gap-2">
+                            <div class="relative flex-1">
+                                <input
+                                    id="buscarMemosEnviados"
+                                    type="text"
+                                    placeholder="Buscar por nombre o DNI..."
+                                    class="w-full h-10 pl-9 pr-3 text-sm text-default-700 placeholder:text-default-400
+                       bg-white border border-default-200 rounded-lg shadow-sm
+                       outline-none transition
+                       hover:border-default-300
+                       focus:border-primary/50 focus:ring-2 focus:ring-primary/10" />
+                            </div>
+
+                            <div class="w-full md:w-64">
+                                <select
+                                    id="filtroClienteMemos"
+                                    class="w-full h-10 px-3 text-sm text-default-700
+                       bg-white border border-default-200 rounded-lg shadow-sm
+                       outline-none transition
+                       hover:border-default-300
+                       focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                                    <option value="">Todos los clientes</option>
+                                </select>
+                            </div>
+
+                            <button
+                                id="btnLimpiarFiltroMemos"
+                                type="button"
+                                class="h-10 px-4 inline-flex items-center gap-1.5
+                   bg-default-100 text-default-700 text-xs font-semibold
+                   rounded-lg shadow-sm
+                   hover:bg-default-200 transition">
+                                Limpiar filtros
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="tblMemosEnviados"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -979,548 +1268,842 @@ body {
     </div>
 </div>
 
+<!-- Modal detalle de MEMOs por persona -->
+<div id="modal-memos-persona" x-data="modalMemosPersona()" x-show="open" x-cloak
+    class="fixed inset-0 z-[110] flex items-center justify-center p-4"
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
+
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-4xl border border-default-200 bg-white transition-all duration-300 max-h-[85vh]"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+        x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+        <!-- Header -->
+        <div class="flex justify-between items-start py-5 px-6 border-b border-default-100 shrink-0">
+            <div class="flex items-start gap-4 flex-1 min-w-0">
+                <div class="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <i class="ti ti-notes text-primary text-lg"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate" x-text="personal">Cargando...</h3>
+                    <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest mt-0.5">
+                        <span x-text="'DNI: ' + nroDoc"></span>
+                        <span class="mx-2 text-default-300">|</span>
+                        <span class="text-primary" x-text="nivelTexto"></span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" @click="cerrar()"
+                class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
+                <i class="ti ti-x text-base"></i>
+            </button>
+        </div>
+
+        <!-- Body: two columns -->
+        <div class="flex-1 flex flex-row min-h-0">
+            <!-- Left panel: MEMOs list -->
+            <div class="w-1/2 border-r border-default-200 flex flex-col min-h-0">
+                <div class="flex items-center justify-between px-6 py-3 border-b border-default-100 shrink-0">
+                    <span class="text-[10px] font-bold text-default-400 uppercase tracking-widest">MEMOs registrados</span>
+                    <span x-show="!cargando" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold"
+                        x-text="total + ' total'"></span>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
+                    <div x-show="cargando" class="flex flex-col items-center justify-center py-10 text-default-400">
+                        <i class="ti ti-loader animate-spin text-2xl mb-3"></i>
+                        <p class="text-sm font-medium">Cargando MEMOs...</p>
+                    </div>
+
+                    <div x-show="!cargando && memos.length === 0"
+                        class="flex flex-col items-center justify-center py-10 text-default-400">
+                        <i class="ti ti-notes-off text-4xl opacity-30 mb-3"></i>
+                        <p class="text-sm font-medium">No se encontraron MEMOs</p>
+                    </div>
+
+                    <div x-show="!cargando && memos.length > 0" class="flex flex-col gap-2">
+                        <template x-for="(m, idx) in memos" :key="idx">
+                            <div @click="seleccionarMemo(m)"
+                                :class="selectedMemoId === m.ID
+                                    ? 'flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 border-2 border-primary/40 shadow-sm cursor-pointer transition-all duration-200'
+                                    : 'flex items-center gap-3 px-4 py-3 rounded-xl bg-default-50 border border-default-200/60 cursor-pointer transition-all duration-200 hover:border-primary/30 hover:shadow-sm'">
+                                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                    <i class="ti ti-notes text-primary text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-bold text-default-700" x-text="'MEMO #' + m.ID"></p>
+                                    <p class="text-[11px] text-default-400 mt-0.5">
+                                        <i class="ti ti-calendar text-[9px] mr-1"></i>
+                                        <span x-text="m.FECHA_ENVIO"></span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                                        :class="{
+                                            'bg-blue-50 text-blue-700': nivelTexto === 'NIVEL UNO',
+                                            'bg-orange-50 text-orange-700': nivelTexto === 'NIVEL DOS',
+                                            'bg-red-50 text-red-700': nivelTexto === 'NIVEL TRES'
+                                        }">
+                                        <i class="ti"
+                                            :class="{
+                                                'ti-info-circle': nivelTexto === 'NIVEL UNO',
+                                                'ti-alert-triangle': nivelTexto === 'NIVEL DOS',
+                                                'ti-bell-ringing': nivelTexto === 'NIVEL TRES'
+                                            }"></i>
+                                        <span x-text="m.NIVEL_MEMO"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right panel: Courses of selected MEMO -->
+            <div class="w-1/2 flex flex-col min-h-0">
+                <div class="flex items-center justify-between px-6 py-3 border-b border-default-100 shrink-0">
+                    <span class="text-[10px] font-bold text-default-400 uppercase tracking-widest">Cursos del MEMO</span>
+                    <span x-show="selectedMemoId && !cargandoCursos && cursos.length > 0"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-100 text-sky-700 text-[10px] font-bold"
+                        x-text="cursos.length + ' curso(s)'"></span>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
+                    <!-- No MEMO selected -->
+                    <div x-show="!selectedMemoId"
+                        class="flex flex-col items-center justify-center py-12 text-default-400">
+                        <i class="ti ti-arrow-left text-4xl opacity-30 mb-3"></i>
+                        <p class="text-sm font-medium text-center">Selecciona un MEMO para ver los cursos listados</p>
+                    </div>
+
+                    <!-- Loading courses -->
+                    <div x-show="selectedMemoId && cargandoCursos"
+                        class="flex flex-col items-center justify-center py-10 text-default-400">
+                        <i class="ti ti-loader animate-spin text-2xl mb-3"></i>
+                        <p class="text-sm font-medium">Cargando cursos...</p>
+                    </div>
+
+                    <!-- No courses -->
+                    <div x-show="selectedMemoId && !cargandoCursos && cursos.length === 0"
+                        class="flex flex-col items-center justify-center py-10 text-default-400">
+                        <i class="ti ti-book-off text-4xl opacity-30 mb-3"></i>
+                        <p class="text-sm font-medium">Este MEMO no tiene cursos asignados</p>
+                    </div>
+
+                    <!-- Courses list -->
+                    <div x-show="selectedMemoId && !cargandoCursos && cursos.length > 0" class="flex flex-col gap-2">
+                        <template x-for="(c, idx) in cursos" :key="idx">
+                            <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-50/60 border border-sky-200/60">
+                                <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center shrink-0">
+                                    <i class="ti ti-book text-sky-600 text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-bold text-default-700 leading-tight" x-text="c.NOMBRE_CURSO"></p>
+                                    <p class="text-[10px] text-default-400 mt-0.5">
+                                        <span class="font-mono font-semibold text-default-500" x-text="'ID: ' + c.ID"></span>
+                                        <span class="mx-1.5 text-default-300">|</span>
+                                        <span class="font-mono text-primary font-semibold" x-text="'Moodle: ' + c.CODIGO_MOODLE"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100 shrink-0">
+            <button type="button" @click="cerrar()"
+                class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 transition-all cursor-pointer">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Blade <script> -->
 <script>
-window.modalCurso = function() {
-    return {
-        open: false,
-        curso: {
-            nombre: 'Cargando...',
-            codigo: '-',
-            codigoInterno: 0,
-            codigo_moodle: 0,
-            responsable: '',
-            fechaCreacion: '',
+    window.memosStats = function() {
+        return {
+            totalNivelUno: 0,
+            totalNivelDos: 0,
+            totalNivelTres: 0,
+
+            nivelActivo: null,
+
+            actualizar(data = []) {
+
+                this.totalNivelUno = data
+                    .filter(x => Number(x.NUM_MEMO) === 1)
+                    .reduce((a, b) => a + Number(b.TOTAL_MEMOS || 0), 0);
+
+                this.totalNivelDos = data
+                    .filter(x => Number(x.NUM_MEMO) === 2)
+                    .reduce((a, b) => a + Number(b.TOTAL_MEMOS || 0), 0);
+
+                this.totalNivelTres = data
+                    .filter(x => Number(x.NUM_MEMO) === 3)
+                    .reduce((a, b) => a + Number(b.TOTAL_MEMOS || 0), 0);
+            },
+
+            filtrarNivel(nivel) {
+                if (this.nivelActivo === nivel) {
+                    this.nivelActivo = null;
+                    window.__memoState.memoNivel = null;
+                } else {
+                    this.nivelActivo = nivel;
+                    window.__memoState.memoNivel = nivel;
+                }
+
+                window.__aplicarFiltrosMemos();
+            }
+        };
+    };
+
+    window.modalMemosPersona = function() {
+        return {
+            open: false,
+            nroDoc: '',
+            personal: '',
+            nivelTexto: '',
+            memos: [],
             total: 0,
-            totalSinIniciar: 0,
-            totalEnProgreso: 0,
-            totalCompletados: 0,
-            porcentajeProgreso: 0,
-            programacion: null,
-            programacion_pendiente: null
-        },
+            cargando: false,
 
-        mostrar(data, fetchUsuarios, sendMail) {
-            this._fetchUsuarios = fetchUsuarios;
-            this._sendMail = sendMail;
-            this.curso.nombre = data.nombre;
-            this.curso.codigo = data.codigo_curso;
-            this.curso.codigo_moodle = data.codigo_moodle;
-            this.curso.codigoInterno = data.codigo;
-            this.curso.responsable = data.responsable || '';
-            this.curso.fechaCreacion = this.formatearFechaCreacion(data.fecha_creacion);
-            this.curso.programacion = data.programacion || null;
-            this.curso.programacion_pendiente = data.programacion_pendiente || null;
-            this.curso.total = data.total_matriculados;
-            this.curso.totalSinIniciar = '...';
-            this.curso.totalEnProgreso = '...';
-            this.curso.totalCompletados = '...';
-            this.curso.porcentajeProgreso = 0;
-            this.open = true;
+            selectedMemoId: null,
+            cursos: [],
+            cargandoCursos: false,
 
-            fetchUsuarios(data.codigo_moodle)
-                .then(res => {
-                    this.curso.totalSinIniciar = res.data.total_sin_iniciar;
-                    this.curso.totalEnProgreso = res.data.total_en_progreso;
-                    this.curso.totalCompletados = Math.max(0, this.curso.total - res.data.total_sin_iniciar -
-                        res.data.total_en_progreso);
-                    this.curso.porcentajeProgreso = this.curso.total > 0 ?
-                        Math.round(((this.curso.totalEnProgreso + this.curso.totalCompletados) / this.curso
-                            .total) * 100) :
-                        0;
-                })
-                .catch(() => {
-                    this.curso.totalSinIniciar = 'Error';
-                    this.curso.totalEnProgreso = 'Error';
-                    this.curso.totalCompletados = 'Error';
-                    this.curso.porcentajeProgreso = 0;
-                });
-        },
+            _cache: {},
+            _textos: { 1: 'NIVEL UNO', 2: 'NIVEL DOS', 3: 'NIVEL TRES' },
 
-        formatearFechaCreacion(fecha) {
-            if (!fecha) return '';
-            try {
-                const d = new Date(fecha);
-                return d.toLocaleDateString('es-PE', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                });
-            } catch {
-                return '';
-            }
-        },
+            mostrar(nroDoc, nivel, nombre) {
+                this.nroDoc = nroDoc;
+                this.nivelTexto = this._textos[nivel] || 'NIVEL UNO';
+                this.personal = nombre || 'Sin nombre';
+                this.memos = [];
+                this.total = 0;
+                this.cargando = true;
+                this.selectedMemoId = null;
+                this.cursos = [];
+                this.cargandoCursos = false;
+                this._cache = {};
+                this.open = true;
 
-        formatearFecha(fecha) {
-            if (!fecha) return '';
-            try {
-                const d = new Date(fecha);
-                const dia = String(d.getDate()).padStart(2, '0');
-                const mes = String(d.getMonth() + 1).padStart(2, '0');
-                const anio = d.getFullYear();
-                return dia + '/' + mes + '/' + anio;
-            } catch {
-                return '';
-            }
-        },
-
-        abrirModalUsuarios(tipo = '') {
-            const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?. [0];
-            if (modalUsuarios) {
-                modalUsuarios.mostrar(this.curso.nombre, this.curso.codigo_moodle, this._fetchUsuarios, this
-                    ._sendMail, tipo);
-            }
-        },
-
-        cerrar() {
-            this.open = false;
-        },
-    };
-};
-
-window.modalListaUsuarios = function() {
-    return {
-        open: false,
-        titulo: '',
-        cursoId: null,
-        usuarios: [],
-        busqueda: '',
-        cargado: false,
-        notificados: {},
-        _cooldownMs: 5 * 60 * 60 * 1000,
-
-        get usuariosFiltrados() {
-            if (!this.busqueda) return this.usuarios;
-            const q = this.busqueda.toLowerCase().trim();
-            return this.usuarios.filter(u =>
-                (u.full_name || '').toLowerCase().includes(q) ||
-                (u.username || '').toLowerCase().includes(q) ||
-                (u.idnumber || '').toLowerCase().includes(q)
-            );
-        },
-
-        _guardarNotificados() {
-            localStorage.setItem('notificados_correo', JSON.stringify(this.notificados));
-        },
-
-        mostrar(titulo, moodleCourseId, fetchUsuarios, sendMail, tipo = '') {
-            this._sendMail = sendMail;
-            this.titulo = tipo ? `${titulo} | Usuarios ${tipo}` : titulo;
-            this.cursoId = moodleCourseId;
-            this.usuarios = [];
-            this.cargado = false;
-            this.open = true;
-
-            const guardado = localStorage.getItem('notificados_correo');
-            this.notificados = guardado ? JSON.parse(guardado) : {};
-
-            fetchUsuarios(moodleCourseId)
-                .then(res => {
-                    this.usuarios = res.data.usuarios || [];
-                    this.cargado = true;
-                })
-                .catch(() => {
-                    this.cargado = true;
-                });
-        },
-
-        estaEnCooldown(user) {
-            if (!this.notificados) return false;
-            const key = user.email + '_' + this.cursoId;
-            const ultimaVez = this.notificados[key];
-            if (!ultimaVez) return false;
-            return (Date.now() - ultimaVez) < this._cooldownMs;
-        },
-
-        tiempoRestante(user) {
-            if (!this.notificados) return '';
-            const key = user.email + '_' + this.cursoId;
-            const ultimaVez = this.notificados[key];
-            if (!ultimaVez) return '';
-
-            const restanteMs = this._cooldownMs - (Date.now() - ultimaVez);
-            if (restanteMs <= 0) return '';
-
-            const horas = Math.floor(restanteMs / 3600000);
-            const minutos = Math.floor((restanteMs % 3600000) / 60000);
-
-            if (horas > 0) return `${horas}h ${minutos}m`;
-            return `${minutos}m`;
-        },
-
-        notificarUsuario(user) {
-            const ahora = Date.now();
-            const key = user.email + '_' + this.cursoId;
-            const ultimaVez = this.notificados[key];
-
-            if (ultimaVez && (ahora - ultimaVez) < this._cooldownMs) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Ya fue notificado',
-                    text: `Este usuario ya recibió un recordatorio. Podrás volver a notificarlo en ${this.tiempoRestante(user)}.`,
-                });
-                return;
-            }
-
-            Swal.fire({
-                title: 'Enviando correo de recordatorio',
-                text: 'Por favor espere...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-            });
-
-            this._sendMail({
-                    to: user.email,
-                    subject: 'Recordatorio: ' + this.titulo,
-                    template: 'recordatorio-curso',
-                    data: {
-                        full_name: user.full_name,
-                        course_name: this.titulo,
-                        enrolment_start_date: user.enrolment_start_date,
-                    },
-                })
-                .then(() => {
-                    this.notificados[key] = Date.now();
-                    this._guardarNotificados();
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Correo enviado',
-                        text: 'El recordatorio ha sido enviado a ' + user.email,
-                        timer: 3000,
-                        timerProgressBar: true,
-                        showConfirmButton: false,
-                    });
-                })
-                .catch(() => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'No se pudo enviar el correo a ' + user.email,
-                    });
-                });
-        },
-
-        abrirCursoPersonal(user) {
-            const term = encodeURIComponent((user.username || user.full_name || '').trim());
-            if (!term) return;
-
-            fetch(`${VITE_URL_APP}/api/buscar-personal-capacitacion?q=${term}&limite=20`)
-                .then(r => r.json())
-                .then(res => {
-                    const personal = res.personal || [];
-                    if (personal.length > 0) {
-                        this.open = false;
-                        const modalEl = document.getElementById('modal-usuario');
-                        const alpineComponent = modalEl?._x_dataStack?. [0];
-                        if (alpineComponent) {
-                            alpineComponent.mostrar({
-                                ...personal[0],
-                                email: user.email
-                            });
-                        }
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'No encontrado',
-                            text: 'No se encontraron datos de este usuario en el sistema'
-                        });
-                    }
-                })
-                .catch(() => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Error al buscar el usuario'
-                    });
-                });
-        },
-
-        cerrar() {
-            this.open = false;
-        },
-    };
-};
-
-window.infoBadges = function() {
-    return {
-        mensajes: {
-            notificaciones: '<p>Las notificaciones por correo funcionan de dos formas:</p><br><p><b>• Automatizado:</b> Los días 1 y 15 de cada mes, el sistema analiza automáticamente todos los cursos y envía un correo recordatorio a los participantes que aún no han iniciado el curso.</p><br><p><b>• Manual:</b> Ingresando al listado de usuarios que no han iniciado un curso (haciendo clic en la tarjeta "Sin iniciar" del detalle del curso), puedes enviar un recordatorio individual haciendo clic en el botón "Notificar por correo" de cada usuario.</p>',
-        },
-        abrirInfo(titulo, mensaje) {
-            const el = document.getElementById('modal-info')._x_dataStack?. [0];
-            if (el) {
-                el.mostrar(titulo, mensaje);
-            }
-        },
-    };
-};
-
-window.modalInfo = function() {
-    return {
-        open: false,
-        titulo: '',
-        mensaje: '',
-        mostrar(titulo, mensaje) {
-            this.titulo = titulo;
-            this.mensaje = mensaje;
-            this.open = true;
-        },
-        cerrar() {
-            this.open = false;
-        },
-    };
-};
-
-window.modalUsuario = function() {
-    return {
-        open: false,
-        personal: {
-            nombre_completo: '',
-            dni: '',
-            codigo: '',
-            cargo: '',
-            sucursal: '',
-            email: ''
-        },
-        cursos: [],
-        cursosCargado: false,
-        filtroEstado: 'todos',
-        busquedaCurso: '',
-        _cooldownMs: 5 * 60 * 60 * 1000,
-
-        _cooldownKey() {
-            return 'notif_pendientes_' + this.personal.dni;
-        },
-
-        getIniciales() {
-            if (!this.personal.nombre_completo) return '?';
-            const partes = this.personal.nombre_completo.trim().split(/\s+/).filter(Boolean);
-            if (partes.length >= 2) {
-                return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-            }
-            return partes[0][0].toUpperCase();
-        },
-
-        copiarCorreo(email, event) {
-            navigator.clipboard.writeText(email).then(() => {
-                const btn = event.currentTarget;
-                const icon = btn.querySelector('i');
-                icon.className = 'ti ti-check text-[10px]';
-                btn.classList.add('text-green-500', 'bg-green-50');
-                setTimeout(() => {
-                    icon.className = 'ti ti-copy text-[10px]';
-                    btn.classList.remove('text-green-500', 'bg-green-50');
-                }, 1500);
-            });
-        },
-
-        countByEstado(estado) {
-            return this.cursos.filter(c => c.estado === estado).length;
-        },
-
-        get porcentajeAvance() {
-            if (this.cursos.length === 0) return 0;
-            const completados = this.countByEstado('finalizado');
-            const enCurso = this.countByEstado('en_curso');
-            return Math.round(((completados + enCurso) / this.cursos.length) * 100);
-        },
-
-        enCooldown() {
-            const ultimaVez = localStorage.getItem(this._cooldownKey());
-            return ultimaVez && (Date.now() - parseInt(ultimaVez)) < this._cooldownMs;
-        },
-
-        tiempoRestanteCooldown() {
-            const ultimaVez = localStorage.getItem(this._cooldownKey());
-            if (!ultimaVez) return '';
-            const restante = this._cooldownMs - (Date.now() - parseInt(ultimaVez));
-            if (restante <= 0) return '';
-            const h = Math.floor(restante / 3600000);
-            const m = Math.floor((restante % 3600000) / 60000);
-            return h > 0 ? `${h}h ${m}m` : `${m}m`;
-        },
-
-        get cursosFiltrados() {
-            return this.cursos.filter(c => {
-                if (this.filtroEstado !== 'todos' && c.estado !== this.filtroEstado) return false;
-                const q = this.busquedaCurso.toLowerCase().trim();
-                if (q && !c.course_nombre.toLowerCase().includes(q) && !c.course_codigo.toLowerCase()
-                    .includes(q)) return false;
-                return true;
-            });
-        },
-
-        formatearFecha(val) {
-            if (!val || val === '0' || val === 0) return null;
-            const d = new Date(val);
-            if (isNaN(d.getTime())) return null;
-            const fecha = d.toLocaleDateString('es-PE', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-            const hora = d.toLocaleTimeString('es-PE', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-            return {
-                fecha,
-                hora
-            };
-        },
-
-        mostrar(data) {
-            this.personal = data;
-            this.cursos = [];
-            this.cursosCargado = false;
-            this.filtroEstado = 'todos';
-            this.busquedaCurso = '';
-            this.open = true;
-
-            fetch(`${VITE_URL_APP}/api/get-cursos-alumno/${data.dni}`)
-                .then(r => r.json())
-                .then(res => {
-                    this.cursos = res.cursos || [];
-                    this.cursosCargado = true;
-                })
-                .catch(() => {
-                    this.cursos = [];
-                    this.cursosCargado = true;
-                });
-        },
-
-        notificarCursosPendientes() {
-            if (this.enCooldown()) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Ya fue notificado',
-                    text: `Podrás volver a notificar en ${this.tiempoRestanteCooldown()}`
-                });
-                return;
-            }
-            const pendientes = this.cursos.filter(c => c.estado === 'sin_iniciar');
-            if (pendientes.length === 0) {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Sin pendientes',
-                    text: 'Este usuario inició todos sus cursos'
-                });
-                return;
-            }
-            if (!this.personal.email) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Sin correo',
-                    text: 'Este colaborador no tiene correo registrado en el sistema'
-                });
-                return;
-            }
-            Swal.fire({
-                title: 'Enviando recordatorio',
-                text: `Recordatorio de ${pendientes.length} curso(s) pendiente(s)`,
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-            fetch(`${VITE_URL_APP}/api/mail/send`, {
+                fetch(`${VITE_URL_APP}/api/obtener-memos-personal`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute(
-                            'content')
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
                     },
                     body: JSON.stringify({
-                        to: this.personal.email,
-                        subject: 'Tienes cursos pendientes por iniciar',
-                        template: 'recordatorio-pendientes',
-                        data: {
-                            full_name: this.personal.nombre_completo,
-                            cursos_pendientes: pendientes.map(c => ({
-                                nombre: c.course_nombre,
-                                codigo: c.course_codigo
-                            })),
-                        },
+                        nroDoc: nroDoc,
+                        nivel: nivel,
                     }),
                 })
                 .then(r => r.json())
-                .then(() => {
-                    localStorage.setItem(this._cooldownKey(), Date.now());
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Recordatorio enviado',
-                        timer: 2000,
-                        timerProgressBar: true,
-                        showConfirmButton: false
-                    });
+                .then(res => {
+                    if (res.success) {
+                        this.memos = res.data || [];
+                        this.total = res.total || 0;
+                    } else {
+                        this.memos = [];
+                        this.total = 0;
+                    }
+                    this.cargando = false;
                 })
                 .catch(() => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'No se pudo enviar el recordatorio'
-                    });
+                    this.memos = [];
+                    this.total = 0;
+                    this.cargando = false;
                 });
-        },
+            },
 
-        cerrar() {
-            this.open = false;
-        },
-    };
-};
+            seleccionarMemo(memo) {
+                if (this.selectedMemoId === memo.ID) return;
 
-window.searchPersonalSeguimiento = function() {
-    return {
-        open: false,
-        query: "",
-        results: [],
+                this.selectedMemoId = memo.ID;
 
-        search() {
-            const q = this.query.toLowerCase().trim();
-            if (q.length < 3) {
-                this.results = [];
+                if (this._cache[memo.ID]) {
+                    this.cursos = this._cache[memo.ID];
+                    this.cargandoCursos = false;
+                    return;
+                }
+
+                this.cursos = [];
+                this.cargandoCursos = true;
+
+                fetch(`${VITE_URL_APP}/api/obtener-detalle-memo/${memo.ID}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        this.cursos = res.data || [];
+                        this._cache[memo.ID] = this.cursos;
+                    } else {
+                        this.cursos = [];
+                    }
+                    this.cargandoCursos = false;
+                })
+                .catch(() => {
+                    this.cursos = [];
+                    this.cargandoCursos = false;
+                });
+            },
+
+            cerrar() {
                 this.open = false;
-                return;
-            }
-            const personalData = window.tabulatorPersonal?.getData() || [];
-            this.results = personalData.filter(p =>
-                (p.nombre_completo || '').toLowerCase().includes(q) ||
-                (p.dni || '').includes(q)
-            );
-            this.open = this.results.length > 0;
-            if (this.open) this.posicionarDropdown();
-        },
-
-        seleccionarPrimerResultado() {
-            if (this.results.length > 0) {
-                this.seleccionarPersonal(this.results[0]);
-            }
-        },
-
-        seleccionarPersonal(p) {
-            this.open = false;
-            this.query = p.nombre_completo;
-            const modalEl = document.getElementById("modal-usuario");
-            const alpineComponent = modalEl?._x_dataStack?. [0];
-            if (alpineComponent) {
-                alpineComponent.mostrar(p);
-            }
-        },
-
-        posicionarDropdown() {
-            this.$nextTick(() => {
-                const input = this.$refs.inputBuscar;
-                const dropdown = this.$refs.dropdown;
-                if (!input || !dropdown) return;
-
-                const rect = input.getBoundingClientRect();
-                dropdown.style.top = (rect.bottom + window.scrollY + 4) + 'px';
-                dropdown.style.left = (rect.left + window.scrollX) + 'px';
-                dropdown.style.width = rect.width + 'px';
-            });
-        },
+                this._cache = {};
+                this.selectedMemoId = null;
+                this.cursos = [];
+            },
+        };
     };
-};
+
+    window.modalCurso = function() {
+        return {
+            open: false,
+            curso: {
+                nombre: 'Cargando...',
+                codigo: '-',
+                codigoInterno: 0,
+                codigo_moodle: 0,
+                responsable: '',
+                fechaCreacion: '',
+                total: 0,
+                totalSinIniciar: 0,
+                totalEnProgreso: 0,
+                totalCompletados: 0,
+                porcentajeProgreso: 0,
+                programacion: null,
+                programacion_pendiente: null
+            },
+
+            mostrar(data, fetchUsuarios, sendMail) {
+                this._fetchUsuarios = fetchUsuarios;
+                this._sendMail = sendMail;
+                this.curso.nombre = data.nombre;
+                this.curso.codigo = data.codigo_curso;
+                this.curso.codigo_moodle = data.codigo_moodle;
+                this.curso.codigoInterno = data.codigo;
+                this.curso.responsable = data.responsable || '';
+                this.curso.fechaCreacion = this.formatearFechaCreacion(data.fecha_creacion);
+                this.curso.programacion = data.programacion || null;
+                this.curso.programacion_pendiente = data.programacion_pendiente || null;
+                this.curso.total = data.total_matriculados;
+                this.curso.totalSinIniciar = '...';
+                this.curso.totalEnProgreso = '...';
+                this.curso.totalCompletados = '...';
+                this.curso.porcentajeProgreso = 0;
+                this.open = true;
+
+                fetchUsuarios(data.codigo_moodle)
+                    .then(res => {
+                        this.curso.totalSinIniciar = res.data.total_sin_iniciar;
+                        this.curso.totalEnProgreso = res.data.total_en_progreso;
+                        this.curso.totalCompletados = Math.max(0, this.curso.total - res.data.total_sin_iniciar -
+                            res.data.total_en_progreso);
+                        this.curso.porcentajeProgreso = this.curso.total > 0 ?
+                            Math.round(((this.curso.totalEnProgreso + this.curso.totalCompletados) / this.curso
+                                .total) * 100) :
+                            0;
+                    })
+                    .catch(() => {
+                        this.curso.totalSinIniciar = 'Error';
+                        this.curso.totalEnProgreso = 'Error';
+                        this.curso.totalCompletados = 'Error';
+                        this.curso.porcentajeProgreso = 0;
+                    });
+            },
+
+            formatearFechaCreacion(fecha) {
+                if (!fecha) return '';
+                try {
+                    const d = new Date(fecha);
+                    return d.toLocaleDateString('es-PE', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    });
+                } catch {
+                    return '';
+                }
+            },
+
+            formatearFecha(fecha) {
+                if (!fecha) return '';
+                try {
+                    const d = new Date(fecha);
+                    const dia = String(d.getDate()).padStart(2, '0');
+                    const mes = String(d.getMonth() + 1).padStart(2, '0');
+                    const anio = d.getFullYear();
+                    return dia + '/' + mes + '/' + anio;
+                } catch {
+                    return '';
+                }
+            },
+
+            abrirModalUsuarios(tipo = '') {
+                const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?.[0];
+                if (modalUsuarios) {
+                    modalUsuarios.mostrar(this.curso.nombre, this.curso.codigo_moodle, this._fetchUsuarios, this
+                        ._sendMail, tipo);
+                }
+            },
+
+            cerrar() {
+                this.open = false;
+            },
+        };
+    };
+
+    window.modalListaUsuarios = function() {
+        return {
+            open: false,
+            titulo: '',
+            cursoId: null,
+            usuarios: [],
+            busqueda: '',
+            cargado: false,
+            notificados: {},
+            _cooldownMs: 5 * 60 * 60 * 1000,
+
+            get usuariosFiltrados() {
+                if (!this.busqueda) return this.usuarios;
+                const q = this.busqueda.toLowerCase().trim();
+                return this.usuarios.filter(u =>
+                    (u.full_name || '').toLowerCase().includes(q) ||
+                    (u.username || '').toLowerCase().includes(q) ||
+                    (u.idnumber || '').toLowerCase().includes(q)
+                );
+            },
+
+            _guardarNotificados() {
+                localStorage.setItem('notificados_correo', JSON.stringify(this.notificados));
+            },
+
+            mostrar(titulo, moodleCourseId, fetchUsuarios, sendMail, tipo = '') {
+                this._sendMail = sendMail;
+                this.titulo = tipo ? `${titulo} | Usuarios ${tipo}` : titulo;
+                this.cursoId = moodleCourseId;
+                this.usuarios = [];
+                this.cargado = false;
+                this.open = true;
+
+                const guardado = localStorage.getItem('notificados_correo');
+                this.notificados = guardado ? JSON.parse(guardado) : {};
+
+                fetchUsuarios(moodleCourseId)
+                    .then(res => {
+                        this.usuarios = res.data.usuarios || [];
+                        this.cargado = true;
+                    })
+                    .catch(() => {
+                        this.cargado = true;
+                    });
+            },
+
+            estaEnCooldown(user) {
+                if (!this.notificados) return false;
+                const key = user.email + '_' + this.cursoId;
+                const ultimaVez = this.notificados[key];
+                if (!ultimaVez) return false;
+                return (Date.now() - ultimaVez) < this._cooldownMs;
+            },
+
+            tiempoRestante(user) {
+                if (!this.notificados) return '';
+                const key = user.email + '_' + this.cursoId;
+                const ultimaVez = this.notificados[key];
+                if (!ultimaVez) return '';
+
+                const restanteMs = this._cooldownMs - (Date.now() - ultimaVez);
+                if (restanteMs <= 0) return '';
+
+                const horas = Math.floor(restanteMs / 3600000);
+                const minutos = Math.floor((restanteMs % 3600000) / 60000);
+
+                if (horas > 0) return `${horas}h ${minutos}m`;
+                return `${minutos}m`;
+            },
+
+            notificarUsuario(user) {
+                const ahora = Date.now();
+                const key = user.email + '_' + this.cursoId;
+                const ultimaVez = this.notificados[key];
+
+                if (ultimaVez && (ahora - ultimaVez) < this._cooldownMs) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Ya fue notificado',
+                        text: `Este usuario ya recibió un recordatorio. Podrás volver a notificarlo en ${this.tiempoRestante(user)}.`,
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Enviando correo de recordatorio',
+                    text: 'Por favor espere...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading(),
+                });
+
+                this._sendMail({
+                        to: user.email,
+                        subject: 'Recordatorio: ' + this.titulo,
+                        template: 'recordatorio-curso',
+                        data: {
+                            full_name: user.full_name,
+                            course_name: this.titulo,
+                            enrolment_start_date: user.enrolment_start_date,
+                        },
+                    })
+                    .then(() => {
+                        this.notificados[key] = Date.now();
+                        this._guardarNotificados();
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Correo enviado',
+                            text: 'El recordatorio ha sido enviado a ' + user.email,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            showConfirmButton: false,
+                        });
+                    })
+                    .catch(() => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo enviar el correo a ' + user.email,
+                        });
+                    });
+            },
+
+            abrirCursoPersonal(user) {
+                const term = encodeURIComponent((user.username || user.full_name || '').trim());
+                if (!term) return;
+
+                fetch(`${VITE_URL_APP}/api/buscar-personal-capacitacion?q=${term}&limite=20`)
+                    .then(r => r.json())
+                    .then(res => {
+                        const personal = res.personal || [];
+                        if (personal.length > 0) {
+                            this.open = false;
+                            const modalEl = document.getElementById('modal-usuario');
+                            const alpineComponent = modalEl?._x_dataStack?.[0];
+                            if (alpineComponent) {
+                                alpineComponent.mostrar({
+                                    ...personal[0],
+                                    email: user.email
+                                });
+                            }
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'No encontrado',
+                                text: 'No se encontraron datos de este usuario en el sistema'
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error al buscar el usuario'
+                        });
+                    });
+            },
+
+            cerrar() {
+                this.open = false;
+            },
+        };
+    };
+
+    window.infoBadges = function() {
+        return {
+            mensajes: {
+                notificaciones: '<p>Las notificaciones por correo funcionan de dos formas:</p><br><p><b>• Automatizado:</b> Los días 1 y 15 de cada mes, el sistema analiza automáticamente todos los cursos y envía un correo recordatorio a los participantes que aún no han iniciado el curso.</p><br><p><b>• Manual:</b> Ingresando al listado de usuarios que no han iniciado un curso (haciendo clic en la tarjeta "Sin iniciar" del detalle del curso), puedes enviar un recordatorio individual haciendo clic en el botón "Notificar por correo" de cada usuario.</p>',
+                memos: '<p>Los <b>MEMOs</b> son comunicaciones internas clasificadas estratégicamente seg\u00fan su nivel de criticidad para garantizar una gesti\u00f3n eficiente de la informaci\u00f3n.</p><br><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#eff6ff;border-radius:10px"><div style="width:28px;height:28px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-info-circle" style="color:#2563eb;font-size:14px"></i></div><div><b style="color:#1e40af;font-size:13px">Nivel 1 \u2014 Informativo</b><br><span style="color:#64748b;font-size:12px">Comunicados generales y avisos de conocimiento</span></div></div><div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff7ed;border-radius:10px"><div style="width:28px;height:28px;border-radius:8px;background:#ffedd5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-alert-triangle" style="color:#ea580c;font-size:14px"></i></div><div><b style="color:#9a3412;font-size:13px">Nivel 2 \u2014 Advertencia</b><br><span style="color:#64748b;font-size:12px">Recordatorios y alertas tempranas de cumplimiento</span></div></div><div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fef2f2;border-radius:10px"><div style="width:28px;height:28px;border-radius:8px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-bell-ringing" style="color:#dc2626;font-size:14px"></i></div><div><b style="color:#991b1b;font-size:13px">Nivel 3 \u2014 Cr\u00edtico</b><br><span style="color:#64748b;font-size:12px">Notificaciones urgentes con atenci\u00f3n inmediata requerida</span></div></div></div>',
+            },
+            abrirInfo(titulo, mensaje) {
+                const el = document.getElementById('modal-info')._x_dataStack?.[0];
+                if (el) {
+                    el.mostrar(titulo, mensaje);
+                }
+            },
+        };
+    };
+
+    window.modalInfo = function() {
+        return {
+            open: false,
+            titulo: '',
+            mensaje: '',
+            mostrar(titulo, mensaje) {
+                this.titulo = titulo;
+                this.mensaje = mensaje;
+                this.open = true;
+            },
+            cerrar() {
+                this.open = false;
+            },
+        };
+    };
+
+    window.modalUsuario = function() {
+        return {
+            open: false,
+            personal: {
+                nombre_completo: '',
+                dni: '',
+                codigo: '',
+                cargo: '',
+                sucursal: '',
+                email: ''
+            },
+            cursos: [],
+            cursosCargado: false,
+            filtroEstado: 'todos',
+            busquedaCurso: '',
+            _cooldownMs: 5 * 60 * 60 * 1000,
+
+            _cooldownKey() {
+                return 'notif_pendientes_' + this.personal.dni;
+            },
+
+            getIniciales() {
+                if (!this.personal.nombre_completo) return '?';
+                const partes = this.personal.nombre_completo.trim().split(/\s+/).filter(Boolean);
+                if (partes.length >= 2) {
+                    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+                }
+                return partes[0][0].toUpperCase();
+            },
+
+            copiarCorreo(email, event) {
+                navigator.clipboard.writeText(email).then(() => {
+                    const btn = event.currentTarget;
+                    const icon = btn.querySelector('i');
+                    icon.className = 'ti ti-check text-[10px]';
+                    btn.classList.add('text-green-500', 'bg-green-50');
+                    setTimeout(() => {
+                        icon.className = 'ti ti-copy text-[10px]';
+                        btn.classList.remove('text-green-500', 'bg-green-50');
+                    }, 1500);
+                });
+            },
+
+            countByEstado(estado) {
+                return this.cursos.filter(c => c.estado === estado).length;
+            },
+
+            get porcentajeAvance() {
+                if (this.cursos.length === 0) return 0;
+                const completados = this.countByEstado('finalizado');
+                const enCurso = this.countByEstado('en_curso');
+                return Math.round(((completados + enCurso) / this.cursos.length) * 100);
+            },
+
+            enCooldown() {
+                const ultimaVez = localStorage.getItem(this._cooldownKey());
+                return ultimaVez && (Date.now() - parseInt(ultimaVez)) < this._cooldownMs;
+            },
+
+            tiempoRestanteCooldown() {
+                const ultimaVez = localStorage.getItem(this._cooldownKey());
+                if (!ultimaVez) return '';
+                const restante = this._cooldownMs - (Date.now() - parseInt(ultimaVez));
+                if (restante <= 0) return '';
+                const h = Math.floor(restante / 3600000);
+                const m = Math.floor((restante % 3600000) / 60000);
+                return h > 0 ? `${h}h ${m}m` : `${m}m`;
+            },
+
+            get cursosFiltrados() {
+                return this.cursos.filter(c => {
+                    if (this.filtroEstado !== 'todos' && c.estado !== this.filtroEstado) return false;
+                    const q = this.busquedaCurso.toLowerCase().trim();
+                    if (q && !c.course_nombre.toLowerCase().includes(q) && !c.course_codigo.toLowerCase()
+                        .includes(q)) return false;
+                    return true;
+                });
+            },
+
+            formatearFecha(val) {
+                if (!val || val === '0' || val === 0) return null;
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return null;
+                const fecha = d.toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const hora = d.toLocaleTimeString('es-PE', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                return {
+                    fecha,
+                    hora
+                };
+            },
+
+            mostrar(data) {
+                this.personal = data;
+                this.cursos = [];
+                this.cursosCargado = false;
+                this.filtroEstado = 'todos';
+                this.busquedaCurso = '';
+                this.open = true;
+
+                fetch(`${VITE_URL_APP}/api/get-cursos-alumno/${data.dni}`)
+                    .then(r => r.json())
+                    .then(res => {
+                        this.cursos = res.cursos || [];
+                        this.cursosCargado = true;
+                    })
+                    .catch(() => {
+                        this.cursos = [];
+                        this.cursosCargado = true;
+                    });
+            },
+
+            notificarCursosPendientes() {
+                if (this.enCooldown()) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Ya fue notificado',
+                        text: `Podrás volver a notificar en ${this.tiempoRestanteCooldown()}`
+                    });
+                    return;
+                }
+                const pendientes = this.cursos.filter(c => c.estado === 'sin_iniciar');
+                if (pendientes.length === 0) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sin pendientes',
+                        text: 'Este usuario inició todos sus cursos'
+                    });
+                    return;
+                }
+                if (!this.personal.email) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin correo',
+                        text: 'Este colaborador no tiene correo registrado en el sistema'
+                    });
+                    return;
+                }
+                Swal.fire({
+                    title: 'Enviando recordatorio',
+                    text: `Recordatorio de ${pendientes.length} curso(s) pendiente(s)`,
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                fetch(`${VITE_URL_APP}/api/mail/send`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                                'content')
+                        },
+                        body: JSON.stringify({
+                            to: this.personal.email,
+                            subject: 'Tienes cursos pendientes por iniciar',
+                            template: 'recordatorio-pendientes',
+                            data: {
+                                full_name: this.personal.nombre_completo,
+                                cursos_pendientes: pendientes.map(c => ({
+                                    nombre: c.course_nombre,
+                                    codigo: c.course_codigo
+                                })),
+                            },
+                        }),
+                    })
+                    .then(r => r.json())
+                    .then(() => {
+                        localStorage.setItem(this._cooldownKey(), Date.now());
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Recordatorio enviado',
+                            timer: 2000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        });
+                    })
+                    .catch(() => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo enviar el recordatorio'
+                        });
+                    });
+            },
+
+            cerrar() {
+                this.open = false;
+            },
+        };
+    };
+
+    window.searchPersonalSeguimiento = function() {
+        return {
+            open: false,
+            query: "",
+            results: [],
+
+            search() {
+                const q = this.query.toLowerCase().trim();
+                if (q.length < 3) {
+                    this.results = [];
+                    this.open = false;
+                    return;
+                }
+                const personalData = window.tabulatorPersonal?.getData() || [];
+                this.results = personalData.filter(p =>
+                    (p.nombre_completo || '').toLowerCase().includes(q) ||
+                    (p.dni || '').includes(q)
+                );
+                this.open = this.results.length > 0;
+                if (this.open) this.posicionarDropdown();
+            },
+
+            seleccionarPrimerResultado() {
+                if (this.results.length > 0) {
+                    this.seleccionarPersonal(this.results[0]);
+                }
+            },
+
+            seleccionarPersonal(p) {
+                this.open = false;
+                this.query = p.nombre_completo;
+                const modalEl = document.getElementById("modal-usuario");
+                const alpineComponent = modalEl?._x_dataStack?.[0];
+                if (alpineComponent) {
+                    alpineComponent.mostrar(p);
+                }
+            },
+
+            posicionarDropdown() {
+                this.$nextTick(() => {
+                    const input = this.$refs.inputBuscar;
+                    const dropdown = this.$refs.dropdown;
+                    if (!input || !dropdown) return;
+
+                    const rect = input.getBoundingClientRect();
+                    dropdown.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+                    dropdown.style.left = (rect.left + window.scrollX) + 'px';
+                    dropdown.style.width = rect.width + 'px';
+                });
+            },
+        };
+    };
 </script>
 
 @endsection
