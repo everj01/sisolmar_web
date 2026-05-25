@@ -3760,9 +3760,11 @@ class CapacitacionController extends Controller
     public function getCursosAlumno(string $dni): JsonResponse
     {
         try {
+            $anio = date('Y');
+
             $cursos = DB::connection("mysql_grupoihb")->select(
-                "CALL SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?)",
-                [$dni],
+                "CALL SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?, ?)",
+                [$dni, $anio]
             );
 
             $resultado = array_map(
