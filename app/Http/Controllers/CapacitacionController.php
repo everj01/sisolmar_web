@@ -4273,4 +4273,140 @@ class CapacitacionController extends Controller
             );
         }
     }
+
+    public function obtenerMemosEnviados(): JsonResponse
+    {
+        try {
+            $resultados = DB::select("EXEC SP_OBTENER_MEMOS_ENVIADOS");
+
+            return response()->json([
+                "success" => true,
+                "data" => $resultados,
+                "total" => count($resultados),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error en obtenerMemosEnviados", [
+                "error" => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al obtener los MEMOs enviados al personal.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function obtenerMemosResumen(int $nivelMemo): JsonResponse
+    {
+        try {
+            $resultados = DB::select("EXEC SP_OBTENER_MEMOS_RESUMEN ?", [$nivelMemo]);
+
+            return response()->json([
+                "success" => true,
+                "data" => $resultados,
+                "total" => count($resultados),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error en obtenerMemosResumen", [
+                "nivelMemo" => $nivelMemo,
+                "error" => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al obtener el resumen de MEMOs.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function obtenerDetalleMemo(int $memoId): JsonResponse
+    {
+        try {
+            $resultados = DB::select("EXEC SP_MEMOS_CURSOS ?", [$memoId]);
+
+            return response()->json([
+                "success" => true,
+                "data" => $resultados,
+                "total" => count($resultados),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error en obtenerDetalleMemo", [
+                "memoId" => $memoId,
+                "error" => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al obtener el detalle del MEMO.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function obtenerMemosPersonal(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                "nroDoc" => "required|string",
+                "nivel" => "required|integer|min:1|max:3",
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Errores de validación.",
+                        "errors" => $validator->errors(),
+                    ],
+                    422,
+                );
+            }
+
+            $resultados = DB::select("EXEC SP_OBTENER_MEMOS_PERSONAL ?, ?", [
+                $request->nroDoc,
+                $request->nivel,
+            ]);
+
+            $data = array_map(function ($item) {
+                $fecha = $item->FECHA_ENVIO ?? null;
+                $fechaFormateada = $fecha
+                    ? Carbon::parse($fecha)->format("d/m/Y | g:i:s A")
+                    : null;
+
+                return [
+                    "ID" => $item->ID,
+                    "NIVEL_MEMO" => $item->NIVEL_MEMO,
+                    "FECHA_ENVIO" => $fechaFormateada,
+                ];
+            }, $resultados);
+
+            return response()->json([
+                "success" => true,
+                "data" => $data,
+                "total" => count($data),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error en obtenerMemosPersonal", [
+                "nroDoc" => $request->nroDoc,
+                "nivel" => $request->nivel,
+                "error" => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al obtener los MEMOs del personal.",
+                ],
+                500,
+            );
+        }
+    }
 }
