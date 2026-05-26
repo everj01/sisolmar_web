@@ -1293,6 +1293,8 @@ async function cargarProgramacionesModal(cursoId) {
                 const ff = new Date(prog.fecha_final).toLocaleDateString();
                 const codigo = prog.codigo;
 
+                const esPendiente = prog.estado_periodo === 'PENDIENTE';
+
                 // Validar si la fecha ha pasado
                 const fechaFinal = new Date(prog.fecha_final);
                 const hoy = new Date();
@@ -1303,16 +1305,22 @@ async function cargarProgramacionesModal(cursoId) {
 
                 const option = document.createElement("option");
                 option.value = codigo;
-                option.textContent = `${prog.codigo_programacion} | ${fi} - ${ff}${esPasada ? ' (Finalizada)' : ''}`;
-
+                let suffix = '';
                 if (esPasada) {
+                    suffix = ' (Finalizada)';
+                } else if (esPendiente) {
+                    suffix = ' (SIN APERTURAR)';
+                }
+                option.textContent = `${prog.codigo_programacion} | ${fi} - ${ff}${suffix}`;
+
+                if (esPasada || esPendiente) {
                     option.disabled = true;
                     option.style.backgroundColor = "#e5e7eb";
                     option.style.color = "#9ca3af";
                 }
 
                 // Auto-seleccionar la más reciente VIGENTE que no haya pasado
-                if (!esPasada && prog.estado_periodo === 'VIGENTE' && !vigenteSeleccionado) {
+                if (!esPasada && !esPendiente && prog.estado_periodo === 'VIGENTE' && !vigenteSeleccionado) {
                     option.selected = true;
                     select.value = codigo;
                     vigenteSeleccionado = codigo;
