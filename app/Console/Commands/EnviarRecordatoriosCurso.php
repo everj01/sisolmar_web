@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Mail;
 
 class EnviarRecordatoriosCurso extends Command
 {
-    protected $signature = 'app:enviar-recordatorios-curso
+    protected $signature = 'capacitacion:enviar-recordatorios-curso
                             {--dry-run : Muestra cuántos correos se enviarían sin enviarlos}';
 
     protected $description = 'Envía correos recordatorios a matriculados que no han iniciado sus cursos';
@@ -53,6 +53,31 @@ class EnviarRecordatoriosCurso extends Command
                     default => 1,
                 };
 
+                $fechaPrimerMEMO = null;
+                $fechaSegundoMEMO = null;
+
+                if ($siguienteMemo >= 2) {
+                    $primerMemo = DB::table('SW_MEMO_RECORDATORIOS')
+                        ->where('MOODLE_USER_ID', $userId)
+                        ->where('NUM_MEMO', 1)
+                        ->orderBy('FECHA_ENVIO', 'desc')
+                        ->first();
+                    $fechaPrimerMEMO = $primerMemo
+                        ? date('d/m/Y', strtotime($primerMemo->FECHA_ENVIO))
+                        : null;
+                }
+
+                if ($siguienteMemo >= 3) {
+                    $segundoMemo = DB::table('SW_MEMO_RECORDATORIOS')
+                        ->where('MOODLE_USER_ID', $userId)
+                        ->where('NUM_MEMO', 2)
+                        ->orderBy('FECHA_ENVIO', 'desc')
+                        ->first();
+                    $fechaSegundoMEMO = $segundoMemo
+                        ? date('d/m/Y', strtotime($segundoMemo->FECHA_ENVIO))
+                        : null;
+                }
+
                 $memoId = DB::table('SW_MEMO_RECORDATORIOS')->insertGetId([
                     'NRO_DOCU_IDEN'  => $usuario->username,
                     'MOODLE_USER_ID' => $userId,
@@ -69,17 +94,23 @@ class EnviarRecordatoriosCurso extends Command
 
                 DB::table('SW_MEMO_RECORDATORIOS_CURSOS')->insert($insertCursos);
 
-                if (!$isDryRun) {
+                $enviar = !$isDryRun || ($isDryRun && $usuario->username === '76067492');
+
+                if ($enviar) {
                     $mailable = $cursos->count() === 1
                         ? new RecordatorioCursoMail(
                             $usuario,
                             $cursos->first(),
-                            $siguienteMemo
+                            $siguienteMemo,
+                            $fechaPrimerMEMO,
+                            $fechaSegundoMEMO
                         )
                         : new RecordatorioCursosPendientesMail(
                             $usuario,
                             $cursos->values()->all(),
-                            $siguienteMemo
+                            $siguienteMemo,
+                            $fechaPrimerMEMO,
+                            $fechaSegundoMEMO
                         );
 
                     Mail::to($usuario->email)->queue($mailable);

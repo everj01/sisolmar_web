@@ -16,10 +16,14 @@ class RecordatorioCursosPendientesMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public function __construct(
-        public readonly object $usuario,
-        public readonly array  $cursos,
-        public readonly int    $numeroMemo,
-    ) {}
+        public readonly object  $usuario,
+        public readonly array   $cursos,
+        public readonly int     $numeroMemo,
+        public readonly ?string $fechaPrimerMEMO = null,
+        public readonly ?string $fechaSegundoMEMO = null,
+    ) {
+        $this->onQueue('emails');
+    }
 
     public function envelope(): Envelope
     {
@@ -32,23 +36,35 @@ class RecordatorioCursosPendientesMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
+        $cursosPendientes = array_map(fn($curso) => [
+            'nombre' => $curso->course_name,
+        ], $this->cursos);
+
         return new Content(
             view: 'emails.recordatorio-pendientes',
             with: [
-                'full_name'   => $this->usuario->full_name,
-                'cursos'      => $this->cursos,
-                'numero_memo' => $this->numeroMemo,
+                'full_name'          => $this->usuario->full_name,
+                'cursos_pendientes'  => $cursosPendientes,
+                'numero_memo'        => $this->numeroMemo,
             ],
         );
     }
 
     public function attachments(): array
     {
-        $pdf = Pdf::loadView("emails.memorandum-{$this->numeroMemo}-cursos", [
-            'nombreCompleto' => $this->usuario->full_name,
-            'fecha'          => now()->format('d/m/Y'),
-            'cursos'         => $this->cursos,
-        ]);
+        $viewData = [
+            'nombreCompleto'  => $this->usuario->full_name,
+            'fecha'           => now()->format('d/m/Y'),
+            'fechaActual'     => now()->format('d/m/Y'),
+            'cursos'          => $this->cursos,
+            'fechaPrimerMEMO' => $this->fechaPrimerMEMO,
+        ];
+
+        if ($this->fechaSegundoMEMO) {
+            $viewData['fechaSegundoMEMO'] = $this->fechaSegundoMEMO;
+        }
+
+        $pdf = Pdf::loadView("emails.memorandum-{$this->numeroMemo}-cursos", $viewData);
 
         return [
             Attachment::fromData(

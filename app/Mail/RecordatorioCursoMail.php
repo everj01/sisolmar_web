@@ -16,10 +16,14 @@ class RecordatorioCursoMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public function __construct(
-        public readonly object $usuario,
-        public readonly object $curso,
-        public readonly int    $numeroMemo,
-    ) {}
+        public readonly object  $usuario,
+        public readonly object  $curso,
+        public readonly int     $numeroMemo,
+        public readonly ?string $fechaPrimerMEMO = null,
+        public readonly ?string $fechaSegundoMEMO = null,
+    ) {
+        $this->onQueue('emails');
+    }
 
     public function envelope(): Envelope
     {
@@ -44,11 +48,19 @@ class RecordatorioCursoMail extends Mailable implements ShouldQueue
 
     public function attachments(): array
     {
-        $pdf = Pdf::loadView("emails.memorandum-{$this->numeroMemo}-cursos", [
-            'nombreCompleto' => $this->usuario->full_name,
-            'fecha'          => now()->format('d/m/Y'),
-            'cursos'         => [$this->curso],
-        ]);
+        $viewData = [
+            'nombreCompleto'  => $this->usuario->full_name,
+            'fecha'           => now()->format('d/m/Y'),
+            'fechaActual'     => now()->format('d/m/Y'),
+            'cursos'          => [$this->curso],
+            'fechaPrimerMEMO' => $this->fechaPrimerMEMO,
+        ];
+
+        if ($this->fechaSegundoMEMO) {
+            $viewData['fechaSegundoMEMO'] = $this->fechaSegundoMEMO;
+        }
+
+        $pdf = Pdf::loadView("emails.memorandum-{$this->numeroMemo}-cursos", $viewData);
 
         return [
             Attachment::fromData(
