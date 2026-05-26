@@ -40,6 +40,16 @@ class Kernel extends ConsoleKernel
             ->onFailure(function () {
                 Log::error('Error al ejecutar el comando de procesamiento de cursos periódicos.');
             });
+
+        $schedule->command('capacitacion:limpiar-recordatorios --force')
+            ->weeklyOn(1, '06:00')
+            ->withoutOverlapping()
+            ->onSuccess(function () {
+                Log::info('Comando de limpieza de recordatorios ejecutado exitosamente.');
+            })
+            ->onFailure(function () {
+                Log::error('Error al ejecutar el comando de limpieza de recordatorios.');
+            });
     }
 
     protected function commands(): void
