@@ -278,7 +278,7 @@ class MatriculaMasivaJob implements ShouldQueue
                     personalIds: $chunkCorreos,
                     nombreCurso: $curso->nombre,
                     fechaInicio: $fechaInicio,
-                )->onQueue('correos');
+                )->onQueue('emails');
             }
 
             NotificacionMatricula::crearNotificacionMultiplesFallos(
