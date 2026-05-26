@@ -11,18 +11,8 @@ use Illuminate\Support\Facades\Log;
 
 class ProcesarCursosPeriodicosVencidos extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'capacitacion:procesar-cursos-periodicos';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Procesa cursos periódicos vencidos, cerrando programaciones vigentes y generando nuevas programaciones pendientes.';
 
     public function handle()
