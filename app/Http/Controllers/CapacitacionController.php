@@ -1909,7 +1909,7 @@ class CapacitacionController extends Controller
                         $curso->codigo,
                         (string) $newCode,
                         $usuarioId,
-                    ));
+                    ))->onQueue('training');
                 } elseif (
                     $tipoDesc === "PCA" &&
                     (string) $curso->dirigido_a !== "0"
@@ -1921,7 +1921,7 @@ class CapacitacionController extends Controller
                         $curso->codigo,
                         (string) $newCode,
                         $usuarioId,
-                    ));
+                    ))->onQueue('training');
                 }
             } catch (\Throwable $e) {
 
@@ -2170,51 +2170,17 @@ class CapacitacionController extends Controller
 
     public function saveMatricula(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            "cursoId" => "required|integer|exists:sw_cursos,codigo",
-            "programacionId" =>
-            "required|integer|exists:sw_cursos_programacion,codigo",
-            "personalIds" => "required|array|max:100",
-            "personalIds.*" => "required|string",
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" => "Errores de validación.",
-                    "errors" => $validator->errors(),
-                ],
-                422,
-            );
-        }
-
         $cursoId = $request->cursoId;
-        $programacionId = $request->programacionId; // Capturar programacionId
+        $programacionId = $request->programacionId;
         $personalIds = $request->personalIds;
 
-        // Validación adicional del límite de 100
-        if (count($personalIds) > 100) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" =>
-                    "No puede matricular más de 100 personas por operación.",
-                ],
-                422,
-            );
-        }
-
-        // Obtener el ID del usuario autenticado
         $usuarioId = Auth::id();
 
-        // Ejecutamos el proceso de matriculación estàndar.
-        dispatch_sync(MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId));
-
+        dispatch(MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId))->onQueue('training');
 
         return response()->json([
             "success" => true,
-            "message" => "Matriculación completada exitosamente.",
+            "message" => "La matriculación fue enviada a procesamiento.",
         ]);
     }
 
@@ -3464,7 +3430,6 @@ class CapacitacionController extends Controller
             "cursoId" => "required|integer",
             "codPersonal" => "required|string",
             "moodleUserId" => "nullable|integer",
-            "observacion" => "nullable|string|max:200",
         ]);
 
         if ($validator->fails()) {
