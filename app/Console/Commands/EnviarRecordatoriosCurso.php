@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Mail;
 
 class EnviarRecordatoriosCurso extends Command
 {
-    protected $signature = 'capacitacion:enviar-recordatorios-curso
-                            {--dry-run : Muestra cuántos correos se enviarían sin enviarlos}';
+    protected $signature = 'capacitacion:enviar-recordatorios-curso';
 
     protected $description = 'Envía correos recordatorios a matriculados que no han iniciado sus cursos';
 
@@ -33,6 +32,16 @@ class EnviarRecordatoriosCurso extends Command
 
         $porUsuario = collect($registros)->groupBy('user_id');
 
+        $memosPrevios = DB::table('SW_MEMO_RECORDATORIOS')
+            ->select(
+                'MOODLE_USER_ID',
+                'NUM_MEMO',
+                'FECHA_ENVIO'
+            )
+            ->orderByDesc('FECHA_ENVIO')
+            ->get()
+            ->groupBy('MOODLE_USER_ID');
+
         $this->info("{$porUsuario->count()} usuario(s) con pendientes.");
 
         $bar = $this->output->createProgressBar($porUsuario->count());
@@ -42,9 +51,9 @@ class EnviarRecordatoriosCurso extends Command
             $usuario = $cursos->first();
 
             try {
-                $ultimoMemo = DB::table('SW_MEMO_RECORDATORIOS')
-                    ->where('MOODLE_USER_ID', $userId)
-                    ->max('NUM_MEMO');
+                $userMemos = $memosPrevios[$userId] ?? collect();
+
+                $ultimoMemo = optional($userMemos->first())->NUM_MEMO;
 
                 $siguienteMemo = match ((int) $ultimoMemo) {
                     1 => 2,
@@ -57,33 +66,33 @@ class EnviarRecordatoriosCurso extends Command
                 $fechaSegundoMEMO = null;
 
                 if ($siguienteMemo >= 2) {
-                    $primerMemo = DB::table('SW_MEMO_RECORDATORIOS')
-                        ->where('MOODLE_USER_ID', $userId)
+
+                    $primerMemo = $userMemos
                         ->where('NUM_MEMO', 1)
-                        ->orderBy('FECHA_ENVIO', 'desc')
                         ->first();
+
                     $fechaPrimerMEMO = $primerMemo
                         ? date('d/m/Y', strtotime($primerMemo->FECHA_ENVIO))
                         : null;
                 }
 
                 if ($siguienteMemo >= 3) {
-                    $segundoMemo = DB::table('SW_MEMO_RECORDATORIOS')
-                        ->where('MOODLE_USER_ID', $userId)
+
+                    $segundoMemo = $userMemos
                         ->where('NUM_MEMO', 2)
-                        ->orderBy('FECHA_ENVIO', 'desc')
                         ->first();
+
                     $fechaSegundoMEMO = $segundoMemo
                         ? date('d/m/Y', strtotime($segundoMemo->FECHA_ENVIO))
                         : null;
                 }
 
                 $memoId = DB::table('SW_MEMO_RECORDATORIOS')->insertGetId([
-                    'NRO_DOCU_IDEN'  => $usuario->username,
-                    'MOODLE_USER_ID' => $userId,
+                    'NRO_DOCU_IDEN'   => $usuario->username,
+                    'MOODLE_USER_ID'  => $userId,
                     'NOMBRE_COMPLETO' => $usuario->full_name,
-                    'NUM_MEMO'       => $siguienteMemo,
-                    'FECHA_ENVIO' => now()->format('Y-m-d H:i:s'),
+                    'NUM_MEMO'        => $siguienteMemo,
+                    'FECHA_ENVIO'     => now()->format('Y-m-d H:i:s'),
                 ]);
 
                 $insertCursos = $cursos->map(fn($curso) => [
@@ -94,9 +103,7 @@ class EnviarRecordatoriosCurso extends Command
 
                 DB::table('SW_MEMO_RECORDATORIOS_CURSOS')->insert($insertCursos);
 
-                $enviar = !$isDryRun || ($isDryRun && $usuario->username === '76067492');
-
-                if ($enviar) {
+                if (!$isDryRun) {
                     $mailable = $cursos->count() === 1
                         ? new RecordatorioCursoMail(
                             $usuario,
@@ -113,7 +120,8 @@ class EnviarRecordatoriosCurso extends Command
                             $fechaSegundoMEMO
                         );
 
-                    Mail::to($usuario->email)->queue($mailable);
+                    Mail::to($usuario->email)
+                        ->queue($mailable);
                 }
 
                 $totalEnviados++;
