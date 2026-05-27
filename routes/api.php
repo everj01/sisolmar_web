@@ -123,6 +123,7 @@ Route::get('/get-personal-por-sucursal/{sucursalId}', [CapacitacionController::c
 Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
 Route::get('/get-usuarios-curso-moodle/{moodleCourseId}', [CapacitacionController::class, 'getUsuariosCursoMoodle']);
 Route::get('/get-cursos-alumno/{dni}', [CapacitacionController::class, 'getCursosAlumno']);
+Route::post('/comparar-memos', [CapacitacionController::class, 'compararMemos']);
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
 
