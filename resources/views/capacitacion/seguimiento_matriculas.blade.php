@@ -699,24 +699,22 @@ use Carbon\Traits\Date;
                         </div>
                     </div>
 
-                    <div>
-                        <button
-                            type="button"
-                            @click="document.getElementById('modal-comparativa')._x_dataStack?.[0]?.abrir()"
-                            class="w-full px-4 py-2.5 inline-flex items-center justify-center gap-2
-               rounded-xl border border-purple-200/60
-               bg-white/70 backdrop-blur
-               text-purple-700 text-sm font-semibold
-               shadow-sm
-               hover:bg-purple-50 hover:border-purple-300
-               hover:shadow-md hover:shadow-purple-100
-               active:scale-[0.99]
-               transition-all duration-200 ease-out
-               focus:outline-none focus:ring-2 focus:ring-purple-400/20">
-                            <i class="ti ti-chart-comparison text-base text-purple-600"></i>
-                            <span>Comparar MEMOs</span>
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        @click="document.getElementById('modal-comparativa')._x_dataStack?.[0]?.abrir()"
+                        class="w-full px-4 py-2.5 inline-flex items-center justify-center gap-2
+                            rounded-xl border border-purple-200/60
+                            bg-white/70 backdrop-blur
+                            text-purple-700 text-sm font-semibold
+                            shadow-sm
+                            hover:bg-purple-50 hover:border-purple-300
+                            hover:shadow-md hover:shadow-purple-100
+                            active:scale-[0.99]
+                            transition-all duration-200 ease-out
+                            focus:outline-none focus:ring-2 focus:ring-purple-400/20">
+                        <i class="ti ti-chart-comparison text-base text-purple-600"></i>
+                        <span>Comparar MEMOs</span>
+                    </button>
 
                     <div class="w-full flex flex-col gap-2">
                         <div class="flex flex-col md:flex-row gap-2">
@@ -1455,7 +1453,7 @@ use Carbon\Traits\Date;
     x-transition:leave-end="opacity-0"
     style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col w-full max-w-lg bg-white rounded-2xl border border-default-200 shadow-2xl shadow-primary/10 overflow-hidden"
+    <div class="flex flex-col w-full max-w-xl bg-white rounded-2xl border border-default-200 shadow-2xl shadow-primary/10 overflow-hidden"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -1464,30 +1462,22 @@ use Carbon\Traits\Date;
         x-transition:leave-end="opacity-0 scale-95 translate-y-4">
 
         <!-- Header -->
-        <div class="flex items-start justify-between px-6 py-5 border-b border-default-100">
+        <div class="flex items-start justify-between px-6 pt-5 pb-4 border-b border-default-100">
             <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="ti ti-arrows-diff text-primary text-base"></i>
+                </div>
                 <div>
                     <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
                         Comparativa de MEMOs
                     </h3>
                     <p class="text-[11px] text-default-400 mt-0.5">
-                        Selecciona exactamente 2 niveles para continuar
+                        Selecciona un MEMO base y luego un MEMO superior
                     </p>
-                    <!-- Counter badge -->
-                    <div class="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all duration-300"
-                        :class="{
-                            'bg-default-100 text-default-500': seleccionados.length === 0,
-                            'bg-amber-50 text-amber-700 border border-amber-200': seleccionados.length === 1,
-                            'bg-green-50 text-green-700 border border-green-200': seleccionados.length === 2
-                        }">
-                        <i class="ti ti-checkbox text-[10px]"></i>
-                        <span x-text="seleccionados.length + ' de 2 seleccionado' + (seleccionados.length !== 1 ? 's' : '')"></span>
-                    </div>
                 </div>
             </div>
-
             <button type="button" @click="cerrar()"
-                class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 transition-colors">
+                class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 transition-colors shrink-0">
                 <i class="ti ti-x text-base"></i>
             </button>
         </div>
@@ -1495,145 +1485,313 @@ use Carbon\Traits\Date;
         <!-- Body -->
         <div class="p-6 flex flex-col gap-4">
 
-            <!-- Level cards -->
-            <div class="grid grid-cols-3 gap-3">
-                <template x-for="nivel in [1,2,3]" :key="nivel">
-                    <button type="button"
-                        @click="toggleNivel(nivel)"
-                        class="relative group flex flex-col items-center gap-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <!-- Selección -->
+            <template x-if="!resultado && !cargando">
+                <div class="flex flex-col gap-4">
 
-                        <!-- Base layer -->
-                        <div class="absolute inset-0 rounded-xl border border-default-200 bg-default-50 group-hover:bg-default-100 transition-all"></div>
-
-                        <!-- Selected layer -->
-                        <div class="absolute inset-0 rounded-xl border-2 opacity-0 transition-all duration-200"
-                            :class="{
-                                'opacity-100 bg-blue-50 border-blue-300': seleccionados.includes(nivel) && nivel === 1,
-                                'opacity-100 bg-orange-50 border-orange-300': seleccionados.includes(nivel) && nivel === 2,
-                                'opacity-100 bg-red-50 border-red-300': seleccionados.includes(nivel) && nivel === 3
-                            }"></div>
-
-                        <!-- Check badge -->
-                        <template x-if="seleccionados.includes(nivel)">
-                            <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center z-10 transition-all duration-200"
+                    <!-- Level cards -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <template x-for="nivel in [1,2,3]" :key="nivel">
+                            <button type="button"
+                                @click="toggleNivel(nivel)"
+                                :disabled="seleccionados.length === 1 && nivel <= seleccionados[0] && !seleccionados.includes(nivel)"
+                                class="relative group flex flex-col items-center gap-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
                                 :class="{
-                                    'bg-blue-500': nivel === 1,
-                                    'bg-orange-500': nivel === 2,
-                                    'bg-red-500': nivel === 3
+                                    'opacity-40 cursor-not-allowed grayscale': seleccionados.length === 1 && nivel <= seleccionados[0] && !seleccionados.includes(nivel),
+                                    'ring-2 ring-offset-1': seleccionados.includes(nivel)
                                 }">
-                                <i class="ti ti-check text-white text-[10px]"></i>
-                            </div>
+                                <template x-if="!seleccionados.includes(nivel)">
+                                    <div class="absolute inset-0 rounded-xl border border-default-200 bg-default-50 group-hover:bg-default-100 group-hover:border-default-300 transition-all"></div>
+                                </template>
+                                <template x-if="seleccionados.includes(nivel)">
+                                    <div class="absolute inset-0 rounded-xl border-2 shadow-sm transition-all duration-200"
+                                        :class="{
+                                            'bg-blue-50 border-blue-400 shadow-blue-200/30': nivel === 1,
+                                            'bg-orange-50 border-orange-400 shadow-orange-200/30': nivel === 2,
+                                            'bg-red-50 border-red-400 shadow-red-200/30': nivel === 3
+                                        }"></div>
+                                </template>
+                                <template x-if="seleccionados.includes(nivel)">
+                                    <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center z-10"
+                                        :class="{
+                                            'bg-blue-500': nivel === 1,
+                                            'bg-orange-500': nivel === 2,
+                                            'bg-red-500': nivel === 3
+                                        }">
+                                        <i class="ti ti-check text-white text-[10px]"></i>
+                                    </div>
+                                </template>
+                                <div class="relative flex flex-col items-center gap-2 px-4 pt-5 pb-4">
+                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+                                        :class="{
+                                            'bg-blue-100 text-blue-600': nivel === 1,
+                                            'bg-orange-100 text-orange-600': nivel === 2,
+                                            'bg-red-100 text-red-600': nivel === 3
+                                        }">
+                                        <i class="ti text-lg"
+                                            :class="{
+                                                'ti-info-circle': nivel === 1,
+                                                'ti-alert-triangle': nivel === 2,
+                                                'ti-bell-ringing': nivel === 3
+                                            }"></i>
+                                    </div>
+                                    <span class="text-xs font-bold"
+                                        :class="{
+                                            'text-blue-700': nivel === 1,
+                                            'text-orange-700': nivel === 2,
+                                            'text-red-700': nivel === 3
+                                        }"
+                                        x-text="'MEMO ' + nivel">
+                                    </span>
+                                    <span class="text-[10px] text-default-400 font-medium text-center leading-snug"
+                                        x-text="nivel === 1
+                                            ? 'Primer recordatorio informativo'
+                                            : nivel === 2
+                                                ? 'Segundo aviso de advertencia'
+                                                : 'Aviso urgente y definitivo'">
+                                    </span>
+                                </div>
+                            </button>
                         </template>
+                    </div>
 
-                        <!-- Content -->
-                        <div class="relative flex flex-col items-center gap-2 px-4 pt-5 pb-4">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center"
-                                :class="{
-                                    'bg-blue-100 text-blue-600': nivel === 1,
-                                    'bg-orange-100 text-orange-600': nivel === 2,
-                                    'bg-red-100 text-red-600': nivel === 3
-                                }">
-                                <i class="ti text-lg"
-                                    :class="{
-                                        'ti-info-circle': nivel === 1,
-                                        'ti-alert-triangle': nivel === 2,
-                                        'ti-bell-ringing': nivel === 3
-                                    }"></i>
+                    <!-- Preview -->
+                    <div class="rounded-xl border px-4 py-3 transition-all duration-300"
+                        :class="seleccionados.length === 2 ? 'border-green-200 bg-green-50/60' : 'border-default-200 bg-default-50'">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest">
+                                Flujo de comparación
+                            </p>
+                            <template x-if="seleccionados.length === 2">
+                                <span class="text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Listo</span>
+                            </template>
+                            <template x-if="seleccionados.length !== 2">
+                                <span class="text-[10px] font-semibold text-default-400 bg-default-200/60 px-2 py-0.5 rounded-full" x-text="seleccionados.length + ' / 2'"></span>
+                            </template>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 rounded-lg border px-3 py-2.5 min-h-[56px] bg-white transition-all"
+                                :class="{ 'border-green-300 shadow-sm': seleccionados.length >= 1 }">
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <i class="ti ti-arrow-back-up text-[9px] text-default-300"></i>
+                                    <span class="text-[9px] uppercase tracking-wide font-bold text-default-400">Base</span>
+                                </div>
+                                <p class="text-sm font-semibold mt-0.5"
+                                    :class="seleccionados[0] ? 'text-default-800' : 'text-default-300'"
+                                    x-text="seleccionados[0] ? 'MEMO ' + seleccionados[0] : 'Seleccionar...'">
+                                </p>
                             </div>
-
-                            <span class="text-xs font-bold"
-                                :class="{
-                                    'text-blue-700': nivel === 1,
-                                    'text-orange-700': nivel === 2,
-                                    'text-red-700': nivel === 3
-                                }"
-                                x-text="'MEMO ' + nivel"></span>
-
-                            <span class="text-[10px] text-default-400 font-medium text-center leading-snug"
-                                x-text="nivel === 1 ? 'Primer recordatorio informativo' : nivel === 2 ? 'Segundo aviso de advertencia' : 'Aviso urgente y definitivo'">
-                            </span>
+                            <div class="flex flex-col items-center gap-0.5">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center border bg-white"
+                                    :class="seleccionados.length === 2 ? 'border-green-300 text-green-600' : 'border-default-200 text-default-300'">
+                                    <i class="ti ti-arrow-right text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1 rounded-lg border px-3 py-2.5 min-h-[56px] bg-white transition-all"
+                                :class="{ 'border-green-300 shadow-sm': seleccionados.length === 2 }">
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <i class="ti ti-corner-right-up text-[9px] text-default-300"></i>
+                                    <span class="text-[9px] uppercase tracking-wide font-bold text-default-400">Comparado</span>
+                                </div>
+                                <p class="text-sm font-semibold mt-0.5"
+                                    :class="seleccionados[1] ? 'text-default-800' : 'text-default-300'"
+                                    x-text="seleccionados[1] ? 'MEMO ' + seleccionados[1] : 'Seleccionar...'">
+                                </p>
+                            </div>
                         </div>
-                    </button>
-                </template>
-            </div>
-
-            <!-- Comparison preview strip -->
-            <div class="rounded-xl border px-4 py-3 transition-all duration-300"
-                :class="seleccionados.length === 2
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-default-200 bg-default-50'">
-
-                <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest mb-2">Vista previa de comparación</p>
-
-                <div class="flex items-center gap-2">
-
-                    <!-- Slot A -->
-                    <div class="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border min-h-[36px] transition-all duration-200"
-                        :class="seleccionados.length >= 1
-                            ? (seleccionados[0] === 1 ? 'bg-blue-50 border-blue-200' : seleccionados[0] === 2 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200')
-                            : 'bg-white border-dashed border-default-200'">
-                        <div class="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200"
-                            :class="seleccionados.length >= 1
-                                ? (seleccionados[0] === 1 ? 'bg-blue-500' : seleccionados[0] === 2 ? 'bg-orange-500' : 'bg-red-500')
-                                : 'bg-default-200'">
-                        </div>
-                        <span class="text-[11px] font-semibold transition-colors duration-200"
-                            :class="seleccionados.length >= 1
-                                ? (seleccionados[0] === 1 ? 'text-blue-700' : seleccionados[0] === 2 ? 'text-orange-700' : 'text-red-700')
-                                : 'text-default-400'"
-                            x-text="seleccionados.length >= 1 ? 'MEMO ' + seleccionados[0] : 'Primer nivel…'">
-                        </span>
                     </div>
-
-                    <!-- VS chip -->
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border text-[9px] font-black tracking-wide transition-all duration-300"
-                        :class="seleccionados.length === 2
-                            ? 'bg-green-100 border-green-200 text-green-700'
-                            : 'bg-default-100 border-default-200 text-default-500'">
-                        VS
-                    </div>
-
-                    <!-- Slot B -->
-                    <div class="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border min-h-[36px] transition-all duration-200"
-                        :class="seleccionados.length >= 2
-                            ? (seleccionados[1] === 1 ? 'bg-blue-50 border-blue-200' : seleccionados[1] === 2 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200')
-                            : 'bg-white border-dashed border-default-200'">
-                        <div class="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200"
-                            :class="seleccionados.length >= 2
-                                ? (seleccionados[1] === 1 ? 'bg-blue-500' : seleccionados[1] === 2 ? 'bg-orange-500' : 'bg-red-500')
-                                : 'bg-default-200'">
-                        </div>
-                        <span class="text-[11px] font-semibold transition-colors duration-200"
-                            :class="seleccionados.length >= 2
-                                ? (seleccionados[1] === 1 ? 'text-blue-700' : seleccionados[1] === 2 ? 'text-orange-700' : 'text-red-700')
-                                : 'text-default-400'"
-                            x-text="seleccionados.length >= 2 ? 'MEMO ' + seleccionados[1] : 'Segundo nivel…'">
-                        </span>
-                    </div>
-
                 </div>
-            </div>
+            </template>
 
+            <!-- Loading -->
+            <template x-if="cargando">
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <div class="relative w-16 h-16">
+                        <div class="absolute inset-0 rounded-full border-[3px] border-primary/10"></div>
+                        <div class="absolute inset-0 rounded-full border-[3px] border-t-primary animate-spin"></div>
+                        <div class="absolute inset-2 rounded-full bg-primary/5 flex items-center justify-center">
+                            <i class="ti ti-chart-comparison text-primary/40 text-lg"></i>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-sm font-medium text-default-600">
+                        Procesando comparativa...
+                    </p>
+                    <p class="mt-1 text-[11px] text-default-400">
+                        Analizando diferencias entre los grupos seleccionados
+                    </p>
+                </div>
+            </template>
+
+            <!-- Resultado -->
+            <template x-if="resultado">
+                <div class="flex flex-col gap-4">
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="rounded-xl border border-green-200 bg-green-50 p-3 flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                                <i class="ti ti-users text-green-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] uppercase font-bold text-green-700 leading-tight">Persisten</p>
+                                <p class="text-2xl font-bold text-green-800 mt-0.5" x-text="resultado.totales.persisten"></p>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-red-200 bg-red-50 p-3 flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                                <i class="ti ti-user-x text-red-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] uppercase font-bold text-red-700 leading-tight">Ya no están</p>
+                                <p class="text-2xl font-bold text-red-800 mt-0.5" x-text="resultado.totales.ya_no_estan"></p>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-blue-200 bg-blue-50 p-3 flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                <i class="ti ti-user-plus text-blue-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] uppercase font-bold text-blue-700 leading-tight">Nuevos</p>
+                                <p class="text-2xl font-bold text-blue-800 mt-0.5" x-text="resultado.totales.nuevos"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalle resultado -->
+                    <div class="flex flex-col gap-3">
+                        <!-- Buscador dentro del resultado -->
+                        <div class="relative">
+                            <i class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                            <input x-model="busquedaResultado" placeholder="Buscar por nombre o DNI..."
+                                class="w-full pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                        </div>
+                        <!-- Tab nav -->
+                        <div class="flex gap-1 bg-default-100 p-1 rounded-xl">
+                            <button type="button" @click="tabResultado = 'persisten'"
+                                class="flex-1 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all"
+                                :class="tabResultado === 'persisten' ? 'bg-white text-green-700 shadow-sm' : 'text-default-500 hover:text-default-700'">
+                                <i class="ti ti-users mr-1 text-[10px]"></i>
+                                Persisten
+                            </button>
+                            <button type="button" @click="tabResultado = 'ya_no_estan'"
+                                class="flex-1 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all"
+                                :class="tabResultado === 'ya_no_estan' ? 'bg-white text-red-700 shadow-sm' : 'text-default-500 hover:text-default-700'">
+                                <i class="ti ti-user-x mr-1 text-[10px]"></i>
+                                Ya no están
+                            </button>
+                            <button type="button" @click="tabResultado = 'nuevos'"
+                                class="flex-1 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all"
+                                :class="tabResultado === 'nuevos' ? 'bg-white text-blue-700 shadow-sm' : 'text-default-500 hover:text-default-700'">
+                                <i class="ti ti-user-plus mr-1 text-[10px]"></i>
+                                Nuevos
+                            </button>
+                        </div>
+
+                        <!-- Persisten -->
+                        <div x-show="tabResultado === 'persisten'"
+                            class="rounded-xl border border-default-200 overflow-hidden">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-default-100 custom-scrollbar">
+                                <template x-if="persistenFiltrados.length === 0">
+                                    <div class="px-4 py-6 text-center">
+                                        <i class="ti ti-users text-default-200 text-2xl mb-1"></i>
+                                        <p class="text-xs text-default-400">Sin coincidencias</p>
+                                    </div>
+                                </template>
+                                <template x-for="item in persistenFiltrados">
+                                    <div class="px-4 py-2.5 flex items-center gap-3 hover:bg-default-50 transition-colors">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-medium text-default-700 truncate" x-text="item.NOMBRE_COMPLETO"></p>
+                                            <p class="text-[11px] text-default-400">DNI: <span class="font-mono font-medium text-default-500" x-text="item.NRO_DOCU_IDEN"></span></p>
+                                        </div>
+                                        <i class="ti ti-check text-green-400 text-sm shrink-0"></i>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Ya no están -->
+                        <div x-show="tabResultado === 'ya_no_estan'"
+                            class="rounded-xl border border-default-200 overflow-hidden">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-default-100 custom-scrollbar">
+                                <template x-if="yaNoEstanFiltrados.length === 0">
+                                    <div class="px-4 py-6 text-center">
+                                        <i class="ti ti-user-x text-default-200 text-2xl mb-1"></i>
+                                        <p class="text-xs text-default-400">Sin cambios</p>
+                                    </div>
+                                </template>
+                                <template x-for="item in yaNoEstanFiltrados">
+                                    <div class="px-4 py-2.5 flex items-center gap-3 hover:bg-default-50 transition-colors">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-medium text-default-700 truncate" x-text="item.NOMBRE_COMPLETO"></p>
+                                            <p class="text-[11px] text-default-400">DNI: <span class="font-mono font-medium text-default-500" x-text="item.NRO_DOCU_IDEN"></span></p>
+                                        </div>
+                                        <i class="ti ti-x text-red-400 text-sm shrink-0"></i>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Nuevos -->
+                        <div x-show="tabResultado === 'nuevos'"
+                            class="rounded-xl border border-default-200 overflow-hidden">
+                            <div class="max-h-44 overflow-y-auto divide-y divide-default-100 custom-scrollbar">
+                                <template x-if="nuevosFiltrados.length === 0">
+                                    <div class="px-4 py-6 text-center">
+                                        <i class="ti ti-user-plus text-default-200 text-2xl mb-1"></i>
+                                        <p class="text-xs text-default-400">Sin novedades</p>
+                                    </div>
+                                </template>
+                                <template x-for="item in nuevosFiltrados">
+                                    <div class="px-4 py-2.5 flex items-center gap-3 hover:bg-default-50 transition-colors">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-medium text-default-700 truncate" x-text="item.NOMBRE_COMPLETO"></p>
+                                            <p class="text-[11px] text-default-400">DNI: <span class="font-mono font-medium text-default-500" x-text="item.NRO_DOCU_IDEN"></span></p>
+                                        </div>
+                                        <i class="ti ti-plus text-blue-400 text-sm shrink-0"></i>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón nueva comparativa -->
+                    <button type="button" @click="resultado = null; seleccionados = []"
+                        class="self-start inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-default-500 hover:text-default-700 hover:bg-default-100 transition-colors">
+                        <i class="ti ti-reload text-xs"></i>
+                        Nueva comparativa
+                    </button>
+                </div>
+            </template>
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end gap-2 px-6 py-4 border-t border-default-100">
-            <button type="button" @click="cerrar()"
-                class="px-4 h-9 rounded-lg text-sm font-medium bg-default-100 text-default-600 hover:bg-default-200 transition">
-                Cancelar
-            </button>
-
-            <button type="button"
-                @click="realizarComparativa()"
-                :disabled="seleccionados.length !== 2"
-                :class="seleccionados.length === 2
-                    ? 'px-4 h-9 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition inline-flex items-center gap-1.5'
-                    : 'px-4 h-9 rounded-lg text-sm font-semibold bg-default-100 text-default-400 cursor-not-allowed inline-flex items-center gap-1.5'">
-                <i class="ti ti-chart-comparison text-sm"></i>
-                Comparar
-            </button>
+        <div class="border-t border-default-100 bg-default-50/50">
+            <div class="flex justify-end gap-2 px-6 py-4">
+                <template x-if="!cargando && !resultado">
+                    <button type="button" @click="cerrar()"
+                        class="px-4 h-9 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all">
+                        Cancelar
+                    </button>
+                </template>
+                <template x-if="!cargando && !resultado">
+                    <button type="button"
+                        @click="realizarComparativa()"
+                        :disabled="seleccionados.length !== 2"
+                        :class="seleccionados.length === 2
+                            ? 'px-4 h-9 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all inline-flex items-center gap-1.5 active:scale-[0.97]'
+                            : 'px-4 h-9 rounded-lg text-sm font-semibold bg-default-100 text-default-400 cursor-not-allowed inline-flex items-center gap-1.5'">
+                        <i class="ti ti-chart-comparison text-sm"></i>
+                        Comparar
+                    </button>
+                </template>
+                <template x-if="resultado">
+                    <button type="button" @click="cerrar()"
+                        class="px-4 h-9 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all inline-flex items-center gap-1.5">
+                        <i class="ti ti-x text-sm"></i>
+                        Cerrar
+                    </button>
+                </template>
+            </div>
         </div>
-
     </div>
 </div>
 
@@ -2321,22 +2479,112 @@ use Carbon\Traits\Date;
         };
     };
 
-    window.modalComparativa = function() {
+            window.modalComparativa = function() {
         return {
             open: false,
             seleccionados: [],
+            cargando: false,
+            resultado: null,
+            error: null,
+            tabResultado: 'persisten',
+            busquedaResultado: '',
+
+            get persistenFiltrados() {
+                return this.filtrarLista(this.resultado?.persisten ?? []);
+            },
+
+            get yaNoEstanFiltrados() {
+                return this.filtrarLista(this.resultado?.ya_no_estan ?? []);
+            },
+
+            get nuevosFiltrados() {
+                return this.filtrarLista(this.resultado?.nuevos ?? []);
+            },
+
+            filtrarLista(lista) {
+                const q = this.busquedaResultado.trim().toLowerCase();
+                if (!q) return lista;
+                return lista.filter(item =>
+                    (item.NOMBRE_COMPLETO || '').toLowerCase().includes(q) ||
+                    (item.NRO_DOCU_IDEN || '').includes(q)
+                );
+            },
 
             abrir() {
-                this.seleccionados = [];
                 this.open = true;
+                this.seleccionados = [];
+                this.resultado = null;
+                this.error = null;
             },
 
             toggleNivel(nivel) {
-                const idx = this.seleccionados.indexOf(nivel);
-                if (idx !== -1) {
-                    this.seleccionados.splice(idx, 1);
-                } else if (this.seleccionados.length < 2) {
+                if (this.seleccionados.includes(nivel)) {
+                    this.seleccionados =
+                        this.seleccionados.filter(n => n !== nivel);
+
+                    return;
+                }
+
+                if (this.seleccionados.length === 0) {
                     this.seleccionados.push(nivel);
+
+                    return;
+                }
+
+                const primero = this.seleccionados[0];
+
+                if (nivel <= primero) {
+                    return;
+                }
+
+                if (this.seleccionados.length >= 2) {
+                    return;
+                }
+
+                this.seleccionados.push(nivel);
+            },
+
+            async realizarComparativa() {
+                if (this.seleccionados.length !== 2) {
+                    return;
+                }
+
+                this.cargando = true;
+                this.resultado = null;
+                this.error = null;
+
+                try {
+
+                    const response = await fetch(
+                        `${VITE_URL_APP}/api/comparar-memos`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document
+                                    .querySelector('meta[name="csrf-token"]')
+                                    ?.getAttribute('content')
+                            },
+
+                            body: JSON.stringify({
+                                contrMEMOs1: this.seleccionados[0],
+                                contrMEMOs2: this.seleccionados[1],
+                            }),
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        throw new Error(data.message || 'Error');
+                    }
+
+                    this.resultado = data.data;
+
+                } catch (e) {
+                    this.error = e.message || 'Ocurrió un error';
+
+                } finally {
+                    this.cargando = false;
                 }
             },
 
@@ -2349,13 +2597,10 @@ use Carbon\Traits\Date;
                 return map[nivel] || '';
             },
 
-            realizarComparativa() {
-                // Por ahora solo cierra el modal
-                this.cerrar();
-            },
-
             cerrar() {
                 this.open = false;
+                this.resultado = null;
+                this.error = null;
                 this.seleccionados = [];
             },
         };
