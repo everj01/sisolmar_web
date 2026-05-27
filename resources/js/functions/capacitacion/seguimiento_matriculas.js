@@ -10,8 +10,6 @@ axios.defaults.headers.common["X-CSRF-TOKEN"] = document
     ?.getAttribute("content");
 
 document.addEventListener("DOMContentLoaded", () => {
-    Alpine.start?.();
-
     const state = {
         memoSearchTerm: "",
         memoCliente: "",
