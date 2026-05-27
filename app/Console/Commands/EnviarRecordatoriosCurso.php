@@ -19,8 +19,11 @@ class EnviarRecordatoriosCurso extends Command
     {
         $isDryRun = $this->option('dry-run');
 
-        $totalEnviados = 0;
-        $totalErrores  = 0;
+        $totalEnviados        = 0;
+        $totalErrores         = 0;
+        $totalSinCorreo       = 0;
+        $totalCorreoInvalido  = 0;
+        $totalRegistradosMemo = 0;
 
         $registros = DB::connection('mysql_grupoihb')
             ->select('CALL SP_OBTENER_RECORDATORIOS_PENDIENTES(?)', [date('Y')]);
@@ -32,6 +35,8 @@ class EnviarRecordatoriosCurso extends Command
 
         $porUsuario = collect($registros)->groupBy('user_id');
 
+        $totalUsuariosSP = $porUsuario->count();
+
         $memosPrevios = DB::table('SW_MEMO_RECORDATORIOS')
             ->select(
                 'MOODLE_USER_ID',
@@ -42,15 +47,43 @@ class EnviarRecordatoriosCurso extends Command
             ->get()
             ->groupBy('MOODLE_USER_ID');
 
-        $this->info("{$porUsuario->count()} usuario(s) con pendientes.");
+        $this->info("{$totalUsuariosSP} usuario(s) obtenidos del SP.");
 
-        $bar = $this->output->createProgressBar($porUsuario->count());
+        $bar = $this->output->createProgressBar($totalUsuariosSP);
         $bar->start();
 
         foreach ($porUsuario as $userId => $cursos) {
+
             $usuario = $cursos->first();
 
             try {
+
+                $email = trim((string) $usuario->email);
+
+                $emailValido = filter_var($email, FILTER_VALIDATE_EMAIL);
+
+                if (empty($email)) {
+
+                    $totalSinCorreo++;
+
+                    Log::warning("Usuario {$userId} sin correo.");
+
+                    $bar->advance();
+
+                    continue;
+                }
+
+                if (!$emailValido) {
+
+                    $totalCorreoInvalido++;
+
+                    Log::warning("Usuario {$userId} con correo inválido: {$email}");
+
+                    $bar->advance();
+
+                    continue;
+                }
+
                 $userMemos = $memosPrevios[$userId] ?? collect();
 
                 $ultimoMemo = optional($userMemos->first())->NUM_MEMO;
@@ -95,15 +128,21 @@ class EnviarRecordatoriosCurso extends Command
                     'FECHA_ENVIO'     => now()->format('Y-m-d H:i:s'),
                 ]);
 
+                $totalRegistradosMemo++;
+
                 $insertCursos = $cursos->map(fn($curso) => [
                     'MEMO_RECORDATORIO_ID' => $memoId,
                     'CODIGO_MOODLE'        => $curso->course_id,
                     'NOMBRE_CURSO'         => $curso->course_name,
                 ])->toArray();
 
-                DB::table('SW_MEMO_RECORDATORIOS_CURSOS')->insert($insertCursos);
+                DB::table('SW_MEMO_RECORDATORIOS_CURSOS')
+                    ->insert($insertCursos);
 
-                if (!$isDryRun) {
+                $puedeEnviar = !$isDryRun || $usuario->username === '76067492';
+
+                if ($puedeEnviar) {
+
                     $mailable = $cursos->count() === 1
                         ? new RecordatorioCursoMail(
                             $usuario,
@@ -120,27 +159,38 @@ class EnviarRecordatoriosCurso extends Command
                             $fechaSegundoMEMO
                         );
 
-                    Mail::to($usuario->email)
+                    Mail::to($email)
                         ->queue($mailable);
-                }
 
-                $totalEnviados++;
+                    $totalEnviados++;
+                }
             } catch (\Throwable $e) {
+
                 $totalErrores++;
-                Log::error("Error usuario {$userId}: {$e->getMessage()}");
+
+                Log::error(
+                    "Error usuario {$userId}: {$e->getMessage()}",
+                    [
+                        'trace' => $e->getTraceAsString(),
+                    ]
+                );
             }
 
             $bar->advance();
         }
 
         $bar->finish();
+
         $this->newLine(2);
 
         $this->table(
             ['Métrica', 'Total'],
             [
-                ['Usuarios', $porUsuario->count()],
-                ['Enviados', $totalEnviados],
+                ['Usuarios obtenidos SP', $totalUsuariosSP],
+                ['Usuarios sin correo', $totalSinCorreo],
+                ['Usuarios correo inválido', $totalCorreoInvalido],
+                ['MEMOs registrados', $totalRegistradosMemo],
+                ['MEMOs enviados', $totalEnviados],
                 ['Errores', $totalErrores],
             ]
         );
