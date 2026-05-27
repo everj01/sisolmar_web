@@ -4376,4 +4376,83 @@ class CapacitacionController extends Controller
             );
         }
     }
+
+    public function compararMemos(Request $request): JsonResponse
+    {
+        try {
+            $memoBaseNumero = (int) $request->contrMEMOs1;
+            $memoComparadoNumero = (int) $request->contrMEMOs2;
+
+            if ($memoBaseNumero >= $memoComparadoNumero) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El primer MEMO debe ser menor que el segundo.'
+                ], 422);
+            }
+
+            $memoBase = collect(
+                DB::select(
+                    'EXEC SP_OBTENER_MEMOS_ENVIADOS ?',
+                    [$memoBaseNumero]
+                )
+            );
+
+            $memoComparado = collect(
+                DB::select(
+                    'EXEC SP_OBTENER_MEMOS_ENVIADOS ?',
+                    [$memoComparadoNumero]
+                )
+            );
+
+            $idsBase = $memoBase->pluck('NRO_DOCU_IDEN');
+            $idsComparado = $memoComparado->pluck('NRO_DOCU_IDEN');
+
+            $persisten = $memoBase
+                ->filter(
+                    fn($usuario) =>
+                    $idsComparado->contains($usuario->NRO_DOCU_IDEN)
+                )
+                ->values();
+
+            $yaNoEstan = $memoBase
+                ->filter(
+                    fn($usuario) =>
+                    !$idsComparado->contains($usuario->NRO_DOCU_IDEN)
+                )
+                ->values();
+
+            $nuevos = $memoComparado
+                ->filter(
+                    fn($usuario) =>
+                    !$idsBase->contains($usuario->NRO_DOCU_IDEN)
+                )
+                ->values();
+
+            return response()->json([
+                'success' => true,
+
+                'data' => [
+                    'memo_base' => $memoBaseNumero,
+                    'memo_comparado' => $memoComparadoNumero,
+
+                    'totales' => [
+                        'persisten' => $persisten->count(),
+                        'ya_no_estan' => $yaNoEstan->count(),
+                        'nuevos' => $nuevos->count(),
+                    ],
+
+                    'persisten' => $persisten,
+                    'ya_no_estan' => $yaNoEstan,
+                    'nuevos' => $nuevos,
+                ]
+            ]);
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al comparar los MEMOs.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
