@@ -699,6 +699,25 @@ use Carbon\Traits\Date;
                         </div>
                     </div>
 
+                    <div>
+                        <button
+                            type="button"
+                            @click="document.getElementById('modal-comparativa')._x_dataStack?.[0]?.abrir()"
+                            class="w-full px-4 py-2.5 inline-flex items-center justify-center gap-2
+               rounded-xl border border-purple-200/60
+               bg-white/70 backdrop-blur
+               text-purple-700 text-sm font-semibold
+               shadow-sm
+               hover:bg-purple-50 hover:border-purple-300
+               hover:shadow-md hover:shadow-purple-100
+               active:scale-[0.99]
+               transition-all duration-200 ease-out
+               focus:outline-none focus:ring-2 focus:ring-purple-400/20">
+                            <i class="ti ti-chart-comparison text-base text-purple-600"></i>
+                            <span>Comparar MEMOs</span>
+                        </button>
+                    </div>
+
                     <div class="w-full flex flex-col gap-2">
                         <div class="flex flex-col md:flex-row gap-2">
                             <div class="relative flex-1">
@@ -1425,6 +1444,199 @@ use Carbon\Traits\Date;
     </div>
 </div>
 
+<!-- Modal comparativa entre grupos de MEMOs -->
+<div id="modal-comparativa" x-data="modalComparativa()" x-show="open" x-cloak
+    class="fixed inset-0 z-[120] flex items-center justify-center p-4"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    style="background: rgba(36,39,70,0.45);">
+
+    <div class="flex flex-col w-full max-w-lg bg-white rounded-2xl border border-default-200 shadow-2xl shadow-primary/10 overflow-hidden"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+        x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+        <!-- Header -->
+        <div class="flex items-start justify-between px-6 py-5 border-b border-default-100">
+            <div class="flex items-start gap-3">
+                <div>
+                    <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                        Comparativa de MEMOs
+                    </h3>
+                    <p class="text-[11px] text-default-400 mt-0.5">
+                        Selecciona exactamente 2 niveles para continuar
+                    </p>
+                    <!-- Counter badge -->
+                    <div class="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all duration-300"
+                        :class="{
+                            'bg-default-100 text-default-500': seleccionados.length === 0,
+                            'bg-amber-50 text-amber-700 border border-amber-200': seleccionados.length === 1,
+                            'bg-green-50 text-green-700 border border-green-200': seleccionados.length === 2
+                        }">
+                        <i class="ti ti-checkbox text-[10px]"></i>
+                        <span x-text="seleccionados.length + ' de 2 seleccionado' + (seleccionados.length !== 1 ? 's' : '')"></span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" @click="cerrar()"
+                class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 transition-colors">
+                <i class="ti ti-x text-base"></i>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 flex flex-col gap-4">
+
+            <!-- Level cards -->
+            <div class="grid grid-cols-3 gap-3">
+                <template x-for="nivel in [1,2,3]" :key="nivel">
+                    <button type="button"
+                        @click="toggleNivel(nivel)"
+                        class="relative group flex flex-col items-center gap-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30">
+
+                        <!-- Base layer -->
+                        <div class="absolute inset-0 rounded-xl border border-default-200 bg-default-50 group-hover:bg-default-100 transition-all"></div>
+
+                        <!-- Selected layer -->
+                        <div class="absolute inset-0 rounded-xl border-2 opacity-0 transition-all duration-200"
+                            :class="{
+                                'opacity-100 bg-blue-50 border-blue-300': seleccionados.includes(nivel) && nivel === 1,
+                                'opacity-100 bg-orange-50 border-orange-300': seleccionados.includes(nivel) && nivel === 2,
+                                'opacity-100 bg-red-50 border-red-300': seleccionados.includes(nivel) && nivel === 3
+                            }"></div>
+
+                        <!-- Check badge -->
+                        <template x-if="seleccionados.includes(nivel)">
+                            <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center z-10 transition-all duration-200"
+                                :class="{
+                                    'bg-blue-500': nivel === 1,
+                                    'bg-orange-500': nivel === 2,
+                                    'bg-red-500': nivel === 3
+                                }">
+                                <i class="ti ti-check text-white text-[10px]"></i>
+                            </div>
+                        </template>
+
+                        <!-- Content -->
+                        <div class="relative flex flex-col items-center gap-2 px-4 pt-5 pb-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+                                :class="{
+                                    'bg-blue-100 text-blue-600': nivel === 1,
+                                    'bg-orange-100 text-orange-600': nivel === 2,
+                                    'bg-red-100 text-red-600': nivel === 3
+                                }">
+                                <i class="ti text-lg"
+                                    :class="{
+                                        'ti-info-circle': nivel === 1,
+                                        'ti-alert-triangle': nivel === 2,
+                                        'ti-bell-ringing': nivel === 3
+                                    }"></i>
+                            </div>
+
+                            <span class="text-xs font-bold"
+                                :class="{
+                                    'text-blue-700': nivel === 1,
+                                    'text-orange-700': nivel === 2,
+                                    'text-red-700': nivel === 3
+                                }"
+                                x-text="'MEMO ' + nivel"></span>
+
+                            <span class="text-[10px] text-default-400 font-medium text-center leading-snug"
+                                x-text="nivel === 1 ? 'Primer recordatorio informativo' : nivel === 2 ? 'Segundo aviso de advertencia' : 'Aviso urgente y definitivo'">
+                            </span>
+                        </div>
+                    </button>
+                </template>
+            </div>
+
+            <!-- Comparison preview strip -->
+            <div class="rounded-xl border px-4 py-3 transition-all duration-300"
+                :class="seleccionados.length === 2
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-default-200 bg-default-50'">
+
+                <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest mb-2">Vista previa de comparación</p>
+
+                <div class="flex items-center gap-2">
+
+                    <!-- Slot A -->
+                    <div class="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border min-h-[36px] transition-all duration-200"
+                        :class="seleccionados.length >= 1
+                            ? (seleccionados[0] === 1 ? 'bg-blue-50 border-blue-200' : seleccionados[0] === 2 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200')
+                            : 'bg-white border-dashed border-default-200'">
+                        <div class="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200"
+                            :class="seleccionados.length >= 1
+                                ? (seleccionados[0] === 1 ? 'bg-blue-500' : seleccionados[0] === 2 ? 'bg-orange-500' : 'bg-red-500')
+                                : 'bg-default-200'">
+                        </div>
+                        <span class="text-[11px] font-semibold transition-colors duration-200"
+                            :class="seleccionados.length >= 1
+                                ? (seleccionados[0] === 1 ? 'text-blue-700' : seleccionados[0] === 2 ? 'text-orange-700' : 'text-red-700')
+                                : 'text-default-400'"
+                            x-text="seleccionados.length >= 1 ? 'MEMO ' + seleccionados[0] : 'Primer nivel…'">
+                        </span>
+                    </div>
+
+                    <!-- VS chip -->
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border text-[9px] font-black tracking-wide transition-all duration-300"
+                        :class="seleccionados.length === 2
+                            ? 'bg-green-100 border-green-200 text-green-700'
+                            : 'bg-default-100 border-default-200 text-default-500'">
+                        VS
+                    </div>
+
+                    <!-- Slot B -->
+                    <div class="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border min-h-[36px] transition-all duration-200"
+                        :class="seleccionados.length >= 2
+                            ? (seleccionados[1] === 1 ? 'bg-blue-50 border-blue-200' : seleccionados[1] === 2 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200')
+                            : 'bg-white border-dashed border-default-200'">
+                        <div class="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200"
+                            :class="seleccionados.length >= 2
+                                ? (seleccionados[1] === 1 ? 'bg-blue-500' : seleccionados[1] === 2 ? 'bg-orange-500' : 'bg-red-500')
+                                : 'bg-default-200'">
+                        </div>
+                        <span class="text-[11px] font-semibold transition-colors duration-200"
+                            :class="seleccionados.length >= 2
+                                ? (seleccionados[1] === 1 ? 'text-blue-700' : seleccionados[1] === 2 ? 'text-orange-700' : 'text-red-700')
+                                : 'text-default-400'"
+                            x-text="seleccionados.length >= 2 ? 'MEMO ' + seleccionados[1] : 'Segundo nivel…'">
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-2 px-6 py-4 border-t border-default-100">
+            <button type="button" @click="cerrar()"
+                class="px-4 h-9 rounded-lg text-sm font-medium bg-default-100 text-default-600 hover:bg-default-200 transition">
+                Cancelar
+            </button>
+
+            <button type="button"
+                @click="realizarComparativa()"
+                :disabled="seleccionados.length !== 2"
+                :class="seleccionados.length === 2
+                    ? 'px-4 h-9 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition inline-flex items-center gap-1.5'
+                    : 'px-4 h-9 rounded-lg text-sm font-semibold bg-default-100 text-default-400 cursor-not-allowed inline-flex items-center gap-1.5'">
+                <i class="ti ti-chart-comparison text-sm"></i>
+                Comparar
+            </button>
+        </div>
+
+    </div>
+</div>
+
 <!-- Blade <script> -->
 <script>
     window.memosStats = function() {
@@ -1479,7 +1691,11 @@ use Carbon\Traits\Date;
             cargandoCursos: false,
 
             _cache: {},
-            _textos: { 1: 'NIVEL UNO', 2: 'NIVEL DOS', 3: 'NIVEL TRES' },
+            _textos: {
+                1: 'NIVEL UNO',
+                2: 'NIVEL DOS',
+                3: 'NIVEL TRES'
+            },
 
             mostrar(nroDoc, nivel, nombre) {
                 this.nroDoc = nroDoc;
@@ -1495,32 +1711,32 @@ use Carbon\Traits\Date;
                 this.open = true;
 
                 fetch(`${VITE_URL_APP}/api/obtener-memos-personal`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        nroDoc: nroDoc,
-                        nivel: nivel,
-                    }),
-                })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        this.memos = res.data || [];
-                        this.total = res.total || 0;
-                    } else {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            nroDoc: nroDoc,
+                            nivel: nivel,
+                        }),
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            this.memos = res.data || [];
+                            this.total = res.total || 0;
+                        } else {
+                            this.memos = [];
+                            this.total = 0;
+                        }
+                        this.cargando = false;
+                    })
+                    .catch(() => {
                         this.memos = [];
                         this.total = 0;
-                    }
-                    this.cargando = false;
-                })
-                .catch(() => {
-                    this.memos = [];
-                    this.total = 0;
-                    this.cargando = false;
-                });
+                        this.cargando = false;
+                    });
             },
 
             seleccionarMemo(memo) {
@@ -1538,20 +1754,20 @@ use Carbon\Traits\Date;
                 this.cargandoCursos = true;
 
                 fetch(`${VITE_URL_APP}/api/obtener-detalle-memo/${memo.ID}`)
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        this.cursos = res.data || [];
-                        this._cache[memo.ID] = this.cursos;
-                    } else {
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            this.cursos = res.data || [];
+                            this._cache[memo.ID] = this.cursos;
+                        } else {
+                            this.cursos = [];
+                        }
+                        this.cargandoCursos = false;
+                    })
+                    .catch(() => {
                         this.cursos = [];
-                    }
-                    this.cargandoCursos = false;
-                })
-                .catch(() => {
-                    this.cursos = [];
-                    this.cargandoCursos = false;
-                });
+                        this.cargandoCursos = false;
+                    });
             },
 
             cerrar() {
@@ -2101,6 +2317,46 @@ use Carbon\Traits\Date;
                     dropdown.style.left = (rect.left + window.scrollX) + 'px';
                     dropdown.style.width = rect.width + 'px';
                 });
+            },
+        };
+    };
+
+    window.modalComparativa = function() {
+        return {
+            open: false,
+            seleccionados: [],
+
+            abrir() {
+                this.seleccionados = [];
+                this.open = true;
+            },
+
+            toggleNivel(nivel) {
+                const idx = this.seleccionados.indexOf(nivel);
+                if (idx !== -1) {
+                    this.seleccionados.splice(idx, 1);
+                } else if (this.seleccionados.length < 2) {
+                    this.seleccionados.push(nivel);
+                }
+            },
+
+            estilosNivel(nivel) {
+                const map = {
+                    1: 'border-color: #93c5fd; background: #eff6ff',
+                    2: 'border-color: #fdba74; background: #fff7ed',
+                    3: 'border-color: #fca5a5; background: #fef2f2',
+                };
+                return map[nivel] || '';
+            },
+
+            realizarComparativa() {
+                // Por ahora solo cierra el modal
+                this.cerrar();
+            },
+
+            cerrar() {
+                this.open = false;
+                this.seleccionados = [];
             },
         };
     };

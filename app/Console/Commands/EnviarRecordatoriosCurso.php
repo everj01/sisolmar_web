@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Mail;
 
 class EnviarRecordatoriosCurso extends Command
 {
-    protected $signature = 'capacitacion:enviar-recordatorios-curso';
+    protected $signature = 'capacitacion:enviar-recordatorios-curso {--dry-run : Muestra cuántos correos se enviarían sin enviarlos}';
 
     protected $description = 'Envía correos recordatorios a matriculados que no han iniciado sus cursos';
 
