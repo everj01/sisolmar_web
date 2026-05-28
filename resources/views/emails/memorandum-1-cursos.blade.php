@@ -115,6 +115,10 @@
             font-size: 10pt;
         }
 
+        .ul {
+            text-decoration: underline;
+        }
+
         /* ── Lista cursos ── */
         ul.cursos {
             margin: 0 0 11px 18px;
@@ -187,6 +191,7 @@
             <td class="sep">:</td>
             <td>
                 <span class="hl ul">{{ $nombreCompleto }}</span><br>
+                <span class="hl ul">{{ $cargoPersonal }}</span>
             </td>
         </tr>
         <tr>
@@ -200,13 +205,13 @@
         <tr>
             <td class="lbl">Fecha</td>
             <td class="sep">:</td>
-            <td><span class="hl">{{ $fecha }}</span></td>
+            <td><span>{{ $fechaActual }}</span></td>
         </tr>
 
         <tr>
             <td class="lbl">Asunto</td>
             <td class="sep">:</td>
-            <td>Sanción Administrativa – Amonestación</td>
+            <td>Sanción Administrativa - Amonestación</td>
         </tr>
     </table>
 
@@ -228,8 +233,8 @@
     </p>
 
     <ul class="cursos">
-        @foreach($cursos as $curso)
-        <li>{{ $curso->course_name }}</li>
+        @foreach($cursosSinAcceder as $curso)
+        <li>{{ $curso['course_nombre'] }}</li>
         @endforeach
     </ul>
 

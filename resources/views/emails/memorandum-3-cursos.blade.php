@@ -200,7 +200,8 @@
             <td class="lbl">Para</td>
             <td class="sep">:</td>
             <td>
-                <span>{{ $nombreCompleto }}</span><br>
+                <span class="hl ul">{{ $nombreCompleto }}</span><br>
+                <span class="hl ul">{{ $cargoPersonal }}</span>
             </td>
         </tr>
         <tr>
@@ -214,7 +215,7 @@
         <tr>
             <td class="lbl">Fecha</td>
             <td class="sep">:</td>
-            <td><span class="hl">{{ $fechaActual }}</span></td>
+            <td><span>{{ $fechaActual }}</span></td>
         </tr>
         <tr>
             <td class="lbl">Asunto</td>
@@ -236,25 +237,25 @@
     <div class="hr"></div>
 
     <p>
-        En relación a las dos amonestaciones disciplinarias de la referencia se ha verificado en el Sistema de Información Personal – SIP, que usted por segunda vez no cumplió con lo dispuesto, pese a haber sido debidamente notificado.
+        En relación a las dos amonestaciones disciplinarias de la referencia se ha verificado en el Sistema de Información Personal - SIP, que usted por segunda vez no cumplió con sus capacitaciones programadas para el mes de Abril, pese a haber sido debidamente notificado.
     </p>
 
     <p>
-        Lamentamos que usted mantenga pendientes los siguientes módulos de instrucción asignados, conforme al Plan Anual de Capacitación aprobado por la empresa:
+        Lamentamos que Ud. mantenga pendientes los siguientes cursos en el SIP, conforme al <strong>Plan Anual de Capacitación</strong> aprobado por la empresa:
     </p>
 
     <ul class="cursos">
-        @foreach($cursos as $curso)
-        <li>{{ $curso->course_name }}</li>
+        @foreach($cursosSinAcceder as $curso)
+        <li>{{ $curso['course_nombre'] }}</li>
         @endforeach
     </ul>
 
     <p>
-        Este reiterado incumplimiento, constituye <strong>falta grave</strong> prevista en el artículo 25° inciso a) del D.S. N°003-97-TR; en consecuencia, la empresa le aplica la medida disciplinaria de <strong>SUSPENSIÓN</strong> en sus labores con un día (01) sin goce de haber, por no cumplir reiteradamente con las capacitaciones programadas.
+        Este reiterado incumplimiento, constituye <strong>falta grave</strong> prevista en el artículo 25° inciso a) del D.S. N°003-97-TR; en consecuencia, la empresa le aplica la medida disciplinaria de <strong>SUSPENSIÓN</strong> en sus labores con un día (01) sin goce de haber, por no cumplir reiteradamente con las capacitaciones programadas, otorgándole un nuevo plazo de 48 horas a partir de la fecha de entrega de esta comunicación a través de su Sistema de Información Personal - SIP, para que Ud. cumpla con su obligación pendiente.
     </p>
 
     <p>
-        Es oportuno comunicarle que si Ud. no cumple con su obligación, luego de esta sanción disciplinaria, su caso pasará al departamento Legal de la empresa por registrar mala conducta habitual.
+        Es oportuno comunicarle que si Ud. no cumple con su obligación, luego de esta sanción disciplinaria, su caso será evaluado por la Empresa por la causal mala conducta habitual.
     </p>
 
     <div class="firma">

@@ -80,7 +80,8 @@ Route::post('/activar-cargo', [FileController::class, 'activarCargo']);
 Route::get('/get-cargo', [FileController::class, 'getCargos']);
 Route::get('/get-cargo/{codigo}', [FileController::class, 'getCargosXCodigo']);
 
-
+Route::post('/enviar-memos', [CapacitacionController::class, 'enviarMemos']);
+Route::get('/enviar-memo/{nroDoc}', [CapacitacionController::class, 'enviarMemo']);
 Route::post('/delete-notif', [NotificacionController::class, 'deleteNotificacion']);
 Route::post('/save-solicitud', [FileController::class, 'saveSolicitud']);
 

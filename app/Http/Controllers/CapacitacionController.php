@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\MemoMail;
+use Illuminate\Support\Facades\Mail;
 use App\Models\CapacitacionAreas;
 use App\Models\CapacitacionTipoCurso;
 use App\Models\CursoProgramacion;
@@ -4238,6 +4240,122 @@ class CapacitacionController extends Controller
                 ],
                 500,
             );
+        }
+    }
+
+    public function enviarMemo($nroDoc): JsonResponse
+    {
+        $this->procesarMemo($nroDoc);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Memo enviado correctamente.'
+        ]);
+    }
+
+    public function enviarMemos(Request $request): JsonResponse
+    {
+        $nroDocs = $request->input('nroDocs', []);
+
+        if (!is_array($nroDocs) || empty($nroDocs)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lista de documentos inválida.'
+            ], 422);
+        }
+
+        foreach ($nroDocs as $nroDoc) {
+            $this->procesarMemo($nroDoc);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Memos enviados correctamente.'
+        ]);
+    }
+
+    private function procesarMemo($nroDoc): void
+    {
+        $personal = DB::connection('sqlsrv')
+            ->table('si_solm.dbo.PERSONAL as P')
+            ->leftJoin('si_solm.dbo.CARGOS as C', 'P.CODI_CARG', '=', 'C.CODI_CARG')
+            ->select(
+                DB::raw("
+                RTRIM(LTRIM(
+                    ISNULL(P.NOMB_1, '') + ' ' +
+                    ISNULL(P.NOMB_2, '') + ' ' +
+                    ISNULL(P.APEL_1, '') + ' ' +
+                    ISNULL(P.APEL_2, '')
+                )) as nombreCompleto
+            "),
+                'P.NRO_DOCU_IDEN as nroDoc',
+                'P.PERS_EMAIL as correo',
+                'C.DESC_CARGO as cargo'
+            )
+            ->where('P.NRO_DOCU_IDEN', $nroDoc)
+            ->first();
+
+        if (!$personal) return;
+
+        $anioActual = date('Y');
+
+        $cursosSinAcceder = collect(
+            DB::connection("mysql_grupoihb")->select(
+                "CALL SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?, ?)",
+                [$nroDoc, $anioActual]
+            )
+        )
+            ->where('estado', 'sin_iniciar')
+            ->map(fn($curso) => [
+                'course_id' => $curso->course_id,
+                'course_nombre' => $curso->course_nombre,
+            ])
+            ->values()
+            ->toArray();
+
+        $ultimoMemo = DB::table('SW_MEMO_RECORDATORIOS')
+            ->where('NRO_DOCU_IDEN', $nroDoc)
+            ->orderByDesc('id')
+            ->first();
+
+        $historicoMemos = DB::table('SW_MEMO_RECORDATORIOS')
+            ->where('NRO_DOCU_IDEN', $nroDoc)
+            ->orderBy('id')
+            ->get();
+
+        $tipoMemo = !$ultimoMemo
+            ? 1
+            : match ((int) $ultimoMemo->NUM_MEMO) {
+                1 => 2,
+                2 => 3,
+                3 => 1,
+                default => 1,
+            };
+
+        Mail::to($personal->correo)->queue(new MemoMail(
+            nombreCompleto: $personal->nombreCompleto,
+            cargoPersonal: $personal->cargo,
+            cursosSinAcceder: $cursosSinAcceder,
+            tipoMemo: $tipoMemo,
+            historicoMemos: $historicoMemos
+        ));
+
+        $memoId = DB::table('SW_MEMO_RECORDATORIOS')
+            ->insertGetId([
+                'NRO_DOCU_IDEN'   => $personal->nroDoc,
+                'MOODLE_USER_ID'  => $personal->nroDoc,
+                'NOMBRE_COMPLETO' => $personal->nombreCompleto,
+                'NUM_MEMO'        => $tipoMemo,
+                'FECHA_ENVIO'     => now(),
+            ]);
+
+        foreach ($cursosSinAcceder as $curso) {
+            DB::table('SW_MEMO_RECORDATORIOS_CURSOS')
+                ->insert([
+                    'MEMO_RECORDATORIO_ID' => $memoId,
+                    'CODIGO_MOODLE'        => $curso['course_id'],
+                    'NOMBRE_CURSO'         => $curso['course_nombre'],
+                ]);
         }
     }
 

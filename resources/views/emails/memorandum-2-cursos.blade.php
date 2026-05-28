@@ -200,7 +200,8 @@
             <td class="lbl">Para</td>
             <td class="sep">:</td>
             <td>
-                <span>{{ $nombreCompleto }}</span><br>
+                <span class="hl ul">{{ $nombreCompleto }}</span><br>
+                <span class="hl ul">{{ $cargoPersonal }}</span>
             </td>
         </tr>
         <tr>
@@ -219,7 +220,7 @@
         <tr>
             <td class="lbl">Asunto</td>
             <td class="sep">:</td>
-            <td>Sanción Administrativa – Amonestación</td>
+            <td>Sanción Administrativa - Amonestación</td>
         </tr>
 
         <tr>
@@ -232,7 +233,7 @@
     <div class="hr"></div>
 
     <p>
-        En relación a la amonestación disciplinaria de la referencia, se ha verificado en el Sistema de Información Personal – SIP, que usted no cumplió con lo dispuesto, pese a haber sido debidamente notificado.
+        En relación a la amonestación disciplinaria de la referencia, se ha verificado en el Sistema de Información Personal - SIP, que usted no cumplió con lo dispuesto, pese a haber sido debidamente notificado.
     </p>
 
     <p>
@@ -240,8 +241,8 @@
     </p>
 
     <ul class="cursos">
-        @foreach($cursos as $curso)
-        <li>{{ $curso->course_name }}</li>
+        @foreach($cursosSinAcceder as $curso)
+        <li>{{ $curso['course_nombre'] }}</li>
         @endforeach
     </ul>
 
