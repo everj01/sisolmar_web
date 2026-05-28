@@ -463,103 +463,6 @@ use Carbon\Traits\Date;
                     </div>
                 </div>
 
-                <!-- Columna de filtros y búsquedas -->
-                <div
-                    class="flex flex-col gap-3 xl:w-[30%] bg-white rounded-xl p-4 border border-default-200/60 shadow-sm">
-                    <div class="flex items-center gap-2 pb-2 border-b border-default-200">
-                        <div class="w-1 h-4 bg-primary rounded-full"></div>
-                        <span class="text-xs font-semibold text-default-700 uppercase tracking-wide">Filtros de
-                            personal</span>
-                    </div>
-
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-default-700">Sucursal</label>
-                        <div class="relative">
-                            <i
-                                class="ti ti-building-store absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                            <select id="filtroSucursalPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
-                                style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
-                           !bg-white !text-default-700 !appearance-none cursor-pointer
-                           focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
-                                :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
-                                <option value="">Todas las sucursales</option>
-                            </select>
-                            <i
-                                class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-medium text-default-700">Tipo de trabajador</label>
-                        <div class="relative">
-                            <i
-                                class="ti ti-briefcase absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                            <select id="filtroTipoPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
-                                style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
-                           !bg-white !text-default-700 !appearance-none cursor-pointer
-                           focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
-                                :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
-                                <option value="">Todos los tipos</option>
-                                <option value="Administrativo">Administrativo</option>
-                                <option value="Operativo">Operativo</option>
-                            </select>
-                            <i
-                                class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-1.5" x-data="searchPersonalSeguimiento()">
-                        <label class="text-xs font-medium text-default-700">Buscar personal</label>
-                        <div class="relative">
-                            <i
-                                class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                            <input x-ref="inputBuscar" x-model="query" @input="search(); posicionarDropdown()"
-                                @focus="posicionarDropdown()" @keydown.enter.stop="seleccionarPrimerResultado()"
-                                @click.away="open = false" :disabled="tabActivo === 'memos'"
-                                placeholder="Buscar por DNI o nombres..." class="w-full pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg
-                !bg-white !text-default-700 placeholder:text-default-300
-                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50
-                transition-shadow duration-150"
-                                :class="{ '!cursor-not-allowed opacity-60': tabActivo === 'memos' }" />
-
-                            <div x-ref="dropdown" x-show="open && results.length > 0" x-cloak
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 -translate-y-1"
-                                x-transition:enter-end="opacity-100 translate-y-0"
-                                class="fixed z-[999] bg-white border border-default-200 rounded-xl shadow-xl overflow-hidden">
-
-                                <div class="px-3 py-2 border-b border-default-100">
-                                    <span
-                                        class="text-[10px] font-semibold tracking-widest uppercase text-default-400">Resultados</span>
-                                </div>
-
-                                <div class="max-h-56 overflow-y-auto custom-scrollbar">
-                                    <template x-for="(p, idx) in results" :key="idx">
-                                        <div @click="seleccionarPersonal(p)" class="flex items-center gap-3 px-3 py-2.5 cursor-pointer
-                            hover:bg-primary/5 border-b border-default-100 last:border-b-0
-                            transition-colors duration-100 group">
-
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-default-800 truncate"
-                                                    x-text="p.nombre_completo"></p>
-                                                <p class="text-xs mt-0.5">
-                                                    <span class="text-default-400">DNI</span>
-                                                    <span
-                                                        class="ml-1 bg-default-100 text-default-600 rounded px-1 py-0.5 font-mono text-[11px]"
-                                                        x-text="p.dni || '—'"></span>
-                                                </p>
-                                            </div>
-
-                                            <i class="ti ti-chevron-right text-xs text-default-300
-                            group-hover:text-primary group-hover:translate-x-0.5
-                            transition-all duration-150 shrink-0"></i>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -602,11 +505,17 @@ use Carbon\Traits\Date;
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
-                    <div class="relative">
-                        <i
-                            class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                        <input id="buscarCursoSeguimiento" placeholder="Buscar por nombre o código..."
-                            class="w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <i
+                                class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                            <input id="buscarCursoSeguimiento" placeholder="Buscar por nombre o código..."
+                                class="w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                        </div>
+                        <select id="filtroResponsableCursos"
+                            class="w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                            <option value="">Todos los responsables</option>
+                        </select>
                     </div>
                 </div>
                 <div id="tblCursosSeguimiento" class="w-full"></div>
@@ -617,8 +526,92 @@ use Carbon\Traits\Date;
                 x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2"
                 x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex flex-col gap-3 mb-4">
                     <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
+                    <div class="flex flex-col gap-3 bg-white rounded-xl p-4 border border-default-200/60 shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-default-700">Sucursal</label>
+                                <div class="relative">
+                                    <i class="ti ti-building-store absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                                    <select id="filtroSucursalPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
+                                        style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
+                                   !bg-white !text-default-700 !appearance-none cursor-pointer
+                                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                                        :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
+                                        <option value="">Todas las sucursales</option>
+                                    </select>
+                                    <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-default-700">Tipo de trabajador</label>
+                                <div class="relative">
+                                    <i class="ti ti-briefcase absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                                    <select id="filtroTipoPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
+                                        style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
+                                   !bg-white !text-default-700 !appearance-none cursor-pointer
+                                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                                        :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
+                                        <option value="">Todos los tipos</option>
+                                        <option value="Administrativo">Administrativo</option>
+                                        <option value="Operativo">Operativo</option>
+                                    </select>
+                                    <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-1.5" x-data="searchPersonalSeguimiento()">
+                            <label class="text-xs font-medium text-default-700">Buscar personal</label>
+                            <div class="relative">
+                                <i class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                                <input x-ref="inputBuscar" x-model="query" @input="search(); posicionarDropdown()"
+                                    @focus="posicionarDropdown()" @keydown.enter.stop="seleccionarPrimerResultado()"
+                                    @click.away="open = false" :disabled="tabActivo === 'memos'"
+                                    placeholder="Buscar por DNI o nombres..." class="w-full pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg
+                    !bg-white !text-default-700 placeholder:text-default-300
+                    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50
+                    transition-shadow duration-150"
+                                    :class="{ '!cursor-not-allowed opacity-60': tabActivo === 'memos' }" />
+
+                                <div x-ref="dropdown" x-show="open && results.length > 0" x-cloak
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 -translate-y-1"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    class="fixed z-[999] bg-white border border-default-200 rounded-xl shadow-xl overflow-hidden">
+
+                                    <div class="px-3 py-2 border-b border-default-100">
+                                        <span class="text-[10px] font-semibold tracking-widest uppercase text-default-400">Resultados</span>
+                                    </div>
+
+                                    <div class="max-h-56 overflow-y-auto custom-scrollbar">
+                                        <template x-for="(p, idx) in results" :key="idx">
+                                            <div @click="seleccionarPersonal(p)" class="flex items-center gap-3 px-3 py-2.5 cursor-pointer
+                                hover:bg-primary/5 border-b border-default-100 last:border-b-0
+                                transition-colors duration-100 group">
+
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-medium text-default-800 truncate"
+                                                        x-text="p.nombre_completo"></p>
+                                                    <p class="text-xs mt-0.5">
+                                                        <span class="text-default-400">DNI</span>
+                                                        <span class="ml-1 bg-default-100 text-default-600 rounded px-1 py-0.5 font-mono text-[11px]"
+                                                            x-text="p.dni || '—'"></span>
+                                                    </p>
+                                                </div>
+
+                                                <i class="ti ti-chevron-right text-xs text-default-300
+                                group-hover:text-primary group-hover:translate-x-0.5
+                                transition-all duration-150 shrink-0"></i>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div id="tblPersonalSeguimiento" class="w-full"></div>
             </div>
@@ -739,6 +732,18 @@ use Carbon\Traits\Date;
                        hover:border-default-300
                        focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                                     <option value="">Todos los clientes</option>
+                                </select>
+                            </div>
+
+                            <div class="w-full md:w-64">
+                                <select
+                                    id="filtroSucursalMemos"
+                                    class="w-full h-10 px-3 text-sm text-default-700
+                       bg-white border border-default-200 rounded-lg shadow-sm
+                       outline-none transition
+                       hover:border-default-300
+                       focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                                    <option value="">Todas las sucursales</option>
                                 </select>
                             </div>
 
@@ -1268,14 +1273,26 @@ use Carbon\Traits\Date;
                     x-text="countByEstado('sin_iniciar') + ' curso(s) pendiente(s)'"></span>
             </div>
             <div class="flex items-center gap-2">
-                <button type="button" @click="!enCooldown() && notificarCursosPendientes()" :disabled="enCooldown()"
-                    :class="enCooldown()
-                        ? 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-400 cursor-not-allowed text-xs'
-                        : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs shadow-sm'">
-                    <i :class="enCooldown() ? 'ti ti-clock mr-1.5' : 'ti ti-mail mr-1.5'"></i>
-                    <span
-                        x-text="enCooldown() ? 'Espera ' + tiempoRestanteCooldown() : 'Notificar sobre cursos pendientes'"></span>
+                <button type="button"
+                    @click="countByEstado('sin_iniciar') > 0 && notificarCursosPendientes()"
+                    :disabled="countByEstado('sin_iniciar') === 0"
+                    :class="countByEstado('sin_iniciar') > 0
+                        ? 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs shadow-sm'
+                        : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-400 cursor-not-allowed text-xs'">
+                    <i class="ti ti-mail mr-1.5"></i>
+                    <span>Notificar sobre cursos pendientes</span>
                 </button>
+
+                <button type="button"
+                    @click="countByEstado('sin_iniciar') > 0 && enviarMEMO()"
+                    :disabled="countByEstado('sin_iniciar') === 0"
+                    :class="countByEstado('sin_iniciar') > 0
+                        ? 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-all text-xs shadow-sm'
+                        : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-400 cursor-not-allowed text-xs'">
+                    <i class="ti ti-file-alert mr-1.5"></i>
+                    Enviar MEMO
+                </button>
+
                 <button type="button" @click="cerrar()"
                     class="px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-600 hover:bg-default-200 transition-all text-xs cursor-pointer">
                     Cerrar
@@ -2420,6 +2437,32 @@ use Carbon\Traits\Date;
                     });
             },
 
+            enviarMEMO() {
+                const nroDoc = this.personal.dni;
+                if (!nroDoc) {
+                    Swal.fire({ icon: 'warning', title: 'Sin documento', text: 'No se encontró el DNI del colaborador' });
+                    return;
+                }
+                Swal.fire({
+                    title: 'Enviando MEMO...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading(),
+                });
+                fetch(`${VITE_URL_APP}/api/enviar-memo/${nroDoc}`)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: 'MEMO enviado', timer: 2000, timerProgressBar: true, showConfirmButton: false });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo enviar el MEMO' });
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar el MEMO' });
+                    });
+            },
+
             cerrar() {
                 this.open = false;
             },
@@ -2479,7 +2522,7 @@ use Carbon\Traits\Date;
         };
     };
 
-            window.modalComparativa = function() {
+    window.modalComparativa = function() {
         return {
             open: false,
             seleccionados: [],

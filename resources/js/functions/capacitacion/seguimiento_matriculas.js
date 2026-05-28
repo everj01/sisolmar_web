@@ -16,13 +16,16 @@ document.addEventListener("DOMContentLoaded", () => {
         memoNivel: null,
         memoSucursal: "",
         memoTipo: "",
+        cursoResponsable: "",
     };
 
     const elements = {
         searchCurso: document.getElementById("buscarCursoSeguimiento"),
+        filtroResponsableCursos: document.getElementById("filtroResponsableCursos"),
         searchPersonal: document.getElementById("buscarPersonalSeguimiento"),
         searchMemos: document.getElementById("buscarMemosEnviados"),
         filtroClienteMemos: document.getElementById("filtroClienteMemos"),
+        filtroSucursalMemos: document.getElementById("filtroSucursalMemos"),
         btnBuscarMemos: document.getElementById("btnBuscarMemosEnviados"),
         btnLimpiarMemos: document.getElementById("btnLimpiarFiltroMemos"),
         filtroSucursalPersonal: document.getElementById(
@@ -123,6 +126,22 @@ document.addEventListener("DOMContentLoaded", () => {
         select.innerHTML =
             `<option value="">Todos los clientes</option>` +
             clientes.map((c) => `<option value="${c}">${c}</option>`).join("");
+
+        select.value = actual;
+    }
+
+    function cargarSucursalesMemos(lista = []) {
+        const select = elements.filtroSucursalMemos;
+        if (!select) return;
+
+        const actual = select.value;
+        const sucursales = [
+            ...new Set(lista.map((m) => m.SUCURSAL).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todas las sucursales</option>` +
+            sucursales.map((s) => `<option value="${s}">${s}</option>`).join("");
 
         select.value = actual;
     }
@@ -322,6 +341,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window.tabulatorCursos = table;
 
+        table.on("dataLoaded", function (data) {
+            const responsables = [
+                ...new Set(
+                    data
+                        .map((r) => r.responsable)
+                        .filter(Boolean),
+                ),
+            ].sort();
+
+            const select = elements.filtroResponsableCursos;
+            if (select) {
+                const actual = select.value;
+                select.innerHTML =
+                    `<option value="">Todos los responsables</option>` +
+                    responsables
+                        .map((r) => `<option value="${r}">${r}</option>`)
+                        .join("");
+                select.value = actual;
+            }
+        });
+
+        if (elements.filtroResponsableCursos) {
+            elements.filtroResponsableCursos.addEventListener("change", function () {
+                state.cursoResponsable = this.value;
+                const term = (elements.searchCurso?.value || "").trim().toLowerCase();
+                const resp = state.cursoResponsable;
+
+                if (resp || term) {
+                    table.setFilter((data) => {
+                        if (resp && (data.responsable || "") !== resp) return false;
+                        if (term) {
+                            const nombre = (data.nombre || "").toLowerCase();
+                            const codigo = String(data.codigo_curso || "").toLowerCase();
+                            if (!nombre.includes(term) && !codigo.includes(term)) return false;
+                        }
+                        return true;
+                    });
+                } else {
+                    table.clearFilter();
+                }
+            });
+        }
+
         table.on("rowClick", (e, row) => {
             const el = row.getElement();
             el.style.background = "rgba(99, 102, 241, 0.1)";
@@ -349,16 +411,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     const term = this.value.trim().toLowerCase();
+                    const resp = state.cursoResponsable;
 
-                    if (term) {
+                    if (term || resp) {
                         table.setFilter((data) => {
-                            const nombre = (data.nombre || "").toLowerCase();
-                            const codigo = String(
-                                data.codigo_curso || "",
-                            ).toLowerCase();
-                            return (
-                                nombre.includes(term) || codigo.includes(term)
-                            );
+                            if (resp && (data.responsable || "") !== resp) return false;
+                            if (term) {
+                                const nombre = (data.nombre || "").toLowerCase();
+                                const codigo = String(data.codigo_curso || "").toLowerCase();
+                                if (!nombre.includes(term) && !codigo.includes(term)) return false;
+                            }
+                            return true;
                         });
                     } else {
                         table.clearFilter();
@@ -382,6 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 cargarClientesMemos(data);
+                cargarSucursalesMemos(data);
                 return data;
             },
 
@@ -628,6 +692,13 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        if (elements.filtroSucursalMemos) {
+            elements.filtroSucursalMemos.addEventListener("change", () => {
+                state.memoSucursal = elements.filtroSucursalMemos.value;
+                aplicarFiltrosMemos();
+            });
+        }
+
         if (elements.btnLimpiarMemos) {
             elements.btnLimpiarMemos?.addEventListener("click", () => {
                 state.memoSearchTerm = "";
@@ -639,6 +710,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (elements.searchMemos) elements.searchMemos.value = "";
                 if (elements.filtroClienteMemos)
                     elements.filtroClienteMemos.value = "";
+                if (elements.filtroSucursalMemos)
+                    elements.filtroSucursalMemos.value = "";
                 if (elements.filtroSucursalPersonal)
                     elements.filtroSucursalPersonal.value = "";
                 if (elements.filtroTipoPersonal)
