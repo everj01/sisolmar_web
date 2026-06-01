@@ -150,41 +150,36 @@ class Consulta extends Model
             ->get();
     }
 
-    public static function obtenerPersonalPorSucursal_Reporte($codSucursal)
+    public static function obtenerPersonalPorSucursal($codSucursal = null)
     {
-        return DB::table("si_solm.dbo.PERSONAL")
-            ->leftJoin("sw_cargos", "si_solm.dbo.PERSONAL.CODI_CARG", "=", "sw_cargos.codigo")
-            ->select(
-                "si_solm.dbo.PERSONAL.CODI_PERS",
-                "si_solm.dbo.PERSONAL.APEL_1",
-                "si_solm.dbo.PERSONAL.APEL_2",
-                "si_solm.dbo.PERSONAL.NOMB_1",
-                "si_solm.dbo.PERSONAL.NOMB_2",
-                "si_solm.dbo.PERSONAL.NRO_DOCU_IDEN",
-                "si_solm.dbo.PERSONAL.SUCU_CODIGO",
-                "si_solm.dbo.PERSONAL.FECH_INGRE",
-                "si_solm.dbo.PERSONAL.PERS_TIPOTRAB",
-                "sw_cargos.nombre as cargo",
-            )
-            ->orderBy("si_solm.dbo.PERSONAL.CODI_PERS")
-            ->where("si_solm.dbo.PERSONAL.PERS_VIGENCIA", "SI")
-            ->where("si_solm.dbo.PERSONAL.SUCU_CODIGO", $codSucursal)
-            ->get();
-    }
+        return DB::table('si_solm.dbo.PERSONAL as P')
+            ->leftJoin('si_solm.dbo.CARGOS as C', 'C.CODI_CARG', '=', 'P.CODI_CARG')
+            ->selectRaw("
+            P.CODI_PERS,
 
-    public static function getPersonalPorSucursal($codSucursal)
-    {
-        return DB::table("si_solm.dbo.PERSONAL")
-            ->leftJoin("sw_cargos", "si_solm.dbo.PERSONAL.CODI_CARG", "=", "sw_cargos.codigo")
-            ->select(
-                "si_solm.dbo.PERSONAL.CODI_PERS as codigo",
-                DB::raw("LTRIM(RTRIM(si_solm.dbo.PERSONAL.APEL_1 + ' ' + ISNULL(si_solm.dbo.PERSONAL.APEL_2, '') + ' ' + si_solm.dbo.PERSONAL.NOMB_1 + ' ' + ISNULL(si_solm.dbo.PERSONAL.NOMB_2, ''))) as nombre_completo"),
-                "si_solm.dbo.PERSONAL.NRO_DOCU_IDEN as dni",
-                "sw_cargos.nombre as cargo",
-            )
-            ->where("si_solm.dbo.PERSONAL.PERS_VIGENCIA", "SI")
-            ->where("si_solm.dbo.PERSONAL.SUCU_CODIGO", $codSucursal)
-            ->orderBy("si_solm.dbo.PERSONAL.APEL_1")
+            LTRIM(RTRIM(
+                P.APEL_1 + ' ' +
+                ISNULL(P.APEL_2, '') + ' ' +
+                P.NOMB_1 + ' ' +
+                ISNULL(P.NOMB_2, '')
+            )) AS NOMBRE_COMPLETO,
+
+            P.NRO_DOCU_IDEN AS NRO_DOC,
+
+            CASE
+                WHEN P.PERS_TIPOTRAB = '03' THEN 'OPERATIVO'
+                WHEN P.PERS_TIPOTRAB = '05' THEN 'ADMINISTRATIVO'
+                ELSE 'OTRO'
+            END AS TIPO_TRABAJADOR,
+
+            C.DESC_CARGO AS CARGO
+        ")
+            ->where('P.PERS_VIGENCIA', 'SI')
+            ->where('P.EMPR_CODIGO', '01')
+            ->when(!empty($codSucursal), function ($q) use ($codSucursal) {
+                $q->where('P.SUCU_CODIGO', $codSucursal);
+            })
+            ->orderBy('NOMBRE_COMPLETO')
             ->get();
     }
 }
