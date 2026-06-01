@@ -893,9 +893,6 @@ use Carbon\Traits\Date;
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                         <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate" x-text="curso.nombre">Cargando...</h3>
-                        <template x-if="loading">
-                            <i class="ti ti-loader animate-spin text-primary text-sm"></i>
-                        </template>
                     </div>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider"
@@ -942,8 +939,14 @@ use Carbon\Traits\Date;
             </button>
         </div>
 
+        <!-- Loader -->
+        <div x-show="loading" class="flex flex-col items-center justify-center py-16 text-default-400">
+            <i class="ti ti-loader animate-spin text-2xl mb-2"></i>
+            <p class="text-sm">Cargando detalles del curso...</p>
+        </div>
+
         <!-- Stats Cards -->
-        <div class="px-6 pt-5 pb-3">
+        <div x-show="!loading" class="px-6 pt-5 pb-3">
             <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest mb-3">Estadísticas del curso</p>
             <div class="grid grid-cols-5 gap-3">
                 <!-- Total Matriculados -->
@@ -1019,7 +1022,7 @@ use Carbon\Traits\Date;
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-6xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-7xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -1107,8 +1110,50 @@ use Carbon\Traits\Date;
                     </div>
                 </div>
 
-                <!-- Fecha Desde -->
+                <!-- Tipo de Trabajador -->
                 <div class="min-w-[160px]">
+                    <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
+                        <i class="ti ti-briefcase text-[10px]"></i> Tipo Trab.
+                    </label>
+                    <select x-model="filtroTipoTrabajador" @change="paginaActual = 1"
+                        class="w-full h-9 px-3 text-xs text-default-700 bg-white border border-default-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer">
+                        <option value="">Todos</option>
+                        <template x-for="t in tiposTrabajadorUnicos" :key="t">
+                            <option x-text="t" :value="t"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Cargo -->
+                <div class="min-w-[180px]">
+                    <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
+                        <i class="ti ti-id-badge text-[10px]"></i> Cargo
+                    </label>
+                    <select x-model="filtroCargo" @change="paginaActual = 1"
+                        class="w-full h-9 px-3 text-xs text-default-700 bg-white border border-default-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer">
+                        <option value="">Todos</option>
+                        <template x-for="c in cargosUnicos" :key="c">
+                            <option x-text="c" :value="c"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Sucursal -->
+                <div class="min-w-[160px]">
+                    <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
+                        <i class="ti ti-building text-[10px]"></i> Sucursal
+                    </label>
+                    <select x-model="filtroSucursal" @change="paginaActual = 1"
+                        class="w-full h-9 px-3 text-xs text-default-700 bg-white border border-default-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer">
+                        <option value="">Todas</option>
+                        <template x-for="s in sucursalesUnicas" :key="s">
+                            <option x-text="s" :value="s"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Fecha Desde -->
+                <div class="min-w-[140px]">
                     <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
                         <i class="ti ti-calendar text-[10px]"></i> Desde
                     </label>
@@ -1117,7 +1162,7 @@ use Carbon\Traits\Date;
                 </div>
 
                 <!-- Fecha Hasta -->
-                <div class="min-w-[160px]">
+                <div class="min-w-[140px]">
                     <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
                         <i class="ti ti-calendar text-[10px]"></i> Hasta
                     </label>
@@ -1127,7 +1172,7 @@ use Carbon\Traits\Date;
 
                 <!-- Limpiar filtros -->
                 <button type="button" @click="limpiarFiltros()"
-                    x-show="busqueda || fechaDesde || fechaHasta || ordenCampo !== 'default'"
+                    x-show="busqueda || fechaDesde || fechaHasta || filtroCargo || filtroSucursal || filtroTipoTrabajador || ordenCampo !== 'default'"
                     class="h-9 px-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-default-500 bg-white border border-default-200 rounded-lg hover:bg-default-50 hover:text-default-700 transition-all cursor-pointer shrink-0">
                     <i class="ti ti-refresh text-sm"></i> Limpiar
                 </button>
@@ -1174,6 +1219,27 @@ use Carbon\Traits\Date;
                                     <i class="ti text-[11px]" :class="getIconoOrden('nombreCompleto')"></i>
                                 </div>
                             </th>
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest cursor-pointer select-none hover:text-primary transition-colors"
+                                @click="toggleOrden('tipo_trabajador')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Tipo Trab.</span>
+                                    <i class="ti text-[11px]" :class="getIconoOrden('tipo_trabajador')"></i>
+                                </div>
+                            </th>
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest cursor-pointer select-none hover:text-primary transition-colors"
+                                @click="toggleOrden('cargo')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Cargo</span>
+                                    <i class="ti text-[11px]" :class="getIconoOrden('cargo')"></i>
+                                </div>
+                            </th>
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest cursor-pointer select-none hover:text-primary transition-colors"
+                                @click="toggleOrden('sucursal')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Sucursal</span>
+                                    <i class="ti text-[11px]" :class="getIconoOrden('sucursal')"></i>
+                                </div>
+                            </th>
                             <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest">Correo</th>
                             <template x-if="!mostrarAcciones">
                                 <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest text-center cursor-pointer select-none hover:text-primary transition-colors"
@@ -1207,6 +1273,15 @@ use Carbon\Traits\Date;
                                 </td>
                                 <td class="py-3 px-4">
                                     <span class="text-xs font-semibold text-default-900" x-text="p.nombreCompleto"></span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100" x-text="p.tipo_trabajador || '—'"></span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-xs text-default-700" x-text="p.cargo || '—'"></span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-xs text-default-700" x-text="p.sucursal || '—'"></span>
                                 </td>
                                 <td class="py-3 px-4">
                                     <span class="text-xs text-default-500" x-text="p.correo || '—'"></span>
@@ -1347,7 +1422,7 @@ use Carbon\Traits\Date;
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-5xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-7xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -1451,13 +1526,23 @@ use Carbon\Traits\Date;
                         <p class="text-lg font-bold text-primary" x-text="cursos.length">0</p>
                         <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">Total</p>
                     </div>
-                    <div class="text-center px-2">
-                        <p class="text-lg font-bold text-amber-500" x-text="countByEstado('sin_iniciar')">0</p>
-                        <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">Sin iniciar</p>
+                    <div class="w-px h-10 bg-default-200"></div>
+                    <div class="text-center px-2" x-show="totales">
+                        <p class="text-lg font-bold text-amber-500" x-text="totales?.sin_acceder ?? 0">0</p>
+                        <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">Sin acceder</p>
                     </div>
-                    <div class="text-center px-2">
-                        <p class="text-lg font-bold text-green-500" x-text="countByEstado('en_curso')">0</p>
+                    <div class="text-center px-2" x-show="totales">
+                        <p class="text-lg font-bold text-blue-500" x-text="totales?.en_curso ?? 0">0</p>
                         <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">En curso</p>
+                    </div>
+                    <div class="w-px h-10 bg-default-200"></div>
+                    <div class="text-center px-2" x-show="totales">
+                        <p class="text-lg font-bold text-green-500" x-text="totales?.aprobado ?? 0">0</p>
+                        <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">Aprobados</p>
+                    </div>
+                    <div class="text-center px-2" x-show="totales">
+                        <p class="text-lg font-bold text-red-500" x-text="totales?.desaprobado ?? 0">0</p>
+                        <p class="text-[8px] text-default-400 uppercase tracking-wider font-bold">Desaprobados</p>
                     </div>
                 </div>
             </div>
@@ -1484,17 +1569,29 @@ use Carbon\Traits\Date;
                                 : 'px-3 py-1.5 rounded-lg bg-default-100 text-default-500 text-[10px] font-semibold hover:bg-default-200 transition-all'">
                             Todos
                         </button>
-                        <button type="button" @click="filtroEstado = 'sin_iniciar'"
-                            :class="filtroEstado === 'sin_iniciar'
+                        <button type="button" @click="filtroEstado = 'Sin acceder'"
+                            :class="filtroEstado === 'Sin acceder'
                                 ? 'px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[10px] font-semibold transition-all'
                                 : 'px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-semibold hover:bg-amber-100 transition-all'">
-                            <i class="ti ti-clock mr-0.5"></i> Sin iniciar
+                            <i class="ti ti-clock mr-0.5"></i> Sin acceder
                         </button>
-                        <button type="button" @click="filtroEstado = 'en_curso'"
-                            :class="filtroEstado === 'en_curso'
+                        <button type="button" @click="filtroEstado = 'En curso'"
+                            :class="filtroEstado === 'En curso'
+                                ? 'px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[10px] font-semibold transition-all'
+                                : 'px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-semibold hover:bg-blue-100 transition-all'">
+                            <i class="ti ti-player-play mr-0.5"></i> En curso
+                        </button>
+                        <button type="button" @click="filtroEstado = 'Aprobado'"
+                            :class="filtroEstado === 'Aprobado'
                                 ? 'px-3 py-1.5 rounded-lg bg-green-500 text-white text-[10px] font-semibold transition-all'
                                 : 'px-3 py-1.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-semibold hover:bg-green-100 transition-all'">
-                            <i class="ti ti-player-play mr-0.5"></i> En curso
+                            <i class="ti ti-circle-check mr-0.5"></i> Aprobado
+                        </button>
+                        <button type="button" @click="filtroEstado = 'Desaprobado'"
+                            :class="filtroEstado === 'Desaprobado'
+                                ? 'px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-semibold transition-all'
+                                : 'px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-semibold hover:bg-red-100 transition-all'">
+                            <i class="ti ti-x mr-0.5"></i> Desaprobado
                         </button>
                     </div>
                     <div class="flex-1"></div>
@@ -1533,53 +1630,58 @@ use Carbon\Traits\Date;
                                 <th class="text-left py-2.5 px-3 w-10">#</th>
                                 <th class="text-left py-2.5 px-3">Nombre del curso</th>
                                 <th class="text-center py-2.5 px-3 w-32">Estado</th>
+                                <th class="text-center py-2.5 px-3 w-20">Nota final</th>
                                 <th class="text-center py-2.5 px-3 w-32">Último acceso</th>
-                                <th class="text-center py-2.5 px-3 w-28">Matrícula</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-default-100">
-                            <template x-for="(c, index) in cursosFiltrados" :key="c.course_id">
+                            <template x-for="(c, index) in cursosFiltrados" :key="index">
                                 <tr class="hover:bg-default-50 transition-colors">
                                     <td class="py-2.5 px-3 text-default-400 text-xs font-mono" x-text="index + 1"></td>
                                     <td class="py-2.5 px-3">
-                                        <p class="font-medium text-default-800 text-xs" x-text="c.course_nombre"></p>
+                                        <p class="font-medium text-default-800 text-xs" x-text="c.nombre_curso || c.curso_nombre || c.nombre || ''"></p>
                                     </td>
                                     <td class="py-2.5 px-3 text-center">
-                                        <span x-show="c.estado === 'en_curso'"
-                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-green-50 text-green-700 border border-green-200">
+                                        <span x-show="c.estado === 'En curso'"
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                                             <i class="ti ti-player-play text-[8px]"></i>
                                             En curso
                                         </span>
-                                        <span x-show="c.estado === 'sin_iniciar'"
+                                        <span x-show="c.estado === 'Sin acceder'"
                                             class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                                             <i class="ti ti-clock text-[8px]"></i>
-                                            Sin iniciar
+                                            Sin acceder
                                         </span>
-                                        <span x-show="c.estado === 'finalizado'"
-                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                        <span x-show="c.estado === 'Aprobado'"
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-green-50 text-green-700 border border-green-200">
                                             <i class="ti ti-circle-check text-[8px]"></i>
-                                            Finalizado
+                                            Aprobado
+                                        </span>
+                                        <span x-show="c.estado === 'Desaprobado'"
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                                            <i class="ti ti-x text-[8px]"></i>
+                                            Desaprobado
                                         </span>
                                     </td>
                                     <td class="py-2.5 px-3 text-center">
-                                        <template x-if="formatearFecha(c.ultimo_acceso)">
-                                            <div style="line-height: 1.4;">
-                                                <span style="font-size: 11px; font-weight: 600; color: #374151;"
-                                                    x-text="formatearFecha(c.ultimo_acceso).fecha"></span>
-                                                <br>
-                                                <span style="font-size: 10px; color: #9ca3af;"
-                                                    x-text="formatearFecha(c.ultimo_acceso).hora"></span>
-                                            </div>
-                                        </template>
-                                        <span x-show="!formatearFecha(c.ultimo_acceso)"
+                                        <span x-show="c.nota_final !== null && c.nota_final !== undefined"
+                                            class="font-semibold"
+                                            :class="c.nota_final >= 10 ? 'text-green-600' : 'text-red-500'"
+                                            x-text="c.nota_final"></span>
+                                        <span x-show="c.nota_final === null || c.nota_final === undefined"
                                             class="text-[10px] text-default-300">—</span>
                                     </td>
                                     <td class="py-2.5 px-3 text-center">
-                                        <template x-if="formatearFecha(c.fecha_inicio_matricula)">
-                                            <span style="font-size: 10px; color: #6b7280;"
-                                                x-text="formatearFecha(c.fecha_inicio_matricula).fecha"></span>
+                                        <template x-if="formatearFecha(c.fecha_ultimo_acceso)">
+                                            <div style="line-height: 1.4;">
+                                                <span style="font-size: 11px; font-weight: 600; color: #374151;"
+                                                    x-text="formatearFecha(c.fecha_ultimo_acceso).fecha"></span>
+                                                <br>
+                                                <span style="font-size: 10px; color: #9ca3af;"
+                                                    x-text="formatearFecha(c.fecha_ultimo_acceso).hora"></span>
+                                            </div>
                                         </template>
-                                        <span x-show="!formatearFecha(c.fecha_inicio_matricula)"
+                                        <span x-show="!formatearFecha(c.fecha_ultimo_acceso)"
                                             class="text-[10px] text-default-300">—</span>
                                     </td>
                                 </tr>
@@ -1600,9 +1702,9 @@ use Carbon\Traits\Date;
             </div>
             <div class="flex items-center gap-2">
                 <button type="button"
-                    @click="countByEstado('sin_iniciar') > 0 && notificarCursosPendientes()"
-                    :disabled="countByEstado('sin_iniciar') === 0"
-                    :class="countByEstado('sin_iniciar') > 0
+                    @click="countByEstado('Sin acceder') > 0 && notificarCursosPendientes()"
+                    :disabled="countByEstado('Sin acceder') === 0"
+                    :class="countByEstado('Sin acceder') > 0
                         ? 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs shadow-sm'
                         : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-400 cursor-not-allowed text-xs'">
                     <i class="ti ti-mail mr-1.5"></i>
@@ -1610,9 +1712,9 @@ use Carbon\Traits\Date;
                 </button>
 
                 <button type="button"
-                    @click="countByEstado('sin_iniciar') > 0 && enviarMEMO()"
-                    :disabled="countByEstado('sin_iniciar') === 0"
-                    :class="countByEstado('sin_iniciar') > 0
+                    @click="countByEstado('Sin acceder') > 0 && enviarMEMO()"
+                    :disabled="countByEstado('Sin acceder') === 0"
+                    :class="countByEstado('Sin acceder') > 0
                         ? 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-all text-xs shadow-sm'
                         : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-400 cursor-not-allowed text-xs'">
                     <i class="ti ti-file-alert mr-1.5"></i>
@@ -2409,6 +2511,9 @@ use Carbon\Traits\Date;
             busqueda: '',
             fechaDesde: '',
             fechaHasta: '',
+            filtroCargo: '',
+            filtroSucursal: '',
+            filtroTipoTrabajador: '',
             ordenCampo: 'default',
             ordenDireccion: 'asc',
             paginaActual: 1,
@@ -2460,6 +2565,18 @@ use Carbon\Traits\Date;
                     });
                 }
 
+                if (this.filtroCargo) {
+                    resultado = resultado.filter(p => p.cargo === this.filtroCargo);
+                }
+
+                if (this.filtroSucursal) {
+                    resultado = resultado.filter(p => p.sucursal === this.filtroSucursal);
+                }
+
+                if (this.filtroTipoTrabajador) {
+                    resultado = resultado.filter(p => p.tipo_trabajador === this.filtroTipoTrabajador);
+                }
+
                 if (this.ordenCampo !== 'default') {
                     resultado.sort((a, b) => {
                         let valA, valB;
@@ -2472,6 +2589,15 @@ use Carbon\Traits\Date;
                         } else if (this.ordenCampo === 'ultimo_acceso') {
                             valA = a.ultimo_acceso ? new Date(a.ultimo_acceso).getTime() : 0;
                             valB = b.ultimo_acceso ? new Date(b.ultimo_acceso).getTime() : 0;
+                        } else if (this.ordenCampo === 'cargo') {
+                            valA = (a.cargo || '').toLowerCase();
+                            valB = (b.cargo || '').toLowerCase();
+                        } else if (this.ordenCampo === 'sucursal') {
+                            valA = (a.sucursal || '').toLowerCase();
+                            valB = (b.sucursal || '').toLowerCase();
+                        } else if (this.ordenCampo === 'tipo_trabajador') {
+                            valA = (a.tipo_trabajador || '').toLowerCase();
+                            valB = (b.tipo_trabajador || '').toLowerCase();
                         }
                         if (valA < valB) return this.ordenDireccion === 'asc' ? -1 : 1;
                         if (valA > valB) return this.ordenDireccion === 'asc' ? 1 : -1;
@@ -2480,6 +2606,18 @@ use Carbon\Traits\Date;
                 }
 
                 return resultado;
+            },
+
+            get cargosUnicos() {
+                return [...new Set(this.personales.map(p => p.cargo).filter(Boolean))].sort();
+            },
+
+            get sucursalesUnicas() {
+                return [...new Set(this.personales.map(p => p.sucursal).filter(Boolean))].sort();
+            },
+
+            get tiposTrabajadorUnicos() {
+                return [...new Set(this.personales.map(p => p.tipo_trabajador).filter(Boolean))].sort();
             },
 
             get totalPaginas() {
@@ -2584,6 +2722,9 @@ use Carbon\Traits\Date;
                 this.busqueda = '';
                 this.fechaDesde = '';
                 this.fechaHasta = '';
+                this.filtroCargo = '';
+                this.filtroSucursal = '';
+                this.filtroTipoTrabajador = '';
                 this.ordenCampo = 'default';
                 this.ordenDireccion = 'asc';
                 this.paginaActual = 1;
@@ -2599,6 +2740,9 @@ use Carbon\Traits\Date;
                 this.busqueda = '';
                 this.fechaDesde = '';
                 this.fechaHasta = '';
+                this.filtroCargo = '';
+                this.filtroSucursal = '';
+                this.filtroTipoTrabajador = '';
                 this.ordenCampo = 'default';
                 this.ordenDireccion = 'asc';
                 this.paginaActual = 1;
@@ -2673,20 +2817,21 @@ use Carbon\Traits\Date;
                 email: ''
             },
             cursos: [],
+            totales: null,
             cursosCargado: false,
             filtroEstado: 'todos',
+            filtroUltimoAccesoDesde: '',
+            filtroUltimoAccesoHasta: '',
+            filtroMatriculaDesde: '',
+            filtroMatriculaHasta: '',
+            filtroAnioCreacion: '',
             busquedaCurso: '',
-            _cooldownMs: 5 * 60 * 60 * 1000,
             memoInfo: {
                 total: 0,
                 siguiente_num_memo: 1,
                 siguiente_texto: 'primer',
             },
             memoCargado: false,
-
-            _cooldownKey() {
-                return 'notif_pendientes_' + this.personal.dni;
-            },
 
             getIniciales() {
                 if (!this.personal.nombre_completo) return '?';
@@ -2716,34 +2861,53 @@ use Carbon\Traits\Date;
 
             get porcentajeAvance() {
                 if (this.cursos.length === 0) return 0;
-                const completados = this.countByEstado('finalizado');
-                const enCurso = this.countByEstado('en_curso');
+                const completados = this.countByEstado('Aprobado') + this.countByEstado('Desaprobado');
+                const enCurso = this.countByEstado('En curso');
                 return Math.round(((completados + enCurso) / this.cursos.length) * 100);
-            },
-
-            enCooldown() {
-                const ultimaVez = localStorage.getItem(this._cooldownKey());
-                return ultimaVez && (Date.now() - parseInt(ultimaVez)) < this._cooldownMs;
-            },
-
-            tiempoRestanteCooldown() {
-                const ultimaVez = localStorage.getItem(this._cooldownKey());
-                if (!ultimaVez) return '';
-                const restante = this._cooldownMs - (Date.now() - parseInt(ultimaVez));
-                if (restante <= 0) return '';
-                const h = Math.floor(restante / 3600000);
-                const m = Math.floor((restante % 3600000) / 60000);
-                return h > 0 ? `${h}h ${m}m` : `${m}m`;
             },
 
             get cursosFiltrados() {
                 return this.cursos.filter(c => {
                     if (this.filtroEstado !== 'todos' && c.estado !== this.filtroEstado) return false;
                     const q = this.busquedaCurso.toLowerCase().trim();
-                    if (q && !c.course_nombre.toLowerCase().includes(q) && !c.course_codigo.toLowerCase()
-                        .includes(q)) return false;
+                    const nombre = c.nombre_curso || '';
+                    if (q && !nombre.toLowerCase().includes(q)) return false;
+                    if (this.filtroUltimoAccesoDesde) {
+                        const desde = new Date(this.filtroUltimoAccesoDesde);
+                        const val = c.fecha_ultimo_acceso ? new Date(c.fecha_ultimo_acceso) : null;
+                        if (!val || val < desde) return false;
+                    }
+                    if (this.filtroUltimoAccesoHasta) {
+                        const hasta = new Date(this.filtroUltimoAccesoHasta);
+                        hasta.setHours(23, 59, 59, 999);
+                        const val = c.fecha_ultimo_acceso ? new Date(c.fecha_ultimo_acceso) : null;
+                        if (!val || val > hasta) return false;
+                    }
+                    if (this.filtroMatriculaDesde) {
+                        const desde = new Date(this.filtroMatriculaDesde);
+                        const val = c.fecha_inicio_matricula ? new Date(c.fecha_inicio_matricula) : null;
+                        if (!val || val < desde) return false;
+                    }
+                    if (this.filtroMatriculaHasta) {
+                        const hasta = new Date(this.filtroMatriculaHasta);
+                        hasta.setHours(23, 59, 59, 999);
+                        const val = c.fecha_inicio_matricula ? new Date(c.fecha_inicio_matricula) : null;
+                        if (!val || val > hasta) return false;
+                    }
+                    if (this.filtroAnioCreacion) {
+                        const anio = parseInt(this.filtroAnioCreacion);
+                        const val = c.fecha_creacion_curso ? new Date(c.fecha_creacion_curso).getFullYear() : null;
+                        if (val !== anio) return false;
+                    }
                     return true;
                 });
+            },
+
+            get aniosCreacion() {
+                const actual = new Date().getFullYear();
+                const años = [];
+                for (let a = actual; a >= 2010; a--) años.push(a);
+                return años;
             },
 
             formatearFecha(val) {
@@ -2769,8 +2933,14 @@ use Carbon\Traits\Date;
             mostrar(data) {
                 this.personal = data;
                 this.cursos = [];
+                this.totales = null;
                 this.cursosCargado = false;
                 this.filtroEstado = 'todos';
+                this.filtroUltimoAccesoDesde = '';
+                this.filtroUltimoAccesoHasta = '';
+                this.filtroMatriculaDesde = '';
+                this.filtroMatriculaHasta = '';
+                this.filtroAnioCreacion = '';
                 this.busquedaCurso = '';
                 this.memoInfo = {
                     total: 0,
@@ -2792,10 +2962,13 @@ use Carbon\Traits\Date;
                         this.memoCargado = true;
                     });
 
-                fetch(`${VITE_URL_APP}/api/get-cursos-alumno/${data.dni}`)
+                fetch(`${VITE_URL_APP}/api/obtener-cursos-alumno?dni=${data.dni}`)
                     .then(r => r.json())
                     .then(res => {
-                        this.cursos = res.cursos || [];
+                        if (res.success) {
+                            this.cursos = res.Cursos || [];
+                            this.totales = res.Totales || null;
+                        }
                         this.cursosCargado = true;
                     })
                     .catch(() => {
@@ -2805,15 +2978,7 @@ use Carbon\Traits\Date;
             },
 
             notificarCursosPendientes() {
-                if (this.enCooldown()) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Ya fue notificado',
-                        text: `Podrás volver a notificar en ${this.tiempoRestanteCooldown()}`
-                    });
-                    return;
-                }
-                const pendientes = this.cursos.filter(c => c.estado === 'sin_iniciar');
+                const pendientes = this.cursos.filter(c => c.estado === 'Sin acceder');
                 if (pendientes.length === 0) {
                     Swal.fire({
                         icon: 'info',
@@ -2836,7 +3001,7 @@ use Carbon\Traits\Date;
                     allowOutsideClick: false,
                     didOpen: () => Swal.showLoading()
                 });
-                fetch(`${VITE_URL_APP}/api/mail/send`, {
+                fetch(`${VITE_URL_APP}/api/mail/enviar-recordatorios`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2844,21 +3009,13 @@ use Carbon\Traits\Date;
                                 'content')
                         },
                         body: JSON.stringify({
-                            to: this.personal.email,
-                            subject: 'Tienes cursos pendientes por iniciar',
-                            template: 'recordatorio-pendientes',
-                            data: {
-                                full_name: this.personal.nombre_completo,
-                                cursos_pendientes: pendientes.map(c => ({
-                                    nombre: c.course_nombre,
-                                    codigo: c.course_codigo
-                                })),
-                            },
+                            dni: this.personal.dni,
+                            nombreCompleto: this.personal.nombre_completo,
+                            email: this.personal.email
                         }),
                     })
                     .then(r => r.json())
                     .then(() => {
-                        localStorage.setItem(this._cooldownKey(), Date.now());
                         Swal.fire({
                             icon: 'success',
                             title: 'Recordatorio enviado',
