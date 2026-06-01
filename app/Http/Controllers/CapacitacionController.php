@@ -3651,11 +3651,11 @@ class CapacitacionController extends Controller
 
         $moodleCursos = collect(
             DB::connection('mysql_grupoihb')->select(
-                "CALL grupoihb_see.SP_OBTENER_CURSOS()"
+                'CALL grupoihb_see.SP_OBTENER_CURSOS(?)', [date('Y')]
             )
         );
 
-        $result = $moodleCursos->map(fn($curso) => [
+        $result = $moodleCursos->filter(fn($curso) => in_array($curso->course_id, $cursosArray))->map(fn($curso) => [
             'course_id'          => $curso->course_id,
             'nombre'             => $curso->course_name,
             'responsable'        => $curso->responsable,
@@ -3672,27 +3672,40 @@ class CapacitacionController extends Controller
             $codMoodle = $request->course_id;
             $statusId = $request->statusId; // 0: Todos | 1: Aprobados | 2: Desaprobados | 3: Sin acceder | 4: En curso
 
-            $resultados = DB::connection("mysql_grupoihb")->select(
+            $resultadosMoodle = DB::connection("mysql_grupoihb")->select(
                 "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_CON_ESTADO(?, ?)",
                 [$codMoodle, $statusId],
             );
 
-            $personales = array_map(function ($row) {
-                return [
-                    'nroDoc'        => $row->username ?? null,
-                    'nombreCompleto' => $row->full_name ?? null,
-                    'correo'        => $row->email ?? null,
-                    'nota_final'    => $row->final_grade !== null ? (float) $row->final_grade : null,
-                    'ultimo_acceso' => $row->last_access_date ?? null,
-                ];
-            }, $resultados);
+            $resultadosBdLocal = DB::connection('sqlsrv')->select(
+                "EXEC SP_OBTENER_PERSONAL_BETA"
+            );
 
-            $total = count($personales);
+            $localMap = [];
+            foreach ($resultadosBdLocal as $row) {
+                $localMap[$row->NRO_DOC] = $row;
+            }
+
+            $personales = array_map(function ($row) use ($localMap) {
+                $local = $localMap[$row->username] ?? null;
+
+                return [
+                    'nroDoc'         => $row->username ?? null,
+                    'nombreCompleto' => $row->full_name ?? null,
+                    'correo'         => $row->email ?? null,
+                    'nota_final'     => $row->final_grade !== null ? (float) $row->final_grade : null,
+                    'ultimo_acceso'  => $row->last_access_date ?? null,
+                    'tipo_trabajador' => $local->TIPO_TRABAJADOR ?? null,
+                    'cargo'          => $local->CARGO     ?? null,
+                    'sucursal'       => $local->SUCURSAL  ?? null,
+                    'cliente'        => $local->CLIENTE   ?? 'Sin cliente',
+                ];
+            }, $resultadosMoodle);
 
             return response()->json([
-                'success' => true,
-                'Total' => $total,
-                'Personales'    => $personales,
+                'success'    => true,
+                'Total'      => count($personales),
+                'Personales' => $personales,
             ]);
         } catch (\Exception $e) {
             Log::error($e->getMessage());
@@ -3706,68 +3719,60 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function getCursosAlumno(string $dni): JsonResponse
+    public function obtenerEstadoCursosAlumno(Request $request): JsonResponse
     {
         try {
-            $anio = date('Y');
-
             $cursos = DB::connection("mysql_grupoihb")->select(
-                "CALL SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?, ?)",
-                [$dni, $anio]
+                "CALL SP_OBTENER_CURSOS_POR_USUARIO(?, ?)",
+                [$request->dni, date('Y')]
             );
 
             $resultado = array_map(
                 fn($c) => [
-                    "course_id" => $c->course_id ?? null,
-                    "course_codigo" => $c->course_codigo ?? "",
-                    "course_nombre" => $c->course_nombre ?? "",
-                    "course_corto" => $c->course_corto ?? "",
-                    "area" => $c->course_categoria ?? "",
-                    "fecha_inicio_matricula" =>
-                    $c->fecha_inicio_matricula ?? null,
-                    "fecha_fin_matricula" => $c->fecha_fin_matricula ?? null,
-                    "fecha_matricula" => $c->fecha_matricula ?? null,
-                    "ultimo_acceso" => $c->ultimo_acceso ?? null,
-                    "fecha_finalizacion" => $c->fecha_finalizacion ?? null,
+                    "nombre_curso" => $c->course_name,
+                    "fecha_creacion_curso" => $c->course_created_date,
+                    "fecha_creacion_matricula" => $c->enrolment_start_date,
+                    "fecha_ultimo_acceso" => $c->last_access_date ?? null,
+                    "nota_final" => $c->final_grade ?? null,
                     "estado" => $c->estado,
                 ],
                 $cursos,
             );
 
             $totales = [
-                "total" => count($resultado),
+                "Total" => count($resultado),
+                "aprobado" => count(
+                    array_filter(
+                        $resultado,
+                        fn($c) => $c["estado"] === "Aprobado",
+                    ),
+                ),
+                "desaprobado" => count(
+                    array_filter(
+                        $resultado,
+                        fn($c) => $c["estado"] === "Desaprobado",
+                    ),
+                ),
                 "en_curso" => count(
                     array_filter(
                         $resultado,
-                        fn($c) => $c["estado"] === "en_curso",
+                        fn($c) => $c["estado"] === "En curso",
                     ),
                 ),
-                "sin_iniciar" => count(
+                "sin_acceder" => count(
                     array_filter(
                         $resultado,
-                        fn($c) => $c["estado"] === "sin_iniciar",
-                    ),
-                ),
-                "finalizados" => count(
-                    array_filter(
-                        $resultado,
-                        fn($c) => $c["estado"] === "finalizado",
+                        fn($c) => $c["estado"] === "Sin acceder",
                     ),
                 ),
             ];
 
             return response()->json([
                 "success" => true,
-                "dni" => $dni,
-                "cursos" => $resultado,
-                "totales" => $totales,
+                "Totales" => $totales,
+                "Cursos" => $resultado,
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al obtener cursos del alumno", [
-                "dni" => $dni,
-                "error" => $e->getMessage(),
-            ]);
-
             return response()->json(
                 [
                     "success" => false,
