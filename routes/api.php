@@ -124,7 +124,7 @@ Route::get('/get-personal-por-sucursal/{sucursalId}', [CapacitacionController::c
 Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
 Route::get('/obtener-detalle-curso/{course_id}', [CapacitacionController::class, 'obtenerDetalleCurso']);
 Route::get('/get-estudiantes-curso', [CapacitacionController::class, 'obtenerEstudiantesCurso']);
-Route::get('/get-cursos-alumno/{dni}', [CapacitacionController::class, 'getCursosAlumno']);
+Route::get('/obtener-cursos-alumno', [CapacitacionController::class, 'obtenerEstadoCursosAlumno']);
 Route::post('/comparar-memos', [CapacitacionController::class, 'compararMemos']);
 
 Route::post('/cursos/analizar-plantilla', [CapacitacionController::class, 'analizarPlantilla']);
@@ -169,9 +169,8 @@ Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::cla
 Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);
 Route::post('/capacitacion/descargar-reportes-zip', [CapacitacionController::class, 'descargarReportesZip']);
 
-Route::post('/mail/recordatorio-curso/{courseId}', [MailController::class, 'sendRecordatorioCurso']);
+Route::post('/mail/enviar-recordatorios', [MailController::class, 'enviarRecordatorioCursos']);
 Route::post('/mail/enviar-recordatorio', [MailController::class, 'enviarRecordatorioCurso']);
-Route::post('/mail/send', [MailController::class, 'send']);
 
 // Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
 Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);

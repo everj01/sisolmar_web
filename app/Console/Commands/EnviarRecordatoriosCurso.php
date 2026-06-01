@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\RecordatorioCursoMail;
+use App\Mail\RecordatorioCursoPendienteMail;
 use App\Mail\RecordatorioCursosPendientesMail;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -77,7 +77,7 @@ class EnviarRecordatoriosCurso extends Command
                 if ($puedeEnviar) {
 
                     $mailable = $cursos->count() === 1
-                        ? new RecordatorioCursoMail(
+                        ? new RecordatorioCursoPendienteMail(
                             $usuario,
                             $cursos->first(),
                         )

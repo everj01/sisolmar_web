@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\RecordatorioCursosPendientesMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\RecordatorioCursoMail;
+use App\Mail\RecordatorioCursoPendienteMail;
 
 class MailController extends Controller
 {
@@ -36,40 +37,6 @@ class MailController extends Controller
         ]);
     }
 
-    public function sendRecordatorioCurso(int $courseId)
-    {
-        $enviados = 0;
-        $errores = 0;
-
-        $usuarios = DB::connection('mysql_grupoihb')->select(
-            'CALL SP_OBTENER_MATRICULADOS_SIN_INICIAR(?)',
-            [$courseId]
-        );
-
-        foreach ($usuarios as $usuario) {
-            try {
-                Mail::to($usuario->email)
-                    ->queue(
-                        new RecordatorioCursoMail($usuario)
-                    );
-
-                $enviados++;
-            } catch (\Exception $e) {
-                $errores++;
-                Log::error("Error enviando recordatorio a {$usuario->email}: " . $e->getMessage());
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Los correos fueron agregados correctamente a la cola de envío.',
-            'course_id' => $courseId,
-            'queued_jobs' => $enviados,
-            'queue_errors' => $errores,
-            'total_processed' => count($usuarios),
-        ], 202);
-    }
-
     public function enviarRecordatorioCurso(Request $request)
     {
         try {
@@ -90,17 +57,44 @@ class MailController extends Controller
             ];
 
             Mail::to($usuario->email)
-                ->queue(new RecordatorioCursoMail($usuario, $curso));
+                ->queue(new RecordatorioCursoPendienteMail($usuario, $curso));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Recordatorio enviado correctamente',
+                'message' => 'Recordatorio con curso sin acceder enviado correctamente',
             ], 202);
         } catch (\Exception $e) {
             Log::error("Error enviando recordatorio individual a {$email}: " . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al enviar el recordatorio',
+                'message' => 'Error al enviar el recordatorio sobre curso sin acceder',
+            ], 500);
+        }
+    }
+
+    public function enviarRecordatorioCursos(Request $request) {
+        try
+        {
+            $dni = $request->dni;
+            $nombreCompleto = $request->nombre_completo;
+            $email = $request->email;
+
+            $cursosSinAcceder = DB::connection('mysql_grupoihb')->select('CALL SP_OBTENER_CURSOS_POR_USUARIO(?, ?)', [$dni, date('Y')]);
+            $usuario = (object) [
+                'email' => $email,
+                'full_name' => $nombreCompleto
+            ];
+
+            Mail::to($usuario->email)->queue(new RecordatorioCursosPendientesMail($usuario, $cursosSinAcceder));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Recordatorio con cursos sin acceder enviado correctamente',
+            ], 202);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar el recordatorio sobre cursos sin acceder',
             ], 500);
         }
     }
