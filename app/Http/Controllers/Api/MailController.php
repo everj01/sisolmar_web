@@ -69,4 +69,39 @@ class MailController extends Controller
             'total_processed' => count($usuarios),
         ], 202);
     }
+
+    public function enviarRecordatorioCurso(Request $request)
+    {
+        try {
+            $email = $request->email;
+            $full_name = $request->full_name;
+            $course_id = $request->course_id;
+
+            $curso = DB::connection('mysql_grupoihb')->select(
+                'SELECT fullname AS course_name, shortname AS course_shortname, startdate AS enrolment_start_date
+         FROM mdl_course WHERE id = ?',
+                [$course_id]
+            );
+
+            $curso = $curso[0];
+            $usuario = (object) [
+                'email' => $email,
+                'full_name' => $full_name
+            ];
+
+            Mail::to($usuario->email)
+                ->queue(new RecordatorioCursoMail($usuario, $curso));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Recordatorio enviado correctamente',
+            ], 202);
+        } catch (\Exception $e) {
+            Log::error("Error enviando recordatorio individual a {$email}: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar el recordatorio',
+            ], 500);
+        }
+    }
 }

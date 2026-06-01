@@ -10,6 +10,7 @@ use App\Models\CursoProgramacion;
 use App\Models\Cursos;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use App\Models\ExamenCurso;
@@ -2515,6 +2516,51 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function obtenerPersonalSimple(Request $request): JsonResponse
+    {
+        try {
+            $dni = $request->input('dni');
+
+            $sql = "EXEC SP_OBTENER_PERSONAL_BETA";
+
+            $params = [];
+
+            if (!empty($dni)) {
+                $sql .= " @DNI = ?";
+                $params[] = $dni;
+            }
+
+            $rawPersonal = DB::connection('sqlsrv')->select($sql, $params);
+
+            $personal = array_map(function ($p) {
+                return [
+                    'dni' => trim($p->NRO_DOC ?? ''),
+                    'nombre_completo' => trim($p->NOMBRE_COMPLETO ?? ''),
+                    'cargo' => trim($p->CARGO ?? ''),
+                    'tipo_trabajador' => trim($p->TIPO_TRABAJADOR ?? ''),
+                    'cliente' => $p->CLIENTE ?? null,
+                    'sucursal' => trim($p->SUCURSAL ?? ''),
+                    'codigo' => trim($p->CODIGO_PERSONAL ?? ''),
+                    'email' => trim($p->CORREO ?? ''),
+                ];
+            }, $rawPersonal);
+
+            return response()->json([
+                'success' => true,
+                'personal' => $personal,
+                'total' => count($personal),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener personal: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar el personal',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function listarJefaturas(): JsonResponse
     {
         try {
@@ -2998,7 +3044,7 @@ class CapacitacionController extends Controller
     public function getPersonalPorSucursal(string $sucursalId): JsonResponse
     {
         try {
-            $personal = Consulta::getPersonalPorSucursal($sucursalId);
+            $personal = Consulta::obtenerPersonalPorSucursal($sucursalId);
             return response()->json([
                 "success" => true,
                 "personal" => $personal,
@@ -3080,45 +3126,64 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function getCursosPorCategoria(int $categoryId): JsonResponse
+    public function getCursosPorCategoria(Request $request): JsonResponse
     {
         try {
-            $cursos = DB::connection("mysql_grupoihb")->select(
+            $categoryId = $request->input('categoryId');
+
+            $where = '';
+            $params = [];
+
+            if (!empty($categoryId)) {
+                $where = 'WHERE c.category = ?';
+                $params[] = $categoryId;
+            }
+
+            $cursos = DB::connection('mysql_grupoihb')->select(
                 "
-                SELECT
-                    c.id,
-                    c.fullname,
-                    c.startdate,
-                    c.enddate,
-                    c.summary,
-                    GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname) SEPARATOR ', ') AS responsible
-                FROM grupoihb_see.mdl_course c
-                LEFT JOIN grupoihb_see.mdl_context ctx
-                    ON ctx.instanceid = c.id AND ctx.contextlevel = 50
-                LEFT JOIN grupoihb_see.mdl_role_assignments ra ON ra.contextid = ctx.id
-                LEFT JOIN grupoihb_see.mdl_role r ON r.id = ra.roleid
-                LEFT JOIN grupoihb_see.mdl_user u ON u.id = ra.userid
-                    AND r.shortname = 'editingteacher'
-                WHERE c.category = ?
-                GROUP BY c.id, c.fullname, c.startdate, c.enddate, c.summary
+            SELECT
+                c.id,
+                c.fullname,
+                c.startdate,
+                c.enddate,
+                c.timecreated,
+                c.summary,
+                GROUP_CONCAT(
+                    CONCAT(u.firstname, ' ', u.lastname)
+                    SEPARATOR ', '
+                ) AS responsible
+            FROM grupoihb_see.mdl_course c
+            LEFT JOIN grupoihb_see.mdl_context ctx
+                ON ctx.instanceid = c.id
+                AND ctx.contextlevel = 50
+            LEFT JOIN grupoihb_see.mdl_role_assignments ra
+                ON ra.contextid = ctx.id
+            LEFT JOIN grupoihb_see.mdl_role r
+                ON r.id = ra.roleid
+            LEFT JOIN grupoihb_see.mdl_user u
+                ON u.id = ra.userid
+                AND r.shortname = 'editingteacher'
+            {$where}
+            GROUP BY
+                c.id,
+                c.fullname,
+                c.startdate,
+                c.enddate,
+                c.timecreated,
+                c.summary
             ",
-                [$categoryId],
+                $params
             );
 
             return response()->json([
-                "success" => true,
-                "cursos" => $cursos,
+                'success' => true,
+                'cursos' => $cursos,
             ]);
         } catch (\Exception $e) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" =>
-                    "Error al obtener cursos por categoría: " .
-                        $e->getMessage(),
-                ],
-                500,
-            );
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener cursos: ' . $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -3578,142 +3643,59 @@ class CapacitacionController extends Controller
 
     public function getCursosSeguimiento(): JsonResponse
     {
-        $cursos = DB::select("
-            SELECT
-            c.codigo,
-            c.codigo_curso,
-            c.nombre,
-            c.codigo_moodle,
-            c.cod_responsable,
-            c.fecha_creacion,
-            ISNULL(mat.total_matriculados, 0) as total_matriculados,
-            prog.periodo,
-            prog.fecha_inicio,
-            prog.fecha_final,
-            prog.tipo,
-            prog_pend.periodo as periodo_pend,
-            prog_pend.fecha_inicio as fecha_inicio_pend,
-            prog_pend.fecha_final as fecha_final_pend,
-            prog_pend.tipo as tipo_pend
-        FROM sw_cursos c
-        LEFT JOIN (
-            SELECT cod_curso, COUNT(*) as total_matriculados
-            FROM sw_matriculas
-            WHERE estado = 'MATRICULADO'
-            GROUP BY cod_curso
-        ) mat ON c.codigo = mat.cod_curso
-        LEFT JOIN sw_cursos_programacion prog ON c.codigo = prog.cod_curso AND prog.estado_periodo = 'VIGENTE'
-        LEFT JOIN sw_cursos_programacion prog_pend ON c.codigo = prog_pend.cod_curso AND prog_pend.estado_periodo = 'PENDIENTE'
-        WHERE c.habilitado = 1
-        AND c.codigo_moodle IS NOT NULL
-        AND c.codigo_moodle != ''
-        AND c.codigo_moodle != 0
-        ORDER BY c.fecha_creacion DESC
-        ");
+        $cursosHabilitados = DB::connection('sqlsrv')->select(
+            "SELECT [habilitado], [codigo_moodle] FROM [sisolm_web].[dbo].[sw_cursos] WHERE [habilitado] = 1"
+        );
 
-        $result = array_map(function ($curso) {
-            $nombreResponsable = "";
-            if ($curso->cod_responsable) {
-                $resp = DB::connection("sqlsrv")->selectOne(
-                    "
-                    SELECT LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre
-                    FROM si_solm.dbo.PERSONAL
-                    WHERE CODI_PERS = ?
-                ",
-                    [$curso->cod_responsable],
-                );
-                $nombreResponsable = $resp->nombre ?? "";
-            }
+        $cursosArray = array_column($cursosHabilitados, 'codigo_moodle');
 
-            $programacion = null;
-            if ($curso->periodo) {
-                $programacion = [
-                    "periodo" => $curso->periodo,
-                    "fecha_inicio" => $curso->fecha_inicio,
-                    "fecha_final" => $curso->fecha_final,
+        $moodleCursos = collect(
+            DB::connection('mysql_grupoihb')->select(
+                "CALL grupoihb_see.SP_OBTENER_CURSOS()"
+            )
+        );
 
-                    "tipo" => $curso->tipo,
-                ];
-            }
-
-            $programacionPendiente = null;
-            if ($curso->periodo_pend) {
-                $programacionPendiente = [
-                    "periodo" => $curso->periodo_pend,
-                    "fecha_inicio" => $curso->fecha_inicio_pend,
-                    "fecha_final" => $curso->fecha_final_pend,
-                    "tipo" => $curso->tipo_pend,
-                ];
-            }
-
-            return [
-                "codigo" => $curso->codigo,
-                "codigo_curso" => $curso->codigo_curso,
-                "codigo_moodle" => $curso->codigo_moodle,
-                "nombre" => $curso->nombre,
-                "responsable" => $nombreResponsable,
-                "total_matriculados" => (int) $curso->total_matriculados,
-                "fecha_creacion" => $curso->fecha_creacion,
-                "programacion" => $programacion,
-                "programacion_pendiente" => $programacionPendiente,
-            ];
-        }, $cursos);
+        $result = $moodleCursos->map(fn($curso) => [
+            'course_id'          => $curso->course_id,
+            'nombre'             => $curso->course_name,
+            'responsable'        => $curso->responsable,
+            'total_matriculados' => (int) $curso->total_matriculados,
+            'fecha_creacion'     => $curso->created_at,
+        ])->values();
 
         return response()->json($result);
     }
 
-    public function getUsuariosCursoMoodle(int $moodleCourseId): JsonResponse
+    public function obtenerEstudiantesCurso(Request $request): JsonResponse
     {
         try {
-            $sinIniciar = DB::connection("mysql_grupoihb")->select(
-                "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_SIN_INICIAR(?)",
-                [$moodleCourseId],
+            $codMoodle = $request->course_id;
+            $statusId = $request->statusId; // 0: Todos | 1: Aprobados | 2: Desaprobados | 3: Sin acceder | 4: En curso
+
+            $resultados = DB::connection("mysql_grupoihb")->select(
+                "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_CON_ESTADO(?, ?)",
+                [$codMoodle, $statusId],
             );
 
-            $enProgreso = DB::connection("mysql_grupoihb")->select(
-                "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_EN_PROGRESO(?)",
-                [$moodleCourseId],
-            );
+            $personales = array_map(function ($row) {
+                return [
+                    'nroDoc'        => $row->username ?? null,
+                    'nombreCompleto' => $row->full_name ?? null,
+                    'correo'        => $row->email ?? null,
+                    'nota_final'    => $row->final_grade !== null ? (float) $row->final_grade : null,
+                    'ultimo_acceso' => $row->last_access_date ?? null,
+                ];
+            }, $resultados);
 
-            $usuarios = array_merge(
-                array_map(
-                    fn($u) => [
-                        "full_name" => $u->full_name ?? "",
-                        "email" => $u->email ?? "",
-                        "username" => $u->username ?? "", // ← agregar
-                        "estado" => "SIN_INICIAR",
-                        "enrolment_start_date" =>
-                        $u->enrolment_start_date ?? null,
-                    ],
-                    $sinIniciar,
-                ),
-                array_map(
-                    fn($u) => [
-                        "full_name" => $u->full_name ?? "",
-                        "email" => $u->email ?? "",
-                        "username" => $u->username ?? "", // ← agregar
-                        "estado" => "EN_PROGRESO",
-                        "enrolment_start_date" =>
-                        $u->enrolment_start_date ?? null,
-                    ],
-                    $enProgreso,
-                ),
-            );
+            $total = count($personales);
 
             return response()->json([
-                "success" => true,
-                "moodle_course_id" => $moodleCourseId,
-                "usuarios" => $usuarios,
-                "total_sin_iniciar" => count($sinIniciar),
-                "total_en_progreso" => count($enProgreso),
-                "total" => count($usuarios),
+                'success' => true,
+                'Total' => $total,
+                'Personales'    => $personales,
             ]);
         } catch (\Exception $e) {
-            Log::error("Error al obtener usuarios del curso", [
-                "moodle_course_id" => $moodleCourseId,
-                "error" => $e->getMessage(),
-            ]);
-
+            Log::error($e->getMessage());
             return response()->json(
                 [
                     "success" => false,
@@ -3799,75 +3781,119 @@ class CapacitacionController extends Controller
     public function obtenerPersonalParaReporte(Request $request): JsonResponse
     {
         try {
-            $courseId = $request->courseId;
+            $courseId  = $request->courseId;
             $sucursalId = $request->sucursalId;
+            $estado    = $request->estado;
 
-            $personal = Consulta::obtenerPersonalPorSucursal_Reporte(
-                $sucursalId,
-            );
+            if (!$courseId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Por favor, seleccione un curso.',
+                ], 422);
+            }
+
+            $personal = Consulta::obtenerPersonalPorSucursal($sucursalId);
 
             $personalUnico = collect($personal)
-                ->sortByDesc("FECH_INGRE")
-                ->unique("NRO_DOCU_IDEN")
+                ->unique('NRO_DOC')
                 ->values();
 
             $matriculados = collect(
-                DB::connection("mysql_grupoihb")->select(
-                    "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_SIN_INICIAR(?)",
-                    [$courseId],
-                ),
+                DB::connection('mysql_grupoihb')->select(
+                    "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_CON_ESTADO(?)",
+                    [$courseId ?? null]
+                )
             );
 
+            if ($estado) {
+                $matriculados = $matriculados->filter(
+                    fn($m) => strtoupper($m->estado) === strtoupper($estado)
+                );
+            }
+
+            $dniMatriculados = $matriculados->keyBy(fn($m) => trim($m->username));
+
             $resultado = $personalUnico
-                ->filter(function (object $persona) use ($matriculados) {
-                    return $matriculados->contains(
-                        fn(object $matriculado) => trim(
-                            $matriculado->username,
-                        ) === trim($persona->NRO_DOCU_IDEN),
-                    );
-                })
-                ->map(function (object $persona) {
-                    $tipoMap = [
-                        "01" => "Operativo",
-                        "02" => "Administrativo",
-                        "03" => "Operativo",
-                        "05" => "Administrativo",
-                    ];
+                ->filter(fn(object $persona) => $dniMatriculados->has(trim($persona->NRO_DOC)))
+                ->map(function (object $persona) use ($dniMatriculados) {
+                    $moodle = $dniMatriculados->get(trim($persona->NRO_DOC));
 
                     return [
-                        "CodigoPers" => $persona->CODI_PERS,
-                        "NombreCompleto" => trim(
-                            $persona->APEL_1 .
-                                " " .
-                                $persona->APEL_2 .
-                                " " .
-                                $persona->NOMB_1 .
-                                " " .
-                                $persona->NOMB_2,
-                        ),
-                        "DNI" => $persona->NRO_DOCU_IDEN,
-                        "Cargo" => $persona->cargo ?? "Sin asignar",
-                        "TipoTrabajador" =>
-                        $tipoMap[$persona->PERS_TIPOTRAB] ??
-                            $persona->PERS_TIPOTRAB,
-                        "Estado" => "SIN INICIAR",
+                        'CodigoPers'     => $persona->CODI_PERS,
+                        'NombreCompleto' => $persona->NOMBRE_COMPLETO,
+                        'DNI'            => $persona->NRO_DOC,
+                        'Cargo'          => $persona->CARGO ?? 'Sin asignar',
+                        'TipoTrabajador' => $persona->TIPO_TRABAJADOR,
+                        'Estado'         => strtoupper($moodle->estado),
+                        'Curso'          => $moodle->course_name,
                     ];
                 })
                 ->values();
 
             return response()->json([
-                "success" => true,
-                "total" => $resultado->count(),
-                "personal" => $resultado,
+                'success'    => true,
+                'Total'      => $resultado->count(),
+                'Personales' => $resultado,
             ]);
         } catch (\Exception $e) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" => $e->getMessage(),
-                ],
-                500,
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function obtenerDetalleCurso(Request $request): JsonResponse
+    {
+        try {
+            $codMoodle = $request->course_id;
+
+            $cursoBdLocal = DB::selectOne(
+                'SELECT * FROM sw_cursos WHERE codigo_moodle = ?',
+                [$codMoodle]
             );
+
+            $programaciones = DB::select(
+                'SELECT * FROM sw_cursos_programacion WHERE cod_curso = ?',
+                [$cursoBdLocal->codigo]
+            );
+
+            $programacionVigente = collect($programaciones)
+                ->firstWhere('estado_periodo', 'VIGENTE');
+
+            $programacionPendiente = collect($programaciones)
+                ->firstWhere('estado_periodo', 'PENDIENTE');
+
+            $estadisticas = collect(
+                DB::connection('mysql_grupoihb')->select(
+                    "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_CON_ESTADO(?, ?)",
+                    [$codMoodle, 0]
+                )
+            )->groupBy(fn($m) => strtoupper($m->estado))
+                ->map(fn($grupo) => $grupo->count());
+
+            return response()->json([
+                'success' => true,
+                'nombre'             => $cursoBdLocal->nombre ?? "Sin nombre",
+                'codigo'             => $cursoBdLocal->codigo_curso ?? null,
+                'codigo_interno'     => $cursoBdLocal->codigo ?? null,
+                'codigo_moodle'      => (int) $codMoodle,
+                'fecha_creacion'     => $cursoBdLocal->fecha_creacion ?? null,
+                'programacion_actual'       => $programacionVigente ?? null,
+                'programacion_pendiente'  => $programacionPendiente ?? null,
+                'estadisticas'       => [
+                    'aprobados'    => $estadisticas->get('APROBADO', 0),
+                    'desaprobados' => $estadisticas->get('DESAPROBADO', 0),
+                    'en_curso'     => $estadisticas->get('EN CURSO', 0),
+                    'sin_acceder'  => $estadisticas->get('SIN ACCEDER', 0),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -4243,9 +4269,31 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function enviarMemo($nroDoc): JsonResponse
+    public function enviarMemo(Request $request): JsonResponse
     {
-        $this->procesarMemo($nroDoc);
+        $personal = (object) [
+            'nroDoc' => $request->input('nroDoc'),
+            'nombreCompleto' => $request->input('nombreCompleto'),
+            'correo' => $request->input('correo'),
+            'cargo'  => $request->input('cargo'),
+        ];
+
+        $anioActual = date('Y');
+
+        $cursosUsuario = collect(
+            DB::connection('mysql_grupoihb')->select(
+                "CALL grupoihb_see.SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?, ?)",
+                [
+                    $personal->nroDoc,
+                    $anioActual
+                ]
+            )
+        );
+
+        $this->procesarMemo(
+            $personal,
+            $cursosUsuario
+        );
 
         return response()->json([
             'success' => true,
@@ -4255,17 +4303,36 @@ class CapacitacionController extends Controller
 
     public function enviarMemos(Request $request): JsonResponse
     {
-        $nroDocs = $request->input('nroDocs', []);
+        $personales = $request->input('personales', []);
 
-        if (!is_array($nroDocs) || empty($nroDocs)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Lista de documentos inválida.'
-            ], 422);
-        }
+        $anioActual = date('Y');
 
-        foreach ($nroDocs as $nroDoc) {
-            $this->procesarMemo($nroDoc);
+        $cursosPorUsuario = collect(
+            DB::connection('mysql_grupoihb')->select(
+                "CALL SP_GET_CURSOS_ALUMNOS_ESTADO_ALL(?)",
+                [$anioActual]
+            )
+        )->groupBy('username');
+
+        foreach ($personales as $item) {
+            $personal = (object) [
+                'nroDoc' => $item['nroDoc'] ?? null,
+                'nombreCompleto' => $item['nombreCompleto'] ?? null,
+                'correo' => $item['correo'] ?? null,
+                'cargo'  => $item['cargo'] ?? null,
+            ];
+
+            if (
+                empty($personal->nroDoc) ||
+                empty($personal->correo)
+            ) {
+                continue;
+            }
+
+            $this->procesarMemo(
+                $personal,
+                collect($cursosPorUsuario[$personal->nroDoc] ?? [])
+            );
         }
 
         return response()->json([
@@ -4274,37 +4341,11 @@ class CapacitacionController extends Controller
         ]);
     }
 
-    private function procesarMemo($nroDoc): void
-    {
-        $personal = DB::connection('sqlsrv')
-            ->table('si_solm.dbo.PERSONAL as P')
-            ->leftJoin('si_solm.dbo.CARGOS as C', 'P.CODI_CARG', '=', 'C.CODI_CARG')
-            ->select(
-                DB::raw("
-                RTRIM(LTRIM(
-                    ISNULL(P.NOMB_1, '') + ' ' +
-                    ISNULL(P.NOMB_2, '') + ' ' +
-                    ISNULL(P.APEL_1, '') + ' ' +
-                    ISNULL(P.APEL_2, '')
-                )) as nombreCompleto
-            "),
-                'P.NRO_DOCU_IDEN as nroDoc',
-                'P.PERS_EMAIL as correo',
-                'C.DESC_CARGO as cargo'
-            )
-            ->where('P.NRO_DOCU_IDEN', $nroDoc)
-            ->first();
-
-        if (!$personal) return;
-
-        $anioActual = date('Y');
-
-        $cursosSinAcceder = collect(
-            DB::connection("mysql_grupoihb")->select(
-                "CALL SP_GET_CURSOS_ALUMNO_ESTADO(NULL, ?, ?)",
-                [$nroDoc, $anioActual]
-            )
-        )
+    private function procesarMemo(
+        object $personal,
+        Collection $cursosUsuario
+    ): void {
+        $cursosSinAcceder = $cursosUsuario
             ->where('estado', 'sin_iniciar')
             ->map(fn($curso) => [
                 'course_id' => $curso->course_id,
@@ -4313,15 +4354,12 @@ class CapacitacionController extends Controller
             ->values()
             ->toArray();
 
-        $ultimoMemo = DB::table('SW_MEMO_RECORDATORIOS')
-            ->where('NRO_DOCU_IDEN', $nroDoc)
-            ->orderByDesc('id')
-            ->first();
-
         $historicoMemos = DB::table('SW_MEMO_RECORDATORIOS')
-            ->where('NRO_DOCU_IDEN', $nroDoc)
+            ->where('NRO_DOCU_IDEN', $personal->nroDoc)
             ->orderBy('id')
             ->get();
+
+        $ultimoMemo = $historicoMemos->last();
 
         $tipoMemo = !$ultimoMemo
             ? 1
@@ -4349,13 +4387,17 @@ class CapacitacionController extends Controller
                 'FECHA_ENVIO'     => now(),
             ]);
 
-        foreach ($cursosSinAcceder as $curso) {
+        if (!empty($cursosSinAcceder)) {
             DB::table('SW_MEMO_RECORDATORIOS_CURSOS')
-                ->insert([
-                    'MEMO_RECORDATORIO_ID' => $memoId,
-                    'CODIGO_MOODLE'        => $curso['course_id'],
-                    'NOMBRE_CURSO'         => $curso['course_nombre'],
-                ]);
+                ->insert(
+                    collect($cursosSinAcceder)
+                        ->map(fn($curso) => [
+                            'MEMO_RECORDATORIO_ID' => $memoId,
+                            'CODIGO_MOODLE'        => $curso['course_id'],
+                            'NOMBRE_CURSO'         => $curso['course_nombre'],
+                        ])
+                        ->toArray()
+                );
         }
     }
 
@@ -4489,6 +4531,56 @@ class CapacitacionController extends Controller
                 [
                     "success" => false,
                     "message" => "Error al obtener los MEMOs del personal.",
+                ],
+                500,
+            );
+        }
+    }
+
+    public function obtenerInfoMemo($nroDoc): JsonResponse
+    {
+        try {
+            $ultimoMemo = DB::table('SW_MEMO_RECORDATORIOS')
+                ->where('NRO_DOCU_IDEN', $nroDoc)
+                ->orderByDesc('id')
+                ->first();
+
+            $total = DB::table('SW_MEMO_RECORDATORIOS')
+                ->where('NRO_DOCU_IDEN', $nroDoc)
+                ->count();
+
+            $ultimoNumMemo = $ultimoMemo ? (int) $ultimoMemo->NUM_MEMO : null;
+
+            $siguienteNumMemo = !$ultimoMemo
+                ? 1
+                : match ($ultimoNumMemo) {
+                    1 => 2,
+                    2 => 3,
+                    3 => 1,
+                    default => 1,
+                };
+
+            $textos = [1 => 'primer', 2 => 'segundo', 3 => 'tercer'];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total' => $total,
+                    'ultimo_num_memo' => $ultimoNumMemo,
+                    'siguiente_num_memo' => $siguienteNumMemo,
+                    'siguiente_texto' => $textos[$siguienteNumMemo],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerInfoMemo', [
+                'nroDoc' => $nroDoc,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Error al obtener la información del MEMO.',
                 ],
                 500,
             );

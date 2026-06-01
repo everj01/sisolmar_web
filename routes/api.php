@@ -80,8 +80,8 @@ Route::post('/activar-cargo', [FileController::class, 'activarCargo']);
 Route::get('/get-cargo', [FileController::class, 'getCargos']);
 Route::get('/get-cargo/{codigo}', [FileController::class, 'getCargosXCodigo']);
 
-Route::post('/enviar-memos', [CapacitacionController::class, 'enviarMemos']);
-Route::get('/enviar-memo/{nroDoc}', [CapacitacionController::class, 'enviarMemo']);
+Route::post('/enviar-memos-varios', [CapacitacionController::class, 'enviarMemos']);
+Route::post('/enviar-memo-personal', [CapacitacionController::class, 'enviarMemo']);
 Route::post('/delete-notif', [NotificacionController::class, 'deleteNotificacion']);
 Route::post('/save-solicitud', [FileController::class, 'saveSolicitud']);
 
@@ -122,7 +122,8 @@ Route::get('/listar-jefaturas', [CapacitacionController::class, 'listarJefaturas
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
 Route::get('/get-personal-por-sucursal/{sucursalId}', [CapacitacionController::class, 'getPersonalPorSucursal']);
 Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
-Route::get('/get-usuarios-curso-moodle/{moodleCourseId}', [CapacitacionController::class, 'getUsuariosCursoMoodle']);
+Route::get('/obtener-detalle-curso/{course_id}', [CapacitacionController::class, 'obtenerDetalleCurso']);
+Route::get('/get-estudiantes-curso', [CapacitacionController::class, 'obtenerEstudiantesCurso']);
 Route::get('/get-cursos-alumno/{dni}', [CapacitacionController::class, 'getCursosAlumno']);
 Route::post('/comparar-memos', [CapacitacionController::class, 'compararMemos']);
 
@@ -138,7 +139,7 @@ Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigr
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
 Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual'])->middleware('web');
-Route::get('/get-cursos-por-categoria/{categoryId}', [CapacitacionController::class, 'getCursosPorCategoria']);
+Route::get('/get-cursos-por-categoria', [CapacitacionController::class, 'getCursosPorCategoria']);
 Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
 Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
 Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
@@ -160,6 +161,8 @@ Route::get('/obtener-memos-resumen/{nivelMemo}', [CapacitacionController::class,
 Route::get('/obtener-memos-enviados', [CapacitacionController::class, 'obtenerMemosEnviados']);
 Route::get('/obtener-detalle-memo/{memoId}', [CapacitacionController::class, 'obtenerDetalleMemo']);
 Route::post('/obtener-memos-personal', [CapacitacionController::class, 'obtenerMemosPersonal']);
+Route::get('/obtener-info-memo/{nroDoc}', [CapacitacionController::class, 'obtenerInfoMemo']);
+Route::get('/obtener-personal-simple', [CapacitacionController::class, 'obtenerPersonalSimple']);
 
 Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
 Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
@@ -167,6 +170,7 @@ Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionContro
 Route::post('/capacitacion/descargar-reportes-zip', [CapacitacionController::class, 'descargarReportesZip']);
 
 Route::post('/mail/recordatorio-curso/{courseId}', [MailController::class, 'sendRecordatorioCurso']);
+Route::post('/mail/enviar-recordatorio', [MailController::class, 'enviarRecordatorioCurso']);
 Route::post('/mail/send', [MailController::class, 'send']);
 
 // Route::get('/dj/get-backup-data', [DjController::class, 'getBackupData']);
