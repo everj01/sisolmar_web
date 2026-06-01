@@ -99,7 +99,7 @@ use Carbon\Traits\Date;
         border-right: none !important;
         border-bottom: 1px solid #eef2f7 !important;
 
-        padding: 4px 0 !important;
+        padding: 6px 0 4px 0 !important;
     }
 
     .tabulator-header .tabulator-col {
@@ -115,7 +115,7 @@ use Carbon\Traits\Date;
     .tabulator-header .tabulator-col-title {
         width: 100% !important;
 
-        text-align: center !important;
+        text-align: left !important;
 
         font-size: 10px !important;
         font-weight: 800 !important;
@@ -334,6 +334,42 @@ use Carbon\Traits\Date;
 
     /* ───────────────── Placeholder ───────────────── */
 
+    /* ───────────────── Styled Checkboxes ───────────────── */
+
+    .tabulator-row .checkbox-personal-row:checked::after {
+        content: "✓";
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .checkbox-select-all:checked::after {
+        content: "✓";
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .checkbox-personal-row:focus-visible,
+    .checkbox-select-all:focus-visible {
+        outline: 2px solid rgba(59, 130, 246, .4);
+        outline-offset: 1px;
+    }
+
+    /* ───────────────── Placeholder ───────────────── */
+
     .tabulator-placeholder {
         min-height: 110px !important;
 
@@ -527,14 +563,21 @@ use Carbon\Traits\Date;
                 x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
                 <div class="flex flex-col gap-3 mb-4">
-                    <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
-                    <div class="flex flex-col gap-3 bg-white rounded-xl p-4 border border-default-200/60 shadow-sm">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
+                        <div id="selectedPersonalInfo" class="hidden flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 px-2.5 py-1 rounded-full">
+                            <i class="ti ti-checks text-sm"></i>
+                            <span><span id="selectedPersonalCount">0</span> seleccionados</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-3 bg-white rounded-xl p-4 border border-default-200/60 shadow-sm" x-data="filtrosPersonal()">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-xs font-medium text-default-700">Sucursal</label>
                                 <div class="relative">
                                     <i class="ti ti-building-store absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
                                     <select id="filtroSucursalPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
+                                        @change="verificar()"
                                         style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
                                    !bg-white !text-default-700 !appearance-none cursor-pointer
                                    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
@@ -550,6 +593,7 @@ use Carbon\Traits\Date;
                                 <div class="relative">
                                     <i class="ti ti-briefcase absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
                                     <select id="filtroTipoPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
+                                        @change="verificar()"
                                         style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
                                    !bg-white !text-default-700 !appearance-none cursor-pointer
                                    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
@@ -557,6 +601,39 @@ use Carbon\Traits\Date;
                                         <option value="">Todos los tipos</option>
                                         <option value="Administrativo">Administrativo</option>
                                         <option value="Operativo">Operativo</option>
+                                    </select>
+                                    <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-default-700">Cargo</label>
+                                <div class="relative">
+                                    <i class="ti ti-tag absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                                    <select id="filtroCargoPersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
+                                        @change="verificar()"
+                                        style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
+                                   !bg-white !text-default-700 !appearance-none cursor-pointer
+                                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                                        :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
+                                        <option value="">Todos los cargos</option>
+                                    </select>
+                                    <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-medium text-default-700">Cliente</label>
+                                <div class="relative">
+                                    <i class="ti ti-building absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                                    <select id="filtroClientePersonal" :disabled="tabActivo !== 'personal' && tabActivo !== 'memos'"
+                                        @change="verificar()"
+                                        style="background-image: none !important;" class="w-full pl-8 pr-8 py-1.5 text-sm border border-default-200 rounded-lg
+                                   !bg-white !text-default-700 !appearance-none cursor-pointer
+                                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                                        :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
+                                        <option value="">Todos los clientes</option>
+                                        <option value="Sin cliente">Sin cliente</option>
                                     </select>
                                     <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
                                 </div>
@@ -610,6 +687,32 @@ use Carbon\Traits\Date;
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="flex gap-2 w-full">
+
+                            <button
+                                id="btnLimpiarFiltroPersonal"
+                                type="button"
+                                :disabled="!hayFiltros"
+                                :class="hayFiltros
+                                    ? 'flex-1 h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-default-100 text-default-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-default-200 transition cursor-pointer'
+                                    : 'flex-1 h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-default-100 text-default-300 text-xs font-semibold rounded-lg cursor-not-allowed'">
+                                <i class="ti ti-filter-off text-sm"></i>
+                                Limpiar filtros
+                            </button>
+
+                            <button
+                                id="btnEnviarMemosPersonal"
+                                type="button"
+                                disabled
+                                class="flex-1 h-9 px-4 inline-flex items-center justify-center gap-1.5
+            bg-primary text-white text-xs font-semibold
+            rounded-lg shadow-sm opacity-50 cursor-not-allowed
+            hover:bg-primary/90 transition">
+                                <i class="ti ti-send text-sm"></i>
+                                <span id="btnEnviarMemosText">Enviar MEMOs al personal seleccionado</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -773,7 +876,7 @@ use Carbon\Traits\Date;
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-2xl border border-default-200 bg-white transition-all duration-300"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-3xl border border-default-200 bg-white transition-all duration-300"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -784,47 +887,53 @@ use Carbon\Traits\Date;
         <!-- Header -->
         <div class="flex justify-between items-start py-5 px-6 border-b border-default-100">
             <div class="flex items-start gap-4 flex-1 min-w-0">
-                <div
-                    class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white shadow-sm shrink-0">
                     <i class="ti ti-book text-lg"></i>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate" x-text="curso.nombre">
-                        Cargando...</h3>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate" x-text="curso.nombre">Cargando...</h3>
+                        <template x-if="loading">
+                            <i class="ti ti-loader animate-spin text-primary text-sm"></i>
+                        </template>
+                    </div>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                        <p class="text-[10px] font-bold text-primary uppercase tracking-widest"
-                            x-text="'Local: ' + curso.codigo">Local: -</p>
-                        <span class="text-default-300">|</span>
-                        <p class="text-[10px] font-bold text-primary/70 uppercase tracking-widest"
-                            x-text="'Moodle: ' + curso.codigo_moodle">Moodle: -</p>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider"
+                            x-text="'#' + curso.codigo"></span>
                         <template x-if="curso.responsable">
-                            <div class="flex items-center gap-x-3">
+                            <div class="flex items-center gap-1.5">
                                 <span class="text-default-300">|</span>
-                                <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest truncate"
-                                    x-text="'Responsable: ' + curso.responsable">Responsable: -</p>
+                                <i class="ti ti-user text-[10px] text-default-400"></i>
+                                <span class="text-[10px] font-semibold text-default-500 truncate" x-text="curso.responsable"></span>
+                            </div>
+                        </template>
+                        <template x-if="curso.fechaCreacion">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-default-300">|</span>
+                                <i class="ti ti-calendar text-[10px] text-default-400"></i>
+                                <span class="text-[10px] text-default-400" x-text="curso.fechaCreacion"></span>
                             </div>
                         </template>
                     </div>
-                    <template x-if="curso.fechaCreacion">
-                        <p class="text-[10px] text-default-400 mt-1">
-                            <i class="ti ti-calendar text-[9px] mr-0.5"></i>
-                            <span x-text="'Creado: ' + curso.fechaCreacion"></span>
-                        </p>
-                    </template>
-                    <template x-if="curso.programacion">
-                        <p class="text-[10px] text-default-400 mt-0.5">
-                            <i class="ti ti-calendar-stats text-[9px] mr-0.5"></i>
-                            <span x-text="'Programación actual: ' + formatearFecha(curso.programacion.fecha_inicio) + ' - ' + formatearFecha(curso.programacion.fecha_final)"></span>
-                        </p>
-                    </template>
-                    <template x-if="!curso.programacion && curso.programacion_pendiente">
-                        <div class="mt-1">
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                <i class="ti ti-clock text-[9px]"></i>
-                                Tiene una programación pendiente sin iniciar
-                            </span>
-                        </div>
-                    </template>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                        <template x-if="curso.programacion_actual">
+                            <div class="flex items-center gap-1.5">
+                                <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                <span class="text-[11px] text-default-600">
+                                    <span class="font-semibold">Progamación actual:</span>
+                                    <span x-text="formatearFecha(curso.programacion_actual.fecha_inicio) + ' al ' + formatearFecha(curso.programacion_actual.fecha_final)"></span>
+                                </span>
+                            </div>
+                        </template>
+                        <template x-if="!curso.programacion_actual">
+                            <div class="flex items-center gap-1.5">
+                                <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                                <span class="text-[11px] text-default-600">
+                                    <span class="font-semibold">Sin programación aperturada o creada.</span>
+                                </span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
             <button type="button" @click="cerrar()"
@@ -834,154 +943,360 @@ use Carbon\Traits\Date;
         </div>
 
         <!-- Stats Cards -->
-        <div class="px-6 pt-5 pb-2">
-            <div class="grid grid-cols-2 gap-3">
+        <div class="px-6 pt-5 pb-3">
+            <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest mb-3">Estadísticas del curso</p>
+            <div class="grid grid-cols-5 gap-3">
                 <!-- Total Matriculados -->
-                <div class="text-center p-3 rounded-xl bg-default-50 border border-default-200/60">
-                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                        <i class="ti ti-users text-xl text-primary"></i>
+                <div @click="abrirModalUsuarios(0)"
+                    class="text-center p-3 rounded-xl bg-default-50 border border-default-200/60 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-1.5">
+                        <i class="ti ti-users text-lg text-primary"></i>
                     </div>
                     <p class="text-[9px] text-default-500 uppercase tracking-widest font-bold mb-0.5">Matriculados</p>
-                    <p class="text-2xl font-bold text-default-900" x-text="curso.total">0</p>
+                    <p class="text-xl font-bold text-default-900" x-text="curso.total">0</p>
                 </div>
 
-                <!-- Sin Iniciar -->
-                <div class="text-center p-3 rounded-xl bg-amber-50 border border-amber-200/50 cursor-pointer hover:shadow-md transition-shadow"
-                    @click="abrirModalUsuarios('sin iniciar')">
-                    <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center mx-auto mb-2">
-                        <i class="ti ti-hourglass-empty text-xl text-amber-600"></i>
+                <!-- Aprobados -->
+                <div @click="abrirModalUsuarios(1)"
+                    class="text-center p-3 rounded-xl bg-green-50 border border-green-200/60 cursor-pointer hover:shadow-md hover:border-green-400/30 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-1.5">
+                        <i class="ti ti-circle-check text-lg text-green-600"></i>
                     </div>
-                    <p class="text-[9px] text-default-500 uppercase tracking-widest font-bold mb-0.5">Sin iniciar</p>
-                    <p class="text-2xl font-bold text-amber-600" x-text="curso.totalSinIniciar">0</p>
+                    <p class="text-[9px] text-green-700 uppercase tracking-widest font-bold mb-0.5">Aprobados</p>
+                    <p class="text-xl font-bold text-green-700" x-text="curso.estadisticas.aprobados">0</p>
                 </div>
-            </div>
-        </div>
 
-        <!-- Quick Actions -->
-        <div class="px-6 pb-2">
-            <div class="p-3 rounded-xl bg-default-50 border border-default-200/60">
-                <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest mb-2">Acciones rápidas</p>
-                <div class="flex items-center gap-2">
-                    <a :href="'/capacitacion/consulta-matriculas?curso_id=' + curso.codigoInterno"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
-                        <i class="ti ti-list-details text-sm"></i>
-                        Ver matriculados
-                    </a>
-                    <button type="button" @click="abrirModalUsuarios('sin iniciar')"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors">
-                        <i class="ti ti-mail text-sm"></i>
-                        Notificar pendientes
-                    </button>
+                <!-- Desaprobados -->
+                <div @click="abrirModalUsuarios(2)"
+                    class="text-center p-3 rounded-xl bg-red-50 border border-red-200/60 cursor-pointer hover:shadow-md hover:border-red-400/30 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center mx-auto mb-1.5">
+                        <i class="ti ti-circle-x text-lg text-red-600"></i>
+                    </div>
+                    <p class="text-[9px] text-red-700 uppercase tracking-widest font-bold mb-0.5">Desaprobados</p>
+                    <p class="text-xl font-bold text-red-700" x-text="curso.estadisticas.desaprobados">0</p>
+                </div>
+
+                <!-- Sin acceder -->
+                <div @click="abrirModalUsuarios(3)"
+                    class="text-center p-3 rounded-xl bg-gray-50 border border-gray-200/60 cursor-pointer hover:shadow-md hover:border-gray-400/30 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center mx-auto mb-1.5">
+                        <i class="ti ti-eye-off text-lg text-gray-500"></i>
+                    </div>
+                    <p class="text-[9px] text-gray-600 uppercase tracking-widest font-bold mb-0.5">Sin acceder</p>
+                    <p class="text-xl font-bold text-gray-700" x-text="curso.estadisticas.sin_acceder">0</p>
+                </div>
+
+                <!-- En curso -->
+                <div @click="abrirModalUsuarios(4)"
+                    class="text-center p-3 rounded-xl bg-blue-50 border border-blue-200/60 cursor-pointer hover:shadow-md hover:border-blue-400/30 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-1.5">
+                        <i class="ti ti-player-play text-lg text-blue-600"></i>
+                    </div>
+                    <p class="text-[9px] text-blue-700 uppercase tracking-widest font-bold mb-0.5">En curso</p>
+                    <p class="text-xl font-bold text-blue-700" x-text="curso.estadisticas.en_curso">0</p>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-between items-center gap-2 py-4 px-6 border-t border-default-100">
-            <div class="flex items-center gap-1.5 text-[10px] text-default-400">
-                <i class="ti ti-info-circle text-default-300 text-xs"></i>
-                <span>Si un matriculado es <strong class="text-default-500">profesor</strong> del curso, no se contabiliza como estudiante pendiente.</span>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-                <button type="button" @click="cerrar()"
-                    class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
-                    Cerrar
-                </button>
-                <button type="button" @click="cerrar()"
-                    class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer">
-                    Entendido
-                </button>
-            </div>
+        <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
+            <button type="button" @click="cerrar()"
+                class="px-5 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                Cerrar
+            </button>
+            <button type="button" @click="cerrar()"
+                class="px-5 h-9 inline-flex justify-center items-center rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer">
+                Entendido
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Modal con lista de usuarios -->
+<!-- Modal lista de usuarios del curso -->
 <div id="modal-lista-usuarios" x-data="modalListaUsuarios()" x-show="open" x-cloak
-    class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+    class="fixed inset-0 z-[120] flex items-center justify-center p-4"
     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-3xl border border-default-200 bg-white transition-all duration-300"
+    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-6xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-        x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+        x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+        @click.outside="cerrar()">
 
-        <div class="flex justify-between items-center py-5 px-6 border-b border-default-100">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                    <i class="ti ti-users text-amber-600"></i>
+        <!-- Header -->
+        <div class="flex justify-between items-start py-5 px-6 border-b border-default-100 shrink-0 bg-gradient-to-r from-white to-default-50/30">
+            <div class="flex items-start gap-4 flex-1 min-w-0">
+                <div class="relative shrink-0">
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white shadow-sm">
+                        <i class="ti text-lg" :class="{
+                            'ti-users': statusId === 0,
+                            'ti-circle-check': statusId === 1,
+                            'ti-circle-x': statusId === 2,
+                            'ti-eye-off': statusId === 3,
+                            'ti-player-play': statusId === 4
+                        }"></i>
+                    </div>
+                    <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white"
+                        :class="{
+                            'bg-default-400': statusId === 0,
+                            'bg-green-500': statusId === 1,
+                            'bg-red-500': statusId === 2,
+                            'bg-gray-400': statusId === 3,
+                            'bg-blue-500': statusId === 4
+                        }"></div>
                 </div>
-                <h3 class="text-[15px] font-semibold text-default-900" x-text="titulo">Usuarios</h3>
+
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight truncate" x-text="cursoNombre">Cargando...</h3>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm"
+                            :class="{
+                                'bg-default-100 text-default-700': statusId === 0,
+                                'bg-green-100 text-green-700': statusId === 1,
+                                'bg-red-100 text-red-700': statusId === 2,
+                                'bg-gray-100 text-gray-600': statusId === 3,
+                                'bg-blue-100 text-blue-700': statusId === 4
+                            }">
+                            <i class="ti text-[10px]"
+                                :class="{
+                                    'ti-users': statusId === 0,
+                                    'ti-circle-check': statusId === 1,
+                                    'ti-circle-x': statusId === 2,
+                                    'ti-eye-off': statusId === 3,
+                                    'ti-player-play': statusId === 4
+                                }"></i>
+                            <span x-text="statusLabel"></span>
+                        </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[11px] text-default-500">
+                        <div class="flex items-center gap-1" x-show="!loading && personales.length > 0">
+                            <i class="ti ti-users text-xs"></i>
+                            <span>Total: <strong x-text="personales.length" class="text-default-700"></strong></span>
+                        </div>
+                        <div class="flex items-center gap-1" x-show="!loading && personales.length > 0 && personalesFiltrados.length !== personales.length">
+                            <i class="ti ti-filter text-xs"></i>
+                            <span>Filtrados: <strong x-text="personalesFiltrados.length" class="text-primary-600"></strong></span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <button type="button" @click="cerrar()"
-                class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
-                <i class="ti ti-x text-base"></i>
+                class="flex-shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
+                <i class="ti ti-x text-lg"></i>
             </button>
         </div>
 
-        <!-- Buscador -->
-        <div class="px-6 pt-4 pb-2">
-            <div class="relative">
-                <i
-                    class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                <input x-model="busqueda" placeholder="Buscar por nombre o DNI..."
-                    class="w-full pl-9 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50" />
+        <!-- Filtros -->
+        <div x-show="!loading && personales.length > 0" class="px-6 pt-4 pb-3 border-b border-default-100 shrink-0 bg-default-50/30">
+            <div class="flex flex-wrap items-end gap-3">
+                <!-- Buscador -->
+                <div class="flex-1 min-w-[220px]">
+                    <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
+                        <i class="ti ti-search text-[10px]"></i> Buscar
+                    </label>
+                    <div class="relative">
+                        <input type="text" x-model="busqueda" @input="paginaActual = 1" placeholder="Buscar por nombre o DNI..."
+                            class="w-full h-9 pl-9 pr-3 text-xs text-default-700 bg-white border border-default-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all placeholder:text-default-300">
+                    </div>
+                </div>
+
+                <!-- Fecha Desde -->
+                <div class="min-w-[160px]">
+                    <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
+                        <i class="ti ti-calendar text-[10px]"></i> Desde
+                    </label>
+                    <input type="date" x-model="fechaDesde" @change="paginaActual = 1"
+                        class="w-full h-9 px-3 text-xs text-default-700 bg-white border border-default-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all">
+                </div>
+
+                <!-- Fecha Hasta -->
+                <div class="min-w-[160px]">
+                    <label class="block text-[10px] font-bold text-default-400 uppercase tracking-widest mb-1.5">
+                        <i class="ti ti-calendar text-[10px]"></i> Hasta
+                    </label>
+                    <input type="date" x-model="fechaHasta" @change="paginaActual = 1"
+                        class="w-full h-9 px-3 text-xs text-default-700 bg-white border border-default-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all">
+                </div>
+
+                <!-- Limpiar filtros -->
+                <button type="button" @click="limpiarFiltros()"
+                    x-show="busqueda || fechaDesde || fechaHasta || ordenCampo !== 'default'"
+                    class="h-9 px-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-default-500 bg-white border border-default-200 rounded-lg hover:bg-default-50 hover:text-default-700 transition-all cursor-pointer shrink-0">
+                    <i class="ti ti-refresh text-sm"></i> Limpiar
+                </button>
             </div>
         </div>
 
-        <div class="p-6 custom-scrollbar max-h-[500px] overflow-y-auto">
-            <div x-show="cargado && usuariosFiltrados.length > 0">
-                <table class="w-full text-sm">
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar" x-ref="bodyContainer">
+            <!-- Loading -->
+            <div x-show="loading" class="flex flex-col items-center justify-center py-16 text-default-400">
+                <i class="ti ti-loader animate-spin text-3xl mb-3"></i>
+                <p class="text-sm font-medium">Cargando usuarios...</p>
+            </div>
+
+            <!-- Empty (sin datos) -->
+            <div x-show="!loading && personales.length === 0"
+                class="flex flex-col items-center justify-center py-16 text-default-400">
+                <i class="ti ti-users-off text-5xl opacity-30 mb-3"></i>
+                <p class="text-sm font-medium">No se encontraron usuarios</p>
+                <p class="text-[11px] text-default-400 mt-1">
+                    <span x-text="'No hay personal con el filtro: ' + statusLabel"></span>
+                </p>
+            </div>
+
+            <!-- Empty (filtrados sin resultados) -->
+            <div x-show="!loading && personales.length > 0 && personalesFiltrados.length === 0"
+                class="flex flex-col items-center justify-center py-16 text-default-400">
+                <i class="ti ti-search-off text-5xl opacity-30 mb-3"></i>
+                <p class="text-sm font-medium">No se encontraron resultados</p>
+                <p class="text-[11px] text-default-400 mt-1">Intenta ajustar los filtros de búsqueda</p>
+            </div>
+
+            <!-- Table -->
+            <div x-show="!loading && personalesFiltrados.length > 0" class="w-full overflow-x-auto">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr
-                            class="border-b border-default-200 text-xs font-semibold text-default-500 uppercase tracking-widest">
-                            <th class="text-left py-3 px-2 w-10">#</th>
-                            <th class="text-left py-3 px-2">Nombre</th>
-                            <th class="text-left py-3 px-2">Correo</th>
-                            <th class="text-center py-3 px-2 w-40">Acción</th>
+                        <tr class="border-b border-default-200 bg-default-50/50">
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest w-12">N°</th>
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest">Nro. Documento</th>
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest cursor-pointer select-none hover:text-primary transition-colors"
+                                @click="toggleOrden('nombreCompleto')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Nombre Completo</span>
+                                    <i class="ti text-[11px]" :class="getIconoOrden('nombreCompleto')"></i>
+                                </div>
+                            </th>
+                            <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest">Correo</th>
+                            <template x-if="!mostrarAcciones">
+                                <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest text-center cursor-pointer select-none hover:text-primary transition-colors"
+                                    @click="toggleOrden('nota_final')">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <span>Nota Final</span>
+                                        <i class="ti text-[11px]" :class="getIconoOrden('nota_final')"></i>
+                                    </div>
+                                </th>
+                            </template>
+                            <template x-if="!mostrarAcciones">
+                                <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest cursor-pointer select-none hover:text-primary transition-colors"
+                                    @click="toggleOrden('ultimo_acceso')">
+                                    <div class="flex items-center gap-1.5">
+                                        <span>Último Acceso</span>
+                                        <i class="ti text-[11px]" :class="getIconoOrden('ultimo_acceso')"></i>
+                                    </div>
+                                </th>
+                            </template>
+                            <template x-if="mostrarAcciones">
+                                <th class="py-3 px-4 text-[10px] font-bold text-default-400 uppercase tracking-widest text-center">Acción</th>
+                            </template>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-default-100">
-                        <template x-for="(user, index) in usuariosFiltrados" :key="index">
-                            <tr class="hover:bg-default-50 transition-colors">
-                                <td class="py-3 px-2 text-default-400 text-xs font-mono" x-text="index + 1"></td>
-                                <td class="py-3 px-2 font-medium text-default-800 cursor-pointer hover:text-primary transition-colors"
-                                    @click="abrirCursoPersonal(user)">
-                                    <span x-text="user.full_name"></span>
+                    <tbody>
+                        <template x-for="(p, idx) in personalesPaginados" :key="idx">
+                            <tr class="border-b border-default-100 hover:bg-primary/[0.02] transition-colors">
+                                <td class="py-3 px-4 text-xs text-default-400 font-mono" x-text="(paginaActual - 1) * itemsPorPagina + idx + 1"></td>
+                                <td class="py-3 px-4">
+                                    <span class="text-xs font-mono font-semibold text-default-700 bg-default-100 px-2 py-0.5 rounded" x-text="p.nroDoc"></span>
                                 </td>
-                                <td class="py-3 px-2 text-default-500 text-xs" x-text="user.email"></td>
-                                <td class="py-3 px-2 text-center">
-                                    <button type="button" @click="!estaEnCooldown(user) && notificarUsuario(user)"
-                                        :disabled="estaEnCooldown(user)"
-                                        :class="estaEnCooldown(user)
-        ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-default-100 text-default-400 cursor-not-allowed text-xs font-semibold'
-        : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500 text-white hover:bg-sky-600 transition-all text-xs font-semibold shadow-sm'">
-                                        <i :class="estaEnCooldown(user) ? 'ti ti-clock' : 'ti ti-mail'"></i>
-                                        <span
-                                            x-text="estaEnCooldown(user) ? 'Espera ' + tiempoRestante(user) : 'Notificar'"></span>
-                                    </button>
+                                <td class="py-3 px-4">
+                                    <span class="text-xs font-semibold text-default-900" x-text="p.nombreCompleto"></span>
                                 </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-xs text-default-500" x-text="p.correo || '—'"></span>
+                                </td>
+                                <template x-if="!mostrarAcciones">
+                                    <td class="py-3 px-4 text-center">
+                                        <template x-if="p.nota_final !== null">
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                                                :class="p.nota_final >= 11 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                                x-text="p.nota_final.toFixed(2)"></span>
+                                        </template>
+                                        <template x-if="p.nota_final === null">
+                                            <span class="text-xs text-default-300">—</span>
+                                        </template>
+                                    </td>
+                                </template>
+                                <template x-if="!mostrarAcciones">
+                                    <td class="py-3 px-4">
+                                        <span class="text-xs text-default-500" x-text="formatearFechaHora(p.ultimo_acceso)"></span>
+                                    </td>
+                                </template>
+                                <template x-if="mostrarAcciones">
+                                    <td class="py-3 px-4 text-center">
+                                        <template x-if="!p.correo">
+                                            <span class="text-xs text-default-300">—</span>
+                                        </template>
+                                        <template x-if="p.correo && recordatoriosEnviados[p.nroDoc]">
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-green-100 text-green-700">
+                                                <i class="ti ti-check text-[11px]"></i> Enviado
+                                            </span>
+                                        </template>
+                                        <template x-if="p.correo && !recordatoriosEnviados[p.nroDoc]">
+                                            <button type="button" @click="enviarRecordatorio(p)"
+                                                :class="enviandoRecordatorio[p.nroDoc] ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-primary/70 cursor-wait' : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer'">
+                                                <i class="ti text-[12px]" :class="enviandoRecordatorio[p.nroDoc] ? 'ti-loader animate-spin' : 'ti-mail'"></i>
+                                                <span x-text="enviandoRecordatorio[p.nroDoc] ? 'Enviando...' : 'Enviar recordatorio'"></span>
+                                            </button>
+                                        </template>
+                                    </td>
+                                </template>
                             </tr>
                         </template>
                     </tbody>
                 </table>
             </div>
-            <div x-show="!cargado" class="text-center py-10 text-default-400 text-sm">Cargando usuarios...</div>
-            <div x-show="cargado && usuariosFiltrados.length === 0" class="text-center py-10 text-default-400 text-sm">
-                No se
-                encontraron usuarios</div>
         </div>
 
-        <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
-            <button type="button" @click="cerrar()"
-                class="px-4 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 transition-all cursor-pointer">
-                Cerrar
-            </button>
+        <!-- Footer -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 py-4 px-6 border-t border-default-100 shrink-0 bg-gradient-to-r from-white to-default-50/30">
+            <!-- Info + Paginación -->
+            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <span class="text-[11px] text-default-400 shrink-0" x-show="!loading && personales.length > 0">
+                    Mostrando <strong x-text="(paginaActual - 1) * itemsPorPagina + 1" class="text-default-600"></strong>
+                    - <strong x-text="Math.min(paginaActual * itemsPorPagina, personalesFiltrados.length)" class="text-default-600"></strong>
+                    de <strong x-text="personalesFiltrados.length" class="text-default-600"></strong>
+                </span>
+
+                <!-- Controles de paginación -->
+                <nav x-show="!loading && totalPaginas > 1" class="flex items-center gap-1">
+                    <button type="button" @click="irPagina(paginaActual - 1)" :disabled="paginaActual === 1"
+                        class="w-7 h-7 inline-flex items-center justify-center rounded-md text-xs transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-default-100 text-default-500">
+                        <i class="ti ti-chevron-left text-[11px]"></i>
+                    </button>
+
+                    <template x-for="(pag, i) in paginasVisibles" :key="i">
+                        <button type="button" @click="irPagina(pag)"
+                            x-text="pag"
+                            :disabled="pag === '...'"
+                            class="min-w-[28px] h-7 inline-flex items-center justify-center rounded-md text-[11px] font-semibold transition-all cursor-pointer disabled:cursor-default"
+                            :class="pag === paginaActual ? 'bg-primary text-white shadow-sm shadow-primary/20' : pag === '...' ? 'text-default-300 cursor-default' : 'text-default-500 hover:bg-default-100'">
+                        </button>
+                    </template>
+
+                    <button type="button" @click="irPagina(paginaActual + 1)" :disabled="paginaActual === totalPaginas"
+                        class="w-7 h-7 inline-flex items-center justify-center rounded-md text-xs transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-default-100 text-default-500">
+                        <i class="ti ti-chevron-right text-[11px]"></i>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="button" @click="cerrar()"
+                    class="px-5 h-9 inline-flex justify-center items-center rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                    Cerrar
+                </button>
+                <button type="button" @click="cerrar()"
+                    class="px-5 h-9 inline-flex justify-center items-center rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all cursor-pointer">
+                    Entendido
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -1083,7 +1398,7 @@ use Carbon\Traits\Date;
         <div class="px-6 pt-4 pb-2 shrink-0">
             <div class="flex items-start gap-4">
                 <!-- Datos del personal -->
-                <div class="flex-1 grid grid-cols-3 gap-2">
+                <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-default-50 border border-default-200/60">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                             <i class="ti ti-building-store text-sm text-primary"></i>
@@ -1096,13 +1411,23 @@ use Carbon\Traits\Date;
                     </div>
                     <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-default-50 border border-default-200/60">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <i class="ti ti-tag text-sm text-primary"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] text-default-400 uppercase tracking-wider font-bold">Cargo</p>
+                            <p class="text-xs font-semibold text-default-700 truncate"
+                                x-text="personal.cargo || 'No registrado'"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-default-50 border border-default-200/60">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                             <i class="ti ti-briefcase text-sm text-primary"></i>
                         </div>
                         <div class="min-w-0">
                             <p class="text-[9px] text-default-400 uppercase tracking-wider font-bold">Tipo de trabajador
                             </p>
                             <p class="text-xs font-semibold text-default-700 truncate"
-                                x-text="personal.cargo || 'No registrado'"></p>
+                                x-text="personal.tipo_trabajador || 'No registrado'"></p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-default-50 border border-default-200/60">
@@ -1267,10 +1592,11 @@ use Carbon\Traits\Date;
 
         <!-- Footer -->
         <div class="flex justify-between items-center gap-2 py-4 px-6 border-t border-default-100 bg-white shrink-0">
-            <div class="text-xs text-default-400">
-                <i class="ti ti-info-circle mr-1"></i>
-                <span x-show="countByEstado('sin_iniciar') > 0"
-                    x-text="countByEstado('sin_iniciar') + ' curso(s) pendiente(s)'"></span>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
+                    <i class="ti ti-repeat text-[10px]"></i>
+                    Envío cíclico: después del tercer MEMO se reinicia al primero
+                </span>
             </div>
             <div class="flex items-center gap-2">
                 <button type="button"
@@ -1290,7 +1616,7 @@ use Carbon\Traits\Date;
                         ? 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-all text-xs shadow-sm'
                         : 'px-4 h-9 inline-flex justify-center items-center rounded-lg font-semibold bg-default-100 text-default-400 cursor-not-allowed text-xs'">
                     <i class="ti ti-file-alert mr-1.5"></i>
-                    Enviar MEMO
+                    <span x-text="'Enviar ' + memoInfo.siguiente_texto + ' MEMO'"></span>
                 </button>
 
                 <button type="button" @click="cerrar()"
@@ -1957,56 +2283,78 @@ use Carbon\Traits\Date;
     window.modalCurso = function() {
         return {
             open: false,
+            loading: false,
             curso: {
                 nombre: 'Cargando...',
                 codigo: '-',
                 codigoInterno: 0,
                 codigo_moodle: 0,
-                responsable: '',
-                fechaCreacion: '',
+                responsable: 'Sin responsable',
+                fechaCreacion: 'Obteniendo fecha de creación...',
                 total: 0,
-                totalSinIniciar: 0,
-                totalEnProgreso: 0,
-                totalCompletados: 0,
-                porcentajeProgreso: 0,
-                programacion: null,
-                programacion_pendiente: null
+                programacion_actual: null,
+                programacion_pendiente: null,
+                estadisticas: {
+                    aprobados: 0,
+                    desaprobados: 0,
+                    sin_acceder: 0,
+                    en_curso: 0,
+                },
             },
 
             mostrar(data, fetchUsuarios, sendMail) {
                 this._fetchUsuarios = fetchUsuarios;
                 this._sendMail = sendMail;
-                this.curso.nombre = data.nombre;
-                this.curso.codigo = data.codigo_curso;
-                this.curso.codigo_moodle = data.codigo_moodle;
-                this.curso.codigoInterno = data.codigo;
-                this.curso.responsable = data.responsable || '';
-                this.curso.fechaCreacion = this.formatearFechaCreacion(data.fecha_creacion);
-                this.curso.programacion = data.programacion || null;
-                this.curso.programacion_pendiente = data.programacion_pendiente || null;
-                this.curso.total = data.total_matriculados;
-                this.curso.totalSinIniciar = '...';
-                this.curso.totalEnProgreso = '...';
-                this.curso.totalCompletados = '...';
-                this.curso.porcentajeProgreso = 0;
+                this.loading = true;
+                this.curso.nombre = data.nombre || 'Cargando...';
+                this.curso.codigo = data.codigo_curso || '00000';
+                this.curso.codigo_moodle = data.course_id || 0;
+                this.curso.codigoInterno = data.codigo || 0;
+                this.curso.responsable = data.responsable || 'Sin responsable';
+                this.curso.total = data.total_matriculados || 0;
+                this.curso.fechaCreacion = 'Obteniendo fecha de creación...';
+                this.curso.programacion_actual = null;
+                this.curso.programacion_pendiente = null;
+                this.curso.estadisticas = {
+                    aprobados: 0,
+                    desaprobados: 0,
+                    sin_acceder: 0,
+                    en_curso: 0
+                };
                 this.open = true;
 
-                fetchUsuarios(data.codigo_moodle)
-                    .then(res => {
-                        this.curso.totalSinIniciar = res.data.total_sin_iniciar;
-                        this.curso.totalEnProgreso = res.data.total_en_progreso;
-                        this.curso.totalCompletados = Math.max(0, this.curso.total - res.data.total_sin_iniciar -
-                            res.data.total_en_progreso);
-                        this.curso.porcentajeProgreso = this.curso.total > 0 ?
-                            Math.round(((this.curso.totalEnProgreso + this.curso.totalCompletados) / this.curso
-                                .total) * 100) :
-                            0;
+                const courseId = data.course_id || data.codigo_moodle || data.codigo;
+                fetch(`/api/obtener-detalle-curso/${courseId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error en la respuesta del servidor');
+                        }
+                        return response.json();
                     })
-                    .catch(() => {
-                        this.curso.totalSinIniciar = 'Error';
-                        this.curso.totalEnProgreso = 'Error';
-                        this.curso.totalCompletados = 'Error';
-                        this.curso.porcentajeProgreso = 0;
+                    .then(res => {
+                        if (res.success) {
+                            const d = res;
+                            this.curso.nombre = d.nombre;
+                            this.curso.codigo = d.codigo;
+                            this.curso.codigoInterno = d.codigo_interno;
+                            this.curso.codigo_moodle = d.codigo_moodle;
+                            this.curso.fechaCreacion = this.formatearFechaCreacion(d.fecha_creacion);
+                            this.curso.programacion_actual = d.programacion_actual || null;
+                            this.curso.programacion_pendiente = d.programacion_pendiente || null;
+                            this.curso.estadisticas = d.estadisticas || {
+                                aprobados: 0,
+                                desaprobados: 0,
+                                sin_acceder: 0,
+                                en_curso: 0,
+                            };
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al obtener detalle del curso:', error);
+                        this.curso.fechaCreacion = '';
+                    })
+                    .finally(() => {
+                        this.loading = false;
                     });
             },
 
@@ -2037,11 +2385,10 @@ use Carbon\Traits\Date;
                 }
             },
 
-            abrirModalUsuarios(tipo = '') {
+            abrirModalUsuarios(statusId = 0) {
                 const modalUsuarios = document.getElementById('modal-lista-usuarios')._x_dataStack?.[0];
                 if (modalUsuarios) {
-                    modalUsuarios.mostrar(this.curso.nombre, this.curso.codigo_moodle, this._fetchUsuarios, this
-                        ._sendMail, tipo);
+                    modalUsuarios.mostrar(this.curso.nombre, this.curso.codigo_moodle, statusId);
                 }
             },
 
@@ -2054,158 +2401,226 @@ use Carbon\Traits\Date;
     window.modalListaUsuarios = function() {
         return {
             open: false,
-            titulo: '',
-            cursoId: null,
-            usuarios: [],
+            loading: false,
+            cursoNombre: '',
+            cursoId: 0,
+            statusId: 0,
+            personales: [],
             busqueda: '',
-            cargado: false,
-            notificados: {},
-            _cooldownMs: 5 * 60 * 60 * 1000,
+            fechaDesde: '',
+            fechaHasta: '',
+            ordenCampo: 'default',
+            ordenDireccion: 'asc',
+            paginaActual: 1,
+            itemsPorPagina: 20,
+            enviandoRecordatorio: {},
+            recordatoriosEnviados: {},
 
-            get usuariosFiltrados() {
-                if (!this.busqueda) return this.usuarios;
-                const q = this.busqueda.toLowerCase().trim();
-                return this.usuarios.filter(u =>
-                    (u.full_name || '').toLowerCase().includes(q) ||
-                    (u.username || '').toLowerCase().includes(q) ||
-                    (u.idnumber || '').toLowerCase().includes(q)
-                );
+            get mostrarAcciones() {
+                return this.statusId === 3 || this.statusId === 4;
             },
 
-            _guardarNotificados() {
-                localStorage.setItem('notificados_correo', JSON.stringify(this.notificados));
+            get statusLabel() {
+                const labels = {
+                    0: 'Todos los matriculados',
+                    1: 'Aprobados',
+                    2: 'Desaprobados',
+                    3: 'Sin acceder',
+                    4: 'En curso',
+                };
+                return labels[this.statusId] || 'Desconocido';
             },
 
-            mostrar(titulo, moodleCourseId, fetchUsuarios, sendMail, tipo = '') {
-                this._sendMail = sendMail;
-                this.titulo = tipo ? `${titulo} | Usuarios ${tipo}` : titulo;
-                this.cursoId = moodleCourseId;
-                this.usuarios = [];
-                this.cargado = false;
-                this.open = true;
+            get personalesFiltrados() {
+                let resultado = [...this.personales];
 
-                const guardado = localStorage.getItem('notificados_correo');
-                this.notificados = guardado ? JSON.parse(guardado) : {};
-
-                fetchUsuarios(moodleCourseId)
-                    .then(res => {
-                        this.usuarios = res.data.usuarios || [];
-                        this.cargado = true;
-                    })
-                    .catch(() => {
-                        this.cargado = true;
-                    });
-            },
-
-            estaEnCooldown(user) {
-                if (!this.notificados) return false;
-                const key = user.email + '_' + this.cursoId;
-                const ultimaVez = this.notificados[key];
-                if (!ultimaVez) return false;
-                return (Date.now() - ultimaVez) < this._cooldownMs;
-            },
-
-            tiempoRestante(user) {
-                if (!this.notificados) return '';
-                const key = user.email + '_' + this.cursoId;
-                const ultimaVez = this.notificados[key];
-                if (!ultimaVez) return '';
-
-                const restanteMs = this._cooldownMs - (Date.now() - ultimaVez);
-                if (restanteMs <= 0) return '';
-
-                const horas = Math.floor(restanteMs / 3600000);
-                const minutos = Math.floor((restanteMs % 3600000) / 60000);
-
-                if (horas > 0) return `${horas}h ${minutos}m`;
-                return `${minutos}m`;
-            },
-
-            notificarUsuario(user) {
-                const ahora = Date.now();
-                const key = user.email + '_' + this.cursoId;
-                const ultimaVez = this.notificados[key];
-
-                if (ultimaVez && (ahora - ultimaVez) < this._cooldownMs) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Ya fue notificado',
-                        text: `Este usuario ya recibió un recordatorio. Podrás volver a notificarlo en ${this.tiempoRestante(user)}.`,
-                    });
-                    return;
+                if (this.busqueda.trim()) {
+                    const term = this.busqueda.trim().toLowerCase();
+                    resultado = resultado.filter(p =>
+                        (p.nombreCompleto && p.nombreCompleto.toLowerCase().includes(term)) ||
+                        (p.nroDoc && p.nroDoc.toLowerCase().includes(term))
+                    );
                 }
 
-                Swal.fire({
-                    title: 'Enviando correo de recordatorio',
-                    text: 'Por favor espere...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading(),
-                });
-
-                this._sendMail({
-                        to: user.email,
-                        subject: 'Recordatorio: ' + this.titulo,
-                        template: 'recordatorio-curso',
-                        data: {
-                            full_name: user.full_name,
-                            course_name: this.titulo,
-                            enrolment_start_date: user.enrolment_start_date,
-                        },
-                    })
-                    .then(() => {
-                        this.notificados[key] = Date.now();
-                        this._guardarNotificados();
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Correo enviado',
-                            text: 'El recordatorio ha sido enviado a ' + user.email,
-                            timer: 3000,
-                            timerProgressBar: true,
-                            showConfirmButton: false,
-                        });
-                    })
-                    .catch(() => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudo enviar el correo a ' + user.email,
-                        });
+                if (this.fechaDesde) {
+                    const desde = new Date(this.fechaDesde);
+                    desde.setHours(0, 0, 0, 0);
+                    resultado = resultado.filter(p => {
+                        if (!p.ultimo_acceso) return false;
+                        return new Date(p.ultimo_acceso) >= desde;
                     });
+                }
+
+                if (this.fechaHasta) {
+                    const hasta = new Date(this.fechaHasta);
+                    hasta.setHours(23, 59, 59, 999);
+                    resultado = resultado.filter(p => {
+                        if (!p.ultimo_acceso) return false;
+                        return new Date(p.ultimo_acceso) <= hasta;
+                    });
+                }
+
+                if (this.ordenCampo !== 'default') {
+                    resultado.sort((a, b) => {
+                        let valA, valB;
+                        if (this.ordenCampo === 'nota_final') {
+                            valA = a.nota_final ?? -1;
+                            valB = b.nota_final ?? -1;
+                        } else if (this.ordenCampo === 'nombreCompleto') {
+                            valA = (a.nombreCompleto || '').toLowerCase();
+                            valB = (b.nombreCompleto || '').toLowerCase();
+                        } else if (this.ordenCampo === 'ultimo_acceso') {
+                            valA = a.ultimo_acceso ? new Date(a.ultimo_acceso).getTime() : 0;
+                            valB = b.ultimo_acceso ? new Date(b.ultimo_acceso).getTime() : 0;
+                        }
+                        if (valA < valB) return this.ordenDireccion === 'asc' ? -1 : 1;
+                        if (valA > valB) return this.ordenDireccion === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                }
+
+                return resultado;
             },
 
-            abrirCursoPersonal(user) {
-                const term = encodeURIComponent((user.username || user.full_name || '').trim());
-                if (!term) return;
+            get totalPaginas() {
+                return Math.ceil(this.personalesFiltrados.length / this.itemsPorPagina);
+            },
 
-                fetch(`${VITE_URL_APP}/api/buscar-personal-capacitacion?q=${term}&limite=20`)
-                    .then(r => r.json())
+            get personalesPaginados() {
+                const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+                return this.personalesFiltrados.slice(inicio, inicio + this.itemsPorPagina);
+            },
+
+            get paginasVisibles() {
+                const total = this.totalPaginas;
+                const actual = this.paginaActual;
+                const paginas = [];
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) paginas.push(i);
+                } else {
+                    paginas.push(1);
+                    if (actual > 3) paginas.push('...');
+                    const inicio = Math.max(2, actual - 1);
+                    const fin = Math.min(total - 1, actual + 1);
+                    for (let i = inicio; i <= fin; i++) paginas.push(i);
+                    if (actual < total - 2) paginas.push('...');
+                    paginas.push(total);
+                }
+                return paginas;
+            },
+
+            irPagina(pagina) {
+                if (pagina === '...' || pagina < 1 || pagina > this.totalPaginas) return;
+                this.paginaActual = pagina;
+                this.$nextTick(() => {
+                    if (this.$refs.bodyContainer) this.$refs.bodyContainer.scrollTop = 0;
+                });
+            },
+
+            formatearFechaHora(fecha) {
+                if (!fecha) return '—';
+                try {
+                    const d = new Date(fecha);
+                    const dia = String(d.getDate()).padStart(2, '0');
+                    const mes = String(d.getMonth() + 1).padStart(2, '0');
+                    const anio = d.getFullYear();
+                    let horas = d.getHours();
+                    const minutos = String(d.getMinutes()).padStart(2, '0');
+                    const ampm = horas >= 12 ? 'PM' : 'AM';
+                    horas = horas % 12 || 12;
+                    const horasStr = String(horas).padStart(2, '0');
+                    return `${dia}/${mes}/${anio} ${horasStr}:${minutos} ${ampm}`;
+                } catch {
+                    return '—';
+                }
+            },
+
+            toggleOrden(campo) {
+                if (this.ordenCampo === campo) {
+                    if (this.ordenDireccion === 'asc') {
+                        this.ordenDireccion = 'desc';
+                    } else {
+                        this.ordenCampo = 'default';
+                        this.ordenDireccion = 'asc';
+                    }
+                } else {
+                    this.ordenCampo = campo;
+                    this.ordenDireccion = 'asc';
+                }
+            },
+
+            getIconoOrden(campo) {
+                if (this.ordenCampo !== campo) return 'ti-selector';
+                return this.ordenDireccion === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending';
+            },
+
+            async enviarRecordatorio(p) {
+                if (this.enviandoRecordatorio[p.nroDoc] || this.recordatoriosEnviados[p.nroDoc]) return;
+                this.enviandoRecordatorio[p.nroDoc] = true;
+                try {
+                    const res = await fetch(`/api/mail/enviar-recordatorio?course_id=${this.cursoId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        },
+                        body: JSON.stringify({
+                            email: p.correo,
+                            full_name: p.nombreCompleto
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        this.recordatoriosEnviados[p.nroDoc] = true;
+                    }
+                } catch (error) {
+                    console.error('Error al enviar recordatorio:', error);
+                } finally {
+                    this.enviandoRecordatorio[p.nroDoc] = false;
+                }
+            },
+
+            limpiarFiltros() {
+                this.busqueda = '';
+                this.fechaDesde = '';
+                this.fechaHasta = '';
+                this.ordenCampo = 'default';
+                this.ordenDireccion = 'asc';
+                this.paginaActual = 1;
+            },
+
+            mostrar(cursoNombre, cursoId, statusId) {
+                this.cursoNombre = cursoNombre;
+                this.cursoId = cursoId;
+                this.statusId = statusId;
+                this.personales = [];
+                this.loading = true;
+                this.open = true;
+                this.busqueda = '';
+                this.fechaDesde = '';
+                this.fechaHasta = '';
+                this.ordenCampo = 'default';
+                this.ordenDireccion = 'asc';
+                this.paginaActual = 1;
+                this.enviandoRecordatorio = {};
+                this.recordatoriosEnviados = {};
+
+                fetch(`/api/get-estudiantes-curso?course_id=${cursoId}&statusId=${statusId}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                        return response.json();
+                    })
                     .then(res => {
-                        const personal = res.personal || [];
-                        if (personal.length > 0) {
-                            this.open = false;
-                            const modalEl = document.getElementById('modal-usuario');
-                            const alpineComponent = modalEl?._x_dataStack?.[0];
-                            if (alpineComponent) {
-                                alpineComponent.mostrar({
-                                    ...personal[0],
-                                    email: user.email
-                                });
-                            }
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'No encontrado',
-                                text: 'No se encontraron datos de este usuario en el sistema'
-                            });
+                        if (res.success) {
+                            this.personales = res.Personales || [];
                         }
                     })
-                    .catch(() => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Error al buscar el usuario'
-                        });
+                    .catch(error => {
+                        console.error('Error al obtener usuarios del curso:', error);
+                        this.personales = [];
+                    })
+                    .finally(() => {
+                        this.loading = false;
                     });
             },
 
@@ -2262,6 +2677,12 @@ use Carbon\Traits\Date;
             filtroEstado: 'todos',
             busquedaCurso: '',
             _cooldownMs: 5 * 60 * 60 * 1000,
+            memoInfo: {
+                total: 0,
+                siguiente_num_memo: 1,
+                siguiente_texto: 'primer',
+            },
+            memoCargado: false,
 
             _cooldownKey() {
                 return 'notif_pendientes_' + this.personal.dni;
@@ -2351,7 +2772,25 @@ use Carbon\Traits\Date;
                 this.cursosCargado = false;
                 this.filtroEstado = 'todos';
                 this.busquedaCurso = '';
+                this.memoInfo = {
+                    total: 0,
+                    siguiente_num_memo: 1,
+                    siguiente_texto: 'primer'
+                };
+                this.memoCargado = false;
                 this.open = true;
+
+                fetch(`${VITE_URL_APP}/api/obtener-info-memo/${data.dni}`)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            this.memoInfo = res.data;
+                        }
+                        this.memoCargado = true;
+                    })
+                    .catch(() => {
+                        this.memoCargado = true;
+                    });
 
                 fetch(`${VITE_URL_APP}/api/get-cursos-alumno/${data.dni}`)
                     .then(r => r.json())
@@ -2440,7 +2879,11 @@ use Carbon\Traits\Date;
             enviarMEMO() {
                 const nroDoc = this.personal.dni;
                 if (!nroDoc) {
-                    Swal.fire({ icon: 'warning', title: 'Sin documento', text: 'No se encontró el DNI del colaborador' });
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin documento',
+                        text: 'No se encontró el DNI del colaborador'
+                    });
                     return;
                 }
                 Swal.fire({
@@ -2449,22 +2892,76 @@ use Carbon\Traits\Date;
                     allowOutsideClick: false,
                     didOpen: () => Swal.showLoading(),
                 });
-                fetch(`${VITE_URL_APP}/api/enviar-memo/${nroDoc}`)
+                fetch(`${VITE_URL_APP}/api/enviar-memo-personal`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            nroDoc: this.personal.dni,
+                            nombreCompleto: this.personal.nombre_completo,
+                            correo: this.personal.email,
+                            cargo: this.personal.cargo
+                        })
+                    })
                     .then(r => r.json())
                     .then(res => {
                         if (res.success) {
-                            Swal.fire({ icon: 'success', title: 'MEMO enviado', timer: 2000, timerProgressBar: true, showConfirmButton: false });
+                            if (window.tabulatorMemos) {
+                                window.tabulatorMemos.setData("/api/obtener-memos-enviados");
+                            }
+                            fetch(`${VITE_URL_APP}/api/obtener-info-memo/${this.personal.dni}`)
+                                .then(r => r.json())
+                                .then(info => {
+                                    if (info.success) {
+                                        this.memoInfo = info.data;
+                                    }
+                                });
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'MEMO enviado',
+                                timer: 2000,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            });
                         } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo enviar el MEMO' });
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: res.message || 'No se pudo enviar el MEMO'
+                            });
                         }
                     })
                     .catch(() => {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar el MEMO' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo enviar el MEMO'
+                        });
                     });
             },
 
             cerrar() {
                 this.open = false;
+            },
+        };
+    };
+
+    window.filtrosPersonal = function() {
+        return {
+            hayFiltros: false,
+            init() {
+                this.$nextTick(() => this.verificar());
+            },
+            verificar() {
+                const ids = [
+                    'filtroSucursalPersonal',
+                    'filtroTipoPersonal',
+                    'filtroCargoPersonal',
+                    'filtroClientePersonal',
+                ];
+                this.hayFiltros = ids.some(id => !!document.getElementById(id)?.value);
             },
         };
     };
@@ -2499,7 +2996,7 @@ use Carbon\Traits\Date;
 
             seleccionarPersonal(p) {
                 this.open = false;
-                this.query = p.nombre_completo;
+                this.query = "";
                 const modalEl = document.getElementById("modal-usuario");
                 const alpineComponent = modalEl?._x_dataStack?.[0];
                 if (alpineComponent) {

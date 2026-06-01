@@ -32,7 +32,95 @@ document.addEventListener("DOMContentLoaded", () => {
             "filtroSucursalPersonal",
         ),
         filtroTipoPersonal: document.getElementById("filtroTipoPersonal"),
+        filtroCargoPersonal: document.getElementById("filtroCargoPersonal"),
+        filtroClientePersonal: document.getElementById("filtroClientePersonal"),
     };
+
+    const personasSeleccionadasPersonal = new Set();
+
+    window.personalSeleccionado = () => {
+        const table = window.tabulatorPersonal;
+        if (!table) return [];
+        return table.getData().filter(row => personasSeleccionadasPersonal.has(row.dni));
+    };
+
+    const actualizarContadorSeleccionPersonal = () => {
+        const count = personasSeleccionadasPersonal.size;
+        const el = document.getElementById("selectedPersonalCount");
+        const container = document.getElementById("selectedPersonalInfo");
+        if (el) el.textContent = count;
+        if (container) {
+            container.classList.toggle("hidden", count === 0);
+        }
+        const btn = document.getElementById("btnEnviarMemosPersonal");
+        const btnText = document.getElementById("btnEnviarMemosText");
+        if (btn) {
+            if (count > 0) {
+                btn.removeAttribute("disabled");
+                btn.classList.remove("opacity-50", "cursor-not-allowed");
+            } else {
+                btn.setAttribute("disabled", "disabled");
+                btn.classList.add("opacity-50", "cursor-not-allowed");
+            }
+        }
+        if (btnText) {
+            btnText.textContent = count > 0
+                ? `Enviar MEMOs al personal seleccionado (${count} seleccionado${count !== 1 ? "s" : ""})`
+                : "Enviar MEMOs al personal seleccionado";
+        }
+    };
+
+    function configurarEventosCheckboxesPersonal() {
+        const container = document.getElementById("tblPersonalSeguimiento");
+        if (!container) return;
+        if (container.dataset.checkboxListener) return;
+        container.dataset.checkboxListener = "true";
+
+        container.addEventListener("change", function (e) {
+            const table = window.tabulatorPersonal;
+            if (!table) return;
+
+            if (e.target.classList.contains("checkbox-personal-row")) {
+                const dni = e.target.dataset.dni;
+                if (e.target.checked) {
+                    personasSeleccionadasPersonal.add(dni);
+                } else {
+                    personasSeleccionadasPersonal.delete(dni);
+                }
+                actualizarContadorSeleccionPersonal();
+            }
+
+            if (e.target.classList.contains("checkbox-select-all")) {
+                const checked = e.target.checked;
+                const visibleData = table.getData("visible");
+                const visibleRows = table.getRows("visible");
+                visibleData.forEach(row => {
+                    if (checked) {
+                        personasSeleccionadasPersonal.add(row.dni);
+                    } else {
+                        personasSeleccionadasPersonal.delete(row.dni);
+                    }
+                });
+                visibleRows.forEach(row => {
+                    const cell = row.getCell("seleccionar");
+                    if (cell) {
+                        const el = cell.getElement();
+                        const cb = el?.querySelector(".checkbox-personal-row");
+                        const label = el?.querySelector("label");
+                        if (cb) {
+                            cb.checked = checked;
+                            cb.style.borderColor = checked ? "#3b82f6" : "#d1d5db";
+                            cb.style.background = checked ? "#3b82f6" : "transparent";
+                        }
+                        if (label) {
+                            label.style.background = checked ? "rgba(37,99,235,.1)" : "transparent";
+                        }
+                    }
+                });
+                actualizarContadorSeleccionPersonal();
+            }
+        });
+    }
 
     const esLocale = {
         pagination: {
@@ -164,6 +252,43 @@ document.addEventListener("DOMContentLoaded", () => {
         select.value = actual;
     }
 
+    function cargarCargosPersonal(lista = []) {
+        const select = elements.filtroCargoPersonal;
+        if (!select) return;
+
+        const actual = select.value;
+        const cargos = [
+            ...new Set(lista.map((p) => p.cargo).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todos los cargos</option>` +
+            cargos
+                .map((c) => `<option value="${c}">${c}</option>`)
+                .join("");
+
+        select.value = actual;
+    }
+
+    function cargarClientesPersonal(lista = []) {
+        const select = elements.filtroClientePersonal;
+        if (!select) return;
+
+        const actual = select.value;
+        const clientes = [
+            ...new Set(lista.map((p) => p.cliente).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todos los clientes</option>` +
+            `<option value="Sin cliente">Sin cliente</option>` +
+            clientes
+                .map((c) => `<option value="${c}">${c}</option>`)
+                .join("");
+
+        select.value = actual;
+    }
+
     function aplicarFiltrosMemos() {
         const tbl = window.tabulatorMemos;
         if (!tbl) return;
@@ -208,8 +333,10 @@ document.addEventListener("DOMContentLoaded", () => {
             elements.filtroSucursalPersonal?.value || ""
         ).toUpperCase();
         const tipo = elements.filtroTipoPersonal?.value || "";
+        const cargo = (elements.filtroCargoPersonal?.value || "").toUpperCase();
+        const cliente = elements.filtroClientePersonal?.value || "";
 
-        if (!sucursal && !tipo) {
+        if (!sucursal && !tipo && !cargo && !cliente) {
             tbl.clearFilter();
             return;
         }
@@ -217,7 +344,18 @@ document.addEventListener("DOMContentLoaded", () => {
         tbl.setFilter((data) => {
             if (sucursal && (data.sucursal || "").toUpperCase() !== sucursal)
                 return false;
-            if (tipo && (data.cargo || "") !== tipo) return false;
+            if (tipo && (data.tipo_trabajador || "").toUpperCase() !== tipo.toUpperCase())
+                return false;
+            if (cargo && (data.cargo || "").toUpperCase() !== cargo)
+                return false;
+            if (cliente) {
+                const dataCliente = data.cliente ? data.cliente.trim() : "";
+                if (cliente === "Sin cliente") {
+                    if (dataCliente) return false;
+                } else {
+                    if (dataCliente.toUpperCase() !== cliente.toUpperCase()) return false;
+                }
+            }
             return true;
         });
     }
@@ -240,28 +378,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             columns: [
                 {
-                    title: "Código",
-                    field: "codigo_curso",
-                    width: 100,
-                    hozAlign: "center",
-                    headerSort: true,
-                    formatter(cell) {
-                        const val = cell.getValue();
-                        return `
-                            <span style="
-                                display:inline-block;
-                                padding:2px 8px;
-                                border-radius:6px;
-                                background:#eef2ff;
-                                color:#4338ca;
-                                font-size:11px;
-                                font-weight:700;
-                                letter-spacing:0.04em;
-                            ">${val ?? "—"}</span>
-                        `;
-                    },
-                },
-                {
                     title: "Nombre de curso",
                     field: "nombre",
                     minWidth: 250,
@@ -279,27 +395,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     formatter(cell) {
                         const val = cell.getValue();
                         if (!val) return "—";
-
                         const initials = getInitials(val);
-
                         return `
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div style="
-                                    width:28px;
-                                    height:28px;
-                                    border-radius:50%;
-                                    background:#e0e7ff;
-                                    color:#4338ca;
-                                    font-size:10px;
-                                    font-weight:700;
-                                    display:flex;
-                                    align-items:center;
-                                    justify-content:center;
-                                    flex-shrink:0;
-                                ">${initials}</div>
-                                <span style="font-size:13px; color:#374151;">${val}</span>
-                            </div>
-                        `;
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:28px; height:28px; border-radius:50%; background:#e0e7ff; color:#4338ca; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${initials}</div>
+                            <span style="font-size:13px; color:#374151;">${val}</span>
+                        </div>
+                    `;
                     },
                 },
                 {
@@ -311,11 +413,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     formatter(cell) {
                         const val = cell.getValue() ?? 0;
                         return `
-                            <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
-                                <i class="ti ti-users" style="font-size:13px; color:#6366f1;"></i>
-                                <span style="font-weight:600; color:#111827;">${val}</span>
-                            </div>
-                        `;
+                        <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                            <i class="ti ti-users" style="font-size:13px; color:#6366f1;"></i>
+                            <span style="font-weight:600; color:#111827;">${val}</span>
+                        </div>
+                    `;
                     },
                 },
                 {
@@ -327,13 +429,66 @@ document.addEventListener("DOMContentLoaded", () => {
                     formatter(cell) {
                         const { fecha, hora } = formatDateTime(cell.getValue());
                         if (fecha === "—") return "—";
-
                         return `
-                            <div style="display:flex; flex-direction:column; align-items:center; line-height:1.4;">
-                                <span style="font-size:12px; font-weight:600; color:#374151;">${fecha}</span>
-                                <span style="font-size:11px; color:#9ca3af;">${hora}</span>
-                            </div>
-                        `;
+                        <div style="display:flex; flex-direction:column; align-items:center; line-height:1.4;">
+                            <span style="font-size:12px; font-weight:600; color:#374151;">${fecha}</span>
+                            <span style="font-size:11px; color:#9ca3af;">${hora}</span>
+                        </div>
+                    `;
+                    },
+                },
+                {
+                    title: "Acciones",
+                    width: 150,
+                    hozAlign: "center",
+                    headerSort: false,
+                    formatter(cell) {
+                        return `
+                        <button class="btn-detalle-curso" data-row-id="${cell.getRow().getIndex()}" style="
+                            background: #4f46e5;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            padding: 6px 12px;
+                            font-size: 12px;
+                            font-weight: 500;
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 6px;
+                            transition: all 0.2s;
+                        ">
+                            <i class="ti ti-eye" style="font-size: 14px;"></i>
+                            Ver detalle
+                        </button>
+                    `;
+                    },
+                    cellClick: function (e, cell) {
+                        e.stopPropagation();
+                        const row = cell.getRow();
+                        const data = row.getData();
+
+                        const modalEl = document.getElementById(
+                            "modal-detalle-curso",
+                        );
+                        const alpineComponent = modalEl?._x_dataStack?.[0];
+
+                        if (alpineComponent?.mostrar) {
+                            const dummyGetUsuarios = () =>
+                                Promise.resolve({ data: [] });
+                            const dummySendMail = () =>
+                                Promise.resolve({ data: {} });
+
+                            alpineComponent.mostrar(
+                                data,
+                                dummyGetUsuarios,
+                                dummySendMail,
+                            );
+                        } else {
+                            console.warn(
+                                "No se encontró el componente Alpine del modal",
+                            );
+                        }
                     },
                 },
             ],
@@ -343,11 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         table.on("dataLoaded", function (data) {
             const responsables = [
-                ...new Set(
-                    data
-                        .map((r) => r.responsable)
-                        .filter(Boolean),
-                ),
+                ...new Set(data.map((r) => r.responsable).filter(Boolean)),
             ].sort();
 
             const select = elements.filtroResponsableCursos;
@@ -363,47 +514,40 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (elements.filtroResponsableCursos) {
-            elements.filtroResponsableCursos.addEventListener("change", function () {
-                state.cursoResponsable = this.value;
-                const term = (elements.searchCurso?.value || "").trim().toLowerCase();
-                const resp = state.cursoResponsable;
+            elements.filtroResponsableCursos.addEventListener(
+                "change",
+                function () {
+                    state.cursoResponsable = this.value;
+                    const term = (elements.searchCurso?.value || "")
+                        .trim()
+                        .toLowerCase();
+                    const resp = state.cursoResponsable;
 
-                if (resp || term) {
-                    table.setFilter((data) => {
-                        if (resp && (data.responsable || "") !== resp) return false;
-                        if (term) {
-                            const nombre = (data.nombre || "").toLowerCase();
-                            const codigo = String(data.codigo_curso || "").toLowerCase();
-                            if (!nombre.includes(term) && !codigo.includes(term)) return false;
-                        }
-                        return true;
-                    });
-                } else {
-                    table.clearFilter();
-                }
-            });
+                    if (resp || term) {
+                        table.setFilter((data) => {
+                            if (resp && (data.responsable || "") !== resp)
+                                return false;
+                            if (term) {
+                                const nombre = (
+                                    data.nombre || ""
+                                ).toLowerCase();
+                                const codigo = String(
+                                    data.codigo_curso || "",
+                                ).toLowerCase();
+                                if (
+                                    !nombre.includes(term) &&
+                                    !codigo.includes(term)
+                                )
+                                    return false;
+                            }
+                            return true;
+                        });
+                    } else {
+                        table.clearFilter();
+                    }
+                },
+            );
         }
-
-        table.on("rowClick", (e, row) => {
-            const el = row.getElement();
-            el.style.background = "rgba(99, 102, 241, 0.1)";
-            setTimeout(() => (el.style.background = ""), 300);
-
-            const data = row.getData();
-            const modalEl = document.getElementById("modal-detalle-curso");
-            const alpineComponent = modalEl?._x_dataStack?.[0];
-
-            if (alpineComponent?.mostrar) {
-                alpineComponent.mostrar(
-                    data,
-                    (codigoMoodle) =>
-                        axios.get(
-                            "/api/get-usuarios-curso-moodle/" + codigoMoodle,
-                        ),
-                    (payload) => axios.post("/api/mail/send", payload),
-                );
-            }
-        });
 
         if (elements.searchCurso) {
             let debounceTimer;
@@ -415,11 +559,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (term || resp) {
                         table.setFilter((data) => {
-                            if (resp && (data.responsable || "") !== resp) return false;
+                            if (resp && (data.responsable || "") !== resp)
+                                return false;
                             if (term) {
-                                const nombre = (data.nombre || "").toLowerCase();
-                                const codigo = String(data.codigo_curso || "").toLowerCase();
-                                if (!nombre.includes(term) && !codigo.includes(term)) return false;
+                                const nombre = (
+                                    data.nombre || ""
+                                ).toLowerCase();
+                                const codigo = String(
+                                    data.codigo_curso || "",
+                                ).toLowerCase();
+                                if (
+                                    !nombre.includes(term) &&
+                                    !codigo.includes(term)
+                                )
+                                    return false;
                             }
                             return true;
                         });
@@ -716,6 +869,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     elements.filtroSucursalPersonal.value = "";
                 if (elements.filtroTipoPersonal)
                     elements.filtroTipoPersonal.value = "";
+                if (elements.filtroCargoPersonal)
+                    elements.filtroCargoPersonal.value = "";
+                if (elements.filtroClientePersonal)
+                    elements.filtroClientePersonal.value = "";
 
                 const alpineEl = document.querySelector(
                     '[x-data="memosStats()"]',
@@ -743,6 +900,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
             columns: [
                 {
+                    field: "seleccionar",
+                    formatter(cell) {
+                        const data = cell.getRow().getData();
+                        const checked = personasSeleccionadasPersonal.has(data.dni) ? "checked" : "";
+                        return `<label style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:28px;height:28px;border-radius:10px;transition:all .15s ease;background:${checked ? 'rgba(37,99,235,.1)' : 'transparent'}" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="checkbox-personal-row" data-dni="${data.dni}" ${checked} style="width:16px;height:16px;border-radius:5px;border:2px solid ${checked ? '#3b82f6' : '#d1d5db'};background:${checked ? '#3b82f6' : 'transparent'};appearance:none;-webkit-appearance:none;cursor:pointer;transition:all .15s ease;position:relative;flex-shrink:0" onchange="this.style.borderColor=this.checked?'#3b82f6':'#d1d5db';this.style.background=this.checked?'#3b82f6':'transparent';this.closest('label').style.background=this.checked?'rgba(37,99,235,.1)':'transparent'">
+                        </label>`;
+                    },
+                    titleFormatter() {
+                        return `<div style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">
+                            <input type="checkbox" class="checkbox-select-all" title="Seleccionar todos" style="width:16px;height:16px;border-radius:5px;border:2px solid #d1d5db;background:transparent;appearance:none;-webkit-appearance:none;cursor:pointer;transition:all .15s ease;position:relative;flex-shrink:0" onclick="event.stopPropagation();const cb=this;const checked=cb.checked;cb.style.borderColor=checked?'#3b82f6':'#d1d5db';cb.style.background=checked?'#3b82f6':'transparent'">
+                        </div>`;
+                    },
+                    headerSort: false,
+                    width: 65,
+                    hozAlign: "center",
+                    headerHozAlign: "center",
+                    vertAlign: "middle",
+                },
+                {
                     title: "DNI",
                     field: "dni",
                     width: 110,
@@ -755,8 +932,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     minWidth: 250,
                 },
                 {
-                    title: "Tipo de trabajador",
+                    title: "Cargo",
                     field: "cargo",
+                    minWidth: 200,
+                    formatter(cell) {
+                        return `<span class="text-xs text-gray-700">${cell.getValue() || ""}</span>`;
+                    },
+                },
+                {
+                    title: "Tipo de trabajador",
+                    field: "tipo_trabajador",
                     width: 150,
                     headerSort: true,
                     formatter(cell) {
@@ -773,16 +958,24 @@ document.addEventListener("DOMContentLoaded", () => {
                     },
                 },
                 {
+                    title: "Cliente",
+                    field: "cliente",
+                    minWidth: 180,
+                    formatter(cell) {
+                        return `<span class="text-xs text-green-700">${cell.getValue() || "SIN CLIENTE"}</span>`;
+                    },
+                },
+                {
                     title: "Acción",
                     headerSort: false,
                     width: 80,
                     hozAlign: "center",
                     formatter() {
                         return `
-                            <button class="px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-xs font-medium">
-                                <i class="ti ti-eye"></i> Ver
-                            </button>
-                        `;
+                        <button class="px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-xs font-medium">
+                            <i class="ti ti-eye"></i> Ver
+                        </button>
+                    `;
                     },
                     cellClick(e, cell) {
                         e.stopPropagation();
@@ -792,11 +985,32 @@ document.addEventListener("DOMContentLoaded", () => {
             ],
 
             rowClick(e, row) {
-                abrirModalPersonal(row.getData());
+                const el = row.getElement();
+                const cb = el?.querySelector(".checkbox-personal-row");
+                if (!cb) return;
+                const checked = !cb.checked;
+                cb.checked = checked;
+                cb.style.borderColor = checked ? "#3b82f6" : "#d1d5db";
+                cb.style.background = checked ? "#3b82f6" : "transparent";
+                const label = cb.closest("label");
+                if (label) {
+                    label.style.background = checked ? "rgba(37,99,235,.1)" : "transparent";
+                }
+                const dni = cb.dataset.dni;
+                if (checked) {
+                    personasSeleccionadasPersonal.add(dni);
+                } else {
+                    personasSeleccionadasPersonal.delete(dni);
+                }
+                actualizarContadorSeleccionPersonal();
             },
         });
 
         window.tabulatorPersonal = table;
+
+        table.on("tableBuilt", () => {
+            configurarEventosCheckboxesPersonal();
+        });
 
         const aplicarFiltrosCombinados = () => {
             state.memoSucursal = elements.filtroSucursalPersonal?.value || "";
@@ -818,25 +1032,66 @@ document.addEventListener("DOMContentLoaded", () => {
                 aplicarFiltrosCombinados,
             );
         }
+
+        if (elements.filtroCargoPersonal) {
+            elements.filtroCargoPersonal.addEventListener(
+                "change",
+                aplicarFiltrosCombinados,
+            );
+        }
+
+        if (elements.filtroClientePersonal) {
+            elements.filtroClientePersonal.addEventListener(
+                "change",
+                aplicarFiltrosCombinados,
+            );
+        }
+
+        const btnLimpiarPersonal = document.getElementById("btnLimpiarFiltroPersonal");
+        if (btnLimpiarPersonal) {
+            btnLimpiarPersonal.addEventListener("click", () => {
+                if (elements.filtroSucursalPersonal)
+                    elements.filtroSucursalPersonal.value = "";
+                if (elements.filtroTipoPersonal)
+                    elements.filtroTipoPersonal.value = "";
+                if (elements.filtroCargoPersonal)
+                    elements.filtroCargoPersonal.value = "";
+                if (elements.filtroClientePersonal)
+                    elements.filtroClientePersonal.value = "";
+
+                const searchEl = document.querySelector('[x-data="searchPersonalSeguimiento()"]');
+                if (searchEl) {
+                    const data = searchEl._x_dataStack?.[0];
+                    if (data) data.query = "";
+                }
+
+                const filtrosEl = document.querySelector('[x-data="filtrosPersonal()"]');
+                if (filtrosEl) {
+                    const data = filtrosEl._x_dataStack?.[0];
+                    if (data && data.verificar) data.verificar();
+                }
+
+                aplicarFiltrosPersonal();
+            });
+        }
     }
 
-    function buscarPersonalSeguimiento(termino) {
+    function buscarPersonalSeguimiento() {
         axios
-            .get(`${VITE_URL_APP}/api/buscar-personal-capacitacion`, {
-                params: { q: termino, limite: 100 },
-            })
+            .get(`${VITE_URL_APP}/api/obtener-personal-simple`)
             .then((res) => {
                 if (res.data.success && window.tabulatorPersonal) {
-                    const personal = (res.data.personal || []).filter(
-                        (p) => (p.total_capacitaciones || 0) > 0,
-                    );
+                    const personal = res.data.personal || [];
 
                     window.tabulatorPersonal.setData(personal);
+
                     cargarSucursalesPersonal(personal);
+                    cargarCargosPersonal(personal);
+                    cargarClientesPersonal(personal);
                     aplicarFiltrosPersonal();
                 }
             })
-            .catch((err) => console.error("Error al buscar personal:", err));
+            .catch((err) => console.error("Error al cargar personal:", err));
     }
 
     if (elements.searchPersonal) {
@@ -857,4 +1112,55 @@ document.addEventListener("DOMContentLoaded", () => {
     initTablaPersonalSeguimiento();
 
     buscarPersonalSeguimiento("");
+
+    const btnEnviarMemosPersonal = document.getElementById("btnEnviarMemosPersonal");
+    if (btnEnviarMemosPersonal) {
+        btnEnviarMemosPersonal.addEventListener("click", () => {
+            const seleccionados = window.personalSeleccionado();
+            if (seleccionados.length === 0) return;
+
+            const personales = seleccionados.map(p => ({
+                nroDoc: p.dni,
+                nombreCompleto: p.nombre_completo,
+                correo: p.email,
+                cargo: p.cargo
+            }));
+
+            Swal.fire({
+                title: 'Enviando MEMOs...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            axios.post(`${VITE_URL_APP}/api/enviar-memos-varios`, { personales })
+                .then(res => {
+                    if (res.data.success) {
+                        if (window.tabulatorMemos) {
+                            window.tabulatorMemos.setData("/api/obtener-memos-enviados");
+                        }
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'MEMOs enviados',
+                            timer: 2000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.data.message || 'No se pudieron enviar los MEMOs'
+                        });
+                    }
+                })
+                .catch(() => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudieron enviar los MEMOs'
+                    });
+                });
+        });
+    }
 });
