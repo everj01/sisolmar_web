@@ -73,6 +73,10 @@ class Consulta extends Model
         return DB::select("EXEC SW_LISTAR_AREAS_POR_SISTEMA ?", [$sistemaId]);
     }
 
+    public static function obtenerAreas(){
+        return DB::select('SELECT [nombre],[codModdle] FROM [sisolm_web].[dbo].[sw_curso_areas]');
+    }
+
     public static function obtenerAreasEncargadas()
     {
         return DB::select(
@@ -156,6 +160,7 @@ class Consulta extends Model
             ->leftJoin('si_solm.dbo.CARGOS as C', 'C.CODI_CARG', '=', 'P.CODI_CARG')
             ->selectRaw("
             P.CODI_PERS,
+            P.SUCU_CODIGO,
 
             LTRIM(RTRIM(
                 P.APEL_1 + ' ' +
