@@ -19,75 +19,86 @@ class EnviarRecordatoriosCurso extends Command
     {
         $isDryRun = $this->option('dry-run');
 
-        $totalEnviados        = 0;
-        $totalErrores         = 0;
-        $totalSinCorreo       = 0;
-        $totalCorreoInvalido  = 0;
-        $registros = DB::connection('mysql_grupoihb')
-            ->select('CALL SP_OBTENER_RECORDATORIOS_PENDIENTES(?)', [date('Y')]);
+        $totalEnviados       = 0;
+        $totalErrores        = 0;
+        $totalSinCorreo      = 0;
+        $totalCorreoInvalido = 0;
 
-        if (empty($registros)) {
+        $usuarios = DB::connection('mysql_grupoihb')
+            ->select(
+                'CALL SP_OBTENER_RECORDATORIOS_PENDIENTES(?)',
+                [date('Y')]
+            );
+
+        if (empty($usuarios)) {
             $this->info('Sin pendientes.');
             return self::SUCCESS;
         }
 
-        $porUsuario = collect($registros)->groupBy('user_id');
-
-        $totalUsuariosSP = $porUsuario->count();
+        $totalUsuariosSP = count($usuarios);
 
         $this->info("{$totalUsuariosSP} usuario(s) obtenidos del SP.");
 
         $bar = $this->output->createProgressBar($totalUsuariosSP);
         $bar->start();
 
-        foreach ($porUsuario as $userId => $cursos) {
-
-            $usuario = $cursos->first();
+        foreach ($usuarios as $usuario) {
 
             try {
 
                 $email = trim((string) $usuario->email);
 
-                $emailValido = filter_var($email, FILTER_VALIDATE_EMAIL);
-
                 if (empty($email)) {
 
                     $totalSinCorreo++;
 
-                    Log::warning("Usuario {$userId} sin correo.");
+                    Log::warning(
+                        "Usuario {$usuario->user_id} sin correo."
+                    );
 
                     $bar->advance();
 
                     continue;
                 }
 
-                if (!$emailValido) {
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
                     $totalCorreoInvalido++;
 
-                    Log::warning("Usuario {$userId} con correo inválido: {$email}");
+                    Log::warning(
+                        "Usuario {$usuario->user_id} con correo inválido: {$email}"
+                    );
 
                     $bar->advance();
 
                     continue;
                 }
 
-                $puedeEnviar = !$isDryRun || $usuario->username === '76067492';
+                $cursosPendientes = json_decode(
+                    $usuario->cursos_pendientes
+                );
+
+                $usuariosPrueba = [
+                    '76067492',
+                    '75412099',
+                ];
+
+                $puedeEnviar = !$isDryRun
+                    || in_array(
+                        $usuario->username,
+                        $usuariosPrueba,
+                        true
+                    );
 
                 if ($puedeEnviar) {
 
-                    $mailable = $cursos->count() === 1
-                        ? new RecordatorioCursoPendienteMail(
-                            $usuario,
-                            $cursos->first(),
-                        )
-                        : new RecordatorioCursosPendientesMail(
-                            $usuario,
-                            $cursos->values()->all(),
-                        );
-
                     Mail::to($email)
-                        ->queue($mailable);
+                        ->queue(
+                            new RecordatorioCursosPendientesMail(
+                                $usuario,
+                                $cursosPendientes
+                            )
+                        );
 
                     $totalEnviados++;
                 }
@@ -96,7 +107,7 @@ class EnviarRecordatoriosCurso extends Command
                 $totalErrores++;
 
                 Log::error(
-                    "Error usuario {$userId}: {$e->getMessage()}",
+                    "Error usuario {$usuario->user_id}: {$e->getMessage()}",
                     [
                         'trace' => $e->getTraceAsString(),
                     ]

@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function cargarFiltros() {
     try {
         const [resTipos, resAreas] = await Promise.all([
-            axios.get('/api/get-capacitacion-tipo-cursos'),
-            axios.get('/api/get-capacitacion-areas')
+            axios.get("/api/get-capacitacion-tipo-cursos"),
+            axios.get("/api/obtener-capacitacion-sistemas"),
         ]);
 
         const selectTipo = document.getElementById('slcFiltroTipoCurso');

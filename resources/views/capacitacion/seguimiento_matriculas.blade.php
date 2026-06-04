@@ -703,6 +703,19 @@ use Carbon\Traits\Date;
                             </button>
 
                             <button
+                                id="btnDeshacerSeleccionPersonal"
+                                type="button"
+                                disabled
+                                class="h-9 px-4 inline-flex items-center justify-center gap-1.5
+            bg-white text-default-700 text-xs font-semibold
+            rounded-lg shadow-sm border border-default-200
+            opacity-50 cursor-not-allowed
+            hover:bg-default-50 transition shrink-0">
+                                <i class="ti ti-x text-sm"></i>
+                                Deshacer selección
+                            </button>
+
+                            <button
                                 id="btnEnviarMemosPersonal"
                                 type="button"
                                 disabled

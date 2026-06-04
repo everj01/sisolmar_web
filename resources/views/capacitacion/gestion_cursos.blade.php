@@ -1364,8 +1364,7 @@
                                                 <h3 class="text-sm font-medium text-amber-800">Matrícula Manual
                                                 </h3>
                                                 <p class="text-sm text-amber-700 mt-1">
-                                                    Deberá matricular <strong>manualmente</strong> al personal del cliente
-                                                    <strong><span x-text="selectedClienteNombre"></span></strong> desde la
+                                                    Deberá matricular <strong>manualmente</strong> al personal en la
                                                     pestaña de Matrículas.
                                                 </p>
                                             </div>

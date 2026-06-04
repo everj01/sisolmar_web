@@ -49,7 +49,7 @@ Route::get('/get-folios-persona_uno', [FileController::class, 'getFoliosXPersona
 Route::get('/get-folios/{codCliente}/{codCargo}', [FileController::class, 'getFoliosXLegajo']);
 Route::get('/get-folios-cliente-cargo', [FileController::class, 'getFoliosClienteCargo']);
 
-Route::get('/get-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
+Route::get('/obtener-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
 
 Route::get('/get-view-documents/{codPersonal}/{codFolio}', [FileController::class, 'getViewDocumentsPer']);
 
@@ -110,7 +110,7 @@ Route::post('/update-programacion', [CapacitacionController::class, 'updateProgr
 Route::patch('/programaciones/{codigo}/habilitado', [CapacitacionController::class, 'updateProgramacionHab']);
 
 Route::get('/get-capacitacion-tipo-cursos', [CapacitacionController::class, 'getTipoCursos']);
-Route::get('/get-capacitacion-areas', [CapacitacionController::class, 'getAreas']);
+Route::get('/obtener-capacitacion-sistemas', [CapacitacionController::class, 'obtenerSistemas']);
 
 // Rutas de consulta de capacitación
 Route::get('/get-matriculas-curso/{cursoId}', [CapacitacionController::class, 'getMatriculasPorCurso']);
@@ -120,7 +120,7 @@ Route::get('/get-historial-capacitaciones/{personalId}', [CapacitacionController
 Route::get('/buscar-personal-capacitacion', [CapacitacionController::class, 'buscarPersonalCapacitacion']);
 Route::get('/listar-jefaturas', [CapacitacionController::class, 'listarJefaturas']);
 Route::get('/get-sucursales', [CapacitacionController::class, 'getSucursales']);
-Route::get('/get-personal-por-sucursal/{sucursalId}', [CapacitacionController::class, 'getPersonalPorSucursal']);
+Route::get('/obtener-personal-por-sucursal/{sucursalId}', [CapacitacionController::class, 'getPersonalPorSucursal']);
 Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
 Route::get('/obtener-detalle-curso/{course_id}', [CapacitacionController::class, 'obtenerDetalleCurso']);
 Route::get('/get-estudiantes-curso', [CapacitacionController::class, 'obtenerEstudiantesCurso']);
@@ -139,11 +139,11 @@ Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigr
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
 Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual'])->middleware('web');
-Route::get('/get-cursos-por-categoria', [CapacitacionController::class, 'getCursosPorCategoria']);
+Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
 Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
 Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
-Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
-Route::get('/get-areas-pca', [CapacitacionController::class, 'getAreasPCA']);
+Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
+Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
 Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
 Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
@@ -162,12 +162,14 @@ Route::get('/obtener-memos-enviados', [CapacitacionController::class, 'obtenerMe
 Route::get('/obtener-detalle-memo/{memoId}', [CapacitacionController::class, 'obtenerDetalleMemo']);
 Route::post('/obtener-memos-personal', [CapacitacionController::class, 'obtenerMemosPersonal']);
 Route::get('/obtener-info-memo/{nroDoc}', [CapacitacionController::class, 'obtenerInfoMemo']);
-Route::get('/obtener-personal-simple', [CapacitacionController::class, 'obtenerPersonalSimple']);
+Route::get('/obtener-personal', [CapacitacionController::class, 'obtenerPersonal']);
+Route::post('/obtener-personal-record', [CapacitacionController::class, 'obtenerPersonalParaRecord']);
 
 Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
 Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
 Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);
 Route::post('/capacitacion/descargar-reportes-zip', [CapacitacionController::class, 'descargarReportesZip']);
+Route::delete('/capacitacion/eliminar-reporte/{id}', [CapacitacionController::class, 'eliminarReporte']);
 
 Route::post('/mail/enviar-recordatorios', [MailController::class, 'enviarRecordatorioCursos']);
 Route::post('/mail/enviar-recordatorio', [MailController::class, 'enviarRecordatorioCurso']);

@@ -146,7 +146,9 @@ async function listarTipoCurso(selectId, esFiltro = false) {
 
 async function listarAreas(selectId, esFiltro = false) {
     try {
-        const res = await axios.get(`${VITE_URL_APP}/api/get-capacitacion-areas`);
+        const res = await axios.get(
+            `${VITE_URL_APP}/api/obtener-capacitacion-sistemas`,
+        );
         const areasData = Array.isArray(res.data) ? res.data : [];
 
         const select = document.getElementById(selectId);

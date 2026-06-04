@@ -68,6 +68,41 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `Enviar MEMOs al personal seleccionado (${count} seleccionado${count !== 1 ? "s" : ""})`
                 : "Enviar MEMOs al personal seleccionado";
         }
+        const btnDeshacer = document.getElementById("btnDeshacerSeleccionPersonal");
+        if (btnDeshacer) {
+            if (count > 0) {
+                btnDeshacer.removeAttribute("disabled");
+                btnDeshacer.classList.remove("opacity-50", "cursor-not-allowed");
+            } else {
+                btnDeshacer.setAttribute("disabled", "disabled");
+                btnDeshacer.classList.add("opacity-50", "cursor-not-allowed");
+            }
+        }
+    };
+
+    const limpiarSeleccionPersonal = () => {
+        personasSeleccionadasPersonal.clear();
+        const table = window.tabulatorPersonal;
+        if (table) {
+            const visibleRows = table.getRows("visible");
+            visibleRows.forEach(row => {
+                const cell = row.getCell("seleccionar");
+                if (cell) {
+                    const el = cell.getElement();
+                    const cb = el?.querySelector(".checkbox-personal-row");
+                    const label = el?.querySelector("label");
+                    if (cb) {
+                        cb.checked = false;
+                        cb.style.borderColor = "#d1d5db";
+                        cb.style.background = "transparent";
+                    }
+                    if (label) {
+                        label.style.background = "transparent";
+                    }
+                }
+            });
+        }
+        actualizarContadorSeleccionPersonal();
     };
 
     function configurarEventosCheckboxesPersonal() {
@@ -1078,7 +1113,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function buscarPersonalSeguimiento() {
         axios
-            .get(`${VITE_URL_APP}/api/obtener-personal-simple`)
+            .get(`${VITE_URL_APP}/api/obtener-personal`)
             .then((res) => {
                 if (res.data.success && window.tabulatorPersonal) {
                     const personal = res.data.personal || [];
@@ -1113,6 +1148,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     buscarPersonalSeguimiento("");
 
+    const btnDeshacerSeleccionPersonal = document.getElementById("btnDeshacerSeleccionPersonal");
+    if (btnDeshacerSeleccionPersonal) {
+        btnDeshacerSeleccionPersonal.addEventListener("click", limpiarSeleccionPersonal);
+    }
+
     const btnEnviarMemosPersonal = document.getElementById("btnEnviarMemosPersonal");
     if (btnEnviarMemosPersonal) {
         btnEnviarMemosPersonal.addEventListener("click", () => {
@@ -1139,6 +1179,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (window.tabulatorMemos) {
                             window.tabulatorMemos.setData("/api/obtener-memos-enviados");
                         }
+                        limpiarSeleccionPersonal();
                         Swal.fire({
                             icon: 'success',
                             title: 'MEMOs enviados',

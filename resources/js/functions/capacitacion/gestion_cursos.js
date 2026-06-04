@@ -266,7 +266,9 @@ window.opcionesArea = []; // Global initialization
 
 async function listarAreas(selectId = null, esFiltro = false) {
     try {
-        const res = await axios.get(`${VITE_URL_APP}/api/get-capacitacion-areas`);
+        const res = await axios.get(
+            `${VITE_URL_APP}/api/obtener-capacitacion-sistemas`,
+        );
         const areasData = Array.isArray(res.data) ? res.data : [];
 
         // Populate global array for Alpine.js
@@ -868,7 +870,7 @@ window.formCursoGestion = function () {
 
             try {
                 this.lastSistemaId = sistemaId;
-                const res = await axios.get(`${VITE_URL_APP}/api/get-areas-por-sistema/${sistemaId}`);
+                const res = await axios.get(`${VITE_URL_APP}/api/obtener-areas-por-sistema/${sistemaId}`);
                 if (res.data.success) {
                     this.areasResponsables = res.data.areas;
                 }
@@ -879,7 +881,7 @@ window.formCursoGestion = function () {
         },
         async cargarAreasResponsablesPCA() {
             try {
-                const res = await axios.get(`${VITE_URL_APP}/api/get-areas-pca`);
+                const res = await axios.get(`${VITE_URL_APP}/api/obtener-areas`);
                 if (res.data && res.data.success && Array.isArray(res.data.areas)) {
                     this.areasResponsables = res.data.areas;
                 }
