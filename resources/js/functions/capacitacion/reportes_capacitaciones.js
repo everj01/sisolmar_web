@@ -126,8 +126,40 @@ function _ordenarCursosConFechas(datos, columna, direccion, obtenerValor) {
     return datos;
 }
 
+let _catalogsPromise = null;
+async function ensureCatalogsLoaded() {
+    if (!_catalogsPromise) {
+        _catalogsPromise = (async () => {
+            try {
+                const [sucursalesRes, sistemasRes, areasRes, cursosRes, personalesRes] = await Promise.all([
+                    axios.get('/api/get-sucursales'),
+                    axios.get('/api/obtener-capacitacion-sistemas'),
+                    axios.get('/api/obtener-areas'),
+                    axios.get('/api/obtener-cursos'),
+                    axios.get('/api/obtener-personal'),
+                ]);
+
+                return {
+                    sucursales: sucursalesRes.data.success ? sucursalesRes.data.sucursales : [],
+                    sistemas: sistemasRes.data || [],
+                    areas: areasRes.data.success ? areasRes.data.areas : [],
+                    cursos: cursosRes.data.success ? (cursosRes.data.Cursos || []) : [],
+                    personales: personalesRes.data.success ? personalesRes.data.personal : [],
+                };
+            } catch (e) {
+                console.error('Error cargando catálogos:', e);
+                return { sucursales: [], sistemas: [], areas: [], cursos: [], personales: [] };
+            }
+        })();
+    }
+    return _catalogsPromise;
+}
+
 export default document.addEventListener("alpine:init", () => {
     Alpine.data("reportesApp", () => ({
+        init() {
+            ensureCatalogsLoaded();
+        },
         abrirModalReporte() {
             window.dispatchEvent(new CustomEvent("abrir-reporte"));
         },
@@ -181,8 +213,17 @@ export default document.addEventListener("alpine:init", () => {
                 this.abrir();
             });
 
-            await this.cargarCursos();
-            await this.cargarSucursales();
+            this.loadingCursos = true;
+            this.loadingSucursales = true;
+
+            const catalogs = await ensureCatalogsLoaded();
+
+            this.sucursales = catalogs.sucursales;
+            this.todosLosCursos = [...catalogs.cursos];
+            this.cursos = [...catalogs.cursos];
+
+            this.loadingCursos = false;
+            this.loadingSucursales = false;
         },
 
         async cargarSucursales() {
@@ -1200,8 +1241,17 @@ export default document.addEventListener("alpine:init", () => {
             window.addEventListener("abrir-cursos-area", () => {
                 this.abrir();
             });
-            await this.cargarSistemas();
-            await this.cargarAreas();
+
+            this.loadingSistemas = true;
+            this.loadingAreas = true;
+
+            const catalogs = await ensureCatalogsLoaded();
+
+            this.sistemas = catalogs.sistemas;
+            this.areas = catalogs.areas;
+
+            this.loadingSistemas = false;
+            this.loadingAreas = false;
         },
 
         async cargarSistemas() {
@@ -1842,7 +1892,6 @@ export default document.addEventListener("alpine:init", () => {
 
         async abrir() {
             this.open = true;
-            await this.cargarAreas();
         },
 
         cerrar() {
@@ -1852,7 +1901,6 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedArea = "";
             this.selectedFechaInicio = "";
             this.selectedFechaFin = "";
-            this.areas = [];
             this.cursosFilas = [];
             this.currentPage = 1;
             this.loadingCursos = false;
@@ -2387,10 +2435,21 @@ export default document.addEventListener("alpine:init", () => {
         async abrir() {
             this.open = true;
             this.loadingInicial = true;
-            this.cargarSistemas();
+
+            const catalogs = await ensureCatalogsLoaded();
+
+            this.sistemas = catalogs.sistemas;
+            this.sucursales = catalogs.sucursales;
+            this.todosLosCursos = catalogs.cursos;
+            this.filtrarCursos();
+            this.todosLosPersonales = catalogs.personales;
+            const tipos = [...new Set(catalogs.personales.map(p => p.tipo_trabajador).filter(Boolean))];
+            this.tiposTrabajador = tipos.sort();
+            const cargos = [...new Set(catalogs.personales.map(p => p.cargo).filter(Boolean))];
+            this.cargos = cargos.sort();
+            this.filtrarPersonales();
+
             this.cargarClientes();
-            this.cargarSucursales();
-            await Promise.all([this.cargarCursos(), this.cargarPersonales()]);
             this.loadingInicial = false;
         },
 
@@ -2689,7 +2748,6 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedEstadoId = "0";
             this.selectedFechaDesde = "";
             this.selectedFechaHasta = "";
-            this.areas = [];
             this.selectedCourseIds = [];
             this.selectedUsernames = [];
             this.selectAllCursos = false;
