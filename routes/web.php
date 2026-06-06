@@ -1,5 +1,6 @@
 <?php
 
+
 use App\Mail\AlertaCaducidadMail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoutingController;
@@ -7,7 +8,7 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\ReporteController;
-
+use Illuminate\Support\Facades\Broadcast;
 
 
 Route::get('/login',[LoginController::class, 'index'])->name('login');
@@ -113,6 +114,4 @@ Route::get('/test-email-caducidad', function () {
 
 require __DIR__ . '/auth.php';
 
-
-
-
+Broadcast::routes(['middleware' => ['web']]);

@@ -18,6 +18,18 @@ import Alpine from "alpinejs";
 import DataTable from "vanilla-datatables";
 import "vanilla-datatables/dist/vanilla-dataTables.min.css"; // Import Styles
 import Swal from "sweetalert2";
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
+
+window.Pusher = Pusher;
+
+window.Echo = new Echo({
+    broadcaster: "pusher",
+    key: import.meta.env.VITE_PUSHER_APP_KEY,
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+    forceTLS: true,
+});
+
 window.Swal = Swal;
 window.Alpine = Alpine;
 Alpine.start();
@@ -209,7 +221,6 @@ class App {
     }
 }
 
-// Esperar a que el DOM esté listo antes de inicializar
 document.addEventListener("DOMContentLoaded", function () {
     new App().init();
 });
