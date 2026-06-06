@@ -1,9 +1,9 @@
 @extends('layouts.vertical', ['title' => 'Gestión de cursos'])
 @section('css')
 <style>
-[x-cloak] {
-    display: none !important;
-}
+    [x-cloak] {
+        display: none !important;
+    }
 </style>
 @endsection
 @section('content')
@@ -1617,172 +1617,179 @@
     </div>
 
     <script>
-    window.modalExamenWord = function() {
-        return {
-            mostrarModal: false,
-            preguntas: [],
-            preguntasOriginales: [],
-            codCursoActual: null,
-            archivoNombre: '',
+        window.modalExamenWord = function() {
+            return {
+                mostrarModal: false,
+                preguntas: [],
+                preguntasOriginales: [],
+                codCursoActual: null,
+                archivoNombre: '',
 
-            abrirModalWord(preguntas, cursoId, examenId, nombreArc) {
-                this.preguntas = Array.isArray(preguntas) ? preguntas : [];
-                this.preguntasOriginales = Array.isArray(preguntas) ? JSON.parse(JSON.stringify(preguntas)) : [];
-                this.codCursoActual = cursoId;
-                this.archivoNombre = nombreArc || '';
-                this.mostrarModal = true;
-            },
+                abrirModalWord(preguntas, cursoId, examenId, nombreArc) {
+                    this.preguntas = Array.isArray(preguntas) ? preguntas : [];
+                    this.preguntasOriginales = Array.isArray(preguntas) ? JSON.parse(JSON.stringify(preguntas)) : [];
+                    this.codCursoActual = cursoId;
+                    this.archivoNombre = nombreArc || '';
+                    this.mostrarModal = true;
+                },
 
-            undoChanges() {
-                this.preguntas = JSON.parse(JSON.stringify(this.preguntasOriginales));
-            },
+                undoChanges() {
+                    this.preguntas = JSON.parse(JSON.stringify(this.preguntasOriginales));
+                },
 
-            chr(code) {
-                return String.fromCharCode(code);
-            }
-        };
-    }
+                chr(code) {
+                    return String.fromCharCode(code);
+                }
+            };
+        }
 
-    /**
-     * Componente para Matrícula Masiva vía Excel (2026)
-     */
-    window.modalImportacionExcel = function() {
-        return {
-            mostrarModal: false,
-            cargando: false,
-            procesandoMatricula: false,
-            preguntasIA: [], // No se usa aquí pero para consistencia si hay conflictos
-            codCursoActual: null,
-            nombreCursoActual: '',
-            personalEncontrado: [],
-            resumen: {
-                total: 0,
-                encontrados: 0,
-                errores: 0,
-                advertencias: 0
-            },
-            filtros: {
-                soloErrores: false
-            },
-
-            abrirModalExcel(curso) {
-                this.codCursoActual = curso.codigo;
-                this.nombreCursoActual = curso.nombre;
-                this.personalEncontrado = [];
-                this.mostrarModal = true;
-                this.resetResumen();
-                // Limpiar input file si existe
-                const input = document.getElementById('inputExcelMatricula');
-                if (input) input.value = '';
-            },
-
-            resetResumen() {
-                this.resumen = {
+        /**
+         * Componente para Matrícula Masiva vía Excel (2026)
+         */
+        window.modalImportacionExcel = function() {
+            return {
+                mostrarModal: false,
+                cargando: false,
+                procesandoMatricula: false,
+                preguntasIA: [], // No se usa aquí pero para consistencia si hay conflictos
+                codCursoActual: null,
+                nombreCursoActual: '',
+                personalEncontrado: [],
+                resumen: {
                     total: 0,
                     encontrados: 0,
                     errores: 0,
                     advertencias: 0
-                };
-            },
+                },
+                filtros: {
+                    soloErrores: false
+                },
 
-            async procesarArchivo(event) {
-                const file = event.target.files[0];
-                if (!file) return;
+                abrirModalExcel(curso) {
+                    this.codCursoActual = curso.codigo;
+                    this.nombreCursoActual = curso.nombre;
+                    this.personalEncontrado = [];
+                    this.mostrarModal = true;
+                    this.resetResumen();
+                    // Limpiar input file si existe
+                    const input = document.getElementById('inputExcelMatricula');
+                    if (input) input.value = '';
+                },
 
-                this.cargando = true;
-                const formData = new FormData();
-                formData.append('archivo', file);
+                resetResumen() {
+                    this.resumen = {
+                        total: 0,
+                        encontrados: 0,
+                        errores: 0,
+                        advertencias: 0
+                    };
+                },
 
-                try {
-                    const response = await fetch('/api/capacitacion/validar-excel-matricula', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: formData
-                    });
-                    const res = await response.json();
+                async procesarArchivo(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
 
-                    if (res.success) {
-                        this.personalEncontrado = res.data;
-                        this.actualizarResumen();
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
+                    this.cargando = true;
+                    const formData = new FormData();
+                    formData.append('archivo', file);
+
+                    try {
+                        const response = await fetch('/api/capacitacion/validar-excel-matricula', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: formData
+                        });
+                        const res = await response.json();
+
+                        if (res.success) {
+                            this.personalEncontrado = res.data;
+                            this.actualizarResumen();
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        Swal.fire('Error', 'No se pudo procesar el archivo Excel.', 'error');
+                    } finally {
+                        this.cargando = false;
                     }
-                } catch (e) {
-                    console.error(e);
-                    Swal.fire('Error', 'No se pudo procesar el archivo Excel.', 'error');
-                } finally {
-                    this.cargando = false;
-                }
-            },
+                },
 
-            actualizarResumen() {
-                this.resumen.total = this.personalEncontrado.length;
-                this.resumen.encontrados = this.personalEncontrado.filter(p => p.status !== 'RED').length;
-                this.resumen.errores = this.personalEncontrado.filter(p => p.status === 'RED').length;
-                this.resumen.advertencias = this.personalEncontrado.filter(p => p.status === 'AMBER').length;
-            },
+                actualizarResumen() {
+                    this.resumen.total = this.personalEncontrado.length;
+                    this.resumen.encontrados = this.personalEncontrado.filter(p => p.status !== 'RED').length;
+                    this.resumen.errores = this.personalEncontrado.filter(p => p.status === 'RED').length;
+                    this.resumen.advertencias = this.personalEncontrado.filter(p => p.status === 'AMBER').length;
+                },
 
-            get listaFiltrada() {
-                if (this.filtros.soloErrores) {
-                    return this.personalEncontrado.filter(p => p.status === 'RED');
-                }
-                return this.personalEncontrado;
-            },
-
-            async confirmarMatricula() {
-                const swal = window.Swal;
-                const validos = this.personalEncontrado.filter(p => p.status !== 'RED');
-                if (validos.length === 0) {
-                    swal ? swal.fire('Atención', 'No hay personal válido para matricular.', 'warning') : alert(
-                        'No hay personal válido para matricular.');
-                    return;
-                }
-
-                const confirmResult = swal ? await swal.fire({
-                    title: '¿Confirmar Matrícula Masiva?',
-                    text: `Se matricularán ${validos.length} personas al curso "${this.nombreCursoActual}".`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, matricular',
-                    cancelButtonText: 'Cancelar'
-                }) : {
-                    isConfirmed: confirm(`¿Matricular ${validos.length} personas?`)
-                };
-
-                if (!confirmResult.isConfirmed) return;
-
-                this.procesandoMatricula = true;
-                try {
-                    const response = await fetch('/api/capacitacion/confirmar-matricula-masiva', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            cod_curso: this.codCursoActual,
-                            personal: validos
-                        })
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        swal ? swal.fire('¡Éxito!', res.message, 'success') : alert(res.message);
-                        this.mostrarModal = false;
-                    } else {
-                        swal ? swal.fire('Error', res.message, 'error') : alert('Error: ' + res.message);
+                get listaFiltrada() {
+                    if (this.filtros.soloErrores) {
+                        return this.personalEncontrado.filter(p => p.status === 'RED');
                     }
-                } catch (e) {
-                    console.error(e);
-                    swal ? swal.fire('Error', 'Ocurrió un problema al procesar la matrícula masiva.', 'error') :
-                        alert('Error al procesar la matrícula.');
-                } finally {
-                    this.procesandoMatricula = false;
+                    return this.personalEncontrado;
+                },
+
+                async confirmarMatricula() {
+                    const swal = window.Swal;
+                    const validos = this.personalEncontrado.filter(p => p.status !== 'RED');
+                    if (validos.length === 0) {
+                        swal ? swal.fire('Atención', 'No hay personal válido para matricular.', 'warning') : alert(
+                            'No hay personal válido para matricular.');
+                        return;
+                    }
+
+                    const confirmResult = swal ? await swal.fire({
+                        title: '¿Confirmar Matrícula Masiva?',
+                        text: `Se matricularán ${validos.length} personas al curso "${this.nombreCursoActual}".`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, matricular',
+                        cancelButtonText: 'Cancelar'
+                    }) : {
+                        isConfirmed: confirm(`¿Matricular ${validos.length} personas?`)
+                    };
+
+                    if (!confirmResult.isConfirmed) return;
+
+                    this.procesandoMatricula = true;
+                    try {
+                        const response = await fetch('/api/capacitacion/confirmar-matricula-masiva', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                cod_curso: this.codCursoActual,
+                                personal: validos
+                            })
+                        });
+                        const res = await response.json();
+                        if (res.success) {
+                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                                detail: {
+                                    mensaje: `Solicitud recibida. Pronto recibirá una notificación con los resultados de la matrícula.`,
+                                    tipo: "success",
+                                    toast: true,
+                                    recargar: false
+                                }
+                            }));
+                            this.mostrarModal = false;
+                        } else {
+                            swal ? swal.fire('Error', res.message, 'error') : alert('Error: ' + res.message);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        swal ? swal.fire('Error', 'Ocurrió un problema al procesar la matrícula masiva.', 'error') :
+                            alert('Error al procesar la matrícula.');
+                    } finally {
+                        this.procesandoMatricula = false;
+                    }
                 }
-            }
-        };
-    }
+            };
+        }
     </script>
 
     <!-- MODAL: MATRÍCULA MASIVA EXCEL (2026) -->
@@ -2030,280 +2037,284 @@
     </div>{{-- cierre x-data --}}
 
     <script>
-    // Inicialización síncrona para evitar Alpine/Vite race conditions
-    window.alertasVencimientoCursos = function() {
-        return {
-            alertas: [],
-            initAlertas() {
+        // Inicialización síncrona para evitar Alpine/Vite race conditions
+        window.alertasVencimientoCursos = function() {
+            return {
+                alertas: [],
+                initAlertas() {
 
-                fetch(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`)
-                    .then(res => res.json())
-                    .then(data => {
-                        console.log('⚡ Respuesta Alertas:', data);
-                        if (data && data.success) {
-                            this.alertas = data.alertas;
-                            window.alertasCursosData = this.alertas.map(a => String(a.codigo_curso));
-                            if (window.cursoTable && typeof window.renderTablaCursos === 'function') {
-                                window.renderTablaCursos(window.cursosData || []);
+                    fetch(`${VITE_URL_APP}/api/cursos/alertas-vencimiento`)
+                        .then(res => res.json())
+                        .then(data => {
+                            console.log('⚡ Respuesta Alertas:', data);
+                            if (data && data.success) {
+                                this.alertas = data.alertas;
+                                window.alertasCursosData = this.alertas.map(a => String(a.codigo_curso));
+                                if (window.cursoTable && typeof window.renderTablaCursos === 'function') {
+                                    window.renderTablaCursos(window.cursosData || []);
+                                }
                             }
-                        }
-                    })
-                    .catch(e => console.error("Error cargando alertas de vencimiento:", e));
-            }
+                        })
+                        .catch(e => console.error("Error cargando alertas de vencimiento:", e));
+                }
+            };
         };
-    };
 
-    window.modalApertura = function() {
-        return {
-            isOpen: false,
-            cargando: false,
-            codigoCurso: null,
-            cursoNombre: '',
-            tipoCursoId: '',
-            dirigidoA: '',
-            fechaInicio: '',
-            clientesAsignados: [],
-            empresasAsignadas: [],
-            areasAsignadas: [],
-            listaDNIPaste: '',
-            incluirAutomatico: true,
-            selectedSucursal: '',
-            selectedCliente: '',
-            selectedArea: '',
-            combosApertura: {
-                sucursales: [],
-                clientes: [],
-                areas: []
-            },
+        window.modalApertura = function() {
+            return {
+                isOpen: false,
+                cargando: false,
+                codigoCurso: null,
+                cursoNombre: '',
+                tipoCursoId: '',
+                dirigidoA: '',
+                fechaInicio: '',
+                clientesAsignados: [],
+                empresasAsignadas: [],
+                areasAsignadas: [],
+                listaDNIPaste: '',
+                incluirAutomatico: true,
+                selectedSucursal: '',
+                selectedCliente: '',
+                selectedArea: '',
+                combosApertura: {
+                    sucursales: [],
+                    clientes: [],
+                    areas: []
+                },
 
-            get fechaMinima() {
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                return `${yyyy}-${mm}-${dd}`;
-            },
+                get fechaMinima() {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                },
 
-            get selectedClienteNombre() {
-                const cliente = this.combosApertura.clientes?.find(c => String(c.codigo) === String(this.selectedCliente));
-                return cliente ? cliente.nombre : '—';
-            },
+                get selectedClienteNombre() {
+                    const cliente = this.combosApertura.clientes?.find(c => String(c.codigo) === String(this.selectedCliente));
+                    return cliente ? cliente.nombre : '—';
+                },
 
-            get esDirigidoOtros() {
-                return String(this.dirigidoA) === 'OTROS' || String(this.dirigidoA) === '0';
-            },
+                get esDirigidoOtros() {
+                    return String(this.dirigidoA) === 'OTROS' || String(this.dirigidoA) === '0';
+                },
 
-            get dirigidoLabel() {
-                const labels = { '1': 'todo el personal', '2': 'personal administrativo', '3': 'personal operativo' };
-                return labels[String(this.dirigidoA)] || '';
-            },
-
-            async init() {
-                await this.fetchCombos();
-            },
-
-            async fetchCombos() {
-
-                try {
-                    const response = await fetch(`${VITE_URL_APP}/api/capacitacion/combos-apertura`);
-                    const data = await response.json();
-                    if (data.success) {
-                        this.combosApertura = data;
-                    }
-                } catch (e) {
-                    console.error("Error cargando combos de apertura:", e);
-                }
-            },
-
-            openModal(data) {
-                this.codigoCurso = data.codigo;
-                this.cursoNombre = data.nombre;
-                this.tipoCursoId = data.tipo_curso || '';
-                this.dirigidoA = data.dirigido_a || '';
-
-                // Reset filtros
-                this.selectedSucursal = '';
-                this.selectedCliente = '';
-                this.selectedArea = '';
-                this.listaDNIPaste = '';
-
-                this.fechaInicio = this.fechaMinima;
-
-                window.dispatchEvent(new CustomEvent('cambiar-panel', {
-                    detail: {
-                        panel: 'apertura_manual',
-                        titulo: this.cursoNombre
-                    }
-                }));
-                this.isOpen = true;
-                this.cargando = false;
-            },
-
-            closeModal() {
-                window.dispatchEvent(new CustomEvent('cambiar-panel', {
-                    detail: {
-                        panel: 'registro'
-                    }
-                }));
-                this.isOpen = false;
-                this.codigoCurso = null;
-                this.cursoNombre = '';
-                this.tipoCursoId = '';
-                this.dirigidoA = '';
-                this.fechaInicio = '';
-                this.selectedSucursal = '';
-                this.selectedCliente = '';
-                this.selectedArea = '';
-            },
-
-            async guardarApertura() {
-                if (!this.fechaInicio) {
-                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                        detail: {
-                            titulo: "Atención",
-                            mensaje: "Debe seleccionar una fecha de inicio.",
-                            tipo: "warning"
-                        }
-                    }));
-                    return;
-                }
-
-                const dnisLimpios = this.listaDNIPaste.trim() ?
-                    this.listaDNIPaste.split(/\n|,|;/).map(d => d.trim()).filter(d => d.length > 0) : [];
-
-                if (this.tipoCursoId == '6' && this.clientesAsignados.length === 0 && dnisLimpios.length ===
-                    0) {
-                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                        detail: {
-                            titulo: "Atención",
-                            mensaje: "Debe seleccionar al menos un cliente o pegar una lista de DNIs.",
-                            tipo: "warning"
-                        }
-                    }));
-                    return;
-                }
-
-                if (this.tipoCursoId == '7' && this.areasAsignadas.length === 0 && dnisLimpios.length === 0) {
-                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                        detail: {
-                            titulo: "Atención",
-                            mensaje: "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.",
-                            tipo: "warning"
-                        }
-                    }));
-                    return;
-                }
-
-                this.cargando = true;
-
-
-                try {
-                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
-                        'content');
-                    const headers = {
-                        'Content-Type': 'application/json'
+                get dirigidoLabel() {
+                    const labels = {
+                        '1': 'todo el personal',
+                        '2': 'personal administrativo',
+                        '3': 'personal operativo'
                     };
-                    if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+                    return labels[String(this.dirigidoA)] || '';
+                },
 
-                    const payload = {
-                        cod_curso: this.codigoCurso,
-                        fecha_inicio: this.fechaInicio,
-                        incluir_automatico: this.incluirAutomatico,
-                        sucursal_codigo: this.selectedSucursal,
-                        cliente_id: this.selectedCliente,
-                        area_codigo: this.selectedArea
-                    };
+                async init() {
+                    await this.fetchCombos();
+                },
 
-                    if (dnisLimpios.length > 0) {
-                        payload.dnis = dnisLimpios;
+                async fetchCombos() {
+
+                    try {
+                        const response = await fetch(`${VITE_URL_APP}/api/capacitacion/combos-apertura`);
+                        const data = await response.json();
+                        if (data.success) {
+                            this.combosApertura = data;
+                        }
+                    } catch (e) {
+                        console.error("Error cargando combos de apertura:", e);
                     }
+                },
 
-                    const response = await fetch(`${VITE_URL_APP}/api/cursos/programacion-manual`, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify(payload)
-                    });
+                openModal(data) {
+                    this.codigoCurso = data.codigo;
+                    this.cursoNombre = data.nombre;
+                    this.tipoCursoId = data.tipo_curso || '';
+                    this.dirigidoA = data.dirigido_a || '';
 
-                    const result = await response.json();
+                    // Reset filtros
+                    this.selectedSucursal = '';
+                    this.selectedCliente = '';
+                    this.selectedArea = '';
+                    this.listaDNIPaste = '';
 
-                    if (response.ok && result.success) {
-                        this.closeModal();
-                        // El mensaje viene del controlador indicando si fue masiva o solo apertura de ciclo
-                        const mensajeFinal = result.message || "Operación exitosa";
+                    this.fechaInicio = this.fechaMinima;
 
+                    window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                        detail: {
+                            panel: 'apertura_manual',
+                            titulo: this.cursoNombre
+                        }
+                    }));
+                    this.isOpen = true;
+                    this.cargando = false;
+                },
+
+                closeModal() {
+                    window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                        detail: {
+                            panel: 'registro'
+                        }
+                    }));
+                    this.isOpen = false;
+                    this.codigoCurso = null;
+                    this.cursoNombre = '';
+                    this.tipoCursoId = '';
+                    this.dirigidoA = '';
+                    this.fechaInicio = '';
+                    this.selectedSucursal = '';
+                    this.selectedCliente = '';
+                    this.selectedArea = '';
+                },
+
+                async guardarApertura() {
+                    if (!this.fechaInicio) {
                         window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                             detail: {
-                                mensaje: mensajeFinal,
-                                tipo: "success",
-                                toast: true,
-                                recargar: true
+                                titulo: "Atención",
+                                mensaje: "Debe seleccionar una fecha de inicio.",
+                                tipo: "warning"
                             }
                         }));
-                    } else {
+                        return;
+                    }
+
+                    const dnisLimpios = this.listaDNIPaste.trim() ?
+                        this.listaDNIPaste.split(/\n|,|;/).map(d => d.trim()).filter(d => d.length > 0) : [];
+
+                    if (this.tipoCursoId == '6' && this.clientesAsignados.length === 0 && dnisLimpios.length ===
+                        0) {
                         window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                             detail: {
-                                titulo: "No se pudo aperturar",
-                                mensaje: result.message || "Error al procesar la solicitud.",
+                                titulo: "Atención",
+                                mensaje: "Debe seleccionar al menos un cliente o pegar una lista de DNIs.",
+                                tipo: "warning"
+                            }
+                        }));
+                        return;
+                    }
+
+                    if (this.tipoCursoId == '7' && this.areasAsignadas.length === 0 && dnisLimpios.length === 0) {
+                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                            detail: {
+                                titulo: "Atención",
+                                mensaje: "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.",
+                                tipo: "warning"
+                            }
+                        }));
+                        return;
+                    }
+
+                    this.cargando = true;
+
+
+                    try {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                            'content');
+                        const headers = {
+                            'Content-Type': 'application/json'
+                        };
+                        if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+
+                        const payload = {
+                            cod_curso: this.codigoCurso,
+                            fecha_inicio: this.fechaInicio,
+                            incluir_automatico: this.incluirAutomatico,
+                            sucursal_codigo: this.selectedSucursal,
+                            cliente_id: this.selectedCliente,
+                            area_codigo: this.selectedArea
+                        };
+
+                        if (dnisLimpios.length > 0) {
+                            payload.dnis = dnisLimpios;
+                        }
+
+                        const response = await fetch(`${VITE_URL_APP}/api/cursos/programacion-manual`, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify(payload)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            this.closeModal();
+                            // El mensaje viene del controlador indicando si fue masiva o solo apertura de ciclo
+                            const mensajeFinal = result.message || "Operación exitosa";
+
+                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                                detail: {
+                                    mensaje: mensajeFinal,
+                                    tipo: "success",
+                                    toast: true,
+                                    recargar: true
+                                }
+                            }));
+                        } else {
+                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                                detail: {
+                                    titulo: "No se pudo aperturar",
+                                    mensaje: result.message || "Error al procesar la solicitud.",
+                                    tipo: "error"
+                                }
+                            }));
+                        }
+                    } catch (error) {
+                        console.error("Error aperturando curso:", error);
+                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                            detail: {
+                                titulo: "Error de Servidor",
+                                mensaje: "Ocurrió un problema de conectividad con el servidor. Revisa los logs.",
                                 tipo: "error"
                             }
                         }));
+                    } finally {
+                        this.cargando = false;
                     }
-                } catch (error) {
-                    console.error("Error aperturando curso:", error);
-                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                        detail: {
-                            titulo: "Error de Servidor",
-                            mensaje: "Ocurrió un problema de conectividad con el servidor. Revisa los logs.",
-                            tipo: "error"
-                        }
-                    }));
-                } finally {
-                    this.cargando = false;
                 }
-            }
+            };
         };
-    };
 
-    // Escuchador global en Vanilla JS para evadir el Proxy de AlpineJS
-    window.addEventListener('mostrar-alerta', function(e) {
-        if (typeof Swal !== 'undefined') {
-            if (e.detail.toast) {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.addEventListener('mouseenter', Swal.stopTimer)
-                        toast.addEventListener('mouseleave', Swal.resumeTimer)
-                    }
-                });
-                Toast.fire({
-                    icon: e.detail.tipo,
-                    title: e.detail.mensaje
-                }).then(() => {
-                    if (e.detail.recargar) {
-                        window.location.reload();
-                    }
-                });
+        // Escuchador global en Vanilla JS para evadir el Proxy de AlpineJS
+        window.addEventListener('mostrar-alerta', function(e) {
+            if (typeof Swal !== 'undefined') {
+                if (e.detail.toast) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.addEventListener('mouseenter', Swal.stopTimer)
+                            toast.addEventListener('mouseleave', Swal.resumeTimer)
+                        }
+                    });
+                    Toast.fire({
+                        icon: e.detail.tipo,
+                        title: e.detail.mensaje
+                    }).then(() => {
+                        if (e.detail.recargar) {
+                            window.location.reload();
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: e.detail.titulo,
+                        text: e.detail.mensaje,
+                        icon: e.detail.tipo,
+                        confirmButtonText: "Entendido",
+                        confirmButtonColor: "#1d4ed8"
+                    }).then(() => {
+                        if (e.detail.recargar) {
+                            window.location.reload();
+                        }
+                    });
+                }
             } else {
-                Swal.fire({
-                    title: e.detail.titulo,
-                    text: e.detail.mensaje,
-                    icon: e.detail.tipo,
-                    confirmButtonText: "Entendido",
-                    confirmButtonColor: "#1d4ed8"
-                }).then(() => {
-                    if (e.detail.recargar) {
-                        window.location.reload();
-                    }
-                });
+                const title = e.detail.titulo ? e.detail.titulo + ": " : "";
+                alert(title + e.detail.mensaje);
+                if (e.detail.recargar) window.location.reload();
             }
-        } else {
-            const title = e.detail.titulo ? e.detail.titulo + ": " : "";
-            alert(title + e.detail.mensaje);
-            if (e.detail.recargar) window.location.reload();
-        }
-    });
+        });
     </script>

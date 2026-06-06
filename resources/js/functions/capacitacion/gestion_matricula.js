@@ -70,13 +70,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (response.status === 200 || response.status === 201) {
-                Swal.fire({
-                    title: 'Éxito',
-                    text: `✓ ${seleccionados.length} persona(s) matriculada(s) exitosamente.`,
-                    icon: 'success',
-                    timer: 3000,
-                    timerProgressBar: true
-                });
+                window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                    detail: {
+                        mensaje: response.data?.message || `Solicitud recibida. Pronto recibirá una notificación con los resultados de la matrícula de ${seleccionados.length} persona(s).`,
+                        tipo: "success",
+                        toast: true,
+                        recargar: false
+                    }
+                }));
                 personasSeleccionadas.clear();
                 HSOverlay.close('#modal-registro');
             }

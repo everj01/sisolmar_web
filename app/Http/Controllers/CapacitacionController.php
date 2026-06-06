@@ -1855,7 +1855,7 @@ class CapacitacionController extends Controller
                 $newCode = $programacionPendiente->codigo_programacion;
 
                 $mensajeAccion =
-                    "Programación pendiente reutilizada exitosamente.";
+                    "Programación pendiente reutilizada exitosamente. Pronto recibirá una notificación con los resultados de la matriculación.";
             } else {
 
                 $lastCod = CursoProgramacion::orderBy(
@@ -1883,7 +1883,7 @@ class CapacitacionController extends Controller
                     "habilitado" => 1,
                 ]);
 
-                $mensajeAccion = "Programación creada exitosamente.";
+                $mensajeAccion = "Programación creada exitosamente. Pronto recibirá una notificación con los resultados de la matriculación.";
             }
 
             if ($curso->codigo_moodle) {
@@ -1965,9 +1965,12 @@ class CapacitacionController extends Controller
 
             $message = $mensajeAccion;
 
-            if ($autoEnrollAttempted && !$autoEnrollOk) {
-                $message .=
-                    " Sin embargo, hubo un problema con la matriculación automática.";
+            if ($autoEnrollAttempted) {
+                if ($autoEnrollOk) {
+                    $message .= " La matriculación automática está en proceso. Recibirá una notificación cuando finalice.";
+                } else {
+                    $message .= " Sin embargo, hubo un problema con la matriculación automática.";
+                }
             }
 
             return response()->json([
