@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Events\MatriculaMasivaFinalizada;
 use App\Models\Matricula;
 use App\Models\Personal;
 use App\Models\Cursos;
 use App\Models\CursoProgramacion;
-use App\Models\NotificacionMatricula;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -29,9 +29,6 @@ class MatriculaMasivaJob implements ShouldQueue
     protected array  $personalIds;
     protected int    $usuarioId;
 
-    // ----------------------------------------------------------------
-    // Constructor privado — usar los named constructors de abajo
-    // ----------------------------------------------------------------
     private function __construct(
         string $modo,
         int    $cursoCodigo,
@@ -45,10 +42,6 @@ class MatriculaMasivaJob implements ShouldQueue
         $this->usuarioId          = $usuarioId;
         $this->personalIds        = $personalIds;
     }
-
-    // ----------------------------------------------------------------
-    // Named constructors (puntos de entrada)
-    // ----------------------------------------------------------------
 
     public static function estandar(
         int    $cursoCodigo,
@@ -78,9 +71,6 @@ class MatriculaMasivaJob implements ShouldQueue
         );
     }
 
-    // ----------------------------------------------------------------
-    // Handle principal — enruta al modo correcto
-    // ----------------------------------------------------------------
     public function handle(): void
     {
         $curso = Cursos::find($this->cursoCodigo);
@@ -97,31 +87,44 @@ class MatriculaMasivaJob implements ShouldQueue
             return;
         }
 
-        match ($this->modo) {
-            self::MODO_ESTANDAR       => $this->ejecutarEstandar($curso, $prog),
-            self::MODO_POR_TIPO_CURSO => $this->ejecutarPorTipoCurso($curso, $prog),
+        $resumen = match ($this->modo) {
+            self::MODO_ESTANDAR =>
+            $this->ejecutarEstandar($curso, $prog),
+
+            self::MODO_POR_TIPO_CURSO =>
+            $this->ejecutarPorTipoCurso($curso, $prog),
         };
+
+        event(new MatriculaMasivaFinalizada(
+            usuarioId: $this->usuarioId,
+            curso: $curso->nombre,
+            total: $resumen['total'],
+            enviados: $resumen['enviados'],
+            fallidos: $resumen['fallidos'],
+        ));
     }
 
-    // ----------------------------------------------------------------
-    // Modo estándar — procesa la lista de personalIds recibida
-    // ----------------------------------------------------------------
-    private function ejecutarEstandar(Cursos $curso, CursoProgramacion $prog): void
+    private function ejecutarEstandar(Cursos $curso, CursoProgramacion $prog): array
     {
         if (empty($this->personalIds)) {
             Log::warning("MatriculaMasivaJob [estandar]: lista de personal vacía.", [
                 'curso_id' => $this->cursoCodigo,
             ]);
-            return;
+            return [
+                'total' => 0,
+                'enviados' => 0,
+                'fallidos' => 0,
+            ];
         }
 
-        $this->procesarLote($this->personalIds, $curso, $prog);
+        return $this->procesarLote(
+            $this->personalIds,
+            $curso,
+            $prog
+        );
     }
 
-    // ----------------------------------------------------------------
-    // Modo por tipo de curso — resuelve el personal y luego procesa
-    // ----------------------------------------------------------------
-    private function ejecutarPorTipoCurso(Cursos $curso, CursoProgramacion $prog): void
+    private function ejecutarPorTipoCurso(Cursos $curso, CursoProgramacion $prog): array
     {
         $tipoCurso = strtoupper(trim($curso->tipoCurso?->descripcion ?? ''));
 
@@ -135,15 +138,19 @@ class MatriculaMasivaJob implements ShouldQueue
             Log::warning("MatriculaMasivaJob [por_tipo_curso]: no se obtuvo personal para tipo '{$tipoCurso}'.", [
                 'curso_id' => $this->cursoCodigo,
             ]);
-            return;
+            return [
+                'total' => 0,
+                'enviados' => 0,
+                'fallidos' => 0,
+            ];
         }
 
-        $this->procesarLote($personalIds, $curso, $prog);
+        return $this->procesarLote(
+            $personalIds,
+            $curso,
+            $prog
+        );
     }
-
-    // ----------------------------------------------------------------
-    // Resolvers de personal por tipo
-    // ----------------------------------------------------------------
 
     private function resolverPersonalPCA(Cursos $curso): array
     {
@@ -233,11 +240,6 @@ class MatriculaMasivaJob implements ShouldQueue
         }
     }
 
-    /**
-     * Punto de extensión para futuros tipos de curso.
-     * Agregar un nuevo caso en el match de ejecutarPorTipoCurso
-     * y su resolver correspondiente aquí abajo.
-     */
     private function resolverPersonalPorDefecto(Cursos $curso): array
     {
         Log::warning("MatriculaMasivaJob: tipo_curso '{$curso->tipo_curso}' no tiene resolver implementado.", [
@@ -246,10 +248,7 @@ class MatriculaMasivaJob implements ShouldQueue
         return [];
     }
 
-    // ----------------------------------------------------------------
-    // Función base compartida — procesa un lote de personalIds
-    // ----------------------------------------------------------------
-    private function procesarLote(array $personalIds, Cursos $curso, CursoProgramacion $prog): void
+    private function procesarLote(array $personalIds, Cursos $curso, CursoProgramacion $prog): array
     {
         $enviados      = 0;
         $fallidos      = 0;
@@ -281,29 +280,29 @@ class MatriculaMasivaJob implements ShouldQueue
                 )->onQueue('emails');
             }
 
-            NotificacionMatricula::crearNotificacionMultiplesFallos(
-                $this->usuarioId,
-                $this->cursoCodigo,
-                $curso->nombre,
-                $totalPersonas,
-                $enviados,
-                $fallidos
-            );
-
             Log::info("MatriculaMasivaJob [{$this->modo}] finalizado. Éxitos: {$enviados}, Fallos: {$fallidos}", [
                 'curso_id' => $this->cursoCodigo,
             ]);
+
+            return [
+                'total' => $totalPersonas,
+                'enviados' => $enviados,
+                'fallidos' => $fallidos,
+            ];
         } catch (\Exception $e) {
             Log::error("MatriculaMasivaJob [{$this->modo}] error crítico: " . $e->getMessage(), [
                 'curso_id' => $this->cursoCodigo,
                 'trace'    => $e->getTraceAsString(),
             ]);
+
+            return [
+                'total' => $totalPersonas,
+                'enviados' => $enviados,
+                'fallidos' => $fallidos,
+            ];
         }
     }
 
-    // ----------------------------------------------------------------
-    // Función base — procesa un único personal (matrícula + Moodle)
-    // ----------------------------------------------------------------
     private function procesarPersona(
         string           $codPersonal,
         Cursos           $curso,
@@ -362,9 +361,6 @@ class MatriculaMasivaJob implements ShouldQueue
         }
     }
 
-    // ----------------------------------------------------------------
-    // Obtiene o crea el usuario en Moodle
-    // ----------------------------------------------------------------
     private function resolverUsuarioMoodle(Personal $personal, string $dni): int
     {
         $moodleUser = DB::connection('mysql_grupoihb')->table('mdl_user')
@@ -390,9 +386,6 @@ class MatriculaMasivaJob implements ShouldQueue
         return $res[0]->user_id;
     }
 
-    // ----------------------------------------------------------------
-    // Matricula al usuario en el curso de Moodle
-    // ----------------------------------------------------------------
     private function matricularEnMoodle(int $moodleUserId, Cursos $curso, CursoProgramacion $prog): void
     {
         $moodleCourseRef = $curso->codigo_moodle ?: $curso->codigo_curso;
@@ -417,9 +410,6 @@ class MatriculaMasivaJob implements ShouldQueue
         );
     }
 
-    // ----------------------------------------------------------------
-    // Garantiza que el contexto de Moodle exista para el curso
-    // ----------------------------------------------------------------
     private function garantizarContextoMoodle(object $courseMoodle): void
     {
         $context = DB::connection('mysql_grupoihb')->table('mdl_context')
