@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\MatriculaMasivaProgreso;
 use App\Events\MatriculaMasivaFinalizada;
 use App\Models\Matricula;
 use App\Models\Personal;
@@ -87,6 +88,8 @@ class MatriculaMasivaJob implements ShouldQueue
             return;
         }
 
+        $jobId = $this->cursoCodigo . '_' . $this->programacionCodigo;
+
         $resumen = match ($this->modo) {
             self::MODO_ESTANDAR =>
             $this->ejecutarEstandar($curso, $prog),
@@ -97,6 +100,7 @@ class MatriculaMasivaJob implements ShouldQueue
 
         event(new MatriculaMasivaFinalizada(
             usuarioId: $this->usuarioId,
+            jobId: $jobId,
             curso: $curso->nombre,
             total: $resumen['total'],
             enviados: $resumen['enviados'],
@@ -250,10 +254,15 @@ class MatriculaMasivaJob implements ShouldQueue
 
     private function procesarLote(array $personalIds, Cursos $curso, CursoProgramacion $prog): array
     {
-        $enviados      = 0;
-        $fallidos      = 0;
-        $totalPersonas = count($personalIds);
-        $matriculados = [];
+        $enviados         = 0;
+        $fallidos         = 0;
+        $procesados       = 0;
+        $totalPersonas    = count($personalIds);
+        $matriculados     = [];
+
+        $jobId            = $this->cursoCodigo . '_' . $this->programacionCodigo;
+        $intervalo        = max(1, (int) round($totalPersonas * 0.01));
+        $ultimoPorcentaje = -1;
 
         try {
             foreach (array_chunk($personalIds, 100) as $chunk) {
@@ -263,29 +272,49 @@ class MatriculaMasivaJob implements ShouldQueue
 
                     $antes = $enviados;
                     $this->procesarPersona($codPersonal, $curso, $prog, $enviados, $fallidos);
+                    $procesados++;
 
                     if ($enviados > $antes) {
                         $matriculados[] = $codPersonal;
                     }
+
+                    $debeEmitir = $procesados <= 5
+                        || $procesados % $intervalo === 0
+                        || $procesados === $totalPersonas;
+
+                    if ($debeEmitir) {
+                        $porcentaje = round(($procesados / $totalPersonas) * 100);
+
+                        if ($porcentaje !== $ultimoPorcentaje) {
+                            $ultimoPorcentaje = $porcentaje;
+
+                            event(new MatriculaMasivaProgreso(
+                                usuarioId: $this->usuarioId,
+                                jobId: $jobId,
+                                curso: $curso->nombre,
+                                procesados: $procesados,
+                                total: $totalPersonas,
+                                porcentaje: $porcentaje,
+                            ));
+                        }
+                    }
                 }
             }
 
-            $fechaInicio = Carbon::parse($prog->fecha_inicio)->format('d/m/Y');
-
-            foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
-                EnviarCorreosBienvenidaJob::dispatch(
-                    personalIds: $chunkCorreos,
-                    nombreCurso: $curso->nombre,
-                    fechaInicio: $fechaInicio,
-                )->onQueue('emails');
-            }
+            // foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
+            //     EnviarCorreosBienvenidaJob::dispatch(
+            //         personalIds: $chunkCorreos,
+            //         nombreCurso: $curso->nombre,
+            //         fechaInicio: Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
+            //     )->onQueue('emails');
+            // }
 
             Log::info("MatriculaMasivaJob [{$this->modo}] finalizado. Éxitos: {$enviados}, Fallos: {$fallidos}", [
                 'curso_id' => $this->cursoCodigo,
             ]);
 
             return [
-                'total' => $totalPersonas,
+                'total'    => $totalPersonas,
                 'enviados' => $enviados,
                 'fallidos' => $fallidos,
             ];
@@ -296,7 +325,7 @@ class MatriculaMasivaJob implements ShouldQueue
             ]);
 
             return [
-                'total' => $totalPersonas,
+                'total'    => $totalPersonas,
                 'enviados' => $enviados,
                 'fallidos' => $fallidos,
             ];

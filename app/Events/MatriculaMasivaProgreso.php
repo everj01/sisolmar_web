@@ -2,23 +2,23 @@
 
 namespace App\Events;
 
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MatriculaMasivaFinalizada implements ShouldBroadcastNow
+class MatriculaMasivaProgreso implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public int $usuarioId,
+        public int    $usuarioId,
         public string $jobId,
         public string $curso,
-        public int $total,
-        public int $enviados,
-        public int $fallidos
+        public int    $procesados,
+        public int    $total,
+        public float  $porcentaje,
     ) {}
 
     public function broadcastOn(): array
@@ -28,6 +28,6 @@ class MatriculaMasivaFinalizada implements ShouldBroadcastNow
 
     public function broadcastAs(): string
     {
-        return 'matricula.finalizada';
+        return 'matricula.progreso';
     }
 }
