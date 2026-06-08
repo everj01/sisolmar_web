@@ -270,7 +270,7 @@
                 </div>
 
                 <!-- Title + Description -->
-                <h3 class="text-base font-bold text-default-900 mb-2">Récord de capacitaciones por personal</h3>
+                <h3 class="text-base font-bold text-default-900 mb-2">Récord Histórico de Capacitación por personal</h3>
                 <p class="text-sm text-default-500 leading-relaxed mb-4">
                     Consulte el historial completo de cursos de un colaborador específico.
                 </p>
@@ -886,20 +886,20 @@
                                     <tr>
                                         <th class="px-4 py-3 text-left font-semibold text-default-700 w-14">#</th>
                                         <th @click="ordenar('Nombre')"
-                                             class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors min-w-[14rem]">
-                                             Nombre de curso
-                                             <span class="ml-1 text-xs"
-                                                 :class="sortColumn === 'Nombre' ? 'text-primary' : 'text-default-300'"
-                                                 x-text="sortColumn === 'Nombre' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
-                                         </th>
-                                         <th
-                                             class="px-4 py-3 text-left font-semibold text-default-700 min-w-[16rem]">
-                                             Descripción
-                                         </th>
-                                         <th
-                                             class="px-4 py-3 text-left font-semibold text-default-700 min-w-[10rem]">
-                                             Sistema
-                                         </th>
+                                            class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors min-w-[14rem]">
+                                            Nombre de curso
+                                            <span class="ml-1 text-xs"
+                                                :class="sortColumn === 'Nombre' ? 'text-primary' : 'text-default-300'"
+                                                x-text="sortColumn === 'Nombre' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'"></span>
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-semibold text-default-700 min-w-[16rem]">
+                                            Descripción
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left font-semibold text-default-700 min-w-[10rem]">
+                                            Sistema
+                                        </th>
                                         <th
                                             class="px-4 py-3 text-left font-semibold text-default-700 min-w-[10rem]">
                                             Área
@@ -944,13 +944,13 @@
                                             <td class="px-4 py-3 text-default-500"
                                                 x-text="((currentPage - 1) * perPage) + index + 1"></td>
                                             <td class="px-4 py-3 text-default-800 font-medium"
-                                                 x-text="fila.Nombre"></td>
-                                             <td class="px-4 py-3 text-default-600 max-w-[16rem]">
-                                                 <span class="line-clamp-2" x-text="fila.Descripcion"
-                                                     :title="fila.Descripcion"></span>
-                                             </td>
-                                             <td class="px-4 py-3 text-default-600"
-                                                 x-text="fila.Sistema"></td>
+                                                x-text="fila.Nombre"></td>
+                                            <td class="px-4 py-3 text-default-600 max-w-[16rem]">
+                                                <span class="line-clamp-2" x-text="fila.Descripcion"
+                                                    :title="fila.Descripcion"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-default-600"
+                                                x-text="fila.Sistema"></td>
                                             <td class="px-4 py-3 text-default-600"
                                                 x-text="fila.Area"></td>
                                             <td class="px-4 py-3 text-default-600 text-center font-medium"
@@ -1323,7 +1323,7 @@
         </div>
     </div>
 
-    {{-- Modal Record de Capacitaciones por Personal --}}
+    {{-- Modal Record Histórico de Capacitaciones por Personal --}}
     <div id="modal-record-personal" x-data="modalRecordPersonal" x-show="open" x-cloak
         @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
@@ -1349,7 +1349,7 @@
                     <div>
                         <div x-show="view === 'filters'">
                             <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
-                                Récord de capacitaciones por personal
+                                Récord Histórico de Capacitación por personal
                             </h3>
                             <p class="text-xs text-default-500 mt-0.5">Seleccione cursos, personal y período para consultar</p>
                         </div>
