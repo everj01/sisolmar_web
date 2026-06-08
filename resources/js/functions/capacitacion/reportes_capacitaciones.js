@@ -172,6 +172,9 @@ export default document.addEventListener("alpine:init", () => {
         abrirModalHistorial() {
             window.dispatchEvent(new CustomEvent("abrir-historial-reportes"));
         },
+        abrirModalReporteGeneral() {
+            window.dispatchEvent(new CustomEvent("abrir-reporte-general"));
+        },
     }));
 
     Alpine.data("modalReportePorCapacitacion", () => ({
@@ -3188,6 +3191,20 @@ export default document.addEventListener("alpine:init", () => {
             } finally {
                 this.buscando = false;
             }
+        },
+    }));
+
+    Alpine.data("modalReporteGeneral", () => ({
+        open: false,
+
+        init() {
+            window.addEventListener("abrir-reporte-general", () => {
+                this.open = true;
+            });
+        },
+
+        cerrar() {
+            this.open = false;
         },
     }));
 });

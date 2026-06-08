@@ -299,6 +299,54 @@
                 </button>
             </div>
         </div>
+
+        {{-- Card 4: Reporte General de Capacitaciones --}}
+        <div
+            class="card-hover group relative overflow-hidden rounded-2xl border border-default-200/60 bg-white shadow-sm">
+            <div class="relative p-6 flex flex-col h-full">
+                <!-- Icon + Badge -->
+                <div class="flex items-start justify-between mb-5">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center shadow-md shadow-violet-500/20">
+                        <i class="ti ti-report-analytics text-xl text-white"></i>
+                    </div>
+                    <span
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 text-[10px] font-bold uppercase tracking-wider">
+                        <i class="ti ti-chart-bar text-[9px]"></i>
+                        General
+                    </span>
+                </div>
+
+                <!-- Title + Description -->
+                <h3 class="text-base font-bold text-default-900 mb-2">Reporte General de Capacitaciones</h3>
+                <p class="text-sm text-default-500 leading-relaxed mb-4">
+                    Visualice y exporte datos consolidados con filtros avanzados.
+                </p>
+
+                <!-- Features -->
+                <div class="space-y-2 mb-5 flex-grow">
+                    <div class="flex items-center gap-2">
+                        <i class="ti ti-check text-xs text-violet-500 shrink-0"></i>
+                        <span class="text-xs text-default-600">Filtre por empresa, sucursal y tipo de trabajo</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="ti ti-check text-xs text-violet-500 shrink-0"></i>
+                        <span class="text-xs text-default-600">Personal, estado, capacitación y pool</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="ti ti-check text-xs text-violet-500 shrink-0"></i>
+                        <span class="text-xs text-default-600">Exporte a Excel y PDF</span>
+                    </div>
+                </div>
+
+                <!-- Button -->
+                <button @click="abrirModalReporteGeneral()"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-500 text-white text-sm font-semibold hover:bg-violet-600 transition-colors w-full">
+                    <i class="ti ti-arrow-right text-sm"></i>
+                    Generar reporte
+                </button>
+            </div>
+        </div>
     </div>
 
     {{-- Modal Reporte Por Capacitacion --}}
@@ -1849,6 +1897,54 @@
                         </span>
                     </div>
                 </template>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Reporte General de Capacitaciones --}}
+    <div id="modal-reporte-general" x-data="modalReporteGeneral" x-show="open" x-cloak
+        @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        style="background: rgba(36,39,70,0.45);">
+
+        <div class="flex flex-col w-full max-w-4xl bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+            <div class="flex justify-between items-start py-5 px-6 border-b border-default-100">
+                <div class="flex items-center gap-3.5">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                        <i class="ti ti-report-analytics text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                            Reporte General de Capacitaciones
+                        </h3>
+                        <p class="text-xs text-default-500 mt-0.5">Filtros avanzados para generar reportes consolidados</p>
+                    </div>
+                </div>
+                <button type="button" @click="cerrar()"
+                    class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
+                    <i class="ti ti-x text-base"></i>
+                </button>
+            </div>
+
+            <div class="px-6 pt-4 pb-6">
+                <p class="text-sm text-default-500 text-center py-10">Seleccione los filtros para generar el reporte.</p>
+            </div>
+
+            <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
+                <button type="button" @click="cerrar()"
+                    class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                    Cancelar
+                </button>
             </div>
         </div>
     </div>
