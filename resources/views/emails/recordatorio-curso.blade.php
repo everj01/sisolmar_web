@@ -33,13 +33,15 @@
                                         <p style="margin:0;"><strong style="color:#004080;">Inicio:</strong>
                                             {{ \Carbon\Carbon::parse($enrolment_start_date)->format('d/m/Y') }}
                                         </p>
+                                        <p style="margin:0;"><strong style="color:#004080;">Fin:</strong>
+                                            {{ \Carbon\Carbon::parse($enrolment_end_date)->format('d/m/Y') }}
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="margin:15px 0;">Le recordamos que el curso ya se encuentra disponible. Le
-                                invitamos a ingresar a la plataforma y dar inicio a su capacitación.</p>
-                            <p style="margin:0 0 15px;">¡Le deseamos mucho éxito!</p>
+                            <p style="margin:15px 0;">Le informamos que se ha ampliado el plazo para completar la(s) capacitación(es) que mantiene pendiente(s). Le solicitamos finalizar sus cursos dentro del periodo otorgado para mantener sus capacitaciones al día.</p>
+                            <p style="margin:0 0 15px;">Gracias por su compromiso. ¡Le deseamos mucho éxito!</p>
                         </td>
                     </tr>
 

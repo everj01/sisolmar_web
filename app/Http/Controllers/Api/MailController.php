@@ -45,7 +45,7 @@ class MailController extends Controller
             $course_id = $request->course_id;
 
             $curso = DB::connection('mysql_grupoihb')->select(
-                'SELECT fullname AS course_name, shortname AS course_shortname, startdate AS enrolment_start_date
+                'SELECT fullname AS course_name, shortname AS course_shortname, enddate AS enrolment_end_date, startdate AS enrolment_start_date
          FROM mdl_course WHERE id = ?',
                 [$course_id]
             );

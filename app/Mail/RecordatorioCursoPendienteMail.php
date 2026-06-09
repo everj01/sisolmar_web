@@ -36,6 +36,7 @@ class RecordatorioCursoPendienteMail extends Mailable implements ShouldQueue
                 'course_name'          => $this->curso->course_name,
                 'course_shortname'     => $this->curso->course_shortname,
                 'enrolment_start_date' => $this->curso->enrolment_start_date,
+                'enrolment_end_date'   => $this->curso->enrolment_end_date,
             ],
         );
     }
