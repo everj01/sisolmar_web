@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\RecordatorioCursoPendienteMail;
 use App\Mail\RecordatorioCursosPendientesMail;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +79,7 @@ class EnviarRecordatoriosCurso extends Command
 
                 $usuariosPrueba = [
                     '76067492',
-                    '75412099',
+                    // '75412099',
                 ];
 
                 $puedeEnviar = !$isDryRun
