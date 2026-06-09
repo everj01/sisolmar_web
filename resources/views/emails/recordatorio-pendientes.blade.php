@@ -38,9 +38,8 @@
                                 @endforeach
                             </table>
 
-                            <p style="margin:15px 0;">Le invitamos a ingresar a la plataforma y dar inicio a su
-                                capacitaci&oacute;n.</p>
-                            <p style="margin:0 0 15px;">¡Le deseamos mucho éxito!</p>
+                            <p style="margin:15px 0;">Le informamos que se ha ampliado el plazo para completar la(s) capacitación(es) que mantiene pendiente(s). Le solicitamos finalizar sus cursos dentro del periodo otorgado para mantener sus capacitaciones al día.</p>
+                            <p style="margin:0 0 15px;">Gracias por su compromiso. ¡Le deseamos mucho éxito!</p>
                         </td>
                     </tr>
 
