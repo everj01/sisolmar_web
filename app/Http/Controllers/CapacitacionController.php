@@ -1805,31 +1805,23 @@ class CapacitacionController extends Controller
         try {
             DB::beginTransaction();
 
-            $curso = DB::table('sw_cursos')
-                ->where('codigo', $request->cod_curso)
+            $curso = DB::table('sw_cursos as c')
+                ->leftJoin('sw_capacitacion_tipo_curso as tc', 'tc.codigo', '=', 'c.tipo_curso')
+                ->where('c.codigo', $request->cod_curso)
+                ->select('c.*', 'tc.descripcion as tipo_curso_descripcion')
                 ->first();
-
-            if (!$curso) {
-                return response()->json([
-                    "success" => false,
-                    "message" => "Curso no encontrado.",
-                ], 404);
-            }
 
             $fechaInicio = Carbon::parse($request->fecha_inicio);
 
-            if ($curso->frecuencia === 'PERSONALIZADO') {
-                $fechaFin = Carbon::parse($request->fecha_final);
-            } else {
-                $fechaFin = match ($curso->frecuencia) {
-                    "BIMESTRAL" => $fechaInicio->copy()->addMonths(2),
-                    "TRIMESTRAL" => $fechaInicio->copy()->addMonths(3),
-                    "CUATRIMESTRAL" => $fechaInicio->copy()->addMonths(4),
-                    "SEMESTRAL" => $fechaInicio->copy()->addMonths(6),
-                    "ANUAL" => $fechaInicio->copy()->addYear(),
-                    default => $fechaInicio->copy()->addMonth(),
-                };
-            }
+            $fechaFin = match ($curso->frecuencia) {
+                "PERSONALIZADO"  => Carbon::parse($request->fecha_final),
+                "BIMESTRAL" => $fechaInicio->copy()->addMonths(2),
+                "TRIMESTRAL" => $fechaInicio->copy()->addMonths(3),
+                "CUATRIMESTRAL" => $fechaInicio->copy()->addMonths(4),
+                "SEMESTRAL" => $fechaInicio->copy()->addMonths(6),
+                "ANUAL" => $fechaInicio->copy()->addYear(),
+                default => $fechaInicio->copy()->addMonth(),
+            };
 
             $fechaFin = $fechaFin->endOfDay();
 
@@ -1929,13 +1921,7 @@ class CapacitacionController extends Controller
     private function realizarMatriculacion($curso, string $newCode): void
     {
         try {
-            $usuarioId = Auth::id();
-
-            if (!$usuarioId) {
-                throw new \RuntimeException("Auth::id() retornó null");
-            }
-
-            $tipoDesc = strtoupper(trim($curso->tipoCurso?->descripcion ?? ""));
+            $tipoDesc = strtoupper(trim($curso->tipo_curso_descripcion ?? ""));
 
             $debeMatricular =
                 $tipoDesc === "PCE" ||
@@ -1948,7 +1934,7 @@ class CapacitacionController extends Controller
             dispatch(MatriculaMasivaJob::porTipoCurso(
                 $curso->codigo,
                 $newCode,
-                $usuarioId
+                Auth::id()
             ))->onQueue('training');
         } catch (\Throwable $e) {
             Log::error("Error en matriculación automática al crear programación", [
