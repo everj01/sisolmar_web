@@ -138,6 +138,8 @@ Route::get('/get-personal-dj', [FileController::class, 'getListaDJ']);
 Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigracion']);
 Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
 
+Route::post('/cursos/aplazar-curso', [CapacitacionController::class, 'aplazarCurso']);
+Route::get('/cursos/obtener-prog-actual/{courseId}', [CapacitacionController::class, 'obtenerProgActual']);
 Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual'])->middleware('web');
 Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
 Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);

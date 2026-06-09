@@ -487,11 +487,12 @@
                                                 <option value="CUATRIMESTRAL">Cuatrimestral</option>
                                                 <option value="SEMESTRAL">Semestral</option>
                                                 <option value="ANUAL">Anual</option>
+                                                <option value="PERSONALIZADO">Fecha personalizada</option>
                                             </select>
                                         </div>
 
                                         <!-- Recursos Visuales -->
-                                        <div>
+                                        <div x-show="!codigo">
                                             <label
                                                 class="text-gray-800 text-sm font-medium inline-block mb-1.5 flex items-center gap-1.5">
                                                 Recursos Visuales
@@ -1019,7 +1020,7 @@
                                 </div>
 
                                 <!-- Columna 3: Evaluación -->
-                                <div class="flex flex-col mt-8 lg:mt-0">
+                                <div x-show="!codigo" class="flex flex-col mt-8 lg:mt-0">
 
                                     <!-- Evaluación del Curso -->
                                     <div class="flex items-center justify-between mb-2 bg-indigo-50/80 border border-indigo-100 px-5 py-3 rounded-xl shadow-sm w-full transition-all hover:bg-indigo-50 cursor-pointer select-none"
@@ -1333,13 +1334,34 @@
                                 <i class="bx bx-calendar-event text-primary text-2xl"></i>
                             </div>
 
-                            <div class="w-full max-w-sm mb-4">
+                            <div x-show="frecuencia !== 'PERSONALIZADO'" class="w-full max-w-sm mb-4">
                                 <label for="fecha_inicio_modal"
                                     class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
                                     de inicio de capacitación</label>
                                 <input type="date" x-model="fechaInicio" id="fecha_inicio_modal"
                                     :min="fechaMinima"
                                     class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
+                            </div>
+
+                            <div x-show="frecuencia === 'PERSONALIZADO'" class="w-full max-w-sm mb-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="fecha_inicio_personalizada"
+                                            class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
+                                            de inicio</label>
+                                        <input type="date" x-model="fechaInicio" id="fecha_inicio_personalizada"
+                                            :min="fechaMinima"
+                                            class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
+                                    </div>
+                                    <div>
+                                        <label for="fecha_fin_personalizada"
+                                            class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
+                                            de fin</label>
+                                        <input type="date" x-model="fechaFin" id="fecha_fin_personalizada"
+                                            :min="fechaMinima"
+                                            class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
+                                    </div>
+                                </div>
                             </div>
 
                             <div
@@ -1455,6 +1477,102 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Aplazar Curso (Dar más plazo) -->
+        <div x-show="panel === 'aplazar_curso'" x-data="modalAplazarCurso()" x-init="init()"
+            @open-aplazar-modal.window="openModal($event.detail)" style="display: none;"
+            class="fixed inset-0 z-[1040] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100">
+
+            <div class="card w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden"
+                @click.away="closeModal()">
+                <div class="card-header bg-white border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h4 class="card-title">Dar más plazo al curso: <span x-text="cursoNombre"
+                                class="text-primary font-bold"></span></h4>
+                        <button type="button" @click="closeModal()" title="Cerrar"
+                            class="btn btn-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            <i class="bx bx-x text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div x-show="cargando" class="flex flex-col items-center justify-center py-8">
+                        <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p class="text-gray-600">Cargando programación actual...</p>
+                    </div>
+
+                    <div x-show="!cargando && programacionActual" x-transition class="space-y-4">
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                            <h5 class="text-sm font-semibold text-gray-700 mb-3">Programación actual del curso</h5>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span class="text-gray-500">Código programación:</span>
+                                    <span class="font-mono text-primary ml-2" x-text="programacionActual.codigo_programacion"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Periodo:</span>
+                                    <span class="font-medium ml-2" x-text="programacionActual.periodo"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Fecha inicio:</span>
+                                    <span class="font-medium ml-2" x-text="formatearFecha(programacionActual.fecha_inicio)"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Fecha fin actual:</span>
+                                    <span class="font-medium text-red-600 ml-2" x-text="formatearFecha(programacionActual.fecha_final)"></span>
+                                </div>
+                                <div class="col-span-2">
+                                    <span class="text-gray-500">Estado:</span>
+                                    <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium"
+                                        :class="programacionActual.estado_periodo === 'VIGENTE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'"
+                                        x-text="programacionActual.estado_periodo"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="fechaNuevaFin" class="block text-sm font-semibold text-gray-900 mb-2">
+                                Nueva fecha de fin <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" id="fechaNuevaFin" x-model="fechaNuevaFin"
+                                :min="fechaMinima"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
+                                @change="validarFecha()">
+                            <p x-show="errorFecha" class="mt-1 text-sm text-red-600" x-text="errorFecha"></p>
+                            <p x-show="!errorFecha && fechaNuevaFin" class="mt-1 text-sm text-green-600">
+                                Se extenderá el curso por <strong x-text="diasExtension"></strong> día(s) adicional(es)
+                            </p>
+                        </div>
+
+                        <div x-show="errorAPI" class="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-red-700" x-text="errorAPI"></div>
+                    </div>
+
+                    <div x-show="!cargando && !programacionActual" class="text-center py-8 text-gray-500">
+                        <i class="bx bx-error-circle text-4xl text-red-400 mb-2"></i>
+                        <p>No se encontró programación actual para este curso</p>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white border-t border-gray-100 flex justify-end gap-3">
+                    <button type="button" @click="closeModal()"
+                        class="btn rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors px-5"
+                        :disabled="cargando || guardando">
+                        Cancelar
+                    </button>
+                    <button type="button" @click="guardarExtension()"
+                        class="btn rounded-lg bg-success text-white hover:bg-green-600 transition-colors px-5 shadow-sm"
+                        :disabled="cargando || guardando || !fechaValida || !fechaNuevaFin">
+                        <span x-show="!guardando" class="flex items-center"><i
+                                class="bx bx-time-five text-base mr-2"></i> Aplicar extensión</span>
+                        <span x-show="guardando" class="flex items-center"><i
+                                class="bx bx-loader-alt bx-spin text-base mr-2"></i> Guardando...</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -2068,7 +2186,9 @@
                 cursoNombre: '',
                 tipoCursoId: '',
                 dirigidoA: '',
+                frecuencia: '',
                 fechaInicio: '',
+                fechaFin: '',
                 clientesAsignados: [],
                 empresasAsignadas: [],
                 areasAsignadas: [],
@@ -2131,6 +2251,7 @@
                     this.cursoNombre = data.nombre;
                     this.tipoCursoId = data.tipo_curso || '';
                     this.dirigidoA = data.dirigido_a || '';
+                    this.frecuencia = data.frecuencia || '';
 
                     // Reset filtros
                     this.selectedSucursal = '';
@@ -2168,15 +2289,38 @@
                 },
 
                 async guardarApertura() {
-                    if (!this.fechaInicio) {
-                        window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                            detail: {
-                                titulo: "Atención",
-                                mensaje: "Debe seleccionar una fecha de inicio.",
-                                tipo: "warning"
-                            }
-                        }));
-                        return;
+                    if (this.frecuencia === 'PERSONALIZADO') {
+                        if (!this.fechaInicio || !this.fechaFin) {
+                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                                detail: {
+                                    titulo: "Atención",
+                                    mensaje: "Debe seleccionar fecha de inicio y fecha de fin.",
+                                    tipo: "warning"
+                                }
+                            }));
+                            return;
+                        }
+                        if (this.fechaInicio > this.fechaFin) {
+                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                                detail: {
+                                    titulo: "Atención",
+                                    mensaje: "La fecha de inicio no puede ser mayor a la fecha de fin.",
+                                    tipo: "warning"
+                                }
+                            }));
+                            return;
+                        }
+                    } else {
+                        if (!this.fechaInicio) {
+                            window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                                detail: {
+                                    titulo: "Atención",
+                                    mensaje: "Debe seleccionar una fecha de inicio.",
+                                    tipo: "warning"
+                                }
+                            }));
+                            return;
+                        }
                     }
 
                     const dnisLimpios = this.listaDNIPaste.trim() ?
@@ -2224,6 +2368,10 @@
                             cliente_id: this.selectedCliente,
                             area_codigo: this.selectedArea
                         };
+
+                        if (this.frecuencia === 'PERSONALIZADO') {
+                            payload.fecha_final = this.fechaFin;
+                        }
 
                         if (dnisLimpios.length > 0) {
                             payload.dnis = dnisLimpios;

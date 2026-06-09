@@ -395,7 +395,7 @@ window.renderTablaCursos = function (data) {
                         ${curso.tiene_vigente
                         ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
                         : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" 
-                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}', dirigido_a: '${curso.dirigido_a || ''}' } }))"`}>
+                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}', dirigido_a: '${curso.dirigido_a || ''}', frecuencia: '${curso.frecuencia || ''}' } }))"`}>
                         <i class="bx bx-calendar-star text-base"></i>
                     </button>
                     
@@ -420,6 +420,11 @@ window.renderTablaCursos = function (data) {
                         <i class="bx bxs-file-import text-base"></i>
                     </button>` : ''
                 }
+
+                <button type="button" onclick="window.abrirModalAplazarCurso('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
+                    <i class="bx bx-time-five text-base"></i>
+                </button>
             </div>
         </td>
         `;
@@ -490,19 +495,30 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
 
                 // IMPORTANTE: Sincronizar Area de Conocimiento
-                alpineData.areaConocimiento = curso.area_conocimiento ?? "";
-                alpineData.area = curso.area_conocimiento ?? "";
+                // Usar tarea asincrónica para cargar las áreas y luego asignar el área responsable
+                const cargarAreaYAsignar = async () => {
+                    alpineData.areaConocimiento = curso.area_conocimiento ?? "";
+                    alpineData.area = curso.area_conocimiento ?? "";
 
-                if (alpineData.tipoCurso == '6') {
-                    alpineData.cargarAreasResponsablesPCA();
-                } else if (curso.area_conocimiento) {
-                    alpineData.cargarAreasResponsables(curso.area_conocimiento);
-                }
-                alpineData.areaResponsable = curso.area ?? "";
+                    if (alpineData.tipoCurso == '6') {
+                        await alpineData.cargarAreasResponsablesPCA();
+                    } else if (curso.area_conocimiento) {
+                        alpineData.lastSistemaId = null;
+                        await alpineData.cargarAreasResponsables(curso.area_conocimiento);
+                    }
+
+                    alpineData.areaResponsable = curso.area ?? "";
+                };
+
+                // Ejecutar la carga de áreas y continuar
+                const areaPromise = cargarAreaYAsignar();
+
+                // Esperar la carga de áreas antes de abrir el modal
+                await areaPromise;
 
                 alpineData.frecuencia = curso.frecuencia ?? "";
 
-                alpineData.dirigido = curso.dirigido_a === 0 ? 'OTROS' : (curso.dirigido_a ?? '');
+                alpineData.dirigido = curso.dirigido_a == 0 ? 'OTROS' : (curso.dirigido_a ?? '');
 
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
@@ -892,6 +908,8 @@ window.formCursoGestion = function () {
         },
         areasEncargadas: [],
         frecuencia: '',
+        fechaInicio: '',
+        fechaFinal: '',
         dirigido: '',
         // Removed: nombreExa, descripcion
         limiteTiempo: '',
@@ -1274,6 +1292,8 @@ window.formCursoGestion = function () {
             this.areasResponsables = [];
             this.codMoodleArea = '';
             this.frecuencia = '';
+            this.fechaInicio = '';
+            this.fechaFinal = '';
             this.dirigido = '';
             this.limiteTiempo = '30';
             this.nota = '10';
@@ -1402,6 +1422,7 @@ window.formCursoGestion = function () {
             formData.append('area', this.area);
             formData.append('frecuencia', this.frecuencia);
             formData.append('es_periodico', this.frecuencia ? 1 : 0);
+
             formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
             formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
             formData.append('es_demanda', this.esDemanda ? 1 : 0);
@@ -1918,4 +1939,155 @@ window.searchablePersonnel = function () {
         }
     }
 }
+
+window.abrirModalAplazarCurso = function(courseId, courseName) {
+    window.dispatchEvent(new CustomEvent('open-aplazar-modal', {
+        detail: { codigo: courseId, nombre: courseName }
+    }));
+};
+
+window.modalAplazarCurso = function() {
+    return {
+        cursoNombre: '',
+        cursoCodigo: '',
+        programacionActual: null,
+        fechaNuevaFin: '',
+        cargando: false,
+        guardando: false,
+        errorFecha: '',
+        errorAPI: '',
+        fechaValida: false,
+
+        get fechaMinima() {
+            if (this.programacionActual && this.programacionActual.fecha_final) {
+                const partes = this.programacionActual.fecha_final.split(' ')[0].split('-');
+                return `${partes[0]}-${partes[1]}-${partes[2]}`;
+            }
+            return new Date().toISOString().split('T')[0];
+        },
+
+        get diasExtension() {
+            if (!this.fechaNuevaFin || !this.programacionActual) return 0;
+            const fechaFinActual = new Date(this.programacionActual.fecha_final.split(' ')[0]);
+            const fechaNueva = new Date(this.fechaNuevaFin);
+            const diff = Math.ceil((fechaNueva - fechaFinActual) / (1000 * 60 * 60 * 24));
+            return diff > 0 ? diff : 0;
+        },
+
+        init() {
+            this.$watch('fechaNuevaFin', () => this.validarFecha());
+        },
+
+        formatearFecha(fechaStr) {
+            if (!fechaStr) return '-';
+            const partes = fechaStr.split(' ')[0].split('-');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        },
+
+        validarFecha() {
+            this.errorFecha = '';
+            this.fechaValida = false;
+            if (!this.fechaNuevaFin || !this.programacionActual) return;
+
+            const fechaFinActual = new Date(this.programacionActual.fecha_final.split(' ')[0]);
+            const fechaNueva = new Date(this.fechaNuevaFin);
+
+            fechaFinActual.setHours(0, 0, 0, 0);
+            fechaNueva.setHours(0, 0, 0, 0);
+
+            if (fechaNueva <= fechaFinActual) {
+                this.errorFecha = 'La nueva fecha de fin debe ser posterior a la fecha actual de fin.';
+                return;
+            }
+            this.fechaValida = true;
+        },
+
+        openModal(data) {
+            this.cursoCodigo = data.codigo;
+            this.cursoNombre = data.nombre;
+            this.programacionActual = null;
+            this.fechaNuevaFin = '';
+            this.errorFecha = '';
+            this.errorAPI = '';
+            this.fechaValida = false;
+            this.cargando = true;
+            this.guardando = false;
+
+            window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                detail: { panel: 'aplazar_curso', titulo: this.cursoNombre }
+            }));
+
+            this.cargarProgramacionActual();
+        },
+
+        closeModal() {
+            window.dispatchEvent(new CustomEvent('cambiar-panel', {
+                detail: { panel: 'registro' }
+            }));
+            this.cursoCodigo = '';
+            this.cursoNombre = '';
+            this.programacionActual = null;
+            this.fechaNuevaFin = '';
+            this.cargando = false;
+            this.guardando = false;
+            this.errorFecha = '';
+            this.errorAPI = '';
+            this.fechaValida = false;
+        },
+
+        async cargarProgramacionActual() {
+            this.errorAPI = '';
+            try {
+                const res = await axios.get(`${VITE_URL_APP}/api/cursos/obtener-prog-actual/${this.cursoCodigo}`);
+                if (res.data.success && res.data.data) {
+                    this.programacionActual = res.data.data;
+                } else {
+                    this.errorAPI = res.data.message || 'No se encontró programación actual para este curso.';
+                    this.programacionActual = null;
+                }
+            } catch (err) {
+                console.error('Error al obtener programación actual:', err);
+                this.errorAPI = 'Error al consultar la programación actual del curso.';
+                this.programacionActual = null;
+            } finally {
+                this.cargando = false;
+            }
+        },
+
+        async guardarExtension() {
+            if (!this.fechaValida || !this.fechaNuevaFin) return;
+            this.guardando = true;
+            this.errorAPI = '';
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+
+                const res = await axios.post(`${VITE_URL_APP}/api/cursos/aplazar-curso`, {
+                    cod_curso: this.cursoCodigo,
+                    nueva_fecha_final: this.fechaNuevaFin
+                }, { headers });
+
+                if (res.data.success) {
+                    window.dispatchEvent(new CustomEvent('mostrar-alerta', {
+                        detail: {
+                            mensaje: res.data.message || 'Plazo extendido correctamente.',
+                            tipo: 'success',
+                            toast: true,
+                            recargar: true
+                        }
+                    }));
+                    this.closeModal();
+                } else {
+                    this.errorAPI = res.data.message || 'No se pudo extender el plazo.';
+                }
+            } catch (err) {
+                console.error('Error al aplazar curso:', err);
+                this.errorAPI = err.response?.data?.message || 'Error de conexión al servidor.';
+            } finally {
+                this.guardando = false;
+            }
+        }
+    };
+};
 
