@@ -33,11 +33,14 @@
                                         <p style="margin:0;"><strong style="color:#004080;">Inicio:</strong>
                                             {{ $fechaInicio }}
                                         </p>
+                                        <p style="margin:0;"><strong style="color:#004080;">Fin:</strong>
+                                            {{ $fechaFin }}
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="margin:15px 0;">Su matrícula ha sido registrada correctamente. Pronto podrá acceder al material y dar inicio a su capacitación.</p>
+                            <p style="margin:15px 0;">Su matricula ha sido registrado exitosamente, ya puede acceder al material y dar inicio a su capacitación en la <strong>AV de tu Plataforma SIP.</strong></p>
                             <p style="margin:0 0 15px;">¡Le deseamos mucho éxito!</p>
                         </td>
                     </tr>

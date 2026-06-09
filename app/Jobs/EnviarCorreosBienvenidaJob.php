@@ -23,6 +23,7 @@ class EnviarCorreosBienvenidaJob implements ShouldQueue
         private readonly array  $personalIds,
         private readonly string $nombreCurso,
         private readonly string $fechaInicio,
+        private readonly string $fechaFin,
     ) {}
 
     public function handle(): void
@@ -44,6 +45,7 @@ class EnviarCorreosBienvenidaJob implements ShouldQueue
                         nombrePersonal: $nombre,
                         nombreCurso: $this->nombreCurso,
                         fechaInicio: $this->fechaInicio,
+                        fechaFin: $this->fechaFin
                     )
                 );
             } catch (\Exception $e) {

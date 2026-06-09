@@ -16,6 +16,7 @@ class BienvenidaMatriculaMail extends Mailable
         public readonly string $nombrePersonal,
         public readonly string $nombreCurso,
         public readonly string $fechaInicio,
+        public readonly string $fechaFin
     ) {}
 
     public function envelope(): Envelope
