@@ -2654,6 +2654,59 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function obtenerPersonalTodasEmpresas(): JsonResponse
+    {
+        try {
+            $rawPersonal = collect(
+                DB::connection('sqlsrv')->select(
+                    "EXEC [dbo].[SP_OBTENER_PERSONAL_TODAS_EMPRESAS]"
+                )
+            )
+                ->unique('NRO_DOC')
+                ->all();
+
+            $personal = array_values(array_map(function ($p) {
+                $empresa = trim(
+                    $p->EMPRESA
+                        ?? $p->EMPRESA_NOMBRE
+                        ?? $p->EMPR_CODIGO
+                        ?? $p->CLIENTE
+                        ?? ''
+                );
+                return [
+                    'dni' => trim($p->NRO_DOC ?? ''),
+                    'nombre_completo' => trim($p->NOMBRE_COMPLETO ?? ''),
+                    'cargo' => trim($p->CARGO ?? ''),
+                    'tipo_trabajador' => trim($p->TIPO_TRABAJADOR ?? ''),
+                    'empresa' => $empresa,
+                    'empresa_codigo' => trim(
+                        $p->COD_EMPRESA
+                            ?? $p->EMPR_CODIGO
+                            ?? $p->EMPRESA_CODIGO
+                            ?? ''
+                    ),
+                    'sucursal' => trim($p->SUCURSAL ?? ''),
+                    'codigo' => trim($p->CODIGO_PERSONAL ?? ''),
+                    'email' => trim($p->CORREO ?? ''),
+                ];
+            }, $rawPersonal));
+
+            return response()->json([
+                'success' => true,
+                'personal' => $personal,
+                'total' => count($personal),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener personal todas empresas: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar el personal',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function listarJefaturas(): JsonResponse
     {
         try {
@@ -4912,6 +4965,108 @@ class CapacitacionController extends Controller
                 'success' => false,
                 'message' => 'Ocurrió un error al comparar los MEMOs.',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function obtenerReporteGeneral(Request $request): JsonResponse
+    {
+        try {
+            $usernames = $request->usernames ?? [];
+            $courseIds = $request->courseIds ?? [];
+            $estado    = $request->estado    ?? '';
+            $desde     = $request->desde     ?? null;
+            $hasta     = $request->hasta     ?? null;
+            $cliente   = $request->cliente   ?? null;
+
+            $usernamesStr = !empty($usernames) ? implode(',', $usernames) : null;
+            $courseIdsStr = !empty($courseIds) ? implode(',', $courseIds) : null;
+            $estadoId     = $estado ? 0 : 0;
+
+            $personal = collect(
+                DB::connection('sqlsrv')->select("EXEC [dbo].[SP_OBTENER_PERSONAL_TODAS_EMPRESAS]")
+            )
+                ->unique('NRO_DOC')
+                ->keyBy(fn($p) => trim($p->NRO_DOC));
+
+            $cursos = collect(
+                DB::connection('mysql_grupoihb')->select(
+                    "CALL grupoihb_see.SP_OBTENER_ESTADO_CURSOS_POR_USUARIOS(?, ?, ?)",
+                    [$usernamesStr, $courseIdsStr, 0]
+                )
+            )
+                ->when($desde, fn($col) => $col->filter(
+                    fn($c) => $c->course_timecreated >= strtotime($desde)
+                ))
+                ->when($hasta, fn($col) => $col->filter(
+                    fn($c) => $c->course_timecreated <= strtotime($hasta . ' 23:59:59')
+                ));
+
+            $cursosPorUsuario = [];
+            foreach ($cursos as $curso) {
+                $usuarios = json_decode($curso->usuarios, true);
+                foreach ($usuarios as $u) {
+                    $estadoUpper = strtoupper($u['estado'] ?? '');
+                    if ($estado && $estadoUpper !== strtoupper($estado)) {
+                        continue;
+                    }
+                    $cursosPorUsuario[trim($u['username'])][] = [
+                        'Nombre'              => $curso->course_name,
+                        'Estado'              => $estadoUpper,
+                        'Nota_Final'          => $u['final_grade'] ?? 'Sin nota',
+                        'Fecha_Nota'          => $u['fecha_nota'] ?? null,
+                        'Fecha_Ultimo_Acceso' => $u['ultimo_acceso'] ?? null,
+                    ];
+                }
+            }
+
+            $personales = collect($cursosPorUsuario)
+                ->map(function ($cursosList, $username) use ($personal) {
+                    $persona = $personal->get($username);
+                    if (!$persona) return null;
+
+                    $empresa = trim(
+                        $persona->EMPRESA
+                        ?? $persona->EMPRESA_NOMBRE
+                        ?? $persona->EMPR_CODIGO
+                        ?? $persona->CLIENTE
+                        ?? ''
+                    );
+
+                    return [
+                        'CodigoPersonal' => trim($persona->CODIGO_PERSONAL ?? ''),
+                        'NombreCompleto' => trim($persona->NOMBRE_COMPLETO ?? ''),
+                        'NroDoc'         => trim($persona->NRO_DOC ?? ''),
+                        'Sucursal'       => trim($persona->SUCURSAL ?? ''),
+                        'Empresa'        => $empresa,
+                        'Cargo'          => trim($persona->CARGO ?? ''),
+                        'TipoTrabajador' => trim($persona->TIPO_TRABAJADOR ?? ''),
+                        'Cursos'         => $cursosList,
+                    ];
+                })
+                ->filter()
+                ->values();
+
+            if ($cliente) {
+                $clienteSel = collect(DB::select("EXEC SW_LISTAR_CLIENTES"))
+                    ->firstWhere('codigo', $cliente);
+                if ($clienteSel) {
+                    $desc = strtolower(trim($clienteSel->abreviatura ?? $clienteSel->razon_social ?? ''));
+                    $personales = $personales->filter(function ($p) use ($desc) {
+                        $emp = strtolower(trim($p['Empresa'] ?? ''));
+                        return $emp === $desc || str_contains($emp, $desc) || str_contains($desc, $emp);
+                    })->values();
+                }
+            }
+
+            return response()->json([
+                'success'    => true,
+                'Personales' => $personales,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

@@ -131,24 +131,34 @@ async function ensureCatalogsLoaded() {
     if (!_catalogsPromise) {
         _catalogsPromise = (async () => {
             try {
-                const [sucursalesRes, sistemasRes, areasRes, cursosRes, personalesRes] = await Promise.all([
+                const [sucursalesRes, sistemasRes, areasRes, cursosRes, personalesRes, empresasRes, personalTodasEmpresasRes] = await Promise.all([
                     axios.get('/api/get-sucursales'),
                     axios.get('/api/obtener-capacitacion-sistemas'),
                     axios.get('/api/obtener-areas'),
                     axios.get('/api/obtener-cursos'),
                     axios.get('/api/obtener-personal'),
+                    axios.get('/api/get-empresas'),
+                    axios.get('/api/obtener-personal-todas-empresas'),
                 ]);
+
+                const personalesTodas = (personalTodasEmpresasRes.data.success && Array.isArray(personalTodasEmpresasRes.data.personal)) ? personalTodasEmpresasRes.data.personal : [];
+                const tipos = [...new Set(personalesTodas.map(p => p.tipo_trabajador).filter(Boolean))];
+                const cargos = [...new Set(personalesTodas.map(p => p.cargo).filter(Boolean))];
 
                 return {
                     sucursales: sucursalesRes.data.success ? sucursalesRes.data.sucursales : [],
                     sistemas: sistemasRes.data || [],
                     areas: areasRes.data.success ? areasRes.data.areas : [],
                     cursos: cursosRes.data.success ? (cursosRes.data.Cursos || []) : [],
-                    personales: personalesRes.data.success ? personalesRes.data.personal : [],
+                    personales: (personalesRes.data.success && Array.isArray(personalesRes.data.personal)) ? personalesRes.data.personal : [],
+                    empresas: Array.isArray(empresasRes.data) ? empresasRes.data : [],
+                    personalesTodasEmpresas: personalesTodas,
+                    tiposTrabajo: tipos.sort(),
+                    cargosReporte: cargos.sort(),
                 };
             } catch (e) {
                 console.error('Error cargando catálogos:', e);
-                return { sucursales: [], sistemas: [], areas: [], cursos: [], personales: [] };
+                return { sucursales: [], sistemas: [], areas: [], cursos: [], personales: [], empresas: [], personalesTodasEmpresas: [], tiposTrabajo: [], cargosReporte: [] };
             }
         })();
     }
@@ -1211,6 +1221,78 @@ export default document.addEventListener("alpine:init", () => {
                 this.loadingPersonal = false;
             }
         },
+
+        async _fetchPersonal() {
+            const cacheKey = [
+                this.selectedCurso || "todos",
+                this.selectedSucursal || "todas",
+                this.selectedEstado || 0,
+            ].join("_");
+
+            if (this.cacheReportes[cacheKey]) {
+                this.personal = this.cacheReportes[cacheKey].personal;
+                this.totalPersonal = this.cacheReportes[cacheKey].total;
+                return true;
+            }
+
+            this.personal = [];
+
+            const params = {};
+            if (this.selectedCurso) params.courseId = this.selectedCurso;
+            if (this.selectedSucursal) params.sucursalId = this.selectedSucursal;
+            params.estadoId = this.selectedEstado ?? 0;
+
+            try {
+                const response = await axios.get("/api/obtener-personal-reporte", { params });
+                if (response.data.success) {
+                    const cursos = response.data.Cursos || [];
+                    this.personal = cursos.flatMap((curso) => curso.Personales || []);
+                    this.totalPersonal = this.personal.length;
+                    this.cacheReportes[cacheKey] = { personal: this.personal, total: this.totalPersonal };
+                    return true;
+                } else {
+                    this.personal = [];
+                    this.totalPersonal = 0;
+                    return false;
+                }
+            } catch (error) {
+                console.error(error);
+                this.personal = [];
+                this.totalPersonal = 0;
+                Swal.fire("Error", "No se pudo obtener el personal. Intente nuevamente.", "error");
+                return false;
+            }
+        },
+
+        async exportarExcelDesdeFiltros() {
+            if (!this.selectedCurso) {
+                Swal.fire("Atención", "Seleccione un curso para exportar.", "warning");
+                return;
+            }
+            this.exportando = true;
+            const ok = await this._fetchPersonal();
+            if (!ok || this.personal.length === 0) {
+                this.exportando = false;
+                if (ok) Swal.fire("Atención", "No se encontró personal con los filtros seleccionados.", "warning");
+                return;
+            }
+            await this.exportarExcel();
+        },
+
+        async exportarPDFDesdeFiltros() {
+            if (!this.selectedCurso) {
+                Swal.fire("Atención", "Seleccione un curso para exportar.", "warning");
+                return;
+            }
+            this.exportando = true;
+            const ok = await this._fetchPersonal();
+            if (!ok || this.personal.length === 0) {
+                this.exportando = false;
+                if (ok) Swal.fire("Atención", "No se encontró personal con los filtros seleccionados.", "warning");
+                return;
+            }
+            await this.exportarPDF();
+        },
     }));
 
     Alpine.data("modalReporteDeCapacitaciones", () => ({
@@ -1460,6 +1542,68 @@ export default document.addEventListener("alpine:init", () => {
                 this.sortDirection,
                 (fila, col) => this.valorOrden(fila, col),
             );
+        },
+
+        async _fetchCursos() {
+            const cacheKey = `${this.selectedSistema || "_"}_${this.selectedArea || "_"}`;
+
+            if (this.cacheReportes[cacheKey]) {
+                const filas = this.cacheReportes[cacheKey]
+                    .filter((c) => this.cursoSolapaRangoUsuario(c))
+                    .map((c) => this.filaDesdeCurso(c));
+                this.cursosFilas = filas;
+                return true;
+            }
+
+            this.cursosFilas = [];
+
+            try {
+                const params = {};
+                if (this.selectedSistema) params.systemId = this.selectedSistema;
+                if (this.selectedArea) params.areaId = this.selectedArea;
+
+                const response = await axios.get("/api/obtener-cursos", { params });
+                const cursosRaw = response.data.Cursos || response.data.cursos || [];
+
+                if (!response.data.success || !Array.isArray(cursosRaw)) {
+                    return false;
+                }
+
+                this.cacheReportes[cacheKey] = cursosRaw;
+
+                const filas = cursosRaw
+                    .filter((c) => this.cursoSolapaRangoUsuario(c))
+                    .map((c) => this.filaDesdeCurso(c));
+
+                this.cursosFilas = filas;
+                return this.cursosFilas.length > 0;
+            } catch (error) {
+                console.error(error);
+                this.cursosFilas = [];
+                return false;
+            }
+        },
+
+        async exportarExcelHistorialCursosDesdeFiltros() {
+            this.exportando = true;
+            const ok = await this._fetchCursos();
+            if (!ok || this.cursosFilas.length === 0) {
+                this.exportando = false;
+                if (ok) Swal.fire("Atención", "No se encontraron cursos con los filtros seleccionados.", "warning");
+                return;
+            }
+            await this.exportarExcelHistorialCursos();
+        },
+
+        async exportarPDFHistorialCursosDesdeFiltros() {
+            this.exportando = true;
+            const ok = await this._fetchCursos();
+            if (!ok || this.cursosFilas.length === 0) {
+                this.exportando = false;
+                if (ok) Swal.fire("Atención", "No se encontraron cursos con los filtros seleccionados.", "warning");
+                return;
+            }
+            await this.exportarPDFHistorialCursos();
         },
 
         async exportarExcelHistorialCursos() {
@@ -2364,6 +2508,7 @@ export default document.addEventListener("alpine:init", () => {
         loadingClientes: false,
         loadingSucursales: false,
         buscando: false,
+        exportando: false,
         loadingInicial: true,
 
         selectedSistema: "",
@@ -3192,19 +3337,827 @@ export default document.addEventListener("alpine:init", () => {
                 this.buscando = false;
             }
         },
+
+        async registrarReporteEnHistorial(nombreArchivo, pdfBlob, excelBlob) {
+            try {
+                const formData = new FormData();
+                formData.append("nombre_archivo", nombreArchivo);
+                formData.append("descripcion", "");
+
+                if (pdfBlob) {
+                    formData.append("archivo_pdf", pdfBlob, nombreArchivo.replace(/\.pdf$/i, "") + ".pdf");
+                }
+
+                if (excelBlob) {
+                    formData.append("archivo_excel", excelBlob, nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx");
+                }
+
+                await axios.post("/api/capacitacion/registrar-reporte", formData);
+
+                window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+            } catch (error) {
+                console.error("Error al registrar reporte en historial:", error);
+                Swal.fire("Error", error.response?.data?.message || "No se pudo guardar en el historial de reportes.", "warning");
+            }
+        },
+
+        async exportarExcelRecord() {
+            if (this.selectedUsernames.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
+                return;
+            }
+            if (this.selectedCourseIds.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
+                return;
+            }
+
+            this.exportando = true;
+
+            try {
+                const payload = {
+                    usernames: this.selectedUsernames || null,
+                    courseIds: this.selectedCourseIds || null,
+                    desde: this.selectedFechaDesde || null,
+                    hasta: this.selectedFechaHasta || null,
+                    estadoId: parseInt(this.selectedEstadoId) || 0,
+                };
+
+                const response = await axios.post("/api/obtener-personal-record", payload);
+
+                if (!response.data.success) {
+                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                    return;
+                }
+
+                const personales = response.data.Personales || [];
+                if (personales.length === 0) {
+                    Swal.fire("Atención", "No se encontraron resultados para exportar.", "warning");
+                    return;
+                }
+
+                const workbook = new ExcelJS.Workbook();
+                const logoImageId = await _cargarLogoExcel(workbook);
+                const sheet = workbook.addWorksheet("Record");
+
+                const d = new Date();
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
+
+                const headerRowNumber = 5;
+
+                if (logoImageId !== null) {
+                    sheet.addImage(logoImageId, {
+                        tl: { col: 1, row: 0 },
+                        br: { col: 3, row: 2 },
+                        editAs: "absolute",
+                    });
+                }
+
+                sheet.getRow(1).height = 50;
+
+                sheet.mergeCells("D1:H1");
+                const infoCell = sheet.getCell("D1");
+                infoCell.value = "RÉCORD DE CAPACITACIONES";
+                infoCell.font = { bold: true, size: 13, color: { argb: "FF1F4E79" } };
+                infoCell.alignment = { vertical: "middle", horizontal: "right" };
+
+                sheet.mergeCells("D2:H2");
+                const totalCell = sheet.getCell("D2");
+                totalCell.value = `Total: ${personales.length} personal(es)`;
+                totalCell.font = { size: 11, color: { argb: "FF333333" } };
+                totalCell.alignment = { vertical: "middle", horizontal: "right" };
+
+                sheet.getRow(4).height = 8;
+
+                const headers = [
+                    "#", "Sucursal", "N° Documento", "Apellidos y Nombres",
+                    "Código Pers.", "Cargo", "Tipo Trabajador", "Cliente",
+                    "Capacitación", "Estado", "Nota Final",
+                ];
+
+                const headerRow = sheet.getRow(headerRowNumber);
+                headerRow.values = headers;
+                headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
+
+                let rowIdx = 1;
+                personales.forEach((personal) => {
+                    const cursos = personal.Cursos || [];
+                    if (cursos.length === 0) {
+                        const row = sheet.addRow([
+                            rowIdx++,
+                            personal.Sucursal || "—",
+                            personal.NroDoc || "—",
+                            personal.NombreCompleto || "—",
+                            personal.CodigoPersonal || "—",
+                            personal.Cargo || "—",
+                            personal.TipoTrabajador || "—",
+                            personal.Cliente || "—",
+                            "—",
+                            "—",
+                            "—",
+                        ]);
+                        row.eachCell((cell) => _estiloDatoExcel(cell));
+                    } else {
+                        cursos.forEach((curso) => {
+                            const row = sheet.addRow([
+                                rowIdx++,
+                                personal.Sucursal || "—",
+                                personal.NroDoc || "—",
+                                personal.NombreCompleto || "—",
+                                personal.CodigoPersonal || "—",
+                                personal.Cargo || "—",
+                                personal.TipoTrabajador || "—",
+                                personal.Cliente || "—",
+                                curso.Nombre || "—",
+                                curso.Estado || "—",
+                                curso.Nota_Final != null ? curso.Nota_Final : "—",
+                            ]);
+                            row.eachCell((cell) => _estiloDatoExcel(cell));
+                        });
+                    }
+                });
+
+                sheet.columns = [
+                    { width: 5 },   // #
+                    { width: 16 },  // Sucursal
+                    { width: 16 },  // N° Documento
+                    { width: 35 },  // Apellidos y Nombres
+                    { width: 14 },  // Código Pers.
+                    { width: 22 },  // Cargo
+                    { width: 18 },  // Tipo Trabajador
+                    { width: 18 },  // Cliente
+                    { width: 35 },  // Capacitación
+                    { width: 14 },  // Estado
+                    { width: 12 },  // Nota Final
+                ];
+
+                sheet.autoFilter = {
+                    from: `A${headerRowNumber}`,
+                    to: `K${headerRowNumber}`,
+                };
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = _blobExcel(buffer);
+                const nombreArchivo = `RECORD_CAPACITACIONES_${fechaRep}.xlsx`;
+
+                await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+
+                saveAs(blob, nombreArchivo);
+
+                Swal.fire("Éxito", "Record exportado a Excel correctamente.", "success");
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", "No se pudo exportar el Excel.", "error");
+            } finally {
+                this.exportando = false;
+            }
+        },
     }));
 
     Alpine.data("modalReporteGeneral", () => ({
         open: false,
+        loadingInicial: false,
+        loadingPersonal: false,
+        loadingCursos: false,
+        loadingClientes: false,
+
+        selectedCliente: "",
+        selectedEmpresa: "",
+        selectedSucursal: "",
+        selectedTipoTrabajo: "",
+        selectedCargo: "",
+        searchPersonal: "",
+        selectedFechaDesde: "",
+        selectedFechaHasta: "",
+        selectedEstado: "",
+        searchCurso: "",
+
+        clientes: [],
+        empresas: [],
+        sucursales: [],
+        tiposTrabajo: [],
+        cargos: [],
+        todosLosPersonales: [],
+        personalesFiltrados: [],
+        cursos: [],
+        todosLosCursos: [],
+
+        selectedUsernames: [],
+        selectedCourseIds: [],
+        selectAllPersonal: false,
+        selectAllCursos: false,
+
+        personalPerPage: 20,
+        cursosPerPage: 15,
+        personalPage: 1,
+        cursosPage: 1,
+
+        get personalTotalPages() {
+            return Math.max(1, Math.ceil(this.personalesFiltrados.length / this.personalPerPage));
+        },
+        get cursosTotalPages() {
+            return Math.max(1, Math.ceil(this.cursos.length / this.cursosPerPage));
+        },
+
+        personalesPaginados() {
+            const start = (this.personalPage - 1) * this.personalPerPage;
+            return this.personalesFiltrados.slice(start, start + this.personalPerPage);
+        },
+        cursosPaginados() {
+            const start = (this.cursosPage - 1) * this.cursosPerPage;
+            return this.cursos.slice(start, start + this.cursosPerPage);
+        },
 
         init() {
             window.addEventListener("abrir-reporte-general", () => {
-                this.open = true;
+                this.abrir();
             });
+        },
+
+        async abrir() {
+            this.open = true;
+            this.loadingInicial = true;
+
+            try {
+                const catalogs = await ensureCatalogsLoaded();
+
+                this.empresas = catalogs.empresas;
+                this.sucursales = catalogs.sucursales;
+                this.todosLosCursos = catalogs.cursos;
+                this.filtrarCursos();
+
+                const personales = catalogs.personalesTodasEmpresas;
+                this.todosLosPersonales = personales;
+                this.tiposTrabajo = catalogs.tiposTrabajo;
+                this.cargos = catalogs.cargosReporte;
+
+                this.filtrarPersonales();
+
+                this.cargarClientes();
+            } catch (e) {
+                console.error('Error cargando datos:', e);
+                this.empresas = [];
+                this.sucursales = [];
+                this.todosLosPersonales = [];
+                this.personalesFiltrados = [];
+                this.todosLosCursos = [];
+                this.cursos = [];
+            } finally {
+                this.loadingInicial = false;
+            }
+        },
+
+        async cargarClientes() {
+            this.loadingClientes = true;
+            try {
+                const { data } = await axios.get("/api/get-clientes-pac");
+                this.clientes = Array.isArray(data) ? data : [];
+            } catch (e) {
+                console.error(e);
+                this.clientes = [];
+            } finally {
+                this.loadingClientes = false;
+            }
+        },
+
+        filtrarPersonales() {
+            let resultados = [...this.todosLosPersonales];
+
+            if (this.selectedCliente) {
+                const clienteSel = this.clientes.find(c => String(c.codigo) === String(this.selectedCliente));
+                if (clienteSel) {
+                    const desc = String(clienteSel.descripcion).toLowerCase();
+                    resultados = resultados.filter(p => {
+                        const emp = String(p.empresa || '').toLowerCase();
+                        return emp === desc || emp.includes(desc) || desc.includes(emp);
+                    });
+                } else {
+                    resultados = [];
+                }
+            }
+
+            if (this.selectedEmpresa === '__sin_empresa__') {
+                resultados = resultados.filter(p => !p.empresa && !p.empresa_codigo);
+            } else if (this.selectedEmpresa) {
+                const empSel = this.empresas.find(e => String(e.codigo) === String(this.selectedEmpresa));
+                if (empSel) {
+                    const codigo = String(empSel.codigo).toLowerCase();
+                    const desc = String(empSel.descripcion).toLowerCase();
+                    resultados = resultados.filter(p => {
+                        const emp = String(p.empresa || p.empresa_codigo || '').toLowerCase();
+                        if (!emp) return false;
+                        return emp === desc || emp === codigo || emp.includes(desc) || desc.includes(emp);
+                    });
+                }
+            }
+            if (this.selectedSucursal) {
+                const sucSel = this.sucursales.find(s => String(s.codigo) === String(this.selectedSucursal));
+                if (sucSel) {
+                    resultados = resultados.filter(p =>
+                        String(p.sucursal).toLowerCase() === String(sucSel.sucursal).toLowerCase()
+                    );
+                }
+            }
+            if (this.selectedTipoTrabajo) {
+                resultados = resultados.filter(p =>
+                    String(p.tipo_trabajador) === String(this.selectedTipoTrabajo)
+                );
+            }
+            if (this.selectedCargo) {
+                resultados = resultados.filter(p =>
+                    String(p.cargo) === String(this.selectedCargo)
+                );
+            }
+            if (this.searchPersonal) {
+                const term = this.searchPersonal.toLowerCase();
+                resultados = resultados.filter(p =>
+                    (p.nombre_completo || '').toLowerCase().includes(term) ||
+                    (p.dni || '').includes(term)
+                );
+            }
+
+            this.personalesFiltrados = resultados;
+            this.personalPage = 1;
+        },
+
+        filtrarCursos() {
+            this.cursos = this.todosLosCursos.filter(c => {
+                if (this.selectedFechaDesde && c.Fecha_Creacion) {
+                    const desdeTs = new Date(this.selectedFechaDesde).getTime() / 1000;
+                    if (c.Fecha_Creacion < desdeTs) return false;
+                }
+                if (this.selectedFechaHasta && c.Fecha_Creacion) {
+                    const hastaTs = new Date(this.selectedFechaHasta + ' 23:59:59').getTime() / 1000;
+                    if (c.Fecha_Creacion > hastaTs) return false;
+                }
+                if (this.selectedEstado) {
+                    const estadoCurso = (c.Estado || '').toUpperCase();
+                    if (estadoCurso !== this.selectedEstado) return false;
+                }
+                if (this.searchCurso) {
+                    const term = this.searchCurso.toLowerCase();
+                    if (!(c.Nombre || '').toLowerCase().includes(term)) return false;
+                }
+                return true;
+            });
+            this.cursosPage = 1;
+        },
+
+        togglePersonal(dni) {
+            const idx = this.selectedUsernames.indexOf(dni);
+            if (idx === -1) {
+                this.selectedUsernames.push(dni);
+            } else {
+                this.selectedUsernames.splice(idx, 1);
+            }
+            this.selectAllPersonal =
+                this.selectedUsernames.length === this.personalesFiltrados.length &&
+                this.personalesFiltrados.length > 0;
+        },
+
+        toggleAllPersonal() {
+            if (this.selectAllPersonal) {
+                this.selectedUsernames = [];
+                this.selectAllPersonal = false;
+            } else {
+                this.selectedUsernames = this.personalesFiltrados.map(p => p.dni).filter(Boolean);
+                this.selectAllPersonal = true;
+            }
+        },
+
+        toggleCurso(id) {
+            const idx = this.selectedCourseIds.indexOf(id);
+            if (idx === -1) {
+                this.selectedCourseIds.push(id);
+            } else {
+                this.selectedCourseIds.splice(idx, 1);
+            }
+            this.selectAllCursos =
+                this.selectedCourseIds.length === this.cursos.length &&
+                this.cursos.length > 0;
+        },
+
+        toggleAllCursos() {
+            if (this.selectAllCursos) {
+                this.selectedCourseIds = [];
+                this.selectAllCursos = false;
+            } else {
+                this.selectedCourseIds = this.cursos.map(c => c.Id).filter(Boolean);
+                this.selectAllCursos = true;
+            }
+        },
+
+        exportando: false,
+        buscando: false,
+
+        async exportarPDFReporteGeneral() {
+            if (this.selectedUsernames.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
+                return;
+            }
+            if (this.selectedCourseIds.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
+                return;
+            }
+
+            this.buscando = true;
+
+            try {
+                const payload = {
+                    usernames: this.selectedUsernames || null,
+                    courseIds: this.selectedCourseIds || null,
+                    estado: this.selectedEstado || null,
+                    desde: this.selectedFechaDesde || null,
+                    hasta: this.selectedFechaHasta || null,
+                    cliente: this.selectedCliente || null,
+                };
+
+                const response = await axios.post("/api/obtener-reporte-general", payload);
+
+                if (!response.data.success) {
+                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                    return;
+                }
+
+                const personales = response.data.Personales || [];
+                if (personales.length === 0) {
+                    Swal.fire("Atención", "No se encontraron resultados para generar el PDF.", "warning");
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+                const logoSol = await _cargarImagen("/images/logo_sol.png");
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const marginL = 10;
+                const marginR = 10;
+                const contentWidth = pageWidth - marginL - marginR;
+
+                const fmtFecha = (val) => {
+                    if (!val) return "";
+                    const m = String(val).match(/(\d{4})-(\d{2})-(\d{2})/);
+                    return m ? `${m[3]}/${m[2]}/${m[1]}` : val;
+                };
+
+                const dibujarCabecera = (tituloExtra) => {
+                    let logoBottomY = 18;
+                    const logoWidth = 50;
+                    if (logoSol) {
+                        const ratio = logoSol.height / logoSol.width;
+                        doc.addImage(logoSol, "PNG", marginL, 8, logoWidth, logoWidth * ratio);
+                        logoBottomY = 8 + logoWidth * ratio;
+                    }
+                    const lineY = logoBottomY + 2;
+                    doc.setDrawColor(150, 150, 150);
+                    doc.setLineWidth(0.2);
+                    doc.line(marginL, lineY, marginL + 75, lineY);
+                    doc.setFont("helvetica", "italic");
+                    doc.setFontSize(6);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text("Chimbote: Calle Los Laureles Nº206 Urb. La Caleta", marginL, lineY + 3.5);
+                    doc.text("RUC: 20445414833", marginL, lineY + 6);
+
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(11);
+                    doc.setTextColor(0, 0, 0);
+                    const titulo = "REPORTE GENERAL DE CAPACITACIONES";
+                    doc.text(titulo, pageWidth / 2, lineY + 18, { align: "center" });
+                    const tW = doc.getTextWidth(titulo);
+                    doc.setLineWidth(0.3);
+                    doc.setDrawColor(0, 0, 0);
+                    doc.line(pageWidth / 2 - tW / 2, lineY + 19.5, pageWidth / 2 + tW / 2, lineY + 19.5);
+
+                    let y = lineY + 24;
+                    if (tituloExtra) {
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        doc.setTextColor(60, 60, 60);
+                        doc.text(tituloExtra, marginL, y + 2);
+                        y += 7;
+                    }
+                    return y;
+                };
+
+                let yPos = dibujarCabecera();
+
+                const sucursales = {};
+                personales.forEach(p => {
+                    const key = p.Sucursal || "SIN SUCURSAL";
+                    if (!sucursales[key]) sucursales[key] = [];
+                    sucursales[key].push(p);
+                });
+
+                const sucKeys = Object.keys(sucursales).sort();
+                let primeraSuc = true;
+
+                for (const sucName of sucKeys) {
+                    const grupo = sucursales[sucName];
+
+                    if (!primeraSuc) {
+                        if (yPos + 30 > pageHeight - 10) {
+                            doc.addPage();
+                            yPos = dibujarCabecera();
+                        } else {
+                            yPos += 4;
+                        }
+                    }
+                    primeraSuc = false;
+
+                    if (yPos + 8 > pageHeight - 10) {
+                        doc.addPage();
+                        yPos = dibujarCabecera();
+                    }
+
+                    doc.setFillColor(253, 245, 230);
+                    doc.rect(marginL, yPos, contentWidth, 5.5, "F");
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.2);
+                    doc.rect(marginL, yPos, contentWidth, 5.5, "S");
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text("SUCURSAL: " + (sucName === "SIN SUCURSAL" ? "SIN SUCURSAL" : sucName), marginL + 2, yPos + 4);
+                    yPos += 5.5;
+
+                    const filas = [];
+                    grupo.forEach(p => {
+                        const cursos = p.Cursos || [];
+                        if (cursos.length === 0) {
+                            filas.push([
+                                p.CodigoPersonal || "—",
+                                p.NombreCompleto || "—",
+                                p.NroDoc || "—",
+                                p.Cargo || "—",
+                                "—",
+                                "—",
+                                "—",
+                                "—",
+                            ]);
+                        } else {
+                            cursos.forEach(c => {
+                                filas.push([
+                                    p.CodigoPersonal || "—",
+                                    p.NombreCompleto || "—",
+                                    p.NroDoc || "—",
+                                    p.Cargo || "—",
+                                    c.Nombre || "—",
+                                    c.Estado || "—",
+                                    c.Nota_Final != null
+                                        ? (c.Fecha_Nota ? fmtFecha(c.Fecha_Nota) : "")
+                                        : (c.Fecha_Ultimo_Acceso ? fmtFecha(c.Fecha_Ultimo_Acceso) : ""),
+                                    c.Nota_Final != null ? String(c.Nota_Final) : "—",
+                                ]);
+                            });
+                        }
+                    });
+
+                    if (filas.length > 0) {
+                        doc.autoTable({
+                            startY: yPos,
+                            head: [[
+                                "Código Pers.",
+                                "Apellidos y Nombres",
+                                "Nro. Doc",
+                                "Cargo",
+                                "Capacitación",
+                                "Estado",
+                                "Fecha / Últ. Acceso",
+                                "Nota",
+                            ]],
+                            body: filas,
+                            theme: "grid",
+                            styles: {
+                                fontSize: 6.5,
+                                textColor: [0, 0, 0],
+                                lineColor: [0, 0, 0],
+                                lineWidth: 0.1,
+                                valign: "middle",
+                                cellPadding: 1.2,
+                            },
+                            headStyles: {
+                                fillColor: [253, 245, 230],
+                                textColor: [0, 0, 0],
+                                fontStyle: "bold",
+                                halign: "center",
+                                fontSize: 6.5,
+                            },
+                            columnStyles: {
+                                0: { cellWidth: 16, halign: "center" },
+                                1: { cellWidth: 48 },
+                                2: { cellWidth: 18, halign: "center" },
+                                3: { cellWidth: 28 },
+                                4: { cellWidth: "auto" },
+                                5: { cellWidth: 18, halign: "center" },
+                                6: { cellWidth: 22, halign: "center" },
+                                7: { cellWidth: 12, halign: "center" },
+                            },
+                            margin: { left: marginL, right: marginR },
+                        });
+                        yPos = doc.lastAutoTable.finalY + 2;
+                    }
+                }
+
+                const d = new Date();
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
+                const nombreArchivo = `REPORTE_GENERAL_CAPACITACIONES_${fechaRep}.pdf`;
+                const pdfBlob = doc.output("blob");
+
+                try {
+                    const formData = new FormData();
+                    formData.append("nombre_archivo", nombreArchivo);
+                    formData.append("archivo_pdf", pdfBlob, nombreArchivo);
+                    await axios.post("/api/capacitacion/registrar-reporte", formData);
+                    window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+                } catch (error) {
+                    console.error("Error al guardar en historial:", error);
+                }
+
+                saveAs(pdfBlob, nombreArchivo);
+                Swal.fire("Éxito", "PDF generado correctamente.", "success");
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", "No se pudo generar el PDF.", "error");
+            } finally {
+                this.buscando = false;
+            }
+        },
+
+        async exportarExcelReporteGeneral() {
+            if (this.selectedUsernames.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
+                return;
+            }
+            if (this.selectedCourseIds.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
+                return;
+            }
+
+            this.buscando = true;
+
+            try {
+                const payload = {
+                    usernames: this.selectedUsernames || null,
+                    courseIds: this.selectedCourseIds || null,
+                    estado: this.selectedEstado || null,
+                    desde: this.selectedFechaDesde || null,
+                    hasta: this.selectedFechaHasta || null,
+                    cliente: this.selectedCliente || null,
+                };
+
+                const response = await axios.post("/api/obtener-reporte-general", payload);
+
+                if (!response.data.success) {
+                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                    return;
+                }
+
+                const personales = response.data.Personales || [];
+                if (personales.length === 0) {
+                    Swal.fire("Atención", "No se encontraron resultados para exportar.", "warning");
+                    return;
+                }
+
+                const workbook = new ExcelJS.Workbook();
+                const logoImageId = await _cargarLogoExcel(workbook);
+                const sheet = workbook.addWorksheet("Reporte General");
+
+                const d = new Date();
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
+
+                const headerRowNumber = 5;
+
+                if (logoImageId !== null) {
+                    sheet.addImage(logoImageId, {
+                        tl: { col: 1, row: 0 },
+                        br: { col: 3, row: 2 },
+                        editAs: "absolute",
+                    });
+                }
+
+                sheet.getRow(1).height = 50;
+
+                sheet.mergeCells("D1:J1");
+                const infoCell = sheet.getCell("D1");
+                infoCell.value = "REPORTE GENERAL DE CAPACITACIONES";
+                infoCell.font = { bold: true, size: 13, color: { argb: "FF1F4E79" } };
+                infoCell.alignment = { vertical: "middle", horizontal: "right" };
+
+                sheet.mergeCells("D2:J2");
+                const totalCell = sheet.getCell("D2");
+                totalCell.value = `Total: ${personales.length} personal(es)`;
+                totalCell.font = { size: 11, color: { argb: "FF333333" } };
+                totalCell.alignment = { vertical: "middle", horizontal: "right" };
+
+                sheet.getRow(4).height = 8;
+
+                const headers = [
+                    "#", "Sucursal", "Código Pers.", "Apellidos y Nombres",
+                    "Nro. Doc", "Cargo", "Capacitación", "Estado",
+                    "Fecha / Últ. Acceso", "Nota",
+                ];
+
+                const headerRow = sheet.getRow(headerRowNumber);
+                headerRow.values = headers;
+                headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
+
+                let rowIdx = 1;
+                personales.forEach((personal) => {
+                    const cursos = personal.Cursos || [];
+                    if (cursos.length === 0) {
+                        const row = sheet.addRow([
+                            rowIdx++,
+                            personal.Sucursal || "—",
+                            personal.CodigoPersonal || "—",
+                            personal.NombreCompleto || "—",
+                            personal.NroDoc || "—",
+                            personal.Cargo || "—",
+                            "—",
+                            "—",
+                            "—",
+                            "—",
+                        ]);
+                        row.eachCell((cell) => _estiloDatoExcel(cell));
+                    } else {
+                        cursos.forEach((curso) => {
+                            const fechaVal = curso.Nota_Final != null
+                                ? (curso.Fecha_Nota || "")
+                                : (curso.Fecha_Ultimo_Acceso || "");
+                            const row = sheet.addRow([
+                                rowIdx++,
+                                personal.Sucursal || "—",
+                                personal.CodigoPersonal || "—",
+                                personal.NombreCompleto || "—",
+                                personal.NroDoc || "—",
+                                personal.Cargo || "—",
+                                curso.Nombre || "—",
+                                curso.Estado || "—",
+                                fechaVal,
+                                curso.Nota_Final != null ? String(curso.Nota_Final) : "—",
+                            ]);
+                            row.eachCell((cell) => _estiloDatoExcel(cell));
+                        });
+                    }
+                });
+
+                sheet.columns = [
+                    { width: 5 },
+                    { width: 18 },
+                    { width: 14 },
+                    { width: 38 },
+                    { width: 16 },
+                    { width: 24 },
+                    { width: 38 },
+                    { width: 14 },
+                    { width: 18 },
+                    { width: 12 },
+                ];
+
+                sheet.autoFilter = {
+                    from: `A${headerRowNumber}`,
+                    to: `J${headerRowNumber}`,
+                };
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = _blobExcel(buffer);
+                const nombreArchivo = `REPORTE_GENERAL_CAPACITACIONES_${fechaRep}.xlsx`;
+
+                try {
+                    const formData = new FormData();
+                    formData.append("nombre_archivo", nombreArchivo);
+                    formData.append("archivo_excel", blob, nombreArchivo);
+                    await axios.post("/api/capacitacion/registrar-reporte", formData);
+                    window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+                } catch (error) {
+                    console.error("Error al guardar en historial:", error);
+                }
+
+                saveAs(blob, nombreArchivo);
+                Swal.fire("Éxito", "Excel generado correctamente.", "success");
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", "No se pudo generar el Excel.", "error");
+            } finally {
+                this.buscando = false;
+            }
         },
 
         cerrar() {
             this.open = false;
+            this.selectedCliente = "";
+            this.selectedEmpresa = "";
+            this.selectedSucursal = "";
+            this.selectedTipoTrabajo = "";
+            this.selectedCargo = "";
+            this.searchPersonal = "";
+            this.selectedFechaDesde = "";
+            this.selectedFechaHasta = "";
+            this.selectedEstado = "";
+            this.searchCurso = "";
+            this.selectedUsernames = [];
+            this.selectedCourseIds = [];
+            this.selectAllPersonal = false;
+            this.selectAllCursos = false;
         },
     }));
 });
