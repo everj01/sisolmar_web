@@ -178,6 +178,11 @@ class MatriculaMasivaJob implements ShouldQueue
 
             $ids = array_map(fn($row) => $row->codigo, $rows);
 
+            $codResponsable = str_pad(trim((string) $curso->cod_responsable), 5, '0', STR_PAD_LEFT);
+            if (!empty(trim((string) $curso->cod_responsable))) {
+                $ids = array_values(array_filter($ids, fn($id) => $id !== $codResponsable));
+            }
+
             Log::info("MatriculaMasivaJob PCA: {$codCliente} retornó " . count($ids) . " personas (curso {$this->cursoCodigo}).");
 
             return $ids;
@@ -231,6 +236,11 @@ class MatriculaMasivaJob implements ShouldQueue
             }
 
             $allIds = array_unique(array_values($allIds));
+
+            $codResponsable = str_pad(trim((string) $curso->cod_responsable), 5, '0', STR_PAD_LEFT);
+            if (!empty(trim((string) $curso->cod_responsable))) {
+                $allIds = array_values(array_filter($allIds, fn($id) => $id !== $codResponsable));
+            }
 
             Log::info("MatriculaMasivaJob PCE: dirigido_a={$dirigido} retornó " . count($allIds) . " personas (curso {$this->cursoCodigo}).");
 
@@ -301,14 +311,14 @@ class MatriculaMasivaJob implements ShouldQueue
                 }
             }
 
-            foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
-                EnviarCorreosBienvenidaJob::dispatch(
-                    personalIds: $chunkCorreos,
-                    nombreCurso: $curso->nombre,
-                    fechaInicio: Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
-                    fechaFin: Carbon::parse($prog->fecha_fin)->format('d/m/Y'),
-                )->onQueue('emails');
-            }
+            // foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
+            //     EnviarCorreosBienvenidaJob::dispatch(
+            //         personalIds: $chunkCorreos,
+            //         nombreCurso: $curso->nombre,
+            //         fechaInicio: Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
+            //         fechaFin: Carbon::parse($prog->fecha_fin)->format('d/m/Y'),
+            //     )->onQueue('emails');
+            // }
 
             Log::info("MatriculaMasivaJob [{$this->modo}] finalizado. Éxitos: {$enviados}, Fallos: {$fallidos}", [
                 'curso_id' => $this->cursoCodigo,
@@ -341,6 +351,13 @@ class MatriculaMasivaJob implements ShouldQueue
         int              &$fallidos
     ): void {
         try {
+            $codResponsable = str_pad(trim((string) $curso->cod_responsable), 5, '0', STR_PAD_LEFT);
+            if (!empty(trim((string) $curso->cod_responsable)) && $codPersonal === $codResponsable) {
+                $this->asignarResponsableEnMoodle($curso, $prog);
+                $enviados++;
+                return;
+            }
+
             $existe = Matricula::where('cod_curso', $this->cursoCodigo)
                 ->where('cod_programacion', $prog->codigo_programacion)
                 ->where('cod_personal', $codPersonal)
@@ -470,5 +487,86 @@ class MatriculaMasivaJob implements ShouldQueue
             ->update(['path' => $path, 'depth' => $depth]);
 
         Log::info("MatriculaMasivaJob: contexto Moodle generado para curso ID: {$courseMoodle->id}");
+    }
+
+    private function asignarResponsableEnMoodle(Cursos $curso, CursoProgramacion $prog): void
+    {
+        $codResponsable = str_pad(trim((string) $curso->cod_responsable), 5, '0', STR_PAD_LEFT);
+
+        if (empty(trim((string) $curso->cod_responsable)) || $codResponsable === '00000') {
+            return;
+        }
+
+        $personal = Personal::where('CODI_PERS', $codResponsable)->first();
+
+        if (!$personal) {
+            Log::warning("MatriculaMasivaJob: no se encontró Personal para responsable {$codResponsable}.");
+            return;
+        }
+
+        $dni = trim($personal->NRO_DOCU_IDEN);
+
+        if (empty($dni)) {
+            Log::warning("MatriculaMasivaJob: responsable {$codResponsable} no tiene DNI registrado.");
+            return;
+        }
+
+        $moodleUserId = $this->resolverUsuarioMoodle($personal, $dni);
+
+        if ($moodleUserId <= 0) {
+            Log::error("MatriculaMasivaJob: error al crear/obtener usuario Moodle para responsable {$codResponsable}.");
+            return;
+        }
+
+        $moodleCourseRef = $curso->codigo_moodle ?: $curso->codigo_curso;
+
+        $courseMoodle = DB::connection('mysql_grupoihb')->table('mdl_course')
+            ->where('id', $moodleCourseRef)
+            ->orWhere('idnumber', $moodleCourseRef)
+            ->first(['id', 'idnumber', 'category']);
+
+        if (!$courseMoodle) {
+            Log::warning("MatriculaMasivaJob: no se encontró curso Moodle ({$moodleCourseRef}) para asignar responsable.");
+            return;
+        }
+
+        $this->garantizarContextoMoodle($courseMoodle);
+
+        $context = DB::connection('mysql_grupoihb')->table('mdl_context')
+            ->where('contextlevel', 50)
+            ->where('instanceid', $courseMoodle->id)
+            ->first();
+
+        if (!$context) {
+            Log::error("MatriculaMasivaJob: no hay contexto Moodle para curso ID: {$courseMoodle->id}.");
+            return;
+        }
+
+        DB::connection('mysql_grupoihb')->table('mdl_role_assignments')
+            ->where('roleid', 5)
+            ->where('contextid', $context->id)
+            ->where('userid', $moodleUserId)
+            ->delete();
+
+        $existeRol = DB::connection('mysql_grupoihb')->table('mdl_role_assignments')
+            ->where('roleid', 3)
+            ->where('contextid', $context->id)
+            ->where('userid', $moodleUserId)
+            ->exists();
+
+        if (!$existeRol) {
+            DB::connection('mysql_grupoihb')->table('mdl_role_assignments')->insert([
+                'roleid'       => 3,
+                'contextid'    => $context->id,
+                'userid'       => $moodleUserId,
+                'timemodified' => now()->timestamp,
+                'modifierid'   => 0,
+                'component'    => '',
+                'itemid'       => 0,
+                'sortorder'    => 0,
+            ]);
+
+            Log::info("MatriculaMasivaJob: responsable {$codResponsable} asignado como editingteacher en Moodle (course id: {$courseMoodle->id}).");
+        }
     }
 }
