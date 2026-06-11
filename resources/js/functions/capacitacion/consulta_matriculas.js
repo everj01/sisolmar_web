@@ -1370,11 +1370,15 @@ async function cargarPersonalModal(cursoId, programacionId) {
         layout: "fitColumns",
         columns: [
             {
-                title: "Sel",
+                title: "",
                 field: "seleccionar",
-                width: 50,
+                width: 55,
                 hozAlign: "center",
                 headerSort: false,
+                headerVertical: false,
+                titleFormatter: function () {
+                    return '<input type="checkbox" id="chkSelectAllPage" class="chk-select-all-page" title="Seleccionar/Deseleccionar todos en esta página">';
+                },
                 formatter: function (cell) {
                     const data = cell.getRow().getData();
                     const matriculado = data.matriculado || false;
@@ -1397,15 +1401,55 @@ async function cargarPersonalModal(cursoId, programacionId) {
         }
     });
 
+    function inyectarNavegadorPagina() {
+        const paginator = document.querySelector('#tblPersonalMatriculaModal .tabulator-paginator');
+        if (!paginator) return;
+
+        const existing = document.getElementById('gotoPageWrapper');
+        if (existing) existing.remove();
+
+        const wrapper = document.createElement('span');
+        wrapper.id = 'gotoPageWrapper';
+        wrapper.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:12px;color:#6b7280;';
+
+        const label = document.createElement('span');
+        label.textContent = 'Página:';
+        label.style.cssText = 'font-weight:600;white-space:nowrap;';
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '1';
+        input.value = tblPersonalMatriculaModal.getPage();
+        input.style.cssText = 'width:52px;text-align:center;padding:4px 2px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;font-weight:600;color:#374151;outline:none;background:#fff;';
+        input.addEventListener('focus', () => { input.select(); });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const page = parseInt(input.value, 10);
+                const max = tblPersonalMatriculaModal.getPageMax();
+                if (page >= 1 && page <= max) {
+                    tblPersonalMatriculaModal.setPage(page);
+                } else {
+                    input.value = tblPersonalMatriculaModal.getPage();
+                }
+            }
+        });
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        paginator.appendChild(wrapper);
+    }
+
     // Eventos de tabla
     tblPersonalMatriculaModal.on("tableBuilt", () => {
         configurarBuscadorModal();
         configurarCheckboxesModal();
         configurarFiltroSucursalModal();
         configurarFiltroTipoPersonalModal();
+        configurarSelectAllPage();
         const data = tblPersonalMatriculaModal.getData();
         poblarFiltroSucursalModal(data);
         actualizarContadoresModal(data);
+        inyectarNavegadorPagina();
     });
 
     tblPersonalMatriculaModal.on("dataLoaded", (data) => {
@@ -1424,6 +1468,11 @@ async function cargarPersonalModal(cursoId, programacionId) {
                 }
             }
         }
+    });
+
+    tblPersonalMatriculaModal.on("pageLoaded", () => {
+        actualizarEstadoSelectAllPage();
+        inyectarNavegadorPagina();
     });
 }
 
@@ -1504,6 +1553,7 @@ function configurarCheckboxesModal() {
                 personasSeleccionadas.delete(id);
             }
             actualizarContadorSeleccionados();
+            actualizarEstadoSelectAllPage();
         }
     });
     tableEl.dataset.listener = "true";
@@ -1551,6 +1601,46 @@ function actualizarContadoresModal(data) {
 
     if (bMat) bMat.textContent = matriculados.toString();
     if (bDisp) bDisp.textContent = disponibles.toString();
+}
+
+function configurarSelectAllPage() {
+    const el = document.getElementById('chkSelectAllPage');
+    if (!el) return;
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    newEl.addEventListener('change', function () {
+        if (!tblPersonalMatriculaModal) return;
+        const checked = this.checked;
+        const rows = tblPersonalMatriculaModal.getRows('visible');
+        rows.forEach(row => {
+            const data = row.getData();
+            if (data.matriculado) return;
+            if (checked) {
+                personasSeleccionadas.add(data.codigo);
+            } else {
+                personasSeleccionadas.delete(data.codigo);
+            }
+            const chk = row.getElement().querySelector('.chk-personal-modal');
+            if (chk) chk.checked = checked;
+        });
+        actualizarContadorSeleccionados();
+    });
+}
+
+function actualizarEstadoSelectAllPage() {
+    const headerChk = document.getElementById('chkSelectAllPage');
+    if (!headerChk || !tblPersonalMatriculaModal) return;
+    const rows = tblPersonalMatriculaModal.getRows('visible');
+    const nonMatriculadoRows = rows.filter(r => !r.getData().matriculado);
+    if (nonMatriculadoRows.length === 0) {
+        headerChk.checked = false;
+        headerChk.indeterminate = false;
+        return;
+    }
+    const allSelected = nonMatriculadoRows.every(r => personasSeleccionadas.has(r.getData().codigo));
+    const someSelected = nonMatriculadoRows.some(r => personasSeleccionadas.has(r.getData().codigo));
+    headerChk.checked = allSelected;
+    headerChk.indeterminate = someSelected && !allSelected;
 }
 // =========================================================================================
 // ACCIONES DE MATRÍCULA

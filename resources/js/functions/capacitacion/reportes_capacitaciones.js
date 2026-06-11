@@ -191,7 +191,8 @@ export default document.addEventListener("alpine:init", () => {
         open: false,
         view: "filters",
 
-        selectedCurso: "",
+        courseIds: [],
+        searchCurso: "",
         selectedPeriodo: "",
         selectedFechaInicio: "",
         selectedFechaFin: "",
@@ -220,6 +221,7 @@ export default document.addEventListener("alpine:init", () => {
         exportando: false,
 
         cacheReportes: {},
+        _cursosExportData: [],
 
         async init() {
             window.addEventListener("abrir-reporte", () => {
@@ -263,7 +265,9 @@ export default document.addEventListener("alpine:init", () => {
             if (typeof valor === "number" || /^\d+$/.test(valor)) {
                 fecha = new Date(Number(valor) * 1000);
             } else {
-                fecha = new Date(valor.includes("T") ? valor : valor.replace(" ", "T"));
+                fecha = new Date(
+                    valor.includes("T") ? valor : valor.replace(" ", "T"),
+                );
             }
 
             if (isNaN(fecha.getTime())) {
@@ -294,9 +298,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get(
-                    "/api/obtener-cursos",
-                );
+                const response = await axios.get("/api/obtener-cursos");
 
                 if (response.data.success) {
                     this.todosLosCursos = [...response.data.Cursos];
@@ -321,7 +323,9 @@ export default document.addEventListener("alpine:init", () => {
             if (typeof valor === "number" || /^\d+$/.test(valor)) {
                 fecha = new Date(Number(valor) * 1000);
             } else {
-                fecha = new Date(valor.includes("T") ? valor : valor.replace(" ", "T"));
+                fecha = new Date(
+                    valor.includes("T") ? valor : valor.replace(" ", "T"),
+                );
             }
             if (isNaN(fecha.getTime())) return null;
             const dia = String(fecha.getDate()).padStart(2, "0");
@@ -332,7 +336,9 @@ export default document.addEventListener("alpine:init", () => {
 
         filtrarCursosPorFecha() {
             this.cursos = this.todosLosCursos.filter((curso) => {
-                const fechaCreacion = this.formatearFechaISO(curso.Fecha_Creacion);
+                const fechaCreacion = this.formatearFechaISO(
+                    curso.Fecha_Creacion,
+                );
 
                 if (
                     this.selectedFechaInicio &&
@@ -351,7 +357,7 @@ export default document.addEventListener("alpine:init", () => {
                 return true;
             });
 
-            this.selectedCurso = "";
+            this.courseIds = [];
         },
 
         abrir() {
@@ -362,7 +368,7 @@ export default document.addEventListener("alpine:init", () => {
             this.open = false;
             this.view = "filters";
 
-            this.selectedCurso = "";
+            this.courseIds = [];
             this.selectedPeriodo = "";
             this.selectedFechaInicio = "";
             this.selectedFechaFin = "";
@@ -408,11 +414,28 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         get nombreCurso() {
-            if (!this.selectedCurso) return "TODOS LOS CURSOS";
-            return (
-                this.cursos.find((c) => c.Id == this.selectedCurso)?.Nombre ||
-                ""
-            );
+            const count = this.courseIds.length;
+            if (count === 0) return "TODOS LOS CURSOS";
+            if (count === 1)
+                return (
+                    this.cursos.find((c) => c.Id == this.courseIds[0])
+                        ?.Nombre || ""
+                );
+            return `${count} CURSOS SELECCIONADOS`;
+        },
+
+        get nombreCursosSeleccionados() {
+            if (this.courseIds.length === 0) return "SIN CURSO";
+            if (this.courseIds.length === 1) {
+                return (
+                    this.cursos.find((c) => c.Id == this.courseIds[0])
+                        ?.Nombre || "SIN NOMBRE"
+                );
+            }
+            return this.courseIds
+                .map((id) => this.cursos.find((c) => c.Id == id)?.Nombre)
+                .filter(Boolean)
+                .join(", ");
         },
 
         get personalPaginado() {
@@ -531,13 +554,36 @@ export default document.addEventListener("alpine:init", () => {
             return startRow + 1 + dataOrdenada.length;
         },
 
+        _agruparPorSucursal(personales) {
+            const grupos = {};
+            (personales || []).forEach((p) => {
+                const codigo = p.SucursalCodigo || "SIN_SUCURSAL";
+                if (!grupos[codigo]) {
+                    const suc = this.sucursales.find(
+                        (s) => s.codigo == p.SucursalCodigo,
+                    );
+                    grupos[codigo] = {
+                        SucursalCodigo: codigo,
+                        SucursalNombre: suc
+                            ? suc.sucursal.toUpperCase()
+                            : "SIN SUCURSAL",
+                        Personales: [],
+                    };
+                }
+                grupos[codigo].Personales.push(p);
+            });
+            return Object.values(grupos);
+        },
+
         async exportarExcel() {
             this.exportando = true;
             try {
                 const sucursal = this.sucursales.find(
                     (s) => s.codigo == this.selectedSucursal,
                 );
-                const sucursalNombre = sucursal ? sucursal.sucursal : "SUCURSAL";
+                const sucursalNombre = sucursal
+                    ? sucursal.sucursal
+                    : "SUCURSAL";
 
                 const workbook = new ExcelJS.Workbook();
                 const logoImageId = await _cargarLogoExcel(workbook);
@@ -604,10 +650,7 @@ export default document.addEventListener("alpine:init", () => {
                         { width: 15 },
                     ];
                 } else if (this.hayAgrupacionPorSucursal) {
-                    const curso = this.cursos.find(
-                        (c) => c.Id == this.selectedCurso,
-                    );
-                    const nombreCurso = curso ? curso.Nombre : "reporte";
+                    const nombreCurso = this.nombreCursosSeleccionados;
 
                     this._escribirEncabezadoExcel(
                         sheet,
@@ -669,10 +712,7 @@ export default document.addEventListener("alpine:init", () => {
                         { width: 15 },
                     ];
                 } else {
-                    const curso = this.cursos.find(
-                        (c) => c.Id == this.selectedCurso,
-                    );
-                    const nombreCurso = curso ? curso.Nombre : "reporte";
+                    const nombreCurso = this.nombreCursosSeleccionados;
 
                     this._escribirEncabezadoExcel(
                         sheet,
@@ -704,10 +744,14 @@ export default document.addEventListener("alpine:init", () => {
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = _blobExcel(buffer);
                 const d = new Date();
-                const fechaRep = `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,"0")}_${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}_${String(d.getMinutes()).padStart(2,"0")}`;
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
                 const nombreArchivo = `REPORTE_POR_CAPACITACION_${fechaRep}.xlsx`;
 
-                await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+                await this.registrarReporteEnHistorial(
+                    nombreArchivo,
+                    null,
+                    blob,
+                );
 
                 saveAs(blob, nombreArchivo);
 
@@ -735,11 +779,7 @@ export default document.addEventListener("alpine:init", () => {
                     format: "a4",
                 });
 
-                const curso = this.cursos.find(
-                    (c) => c.Id == this.selectedCurso,
-                );
-
-                const nombreCurso = curso ? curso.Nombre : "REPORTE GENERAL";
+                const nombreCurso = this.nombreCursosSeleccionados;
 
                 const logoSol = await _cargarImagen("/images/logo_sol.png");
 
@@ -823,11 +863,11 @@ export default document.addEventListener("alpine:init", () => {
                         startY - 4,
                     );
 
-                    const personalOrdenado = [...personalCurso].sort((a, b) =>
-                        (a.NombreCompleto || "").localeCompare(
-                            b.NombreCompleto || "",
-                        ),
-                    );
+                    const personalOrdenado = [...personalCurso].sort((a, b) => {
+                        const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
+                        if (cmpNombre !== 0) return cmpNombre;
+                        return (a.Estado || "").localeCompare(b.Estado || "");
+                    });
 
                     const filas = personalOrdenado.map((p) => [
                         p.CodigoPers || "",
@@ -920,113 +960,375 @@ export default document.addEventListener("alpine:init", () => {
                         );
                     });
                 } else if (this.hayAgrupacionPorSucursal) {
-                    const { startX, startY } = dibujarEncabezado();
-                    let currentY = startY;
+                    const pageHeight = doc.internal.pageSize.height;
+                    const marginBottom = 20;
+                    const espacioMinimo = 25;
+                    const esMultiCurso =
+                        this.courseIds.length > 1 &&
+                        this._cursosExportData.length > 0;
 
-                    const pageWidth = doc.internal.pageSize.width;
-                    const centerX = pageWidth / 2;
-                    const titulo = nombreCurso.toUpperCase();
+                    if (!esMultiCurso) {
+                        const { startX, startY } = dibujarEncabezado();
+                        let currentY = startY;
+                        const pageWidth = doc.internal.pageSize.width;
+                        const centerX = pageWidth / 2;
+                        const titulo = nombreCurso.toUpperCase();
 
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(20);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text(titulo, centerX, currentY, { align: "center" });
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(20);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(titulo, centerX, currentY, {
+                            align: "center",
+                        });
+                        currentY += 10;
 
-                    currentY += 10;
+                        this.personalPorSucursal.forEach((grupo, index) => {
+                            if (index > 0) currentY += 10;
 
-                    this.personalPorSucursal.forEach((grupo, index) => {
+                            if (
+                                currentY + espacioMinimo >
+                                pageHeight - marginBottom
+                            ) {
+                                doc.addPage();
+                                currentY = 20;
+                            }
+
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(11);
+                            doc.setTextColor(0, 0, 0);
+                            doc.text(grupo.SucursalNombre, startX, currentY);
+                            currentY += 5;
+
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(9);
+                            doc.text(
+                                `${grupo.Personales.length} personal(es)`,
+                                startX,
+                                currentY,
+                            );
+                            currentY += 4;
+
+                            const personalOrdenado = [
+                                ...grupo.Personales,
+                            ].sort((a, b) => {
+                                const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
+                                if (cmpNombre !== 0) return cmpNombre;
+                                return (a.Estado || "").localeCompare(b.Estado || "");
+                            });
+
+                            const filas = personalOrdenado.map((p) => [
+                                p.CodigoPers || "",
+                                p.NombreCompleto || "",
+                                p.DNI || "",
+                                p.TipoTrabajador || "",
+                                p.Cargo || "Sin cargo",
+                                p.Nota_Final || "Sin nota",
+                                p.Estado || "",
+                            ]);
+
+                            doc.autoTable({
+                                startY: currentY,
+                                head: [
+                                    [
+                                        "Código\nPers.",
+                                        "Nombre Completo",
+                                        "DNI",
+                                        "Tipo Trabajador",
+                                        "Cargo",
+                                        "Nota final",
+                                        "Estado",
+                                    ],
+                                ],
+                                body: filas,
+                                theme: "grid",
+                                styles: {
+                                    fontSize: 8,
+                                    textColor: [0, 0, 0],
+                                    lineColor: [0, 0, 0],
+                                    lineWidth: 0.1,
+                                    valign: "middle",
+                                    halign: "center",
+                                },
+                                headStyles: {
+                                    fillColor: [253, 245, 230],
+                                    textColor: [0, 0, 0],
+                                    fontStyle: "bold",
+                                    halign: "center",
+                                },
+                                columnStyles: {
+                                    0: { cellWidth: 17 },
+                                    1: {
+                                        cellWidth: "auto",
+                                        halign: "left",
+                                    },
+                                    2: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    3: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    4: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    5: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    6: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                },
+                                margin: { left: 14, right: 14 },
+                            });
+
+                            currentY = doc.lastAutoTable.finalY;
+                        });
+                    } else {
+                        const { startX, startY } = dibujarEncabezado();
+                        let currentY = startY;
+
+                        this._cursosExportData.forEach((curso, ci) => {
+                            const grupos = this._agruparPorSucursal(
+                                curso.Personales || [],
+                            );
+
+                            grupos.forEach((grupo, gi) => {
+                                if (ci > 0 || gi > 0) currentY += 10;
+
+                                if (
+                                    currentY + espacioMinimo >
+                                    pageHeight - marginBottom
+                                ) {
+                                    doc.addPage();
+                                    currentY = 20;
+                                }
+
+                                const tituloSeccion = `${(curso.Curso || "CURSO").toUpperCase()} | ${grupo.SucursalNombre} - ${grupo.Personales.length} personal(es)`;
+
+                                doc.setFont("helvetica", "bold");
+                                doc.setFontSize(11);
+                                doc.setTextColor(0, 0, 0);
+                                doc.text(
+                                    tituloSeccion,
+                                    startX,
+                                    currentY,
+                                );
+                                currentY += 5;
+
+                                const personalOrdenado = [
+                                    ...grupo.Personales,
+                                ].sort((a, b) => {
+                                    const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
+                                    if (cmpNombre !== 0) return cmpNombre;
+                                    return (a.Estado || "").localeCompare(b.Estado || "");
+                                });
+
+                                const filas = personalOrdenado.map(
+                                    (p) => [
+                                        p.CodigoPers || "",
+                                        p.NombreCompleto || "",
+                                        p.DNI || "",
+                                        p.TipoTrabajador || "",
+                                        p.Cargo || "Sin cargo",
+                                        p.Nota_Final || "Sin nota",
+                                        p.Estado || "",
+                                    ],
+                                );
+
+                                doc.autoTable({
+                                    startY: currentY,
+                                    head: [
+                                        [
+                                            "Código\nPers.",
+                                            "Nombre Completo",
+                                            "DNI",
+                                            "Tipo Trabajador",
+                                            "Cargo",
+                                            "Nota final",
+                                            "Estado",
+                                        ],
+                                    ],
+                                    body: filas,
+                                    theme: "grid",
+                                    styles: {
+                                        fontSize: 8,
+                                        textColor: [0, 0, 0],
+                                        lineColor: [0, 0, 0],
+                                        lineWidth: 0.1,
+                                        valign: "middle",
+                                        halign: "center",
+                                    },
+                                    headStyles: {
+                                        fillColor: [253, 245, 230],
+                                        textColor: [0, 0, 0],
+                                        fontStyle: "bold",
+                                        halign: "center",
+                                    },
+                                    columnStyles: {
+                                        0: { cellWidth: 17 },
+                                        1: {
+                                            cellWidth: "auto",
+                                            halign: "left",
+                                        },
+                                        2: {
+                                            cellWidth: "auto",
+                                            halign: "center",
+                                        },
+                                        3: {
+                                            cellWidth: "auto",
+                                            halign: "center",
+                                        },
+                                        4: {
+                                            cellWidth: "auto",
+                                            halign: "center",
+                                        },
+                                        5: {
+                                            cellWidth: "auto",
+                                            halign: "center",
+                                        },
+                                        6: {
+                                            cellWidth: "auto",
+                                            halign: "center",
+                                        },
+                                    },
+                                    margin: { left: 14, right: 14 },
+                                });
+
+                                currentY = doc.lastAutoTable.finalY;
+                            });
+                        });
+                    }
+                } else {
+                    const esMultiCurso =
+                        this.courseIds.length > 1 &&
+                        this._cursosExportData.length > 0;
+
+                    if (!esMultiCurso) {
+                        const { startX, startY } = dibujarEncabezado();
+                        generarTablaCurso(
+                            nombreCurso,
+                            this.personal,
+                            startX,
+                            startY,
+                        );
+                    } else {
+                        const { startX, startY } = dibujarEncabezado();
+                        let currentY = startY;
                         const pageHeight = doc.internal.pageSize.height;
                         const marginBottom = 20;
                         const espacioMinimo = 25;
 
-                        if (index > 0) {
-                            currentY += 10;
-                        }
+                        this._cursosExportData.forEach((curso, ci) => {
+                            if (ci > 0) currentY += 10;
 
-                        if (currentY + espacioMinimo > pageHeight - marginBottom) {
-                            doc.addPage();
-                            currentY = 20;
-                        }
+                            if (
+                                currentY + espacioMinimo >
+                                pageHeight - marginBottom
+                            ) {
+                                doc.addPage();
+                                currentY = 20;
+                            }
 
-                        doc.setFont("helvetica", "bold");
-                        doc.setFontSize(11);
-                        doc.setTextColor(0, 0, 0);
-                        doc.text(grupo.SucursalNombre, startX, currentY);
-                        currentY += 5;
+                            const tituloSeccion = `${(curso.Curso || "CURSO").toUpperCase()} | ${sucursalNombre} - ${(curso.Personales || []).length} personal(es)`;
 
-                        doc.setFont("helvetica", "normal");
-                        doc.setFontSize(9);
-                        doc.text(`${grupo.Personales.length} personal(es)`, startX, currentY);
-                        currentY += 4;
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(11);
+                            doc.setTextColor(0, 0, 0);
+                            doc.text(
+                                tituloSeccion,
+                                startX,
+                                currentY,
+                            );
+                            currentY += 5;
 
-                        const personalOrdenado = [...grupo.Personales].sort((a, b) =>
-                            (a.NombreCompleto || "").localeCompare(b.NombreCompleto || ""),
-                        );
+                            const personalOrdenado = [
+                                ...(curso.Personales || []),
+                            ].sort((a, b) => {
+                                const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
+                                if (cmpNombre !== 0) return cmpNombre;
+                                return (a.Estado || "").localeCompare(b.Estado || "");
+                            });
 
-                        const filas = personalOrdenado.map((p) => [
-                            p.CodigoPers || "",
-                            p.NombreCompleto || "",
-                            p.DNI || "",
-                            p.TipoTrabajador || "",
-                            p.Cargo || "Sin cargo",
-                            p.Nota_Final || "Sin nota",
-                            p.Estado || "",
-                        ]);
+                            const filas = personalOrdenado.map((p) => [
+                                p.CodigoPers || "",
+                                p.NombreCompleto || "",
+                                p.DNI || "",
+                                p.TipoTrabajador || "",
+                                p.Cargo || "Sin cargo",
+                                p.Nota_Final || "Sin nota",
+                                p.Estado || "",
+                            ]);
 
-                        doc.autoTable({
-                            startY: currentY,
-                            head: [[
-                                "Código\nPers.",
-                                "Nombre Completo",
-                                "DNI",
-                                "Tipo Trabajador",
-                                "Cargo",
-                                "Nota final",
-                                "Estado",
-                            ]],
-                            body: filas,
-                            theme: "grid",
-                            styles: {
-                                fontSize: 8,
-                                textColor: [0, 0, 0],
-                                lineColor: [0, 0, 0],
-                                lineWidth: 0.1,
-                                valign: "middle",
-                                halign: "center",
-                            },
-                            headStyles: {
-                                fillColor: [253, 245, 230],
-                                textColor: [0, 0, 0],
-                                fontStyle: "bold",
-                                halign: "center",
-                            },
-                            columnStyles: {
-                                0: { cellWidth: 17 },
-                                1: { cellWidth: "auto", halign: "left" },
-                                2: { cellWidth: "auto", halign: "center" },
-                                3: { cellWidth: "auto", halign: "center" },
-                                4: { cellWidth: "auto", halign: "center" },
-                                5: { cellWidth: "auto", halign: "center" },
-                                6: { cellWidth: "auto", halign: "center" },
-                            },
-                            margin: { left: 14, right: 14 },
+                            doc.autoTable({
+                                startY: currentY,
+                                head: [
+                                    [
+                                        "Código\nPers.",
+                                        "Nombre Completo",
+                                        "DNI",
+                                        "Tipo Trabajador",
+                                        "Cargo",
+                                        "Nota final",
+                                        "Estado",
+                                    ],
+                                ],
+                                body: filas,
+                                theme: "grid",
+                                styles: {
+                                    fontSize: 8,
+                                    textColor: [0, 0, 0],
+                                    lineColor: [0, 0, 0],
+                                    lineWidth: 0.1,
+                                    valign: "middle",
+                                    halign: "center",
+                                },
+                                headStyles: {
+                                    fillColor: [253, 245, 230],
+                                    textColor: [0, 0, 0],
+                                    fontStyle: "bold",
+                                    halign: "center",
+                                },
+                                columnStyles: {
+                                    0: { cellWidth: 17 },
+                                    1: {
+                                        cellWidth: "auto",
+                                        halign: "left",
+                                    },
+                                    2: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    3: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    4: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    5: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                    6: {
+                                        cellWidth: "auto",
+                                        halign: "center",
+                                    },
+                                },
+                                margin: { left: 14, right: 14 },
+                            });
+
+                            currentY = doc.lastAutoTable.finalY;
                         });
-
-                        currentY = doc.lastAutoTable.finalY;
-                    });
-                } else {
-                    const { startX, startY } = dibujarEncabezado();
-
-                    generarTablaCurso(
-                        nombreCurso,
-                        this.personal,
-                        startX,
-                        startY,
-                    );
+                    }
                 }
 
                 const d = new Date();
-                const fechaRep = `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,"0")}_${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}_${String(d.getMinutes()).padStart(2,"0")}`;
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
                 const nombreArchivo = `REPORTE_POR_CAPACITACION_${fechaRep}.pdf`;
 
                 doc.setProperties({
@@ -1043,11 +1345,7 @@ export default document.addEventListener("alpine:init", () => {
 
                 saveAs(pdfBlob, nombreArchivo);
 
-                Swal.fire(
-                    "Éxito",
-                    "PDF generado correctamente.",
-                    "success",
-                );
+                Swal.fire("Éxito", "PDF generado correctamente.", "success");
             } catch (error) {
                 console.error(error);
 
@@ -1097,7 +1395,7 @@ export default document.addEventListener("alpine:init", () => {
 
         get esReportePorCursos() {
             return (
-                !this.selectedCurso &&
+                this.courseIds.length === 0 &&
                 Array.isArray(this.personal) &&
                 this.personal.length > 0
             );
@@ -1149,18 +1447,17 @@ export default document.addEventListener("alpine:init", () => {
 
         async obtenerPersonal() {
             const cacheKey = [
-                this.selectedCurso || "todos",
+                this.courseIds.length > 0 ? this.courseIds.join(",") : "todos",
                 this.selectedSucursal || "todas",
-                this.selectedEstado || 0,
+                this.selectedEstado ?? 0,
             ].join("_");
 
             if (this.cacheReportes[cacheKey]) {
-                this.personal = this.cacheReportes[cacheKey].personal;
-                this.totalPersonal = this.cacheReportes[cacheKey].total;
-
+                const cached = this.cacheReportes[cacheKey];
+                this.personal = cached.personal;
+                this.totalPersonal = cached.total;
                 this.currentPage = 1;
                 this.view = "personal";
-
                 return;
             }
 
@@ -1168,34 +1465,34 @@ export default document.addEventListener("alpine:init", () => {
             this.personal = [];
             this.loadingPersonal = true;
 
-            const params = {};
+            const params = { estadoId: this.selectedEstado ?? 0 };
 
-            if (this.selectedCurso) {
-                params.courseId = this.selectedCurso;
-            }
-
-            if (this.selectedSucursal) {
+            if (this.courseIds.length > 0) params.courseIds = this.courseIds;
+            if (this.selectedSucursal)
                 params.sucursalId = this.selectedSucursal;
-            }
-            
-            params.estadoId = this.selectedEstado ?? 0;
 
             try {
-                const response = await axios.get(
+                const response = await axios.post(
                     "/api/obtener-personal-reporte",
-                    {
-                        params,
-                    },
+                    params,
                 );
 
-                if (response.data.success) {
+                    if (response.data.success) {
                     const cursos = response.data.Cursos || [];
+                    this._cursosExportData = cursos;
 
-                    this.personal = cursos.flatMap(
-                        (curso) => curso.Personales || [],
-                    );
-
-                    this.totalPersonal = this.personal.length;
+                    if (this.courseIds.length > 0) {
+                        this.personal = cursos;
+                        this.totalPersonal = cursos.reduce(
+                            (sum, c) => sum + (c.Personales?.length ?? 0),
+                            0,
+                        );
+                    } else {
+                        this.personal = cursos.flatMap(
+                            (c) => c.Personales || [],
+                        );
+                        this.totalPersonal = this.personal.length;
+                    }
 
                     this.cacheReportes[cacheKey] = {
                         personal: this.personal,
@@ -1211,7 +1508,6 @@ export default document.addEventListener("alpine:init", () => {
                 console.error(error);
                 this.personal = [];
                 this.totalPersonal = 0;
-
                 Swal.fire(
                     "Error",
                     "No se pudo obtener el personal. Intente nuevamente.",
@@ -1224,7 +1520,7 @@ export default document.addEventListener("alpine:init", () => {
 
         async _fetchPersonal() {
             const cacheKey = [
-                this.selectedCurso || "todos",
+                this.courseIds.length > 0 ? this.courseIds.join(",") : "todos",
                 this.selectedSucursal || "todas",
                 this.selectedEstado || 0,
             ].join("_");
@@ -1238,17 +1534,27 @@ export default document.addEventListener("alpine:init", () => {
             this.personal = [];
 
             const params = {};
-            if (this.selectedCurso) params.courseId = this.selectedCurso;
-            if (this.selectedSucursal) params.sucursalId = this.selectedSucursal;
+            if (this.courseIds.length > 0) params.courseIds = this.courseIds;
+            if (this.selectedSucursal)
+                params.sucursalId = this.selectedSucursal;
             params.estadoId = this.selectedEstado ?? 0;
 
             try {
-                const response = await axios.get("/api/obtener-personal-reporte", { params });
+                const response = await axios.post(
+                    "/api/obtener-personal-reporte",
+                    params,
+                );
                 if (response.data.success) {
                     const cursos = response.data.Cursos || [];
-                    this.personal = cursos.flatMap((curso) => curso.Personales || []);
+                    this._cursosExportData = cursos;
+                    this.personal = cursos.flatMap(
+                        (curso) => curso.Personales || [],
+                    );
                     this.totalPersonal = this.personal.length;
-                    this.cacheReportes[cacheKey] = { personal: this.personal, total: this.totalPersonal };
+                    this.cacheReportes[cacheKey] = {
+                        personal: this.personal,
+                        total: this.totalPersonal,
+                    };
                     return true;
                 } else {
                     this.personal = [];
@@ -1259,36 +1565,58 @@ export default document.addEventListener("alpine:init", () => {
                 console.error(error);
                 this.personal = [];
                 this.totalPersonal = 0;
-                Swal.fire("Error", "No se pudo obtener el personal. Intente nuevamente.", "error");
+                Swal.fire(
+                    "Error",
+                    "No se pudo obtener el personal. Intente nuevamente.",
+                    "error",
+                );
                 return false;
             }
         },
 
         async exportarExcelDesdeFiltros() {
-            if (!this.selectedCurso) {
-                Swal.fire("Atención", "Seleccione un curso para exportar.", "warning");
+            if (this.courseIds.length === 0) {
+                Swal.fire(
+                    "Atención",
+                    "Seleccione al menos un curso para exportar.",
+                    "warning",
+                );
                 return;
             }
             this.exportando = true;
             const ok = await this._fetchPersonal();
             if (!ok || this.personal.length === 0) {
                 this.exportando = false;
-                if (ok) Swal.fire("Atención", "No se encontró personal con los filtros seleccionados.", "warning");
+                if (ok)
+                    Swal.fire(
+                        "Atención",
+                        "No se encontró personal con los filtros seleccionados.",
+                        "warning",
+                    );
                 return;
             }
             await this.exportarExcel();
         },
 
         async exportarPDFDesdeFiltros() {
-            if (!this.selectedCurso) {
-                Swal.fire("Atención", "Seleccione un curso para exportar.", "warning");
+            if (this.courseIds.length === 0) {
+                Swal.fire(
+                    "Atención",
+                    "Seleccione al menos un curso para exportar.",
+                    "warning",
+                );
                 return;
             }
             this.exportando = true;
             const ok = await this._fetchPersonal();
             if (!ok || this.personal.length === 0) {
                 this.exportando = false;
-                if (ok) Swal.fire("Atención", "No se encontró personal con los filtros seleccionados.", "warning");
+                if (ok)
+                    Swal.fire(
+                        "Atención",
+                        "No se encontró personal con los filtros seleccionados.",
+                        "warning",
+                    );
                 return;
             }
             await this.exportarPDF();

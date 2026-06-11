@@ -4012,9 +4012,14 @@ class CapacitacionController extends Controller
     public function obtenerPersonalParaReporte(Request $request): JsonResponse
     {
         try {
-            $courseId   = $request->courseId   ?? null;
+            $courseIds  = $request->courseIds  ?? null;
             $sucursalId = $request->sucursalId ?? null;
             $estadoId   = $request->estadoId   ?? 0;
+
+            $courseIdsCsv = null;
+            if (!empty($courseIds)) {
+                $courseIdsCsv = implode(',', array_map('intval', (array) $courseIds));
+            }
 
             $personal = Consulta::obtenerPersonalPorSucursal($sucursalId);
 
@@ -4022,26 +4027,28 @@ class CapacitacionController extends Controller
                 ->unique('NRO_DOC')
                 ->keyBy(fn($p) => trim($p->NRO_DOC));
 
-            if ($courseId) {
+            if ($courseIdsCsv) {
                 $matriculados = collect(
                     DB::connection('mysql_grupoihb')->select(
                         "CALL grupoihb_see.SP_OBTENER_MATRICULADOS_CON_ESTADO(?, ?)",
-                        [(int) $courseId, (int) $estadoId]
+                        [$courseIdsCsv, (int) $estadoId]
                     )
                 );
 
-                $courseName = $matriculados->first()->course_name ?? 'SIN NOMBRE';
-
-                $personales = $this->mapearPersonales($matriculados, $personalPorDni);
+                $cursos = $matriculados
+                    ->groupBy('course_id')
+                    ->map(function ($grupo) use ($personalPorDni) {
+                        return [
+                            'Curso'      => $grupo->first()->course_name,
+                            'Personales' => $this->mapearPersonales($grupo, $personalPorDni),
+                        ];
+                    })
+                    ->filter(fn($c) => count($c['Personales']) > 0)
+                    ->values();
 
                 return response()->json([
-                    'success'    => true,
-                    'Cursos'     => [
-                        [
-                            'Curso'      => $courseName,
-                            'Personales' => $personales,
-                        ],
-                    ],
+                    'success' => true,
+                    'Cursos'  => $cursos,
                 ]);
             }
 

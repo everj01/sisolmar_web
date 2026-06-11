@@ -42,6 +42,12 @@
         user-select: none;
     }
 
+    #modal-reporte-por-capacitacion input[x-model="searchCurso"] {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
     .table-row {
         transition: all 0.15s ease;
     }
@@ -435,21 +441,6 @@
 
                 <div>
                     <label class="text-xs font-medium text-default-700 mb-1.5 block">
-                        Curso de capacitación <span class="text-danger">*</span>
-                    </label>
-                    <select x-model="selectedCurso"
-                        class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                        <option value="" disabled
-                            x-text="loadingCursos ? 'Cargando cursos...' : (cursos.length === 0 ? 'Sin cursos disponibles' : 'Seleccione un curso')">
-                        </option>
-                        <template x-for="option in cursos" :key="option.Id">
-                            <option :value="option.Id" x-text="option.Nombre"></option>
-                        </template>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
                         Estado de alumnos <span class="text-danger">*</span>
                     </label>
                     <select x-model="selectedEstado"
@@ -460,6 +451,119 @@
                         <option value="3">Sin acceder</option>
                         <option value="4">En curso</option>
                     </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-medium text-default-700 mb-1.5 block">
+                        Cursos de capacitación <span class="text-danger">*</span>
+                    </label>
+
+                    <div class="border border-default-200 rounded-lg overflow-hidden">
+
+                        {{-- Barra de búsqueda + acción global --}}
+                        <div class="flex items-center gap-2 border-b border-default-200 bg-white px-3">
+                            <i class="ti ti-search text-default-400 text-sm shrink-0"></i>
+                            <input
+                                type="text"
+                                x-model="searchCurso"
+                                placeholder="Buscar curso..."
+                                class="flex-1 h-9 text-sm bg-transparent text-default-900 placeholder-default-400 border-0 ring-0 focus:ring-0 focus:outline-none shadow-none" />
+                            <button
+                                type="button"
+                                @click="toggleSeleccionarTodos()"
+                                class="shrink-0 text-[11px] font-semibold px-2.5 h-6 rounded-md transition-colors whitespace-nowrap"
+                                :class="todosCursosSeleccionados
+                ? 'text-danger bg-danger/10 hover:bg-danger/20'
+                : 'text-primary bg-primary/10 hover:bg-primary/20'"
+                                x-text="todosCursosSeleccionados ? 'Quitar todos' : 'Todos'">
+                            </button>
+                        </div>
+
+                        {{-- Lista de cursos --}}
+                        <div class="max-h-40 overflow-y-auto custom-scrollbar divide-y divide-default-100">
+                            <template x-if="loadingCursos">
+                                <div class="flex items-center justify-center py-6 text-default-400 gap-2">
+                                    <i class="ti ti-loader animate-spin text-lg"></i>
+                                    <span class="text-sm">Cargando cursos...</span>
+                                </div>
+                            </template>
+
+                            <template x-if="!loadingCursos">
+                                <div>
+                                    <template
+                                        x-for="option in cursos.filter(c => !searchCurso || c.Nombre.toLowerCase().includes(searchCurso.toLowerCase()))"
+                                        :key="option.Id">
+                                        <label
+                                            class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors select-none"
+                                            :class="courseIds.includes(option.Id) ? 'bg-primary/5' : 'hover:bg-default-50'">
+
+                                            <input
+                                                type="checkbox"
+                                                :value="option.Id"
+                                                x-model="courseIds"
+                                                class="sr-only"
+                                                @change="courseIds = courseIds.map(id => typeof id === 'string' ? parseInt(id) : id)" />
+
+                                            {{-- Checkbox custom --}}
+                                            <div
+                                                class="w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-all"
+                                                :class="courseIds.includes(option.Id)
+                                ? 'bg-primary border-primary'
+                                : 'bg-white border-default-300'">
+                                                <i class="ti ti-check text-white text-[10px]" x-show="courseIds.includes(option.Id)"></i>
+                                            </div>
+
+                                            <span
+                                                class="text-sm transition-colors"
+                                                :class="courseIds.includes(option.Id) ? 'text-primary font-medium' : 'text-default-700'"
+                                                x-text="option.Nombre">
+                                            </span>
+                                        </label>
+                                    </template>
+
+                                    <div
+                                        x-show="cursos.filter(c => !searchCurso || c.Nombre.toLowerCase().includes(searchCurso.toLowerCase())).length === 0"
+                                        class="flex flex-col items-center justify-center py-6 text-default-400 gap-1.5">
+                                        <i class="ti ti-search-off text-lg"></i>
+                                        <span class="text-xs">Sin resultados para "<span class="font-medium" x-text="searchCurso"></span>"</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{-- Chips de seleccionados --}}
+                    <div class="mt-2 min-h-[24px]">
+                        <template x-if="courseIds.length === 0">
+                            <p class="text-xs text-default-400 italic">Ningún curso seleccionado</p>
+                        </template>
+
+                        <template x-if="courseIds.length > 0">
+                            <div class="flex flex-wrap gap-1.5">
+                                <template
+                                    x-for="id in courseIds"
+                                    :key="id">
+                                    <span class="inline-flex items-center gap-1 pl-2 pr-1 h-6 rounded-full bg-primary/10 border border-primary/25 text-primary text-[11px] font-medium max-w-[200px]">
+                                        <span class="truncate" x-text="cursos.find(c => c.Id == id)?.Nombre ?? id"></span>
+                                        <button
+                                            type="button"
+                                            @click="courseIds = courseIds.filter(c => c !== id)"
+                                            class="shrink-0 w-4 h-4 rounded-full hover:bg-primary/20 flex items-center justify-center transition-colors">
+                                            <i class="ti ti-x text-[9px]"></i>
+                                        </button>
+                                    </span>
+                                </template>
+
+                                <button
+                                    type="button"
+                                    @click="courseIds = []"
+                                    class="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-danger/10 border border-danger/20 text-danger text-[11px] font-medium hover:bg-danger/20 transition-colors">
+                                    <i class="ti ti-trash text-[10px]"></i>
+                                    Limpiar todo
+                                </button>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
 

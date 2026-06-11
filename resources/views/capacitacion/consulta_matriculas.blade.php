@@ -255,6 +255,10 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #d1d5db;
     }
+
+    .chk-select-all-page {
+        cursor: pointer;
+    }
 </style>
 @endsection
 @section('content')
