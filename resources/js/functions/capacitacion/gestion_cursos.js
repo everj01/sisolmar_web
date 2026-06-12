@@ -491,6 +491,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
                 // Sincronizar campos principales con Alpine
                 alpineData.codigo = curso.codigo;
+                alpineData.tieneVigente = curso.tiene_vigente ?? false;
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
 
@@ -560,6 +561,20 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 // Corregir nombres de campos de preguntas según el modelo
                 alpineData.cantidadPreguntas = curso.examen?.cantidad_preguntas ?? curso.examen?.preguntas_balotario ?? 0;
                 alpineData.preguntasBalotario = curso.examen?.preguntas_balotario ?? 0;
+
+                // Guardar valores originales para detectar cambios
+                alpineData._original = {
+                    nombre: alpineData.nombre,
+                    tipoCurso: alpineData.tipoCurso,
+                    areaConocimiento: alpineData.areaConocimiento,
+                    frecuencia: alpineData.frecuencia,
+                    codResponsable: alpineData.codResponsable,
+                    areaResponsable: alpineData.areaResponsable,
+                    codMoodleArea: alpineData.codMoodleArea,
+                    descripcion: alpineData.descripcion,
+                    dirigido: alpineData.dirigido,
+                    clienteSeleccionado: alpineData.clienteSeleccionado,
+                };
             } else {
                 console.warn("No se encontró el elemento Alpine formCursoGestion o Alpine no está disponible");
             }
@@ -712,62 +727,33 @@ window.editarFormGestionCurso = (e) => {
         }
     }
 
-    const data = {
-        codigo: alpineData.codigo,
-        nombre: alpineData.nombre,
-        tipo_curso: alpineData.tipoCurso,
-        area_conocimiento: alpineData.areaConocimiento,
-        tiempo: alpineData.aplicaEvaluacion ? (parseInt(alpineData.limiteTiempo) || 0) : 0,
-        nota: alpineData.aplicaEvaluacion ? (parseFloat(alpineData.nota) || 0) : 0,
-        intentos: alpineData.aplicaEvaluacion ? (parseInt(alpineData.intentos) || 0) : 0,
-        cantidad_preguntas: alpineData.aplicaEvaluacion ? (parseInt(alpineData.cantidadPreguntas) || 0) : 0,
-        preguntas_balotario: alpineData.aplicaEvaluacion ? (parseInt(alpineData.preguntasBalotario) || 0) : 0,
-    }
+    const original = alpineData._original || {};
+
+    const isChanged = (field) => {
+        if (!(field in original)) return true;
+        return String(alpineData[field]) !== String(original[field]);
+    };
 
     const formData = new FormData();
-    formData.append('codigo', data.codigo);
-    formData.append('nombre', data.nombre);
-    formData.append('tipo_curso', data.tipo_curso);
-    formData.append('area_conocimiento', data.area_conocimiento);
-    formData.append('tiempo', data.tiempo);
-    formData.append('nota', data.nota);
-    formData.append('intentos', data.intentos);
-    formData.append('cantidad_preguntas', data.cantidad_preguntas);
-    formData.append('preguntas_balotario', data.preguntas_balotario);
-    formData.append('frecuencia', alpineData.frecuencia);
-    formData.append('es_periodico', alpineData.frecuencia ? 1 : 0);
-    // NUEVO: Enviar estados de los checks
-    formData.append('aplica_evaluacion', alpineData.aplicaEvaluacion ? 1 : 0);
-    formData.append('obligatorio_alta', alpineData.obligatorioAlta ? 1 : 0);
-    formData.append('es_demanda', alpineData.esDemanda ? 1 : 0);
-    formData.append('target_group', alpineData.targetGroup || 'TODOS');
-    formData.append('cod_responsable', alpineData.codResponsable);
-    formData.append('area_responsable', alpineData.areaResponsable);
-    formData.append('cod_moodle_area', alpineData.codMoodleArea);
-    formData.append('descripcion', alpineData.descripcion);
-    formData.append('dirigido_a', alpineData.dirigido);
 
-    //formData.append('archivo', archivoSeleccionado);
+    if (isChanged('nombre')) formData.append('nombre', alpineData.nombre);
+    if (isChanged('tipoCurso')) formData.append('tipo_curso', alpineData.tipoCurso);
+    if (isChanged('areaConocimiento')) formData.append('area_conocimiento', alpineData.areaConocimiento);
+    if (isChanged('frecuencia')) formData.append('frecuencia', alpineData.frecuencia);
+    if (isChanged('codResponsable')) formData.append('cod_responsable', alpineData.codResponsable);
+    if (isChanged('areaResponsable')) formData.append('area_responsable', alpineData.areaResponsable);
+    if (isChanged('codMoodleArea')) formData.append('cod_moodle_area', alpineData.codMoodleArea);
+    if (isChanged('descripcion')) formData.append('descripcion', alpineData.descripcion);
+    if (isChanged('dirigido')) formData.append('dirigido_a', alpineData.dirigido);
 
-    // Append Sucursales (PAC / PCU / PCI) - Read from Alpine
-    if (alpineData.esPAC && alpineData.sucursalesAsignadas.length > 0) {
-        alpineData.sucursalesAsignadas.forEach(suc => formData.append('sucursales_asignadas[]', suc));
-    }
-    if (alpineData.tipoCurso == '6' && alpineData.clienteSeleccionado) {
-        formData.append('sucursales_asignadas[]', alpineData.clienteSeleccionado);
-    }
-    if (alpineData.tipoCurso == '7' && alpineData.areasAsignadas.length > 0) {
-        alpineData.areasAsignadas.forEach(a => formData.append('sucursales_asignadas[]', a));
-    }
-
-    if (archivoSeleccionado) {
-        formData.append('archivo', archivoSeleccionado);
+    // cod_cliente: send when tipo_curso is PCA (6) and either tipoCurso or clienteSeleccionado changed
+    if (alpineData.tipoCurso == '6' && (isChanged('tipoCurso') || isChanged('clienteSeleccionado'))) {
+        formData.append('cod_cliente', alpineData.clienteSeleccionado || '');
     }
 
     console.log(formData);
-    //return;
 
-    axios.post(`${VITE_URL_APP}/api/update-curso`, formData, {
+    axios.post(`${VITE_URL_APP}/api/actualizar-curso/${alpineData.codigo}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     })
         .then(async (res) => {
@@ -866,6 +852,7 @@ window.formCursoGestion = function () {
         sys_modificado_por: '-',
         sys_fecha_modificacion: '-',
 
+        tieneVigente: false,
         nombre: '',
         tipoCurso: '5',
         areaConocimiento: '',
@@ -1241,7 +1228,8 @@ window.formCursoGestion = function () {
                     && parseFloat(this.nota) >= 5
                     && parseInt(this.intentos) >= 1
                     && parseInt(this.cantidadPreguntas) >= 5
-                    && parseInt(this.preguntasBalotario) >= 5;
+                    && parseInt(this.preguntasBalotario) >= 5
+                    && this.archivoWord && this.preguntasExamen.length > 0;
             }
 
             return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && examenOk;
@@ -1263,6 +1251,7 @@ window.formCursoGestion = function () {
                 if (parseInt(this.intentos) < 1) faltantes.push('Intentos (mín. 1)');
                 if (parseInt(this.cantidadPreguntas) < 5) faltantes.push('Cant. preguntas (mín. 5)');
                 if (parseInt(this.preguntasBalotario) < 5) faltantes.push('Balotario (mín. 5)');
+                if (!this.archivoWord || this.preguntasExamen.length === 0) faltantes.push('Adjuntar y analizar Word');
             }
 
             if (faltantes.length === 0) return 'Completa los campos requeridos';
@@ -1280,6 +1269,7 @@ window.formCursoGestion = function () {
 
         limpiarCampos() {
             this.codigo = '';
+            this.tieneVigente = false;
             this.nombre = '';
             this.tipoCurso = '5';
             this.areaConocimiento = '';
@@ -1403,16 +1393,9 @@ window.formCursoGestion = function () {
                 }
             }
 
-            if (this.aplicaEvaluacion && this.archivoWord && this.preguntasExamen.length === 0) {
-                const confirm = await Swal.fire({
-                    title: 'Archivo sin analizar',
-                    text: 'Subiste un archivo Word pero no lo analizaste. ¿Deseas continuar sin cargar las preguntas?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, continuar',
-                    cancelButtonText: 'Cancelar'
-                });
-                if (!confirm.isConfirmed) return;
+            if (this.aplicaEvaluacion && (!this.archivoWord || this.preguntasExamen.length === 0)) {
+                Swal.fire('Atención', 'Debe adjuntar un archivo Word (.docx) y analizarlo para crear el curso con examen.', 'warning');
+                return;
             }
 
             const formData = new FormData();

@@ -318,7 +318,7 @@
             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
 
             <div
-                class="card w-full max-w-7xl max-h-[95dvh] sm:max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+                class="card w-auto min-w-[320px] max-w-[95vw] max-h-[95dvh] sm:max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
 
                 <div class="overflow-y-auto custom-scrollbar flex-1 bg-white" x-data="formCursoGestion()"
                     @submit.prevent
@@ -342,7 +342,7 @@
                             <input type="hidden" name="codGestionEditar" x-model="codigo" id="codGestionEditar">
                             <input type="hidden" id="slcArea" x-model="area">
 
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 w-full mt-4">
+                            <div class="grid grid-cols-1 gap-6 lg:gap-8 w-full mt-4" :class="codigo ? 'lg:grid-cols-2' : 'lg:grid-cols-3'">
                                 <!-- Columna 1: Datos del curso -->
                                 <div>
                                     <div class="w-full grid gap-4 grid-cols-1 pb-6">
@@ -479,8 +479,9 @@
                                                 class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia
                                                 del curso</label>
                                             <select id="slcFrecuencia" x-model="frecuencia"
-                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
-                                                <option value="">Seleccione la frecuencia del curso</option>
+                                                 :disabled="tieneVigente"
+                                                 :class="tieneVigente ? 'w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100 cursor-not-allowed' : 'w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white'">
+                                                 <option value="">Seleccione la frecuencia del curso</option>
                                                 <option value="MENSUAL">Mensual</option>
                                                 <option value="BIMESTRAL">Bimestral</option>
                                                 <option value="TRIMESTRAL">Trimestral</option>
@@ -613,17 +614,17 @@
                                                 @tipo-curso-loaded.window="tipos = $event.detail">
                                                 <template x-for="tipo in tipos" :key="tipo.codigo">
                                                     <label
-                                                        class="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2 transition-all shadow-sm"
-                                                        :class="{
-                                                                'border-primary ring-1 ring-primary/30 bg-primary/5': tipoCurso == tipo.codigo,
-                                                                'cursor-pointer hover:bg-slate-50': tipo.codigo != '7',
-                                                                'opacity-50 cursor-not-allowed border-dashed': tipo.codigo == '7'
-                                                            }" :title="tipo.codigo == '7' ? 'Aún en desarrollo' : ''">
-                                                        <input type="radio" :value="tipo.codigo" x-model="tipoCurso"
-                                                            @change="checkEsPACByText(tipo.descripcion)"
-                                                            name="plan_capacitacion"
-                                                            class="w-4 h-4 text-primary focus:ring-primary border-gray-300"
-                                                            :disabled="tipo.codigo == '7'">
+                                                         class="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2 transition-all shadow-sm"
+                                                         :class="{
+                                                                 'border-primary ring-1 ring-primary/30 bg-primary/5': tipoCurso == tipo.codigo,
+                                                                 'cursor-pointer hover:bg-slate-50': tipo.codigo != '7' && !tieneVigente,
+                                                                 'opacity-50 cursor-not-allowed border-dashed': tipo.codigo == '7' || tieneVigente
+                                                             }" :title="tieneVigente ? 'No se puede cambiar: el curso tiene una programación vigente' : (tipo.codigo == '7' ? 'Aún en desarrollo' : '')">
+                                                         <input type="radio" :value="tipo.codigo" x-model="tipoCurso"
+                                                             @change="checkEsPACByText(tipo.descripcion)"
+                                                             name="plan_capacitacion"
+                                                             class="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                                                             :disabled="tipo.codigo == '7' || tieneVigente">
                                                         <span class="text-sm font-medium text-gray-700"
                                                             :class="{ 'text-gray-400': tipo.codigo == '7' }"
                                                             x-text="tipo.descripcion"></span>

@@ -118,6 +118,12 @@ class CapacitacionController extends Controller
             $curso->nombre_responsable = "";
         }
 
+        $curso->tiene_vigente = DB::table("sw_cursos_programacion")
+            ->where("cod_curso", $id)
+            ->where("estado_periodo", "VIGENTE")
+            ->where("habilitado", 1)
+            ->exists();
+
         return response()->json([
             "success" => true,
             "curso" => $curso,
@@ -446,6 +452,134 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function actualizarCurso(Request $request, int $codigo): JsonResponse
+    {
+        // ? Campos que se actualizaran tanto en Moodle como en Sisolmar web
+        $nombre = $request->input('nombre');
+        $descripcion = $request->input('descripcion');
+        $codMoodleArea = $request->input('cod_moodle_area');
+        $areaResponsable = $request->input('area_responsable');
+        $codResponsable = $request->input('cod_responsable');
+
+        // ? Campos que se actualizaran solamente en Sisolmar web
+        $areaConocimiento = $request->input('area_conocimiento');
+        $dirigidoA = $request->input('dirigido_a');
+        $tipoCurso = $request->input('tipo_curso');
+        $frecuencia = $request->input('frecuencia');
+
+        DB::beginTransaction();
+
+        try {
+            $curso = Cursos::where('codigo', $codigo)->firstOrFail();
+            $codigoMoodle = $curso->codigo_moodle;
+
+            $updateData = ['fecha_modificacion' => now()->format('Y-m-d\TH:i:s.000')];
+            $moodleData = [];
+
+            if ($nombre) {
+                $updateData['nombre'] = $nombre;
+                $moodleData['fullname'] = $nombre;
+            }
+
+            if ($descripcion) {
+                $updateData['descripcion'] = $descripcion;
+                $moodleData['summary'] = $descripcion;
+            }
+
+            if ($areaConocimiento) {
+                $updateData['area_conocimiento'] = $areaConocimiento;
+            }
+
+            if ($dirigidoA) {
+                $updateData['dirigido_a'] = $dirigidoA;
+            }
+
+            if ($areaResponsable) {
+                $updateData['area'] = $areaResponsable;
+            }
+
+            if ($codMoodleArea) {
+                $moodleData['category'] = $codMoodleArea;
+            }
+
+            if ($codResponsable) {
+                $updateData['cod_responsable'] = $codResponsable;
+
+                $personal = DB::connection('sqlsrv')->selectOne(
+                    "SELECT LTRIM(RTRIM(NRO_DOCU_IDEN)) AS dni
+                        FROM si_solm.dbo.PERSONAL
+                        WHERE CODI_PERS = ?",
+                    [$codResponsable]
+                );
+
+                DB::connection('mysql_grupoihb')->statement(
+                    "CALL SP_REEMPLAZAR_RESPONSABLE(?, ?, @resultado)",
+                    [
+                        $codigoMoodle,
+                        $personal->dni
+                    ]
+                );
+            }
+
+            if ($frecuencia) {
+                $updateData['frecuencia'] = $frecuencia;
+                $updateData['periodicidad'] = match ($frecuencia) {
+                    'MENSUAL' => 1,
+                    'BIMESTRAL' => 2,
+                    'TRIMESTRAL' => 3,
+                    'CUATRIMESTRAL' => 4,
+                    'SEMESTRAL' => 6,
+                    'ANUAL' => 12,
+                    default => 0,
+                };
+            }
+
+            if ($tipoCurso) {
+                $oldTipoCurso = $curso->tipo_curso;
+                $updateData['tipo_curso'] = $tipoCurso;
+
+                if ((int) $oldTipoCurso === 5 && (int) $tipoCurso === 6) {
+                    $updateData['area_conocimiento'] = null;
+                    $codCliente = $request->input('cod_cliente');
+                    if ($codCliente) {
+                        $updateData['cod_cliente'] = $codCliente;
+                    }
+                } elseif ((int) $oldTipoCurso === 6 && (int) $tipoCurso === 5) {
+                    $updateData['cod_cliente'] = null;
+                    $areaConocimientoValue = $request->input('area_conocimiento');
+                    if ($areaConocimientoValue) {
+                        $updateData['area_conocimiento'] = $areaConocimientoValue;
+                    }
+                }
+            } elseif ($request->has('cod_cliente')) {
+                $updateData['cod_cliente'] = $request->input('cod_cliente');
+            }
+
+            $curso->update($updateData);
+
+            if ($codigoMoodle && !empty($moodleData)) {
+                DB::connection('mysql_grupoihb')
+                    ->table('mdl_course')
+                    ->where('id', $codigoMoodle)
+                    ->update($moodleData);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Datos actualizado(s) correctamente.",
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el curso.',
+            ], 500);
+        }
+    }
+
     public function updateCursoHab(Request $request, int $codigo): JsonResponse
     {
         $curso = Cursos::where("codigo", $codigo)->firstOrFail();
@@ -731,9 +865,6 @@ class CapacitacionController extends Controller
                     $request->input("aplica_evaluacion", 0),
                     (int) ($request->tiempo ?? 0),
                     (int) ($request->intentos ?? 0),
-                    $request->filled("preguntas_word")
-                        ? 0
-                        : (int) ($request->cantidad_preguntas ?? 0),
                     (float) ($request->nota ?? 0.0),
                     $inicioTimestamp,
                     $finTimestamp,
@@ -976,7 +1107,6 @@ class CapacitacionController extends Controller
         int $aplicaEvaluacion,
         int $tiempo,
         int $intentos,
-        int $cantPreguntas,
         float $nota,
         int $inicio,
         int $fin,
@@ -985,9 +1115,7 @@ class CapacitacionController extends Controller
             $moodleUserId = $this->getOrCreateMoodleUser($codResponsable);
 
             DB::connection("mysql_grupoihb")->statement(
-                "
-            CALL SP_CREAR_CURSO(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)
-            ",
+                "CALL SP_CREAR_CURSO(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @resultado)",
                 [
                     $nombre,
                     $codigo,
@@ -997,7 +1125,6 @@ class CapacitacionController extends Controller
                     $aplicaEvaluacion,
                     $tiempo,
                     $intentos,
-                    $cantPreguntas,
                     $nota,
                     $inicio,
                     $fin,
@@ -1340,14 +1467,13 @@ class CapacitacionController extends Controller
         if (!$aplicaEvaluacion || !$preguntasWordStr) {
             return;
         }
-
+        
         $preguntas = json_decode($preguntasWordStr, true);
 
         if (empty($preguntas)) {
             return;
         }
 
-        // Selección aleatoria: N/2 básicas + N/2 complementarias
         if ($cantidadPreguntas > 0) {
             $mitad = intdiv($cantidadPreguntas, 2);
 
@@ -1383,12 +1509,68 @@ class CapacitacionController extends Controller
         if (!empty($quizRow)) {
             $quizId = $quizRow[0]->id;
 
+            $preguntasTransformadas = $this->transformarPreguntas($preguntas);
+
+            $jsonPreguntas = json_encode(
+                $preguntasTransformadas,
+                JSON_UNESCAPED_UNICODE
+            );
+
+            Log::info(
+                'JSON SP_INSERTAR_PREGUNTAS_R => ' . $jsonPreguntas
+            );
+
             DB::connection("mysql_grupoihb")->statement(
                 "
-                CALL SP_QUIZ_agregar_preguntas_mc(?, ?, @res_preguntas)",
-                [$quizId, json_encode($preguntas)],
+                CALL SP_INSERTAR_PREGUNTAS_R(?, ?, @res_preguntas)",
+                [
+                    $quizId,
+                    json_encode(
+                        $preguntasTransformadas,
+                        JSON_UNESCAPED_UNICODE
+                    ),
+                ],
             );
+
+            $resultado = DB::connection("mysql_grupoihb")->selectOne(
+                "SELECT @res_preguntas AS resultado"
+            );
+
+            Log::info('Resultado SP_INSERTAR_PREGUNTAS_R', [
+                'quiz_id' => $quizId,
+                'resultado' => $resultado->resultado ?? null,
+            ]);
         }
+    }
+
+    private function transformarPreguntas(array $preguntas): array
+    {
+        return array_map(function ($pregunta) {
+
+            $opciones = $pregunta['opciones'] ?? [];
+            $respuesta = $pregunta['respuesta_correcta'] ?? '';
+
+            if (
+                count($opciones) === 2 &&
+                $opciones[0] === 'Verdadero' &&
+                $opciones[1] === 'Falso'
+            ) {
+                return [
+                    'tipo_pregunta' => 'true_or_false',
+                    'texto' => $pregunta['texto'],
+                    'respuesta_correcta' => $respuesta === 'A',
+                ];
+            }
+
+            $indiceRespuesta = ord($respuesta) - ord('A');
+
+            return [
+                'tipo_pregunta' => 'multiple_choice',
+                'texto' => $pregunta['texto'],
+                'opciones' => $opciones,
+                'respuesta_correcta' => $opciones[$indiceRespuesta] ?? null,
+            ];
+        }, $preguntas);
     }
 
     public function saveProgramacion(Request $request): JsonResponse
@@ -1964,9 +2146,9 @@ class CapacitacionController extends Controller
             ]);
     }
 
-    public function aplazarCurso(Request $request): JsonResponse {
-        try
-        {
+    public function aplazarCurso(Request $request): JsonResponse
+    {
+        try {
             DB::beginTransaction();
 
             $codCurso = $request->cod_curso;
@@ -5034,10 +5216,10 @@ class CapacitacionController extends Controller
 
                     $empresa = trim(
                         $persona->EMPRESA
-                        ?? $persona->EMPRESA_NOMBRE
-                        ?? $persona->EMPR_CODIGO
-                        ?? $persona->CLIENTE
-                        ?? ''
+                            ?? $persona->EMPRESA_NOMBRE
+                            ?? $persona->EMPR_CODIGO
+                            ?? $persona->CLIENTE
+                            ?? ''
                     );
 
                     return [

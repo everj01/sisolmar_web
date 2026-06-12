@@ -101,6 +101,7 @@ Route::get('/get-curso-programacion/{id}', [CapacitacionController::class, 'getC
 
 Route::post('/save-cursos', [CapacitacionController::class, 'saveCurso']);
 Route::post('/update-curso', [CapacitacionController::class, 'updateCurso']);
+Route::post('/actualizar-curso/{codigo}', [CapacitacionController::class, 'actualizarCurso']);
 
 Route::patch('/cursos/{codigo}/habilitado', [CapacitacionController::class, 'updateCursoHab']);
 Route::delete('/cursos/{codigo}', [CapacitacionController::class, 'destroyCurso']);
