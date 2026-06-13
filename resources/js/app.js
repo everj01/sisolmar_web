@@ -13,6 +13,7 @@ import "jquery";
 import "simplebar";
 import "boxicons/css/boxicons.min.css";
 import "./functions/capacitacion/reportes_capacitaciones";
+import "./functions/capacitacion/planes_capacitaciones";
 import Waves from "node-waves";
 import Alpine from "alpinejs";
 import DataTable from "vanilla-datatables";

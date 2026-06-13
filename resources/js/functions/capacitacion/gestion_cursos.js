@@ -1718,10 +1718,13 @@ window.formProgramacionGestion = function () {
         isEdit: false,
 
         init() {
-            // Helper interno para parsear fecha YYYY-MM-DD desde ISO o datetime SQL
+            // Helper interno para parsear fecha desde ISO o datetime SQL a formato datetime-local
             const parseDateISO = (dateStr) => {
                 if (!dateStr) return '';
-                return dateStr.split(/T| /)[0];
+                if (dateStr.includes('T')) return dateStr.substring(0, 16);
+                const [datePart, timePart] = dateStr.split(' ');
+                if (timePart) return `${datePart}T${timePart.substring(0, 5)}`;
+                return `${datePart}T00:00`;
             };
 
             window.addEventListener('set-curso-programacion', (e) => {
@@ -1943,10 +1946,16 @@ window.modalAplazarCurso = function() {
 
         get fechaMinima() {
             if (this.programacionActual && this.programacionActual.fecha_final) {
-                const partes = this.programacionActual.fecha_final.split(' ')[0].split('-');
-                return `${partes[0]}-${partes[1]}-${partes[2]}`;
+                const dateStr = this.programacionActual.fecha_final.split(' ')[0];
+                return `${dateStr}T00:00`;
             }
-            return new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
         },
 
         get diasExtension() {

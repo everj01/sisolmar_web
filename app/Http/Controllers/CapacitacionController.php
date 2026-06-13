@@ -2984,6 +2984,11 @@ class CapacitacionController extends Controller
         return view("capacitacion.reportes_capacitaciones");
     }
 
+    public function vistaPlanesCapacitacion(): View
+    {
+        return view("capacitacion.planes_capacitacion");
+    }
+
     public function getMatriculasMigraPersonal(int $cursoId): JsonResponse
     {
         try {
