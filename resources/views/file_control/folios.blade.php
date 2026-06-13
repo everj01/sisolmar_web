@@ -4,10 +4,10 @@
 
 @include('layouts.shared/page-title', ['subtitle' => 'File Control', 'title' => 'Gestíon de Folios'])
 
- <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
+ <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
 
     {{-- ── CARD IZQUIERDA: Listado de Folios ───────────────────────────── --}}
-     <div class="card overflow-hidden lg:col-span-3">
+     <div class="card overflow-hidden lg:col-span-8">
         <div class="card-header">
             <h4 class="card-title">Listado de Folios</h4>
         </div>
@@ -90,7 +90,8 @@
                 <div x-data="{ soloActivos: true }" class="flex items-center gap-2">
                     <input type="checkbox" class="form-switch text-primary" role="switch"
                            id="chkEliminados" x-model="soloActivos">
-                    <label for="chkEliminados" class="text-sm cursor-pointer">Solo activos</label>
+                    {{-- AQUÍ LE METEMOS ALPINE.JS PARA QUE EL TEXTO CAMBIE DINÁMICAMENTE --}}
+                    <label for="chkEliminados" class="text-sm cursor-pointer" x-text="soloActivos ? 'Solo activos' : 'Solo inactivos'"></label>
                     <div x-effect="soloActivos ? aplicarFiltroSoloActivos(1) : aplicarFiltroSoloActivos(0)"></div>
                 </div>
             </div>
@@ -115,7 +116,7 @@
     </div>
 
     {{-- ── CARD DERECHA: Formulario de Gestión ────────────────────────── --}}
-   <div class="card lg:col-span-2">
+   <div class="card lg:col-span-4">
         <div class="card-header flex items-center gap-3">
             <h3 class="card-title">Gestión de Folios</h3>
             <span id="txtMensajeNuevo"
@@ -158,15 +159,26 @@
                         </div>
                     </div>
 
-                    {{-- Responsable --}}
-                    <div>
-                        <label for="responsable" class="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
-                        <select id="responsable" class="form-select w-full" required>
-                            <option value="" disabled selected>— Seleccionar —</option>
-                            @foreach ($roles as $rol)
-                                <option value="{{ $rol->codigo }}">{{ $rol->nombre }}</option>
-                            @endforeach
-                        </select>
+                    {{-- Responsable y Categoría --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="responsable" class="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
+                            <select id="responsable" class="form-select w-full" required>
+                                <option value="" disabled selected>— Seleccionar —</option>
+                                @foreach ($roles as $rol)
+                                    <option value="{{ $rol->codigo }}">{{ $rol->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                            <select id="categoria" class="form-select w-full" required>
+                                <option value="" disabled selected>— Seleccionar —</option>
+                                @foreach ($categorias as $cat)
+                                    <option value="{{ $cat->codigo }}">{{ $cat->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     {{-- Descripción contextual por tipo --}}

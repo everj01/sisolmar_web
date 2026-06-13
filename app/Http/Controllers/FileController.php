@@ -756,12 +756,27 @@ class FileController extends Controller
         $folios = DB::select('EXEC SW_LISTAR_FOLIOS');
 
         $ids = array_column($folios, 'codigo');
-        $responsables = DB::table('sw_folios')
+        
+        // Sacamos responsable y cod_categoria directo de la tabla por si tu SP no lo trae
+        $foliosExtra = DB::table('sw_folios')
             ->whereIn('codigo', $ids)
-            ->pluck('codResponsable', 'codigo');
+            ->select('codigo', 'codResponsable', 'cod_categoria')
+            ->get()
+            ->keyBy('codigo');
+
+        // Sacamos los nombres de las categorías de tu otra tabla
+        $categorias = DB::table('sw_folios_categoria')->pluck('nombre', 'codigo');
 
         foreach ($folios as $folio) {
-            $folio->cod_responsable = $responsables[$folio->codigo] ?? null;
+            $extra = $foliosExtra->get($folio->codigo);
+            
+            $folio->cod_responsable = $extra ? $extra->codResponsable : null;
+            $folio->cod_categoria = $extra ? $extra->cod_categoria : null; // Para que el botón editar lo lea
+            
+            // Le inyectamos el nombre de la categoría para pintarlo en la tabla
+            $folio->nombre_categoria = ($extra && $extra->cod_categoria) 
+                                        ? ($categorias->get($extra->cod_categoria) ?? 'SIN CATEGORÍA') 
+                                        : 'SIN CATEGORÍA';
         }
 
         return response()->json($folios);
@@ -820,29 +835,19 @@ class FileController extends Controller
     {
         $periodos = FileControl::getPeriodos();
 
-        // MIGRACIÓN A ELOQUENT: Reemplacé todas las queries DB::table('sw_folios') por modelo Folio
-        // Beneficios: type safety, prepared statements automáticos, código más mantenible
-        // Uso scope habilitado() para evitar repetir where('habilitado', 1) en cada query
         $todos = Folio::habilitado()->count();
-        $principal = Folio::habilitado()
-            ->where('obligatorio', 1)
-            ->count();
-        $adicional = Folio::habilitado()
-            ->where('obligatorio', 0)
-            ->count();
-        $documento = Folio::habilitado()
-            ->where('tipo', 1)
-            ->count();
-        $formato = Folio::habilitado()
-            ->where('tipo', 2)
-            ->count();
-        $certificado = Folio::habilitado()
-            ->where('tipo', 3)
-            ->count();
+        $principal = Folio::habilitado()->where('obligatorio', 1)->count();
+        $adicional = Folio::habilitado()->where('obligatorio', 0)->count();
+        $documento = Folio::habilitado()->where('tipo', 1)->count();
+        $formato = Folio::habilitado()->where('tipo', 2)->count();
+        $certificado = Folio::habilitado()->where('tipo', 3)->count();
 
         $roles = FileControl::getRoles();
+        
 
-        return view('file_control.folios', compact('periodos', 'todos', 'principal', 'adicional', 'documento', 'formato', 'certificado', 'roles'));
+        $categorias = DB::table('sw_folios_categoria')->where('habilitado', 1)->get();
+
+        return view('file_control.folios', compact('periodos', 'todos', 'principal', 'adicional', 'documento', 'formato', 'certificado', 'roles', 'categorias'));
     }
 
     public function ViewBusquedaLegajo()
@@ -1697,10 +1702,12 @@ class FileController extends Controller
 
     public function saveFolio(Request $request)
     {
+        // 1. AGREGA LA VALIDACIÓN PARA QUE NO TE METAN BASURA
         $request->validate([
             'nombre' => 'required|string|max:255',
             'tipo' => 'required|integer',
             'responsable' => 'required|integer',
+            'cod_categoria' => 'required|integer' // <-- ESTO ES NUEVO
         ]);
 
         $codigo = $request->input('codigo');
@@ -1711,12 +1718,16 @@ class FileController extends Controller
         $tipo_fecha = $request->input('periodo');
         $plataforma = $request->input('plataforma');
         $responsable = $request->input('responsable');
+        
+        // 2. ATRAPA EL DATO QUE VIENE DEL FRONT
+        $cod_categoria = $request->input('cod_categoria'); 
         $usuario = session('usuario');
 
+        // 3. PÁSALE LA VARIABLE AL MODELO (Lo agregué al final de los parámetros)
         if (empty($codigo)) {
-            $result = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario);
+            $result = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria);
         } else {
-            $result = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario);
+            $result = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria);
         }
 
         if ($result) {

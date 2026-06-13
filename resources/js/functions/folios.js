@@ -47,7 +47,8 @@ const tblFolios = new Tabulator("#tblFolios", {
         }
     },
     columns: [
-        { title: "Folios", field: "nombre", hozAlign: "left", widthGrow: 4 },
+        { title: "Folios", field: "nombre", hozAlign: "left", widthGrow: 3 },
+        { title: "Categoría", field: "nombre_categoria", hozAlign: "center", widthGrow: 3 },
         {
             title: "Tipo", field: "tipoFolio", hozAlign: "center", widthGrow: 2,
             formatter: function (cell, formatterParams) {
@@ -112,6 +113,7 @@ const tblFolios = new Tabulator("#tblFolios", {
                     document.querySelector('#nombre').value = rowData.nombre;
                     document.querySelector('#tipo').value = rowData.tipo;
                     document.querySelector('#responsable').value = rowData.cod_responsable ?? '';
+                    document.querySelector('#categoria').value = rowData.cod_categoria ?? ''; // <-- AQUÍ CARGA LA CATEGORÍA, BESTIA
 
                     //Bloquear nombre
                     if (rowData.utilizado == 1) {
@@ -385,6 +387,8 @@ function aplicarTodosFiltros() {
 
       if (soloActivosChecked) {
           filtros.push({ field: "habilitado", type: "=", value: "1" });
+      } else {
+          filtros.push({ field: "habilitado", type: "=", value: "0" });
       }
 
       if (filtroTipos && filtroTipos !== "TODOS") {
@@ -455,6 +459,7 @@ document.getElementById('switchVencimiento').addEventListener('change', function
       document.getElementById('tipo').value = '';
       document.getElementById('tipo').dispatchEvent(new Event('change'));
       document.getElementById('responsable').value = '';
+      document.getElementById('categoria').value = '';
       document.getElementById('radioPrin').checked = true;
       document.getElementById('radioAdi').checked = false;
       document.querySelector('#switchVencimiento').checked = false;
@@ -498,13 +503,15 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
     var vencimiento = switchVencimiento.checked ? 1 : 0;
     var periodo = document.getElementById('periodo').value;
     var responsable = document.getElementById('responsable').value;
+    var categoria = document.getElementById('categoria').value; // <-- CAPTURAS EL DATO
     var institucion = document.querySelector('input[name="institucion"]:checked')?.value;
 
     if (vencimiento == 0) {
         periodo = null;
     }
 
-    if (nombre && tipo && responsable) {
+    // <-- LE AGREGAS LA VALIDACIÓN PARA LA CATEGORÍA
+    if (nombre && tipo && responsable && categoria) {
         axios.post(`${VITE_URL_APP}/api/save_folio`, {
             codigo: codigo,
             nombre: nombre,
@@ -513,6 +520,7 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
             vencimiento: vencimiento,
             periodo: periodo,
             responsable: responsable,
+            cod_categoria: categoria, // <-- LO MANDAS AL CONTROLADOR
             plataforma: institucion,
         })
             .then(function (response) {
@@ -538,7 +546,7 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
         Swal.fire({
             icon: 'warning',
             title: 'Campos incompletos',
-            text: 'Por favor, complete todos los campos obligatorios: Nombre, Tipo y Responsable.',
+            text: 'Por favor, complete todos los campos obligatorios: Nombre, Tipo, Responsable y Categoría.', // <-- MENSAJE ACTUALIZADO
             confirmButtonColor: '#3085d6'
         });
     }
