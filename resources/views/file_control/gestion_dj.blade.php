@@ -137,17 +137,24 @@
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Tipo:</label>
                           
-                            <select id="filtroTipoPerPEN" class=" px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                @if($tipoPerLimitar == 0)
-                                    <option value="">Todos</option>
-                                    <option value="OPERATIVO">Operativo</option>
-                                    <option value="ADMINISTRATIVO">Administrativo</option>
-                                @elseif($tipoPerLimitar == 1)
-                                    <option value="ADMINISTRATIVO" selected>Administrativo</option>
-                                @elseif($tipoPerLimitar == 2)
-                                    <option value="OPERATIVO" selected>Operativo</option>
-                                @endif
-                            </select>
+                            <select id="filtroTipoPerPEN" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+    @if($tipoPerLimitar == 0)
+        <option value="">Todos</option>
+        <option value="OPERATIVO 4°">Operativo 4°</option>
+        <option value="OPERATIVO 5°">Operativo 5°</option>
+        <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+        <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+        <option value="ESPECIAL">Especial</option>
+    @elseif($tipoPerLimitar == 1)
+        <option value="">Todos</option>
+        <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+        <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 2)
+        <option value="">Todos</option>
+        <option value="OPERATIVO 4°">Operativo 4°</option>
+        <option value="OPERATIVO 5°">Operativo 5°</option>
+    @endif
+</select>
                         </div>
                          {{-- <button type="button" id="btnDescargarDJs_PEN"
                                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
@@ -274,18 +281,24 @@
                     <option value="ADMINISTRATIVO">Administrativo</option>
                     <option value="ESPECIAL">Especial</option>
                 </select> -->
-                <select id="filtroTipoPer" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                    @if($tipoPerLimitar == 0)
-                        <option value="">Todos</option>
-                        <option value="OPERATIVO">Operativo</option>
-                        <option value="ADMINISTRATIVO">Administrativo</option>
-                        <!-- <option value="ESPECIAL">Especial</option> -->
-                    @elseif($tipoPerLimitar == 1)
-                        <option value="ADMINISTRATIVO" selected>Administrativo</option>
-                    @elseif($tipoPerLimitar == 2)
-                        <option value="OPERATIVO" selected>Operativo</option>
-                    @endif
-                </select>
+                <select id="filtroTipoPer" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+    @if($tipoPerLimitar == 0)
+        <option value="">Todos</option>
+        <option value="OPERATIVO 4°">Operativo 4°</option>
+        <option value="OPERATIVO 5°">Operativo 5°</option>
+        <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+        <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+        <option value="ESPECIAL">Especial</option>
+    @elseif($tipoPerLimitar == 1)
+        <option value="">Todos</option>
+        <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+        <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 2)
+        <option value="">Todos</option>
+        <option value="OPERATIVO 4°">Operativo 4°</option>
+        <option value="OPERATIVO 5°">Operativo 5°</option>
+    @endif
+</select>
             </div>
         </div>
 

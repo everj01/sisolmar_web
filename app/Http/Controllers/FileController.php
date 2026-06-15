@@ -784,7 +784,7 @@ class FileController extends Controller
 
     public function getListaDJ()
     {
-        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]');
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_V2]');
 
         return response()->json($DJ);
     }
@@ -792,7 +792,7 @@ class FileController extends Controller
     public function getListaDJXusuario()
     {
         $usuario = session('usuario');
-        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ] ?', [$usuario]);
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_V2] ?', [$usuario]);
 
         return response()->json($DJ);
     }
