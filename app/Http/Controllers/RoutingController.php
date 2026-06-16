@@ -51,10 +51,10 @@ class RoutingController extends Controller
     }
 
     public function secondLevel(Request $request, $first, $second)
-    {
-        $controllers = [
+    {$controllers = [
             'dj' => [
                 'gestion_dj' => [FileController::class, 'indexGestionDj'],
+                'actualizar_dj' => [FileController::class, 'indexActualizarDj'],
             ],
             'file_control' => [
                 'chargefile' => [FileController::class, 'index'],

@@ -48,6 +48,20 @@ class FileController extends Controller
         return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
+    public function indexActualizarDj()
+    {
+        $grados = FileControl::getGradosInstruccionDJ();
+        $carreras = FileControl::getCarrerasDJ();
+        $instituciones = FileControl::getInstitucionesDJ();
+        $sucursales = FileControl::getSucursales();
+
+        $tipoPerLimitar = session('limitarTipoPer');
+        $tipoUsuario = session('tipo_rol');
+
+        // Retorna a una nueva vista que crearemos en el siguiente paso
+        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
+    }
+
   
 
     public function getCargosXCliente(Request $request)
@@ -799,7 +813,7 @@ class FileController extends Controller
 
     public function getListaDJMigracion()
     {
-        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_MIGRACION]');
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_MIGRACION_V2]');
 
         return response()->json($DJ);
     }

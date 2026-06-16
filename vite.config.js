@@ -34,6 +34,7 @@ export default defineConfig({
 
                 // DJ
                 'resources/js/functions/gestion_dj.js',
+                'resources/js/functions/actualizar_dj.js',
                 'resources/js/functions/nueva_dj.js',
 
                 'resources/js/app.js',

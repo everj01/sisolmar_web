@@ -171,8 +171,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // TABLAS TABULATOR
     // ============================================================
 
-    // ── Tabla 1: Pendientes/Listos ───────────────────────────
-    const tblPersonas = new Tabulator("#tblPersonas", {
+    // ── Tabla 2: Migración ───────────────────────────────────
+    const tblPersonasMigrado = new Tabulator("#tblPersonasMigrado", {
         height: "100%",
         layout: "fitColumns",
         responsiveLayout: "collapse",
@@ -198,24 +198,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 2,
                 formatter: cell => { const d = cell.getData(); return `${d.nombres ?? ''} `.trim(); }
             },
-
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
             {
                 title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
-                    let color = '';
-                    if (val.includes('OPERATIVO')) {
+                    let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Color por defecto
+                    
+                    // Usamos .includes() para que agarre tanto 4° como 5°
+                    if (val.toUpperCase().includes('OPERATIVO')) {
                         color = 'border-blue-300 bg-blue-100 text-blue-800';
-                    } else if (val.includes('ADMINISTRATIVO')) {
+                    } else if (val.toUpperCase().includes('ADMINISTRATIVO')) {
                         color = 'border-purple-300 bg-purple-100 text-purple-800';
-                    } else if (val.includes('ESPECIAL')) {
+                    } else if (val.toUpperCase().includes('ESPECIAL')) {
                         color = 'border-orange-300 bg-orange-100 text-orange-800';
-                    } else {
-                        color = 'border-gray-300 bg-gray-100 text-gray-800';
                     }
+                    
                     return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium whitespace-nowrap">${capitalizeWords(val)}</span>` : '';
+                }
+            },
+            {
+                title: "Migrado", field: "migrado", hozAlign: "center", widthGrow: 2,
+                formatter: cell => {
+                    const d = cell.getData();
+                    // Ahora la BD sí enviará correctamente 'Migrado' o 'Sin Migrar'
+                    const estado = d.migrado || 'Sin Migrar'; 
+                    
+                    const color = estado === 'Migrado' 
+                        ? 'border-success bg-success text-white' 
+                        : 'border-dark-100 bg-dark-100 text-yellow-800';
+                        
+                    return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium whitespace-nowrap">${estado}</span>`;
                 }
             },
             {
@@ -231,27 +245,64 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `${d.cambio ?? 'Sin cambios'}`.trim();
                 }
             },
+            // ── NUEVA COLUMNA ──────────────────────────────────────
+            {
+                title: "PDF", field: "pdf_generado", hozAlign: "center", widthGrow: 1,
+                headerSort: false,
+                formatter: cell => {
+                    const d = cell.getData();
+                    const cod = d.codPersonal || d.CODI_PERS || d.id;
+                    const gen = estaGenerado(cod, d.cambio);
+                    const titulo = gen ? 'Generado — click para resetear' : 'Pendiente';
+                    const color = gen
+                        ? 'color:#16a34a;font-size:18px;cursor:pointer;'
+                        : 'color:#d1d5db;font-size:18px;cursor:default;';
+                    return `<span title="${titulo}" style="${color}" data-pdf-cod="${cod}" data-pdf-cambio="${d.cambio || ''}">
+                                ${gen ? '✅' : '○'}
+                            </span>`;
+                },
+                cellClick: (e, cell) => {
+                    const span = e.target.closest('[data-pdf-cod]');
+                    if (!span) return;
+                    const cod = span.getAttribute('data-pdf-cod');
+                    if (!estaGenerado(cod, span.getAttribute('data-pdf-cambio'))) return;
+
+                    Swal.fire({
+                        icon: 'question',
+                        title: '¿Resetear marca?',
+                        text: 'Se marcará este registro como pendiente de generar PDF.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, resetear',
+                        cancelButtonText: 'Cancelar',
+                    }).then(r => {
+                        if (!r.isConfirmed) return;
+                        desmarcarDJGenerado(cod);
+                        cell.getTable().updateOrAddData([{ ...cell.getData() }]);
+                        // Forzar re-render de la fila
+                        cell.getRow().reformat();
+                    });
+                }
+            },
+            // ── FIN NUEVA COLUMNA ──────────────────────────────────
             {
                 title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
                 formatter: cell => {
                     const d = cell.getData();
-                    const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">DJ</button>`;
-                    const btnPDF = `<button type="button" class="btn rounded-full form-btn bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar"><i class='bx bxs-file-pdf'></i></button>`;
-                    return d.estado === 'pendiente' ? btnDJ : btnDJ /*+ btnPDF*/;
+                    // Evaluamos seguro para bloquear el botón si ya está migrado
+                    const disabled = (d.migrado === 'Migrado' || d.migrado === 'MIGRADO') ? 'disabled' : '';
+                    return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white" data-hs-overlay="#modalDjGestion">DJ</button>`;
                 },
                 cellClick: (e, cell) => {
-                    const btn = e.target.closest('.form-btn');
+                    const btn = e.target.closest('.form-btn-migrado');
                     if (!btn) return;
-                    registroSeleccionado = cell.getRow().getData();
-                    registroSeleccionado._sinSplit = true;
-
-                    const codiPers = registroSeleccionado.codPersonal || registroSeleccionado.CODI_PERS || registroSeleccionado.id;
-
-                    // Limpiar caché solo de esta persona
+                    const rowData = cell.getRow().getData();
+                    const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+                    
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
-
-                    //btnNuevaDJ?.click();
+                    
+                    // 🔥 AQUÍ ESTÁ EL ARREGLO 🔥
+                    // Como están "Sin Migrar", extraemos sus datos base de 'pendiente'
                     abrirFormularioDJ(codiPers, 'pendiente');
                 }
             },
@@ -460,33 +511,42 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // CARGA DE DATOS (API)
     // ============================================================
-    function getPersonal() {
-
-        axios.get(`${VITE_URL_APP}/get-personal-dj`)
+    function getPersonalMigracion() {
+        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
             .then(response => {
                 const datosTabla = response.data;
-                tblPersonas.setData(datosTabla);
+                tblPersonasMigrado.setData(datosTabla);
                 // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                // const filtroSucursal = document.getElementById('filtroSucursalPEN');
+                // const filtroSucursal = document.getElementById('filtroSucursal');
                 // if (filtroSucursal) {
                 //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
                 //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
                 // }
-                aplicarFiltrosPEN();
+                aplicarFiltrosMigracion();  // ← agrega esta línea al final
+                actualizarCardDesdeSP();
             })
             .catch(error => console.error("Hubo un error:", error));
     }
 
 
-    window.getPersonalSoloDJ = function () {
+    window.getPersonalSoloDJMigracion = function () {
 
-        axios.get(`${VITE_URL_APP}/get-personal-dj`)
+        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
             .then(response => {
-                return tblPersonas.setData(response.data);
+                const datosTabla = response.data;
+                tblPersonasMigrado.setData(datosTabla);
+                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
+                // const filtroSucursal = document.getElementById('filtroSucursal');
+                // if (filtroSucursal) {
+                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
+                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
+                // }
+                aplicarFiltrosMigracion();  // ← agrega esta línea al final
+                actualizarCardDesdeSP();
             })
-            .then(() => aplicarFiltrosPEN())
-            .catch(console.error);
-    };
+            .catch(error => console.error("Hubo un error:", error));
+    }
+
 
     function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
         const codSucursal = sucursal || '00';
@@ -527,48 +587,51 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // FILTROS
     // ============================================================
-    function aplicarFiltrosPEN() {
-        const sucursal = document.getElementById('filtroSucursalPEN')?.value ?? '';
-        const tipoPer = document.getElementById('filtroTipoPerPEN')?.value ?? '';
+    function aplicarFiltrosMigracion() {
+        const sucursal = document.getElementById('filtroSucursal')?.value ?? '';
+        const tipoPer = document.getElementById('filtroTipoPer')?.value ?? '';
         const filtros = [];
+        
         if (sucursal) filtros.push({ field: "codSucursal", type: "=", value: sucursal });
         if (tipoPer) filtros.push({ field: "tipoPer", type: "=", value: tipoPer });
+        
         const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
-        if (texto) filtros.push([{ field: "nombres", type: "like", value: texto }, { field: "dni", type: "like", value: texto }]);
-        tblPersonas.setFilter(filtros);
+        if (texto) {
+            // Se manda un array interno para que Tabulator lo interprete como "OR"
+            filtros.push([
+                { field: "nombres", type: "like", value: texto }, 
+                { field: "apellido1", type: "like", value: texto },
+                { field: "apellido2", type: "like", value: texto },
+                { field: "dni", type: "like", value: texto }
+            ]);
+        }
+        
+        tblPersonasMigrado.setFilter(filtros);
+        actualizarCardDesdeSP(sucursal, tipoPer);
     }
 
     document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
     document.getElementById('filtroTipoPer')?.addEventListener('change', aplicarFiltrosMigracion);
-    document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
-    document.getElementById('filtroTipoPerPEN')?.addEventListener('change', aplicarFiltrosPEN);
+    document.getElementById('filtroMigrado')?.addEventListener('change', aplicarFiltrosMigracion); // ← Asegúrate de tener este
 
-    getPersonal();
-
-    getPersonal();
+    getPersonalMigracion();
 
     // ============================================================
-    // PESTAÑAS
+    // ESTADO ACTIVO (Migración)
     // ============================================================
-    let tabActiva = 'pendiente';
+    let tabActiva = 'migrado';
 
     // ============================================================
     // BÚSQUEDA Y RESALTADO
     // ============================================================
     buscarPersonalInput?.addEventListener("keyup", function () {
         const valor = this.value.toLowerCase().trim();
-        if (tabActiva === 'pendiente') {
-            tblPersonas.setFilter([[{ field: "nombres", type: "like", value: valor }, { field: "dni", type: "like", value: valor }]]);
-            tblPersonas._ultimoFiltro = valor;
-            setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
-        } else {
-            tblPersonasMigrado._ultimoFiltro = valor;
-            aplicarFiltrosMigracion();
-            setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
-        }
+        tblPersonasMigrado._ultimoFiltro = valor;
+        aplicarFiltrosMigracion();
+        setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
     });
 
-    tblPersonas.on("renderComplete", () => { if (tblPersonas._ultimoFiltro) resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro); });
+    tblPersonasMigrado.on("renderComplete", () => { if (tblPersonasMigrado._ultimoFiltro) resaltarTexto(tblPersonasMigrado, tblPersonasMigrado._ultimoFiltro); });
 
     // ============================================================
     // BOTONES MODAL
@@ -637,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btnEliminar?.addEventListener("click", () => limpiarPreviewFoto());
 
     // Page size
-    pageSizeSelect?.addEventListener("change", function () { tblPersonas.setPageSize(parseInt(this.value)); });
+   pageSizeMigradoSelect?.addEventListener("change", function () { tblPersonasMigrado.setPageSize(parseInt(this.value)); });
 
     // ============================================================
     // PREVISUALIZAR PDF
@@ -721,7 +784,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.body.style.overflow = '';
                     }
 
-                    getPersonal();
+                    getPersonalMigracion();   
                 }
             } catch (error) {
                 console.error('❌ Error completo:', error);
@@ -791,6 +854,139 @@ document.addEventListener('DOMContentLoaded', function () {
             URL.revokeObjectURL(link.href);
             Swal.fire({ icon: 'success', title: 'Descarga completada', html: `Se generaron <b>${generados}</b> PDF(s) correctamente.` + (errores > 0 ? `<br><small class="text-red-500">${errores} con error.</small>` : '') });
         } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al generar el archivo ZIP.' }); }
+    });
+
+    // ============================================================
+    // DJ UNIFICADO (un solo PDF — Migración)
+    // ============================================================
+    const btnDJUnificado = document.getElementById('btnDJUnificado');
+    const btnDJUnificadoMigrado = document.getElementById('btnDJUnificadoMigrado');
+
+    btnDJUnificado?.addEventListener('click', async function () {
+        const filasVisibles = tblPersonasMigrado.getData("active");
+        if (!filasVisibles || filasVisibles.length === 0) {
+            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles para descargar.' });
+            return;
+        }
+
+        const confirmacion = await Swal.fire({
+            icon: 'question', title: 'DJ Unificado',
+            html: `Se generará <b>1 PDF</b> con las <b>${filasVisibles.length}</b> declaraciones juradas.<br>¿Desea continuar?`,
+            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+        });
+        if (!confirmacion.isConfirmed) return;
+
+        await _generarUnificado(filasVisibles, 'DJ_Unificado');
+    });
+
+
+    btnDJUnificadoMigrado?.addEventListener('click', async function () {
+
+        const todasMigradas = tblPersonasMigrado.getData("active");
+
+        if (!todasMigradas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles en la tabla.' });
+            return;
+        }
+
+        const pendientes = todasMigradas.filter(f => !estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+        const yaGenerados = todasMigradas.filter(f => estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
+
+        const { value: opcion, isConfirmed } = await Swal.fire({
+            title: 'DJ Unificado — Migrados',
+            html: `
+            <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend">
+                    <input type="radio" name="djopcion" value="pendientes" ${pendientes.length ? '' : 'disabled'}
+                        style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+                    <div>
+                        <div style="font-weight:600;color:${pendientes.length ? '#111827' : '#9ca3af'};">
+                            Solo pendientes
+                            <span style="margin-left:6px;background:${pendientes.length ? '#dcfce7' : '#f3f4f6'};color:${pendientes.length ? '#16a34a' : '#9ca3af'};font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+                                ${pendientes.length}
+                            </span>
+                        </div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+                            Registros sin ✅ o con cambios nuevos desde la última generación
+                        </div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-todos">
+                    <input type="radio" name="djopcion" value="todos"
+                        style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
+                    <div>
+                        <div style="font-weight:600;color:#111827;">
+                            Todos los migrados
+                            <span style="margin-left:6px;background:#dbeafe;color:#1e40af;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
+                                ${todasMigradas.length}
+                            </span>
+                        </div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+                            Incluye los ${yaGenerados.length} ya generados anteriormente
+                        </div>
+                    </div>
+                </label>
+            </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Generar PDF',
+            cancelButtonText: 'Cancelar',
+            didOpen: () => {
+                const radios = document.querySelectorAll('input[name="djopcion"]');
+                radios.forEach(r => {
+                    r.addEventListener('change', () => {
+                        document.getElementById('lbl-pend').style.borderColor = r.value === 'pendientes' && r.checked ? '#6366f1' : '#e5e7eb';
+                        document.getElementById('lbl-todos').style.borderColor = r.value === 'todos' && r.checked ? '#6366f1' : '#e5e7eb';
+                    });
+                });
+                const def = pendientes.length ? 'pendientes' : 'todos';
+                const defRadio = document.querySelector(`input[name="djopcion"][value="${def}"]`);
+                if (defRadio) {
+                    defRadio.checked = true;
+                    document.getElementById(def === 'pendientes' ? 'lbl-pend' : 'lbl-todos').style.borderColor = '#6366f1';
+                }
+            },
+            preConfirm: () => {
+                const sel = document.querySelector('input[name="djopcion"]:checked');
+                if (!sel) { Swal.showValidationMessage('Selecciona una opción.'); return false; }
+                return sel.value;
+            }
+        });
+
+        if (!isConfirmed) return;
+
+        const filasSeleccionadas = opcion === 'pendientes' ? pendientes : todasMigradas;
+
+        if (!filasSeleccionadas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin pendientes', text: 'Todos los registros ya fueron generados. Usa "Todos" para regenerar.' });
+            return;
+        }
+
+        const confirmacion = await Swal.fire({
+            icon: 'question',
+            title: 'Confirmar generación',
+            html: `Se generará <b>1 PDF</b> con <b>${filasSeleccionadas.length}</b> declaración(es).<br>¿Desea continuar?`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar',
+            cancelButtonText: 'Cancelar'
+        });
+        if (!confirmacion.isConfirmed) return;
+
+        // Se usa 'pendiente' como source para que el endpoint devuelva los datos más frescos
+        const resultadoGen = await _generarUnificado(filasSeleccionadas, 'DJ_Unificado_Migrados', 'pendiente');
+
+        if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
+            const marcados = resultadoGen.generadosOk.map(fila1 => {
+                return {
+                    codPersonal: fila1.codPersonal || fila1.CODI_PERS || fila1.id,
+                    fechaCambio: fila1.cambio
+                };
+            }).filter(x => x.codPersonal);
+
+            marcarDJGeneradosBatch(marcados);
+        }
+
+        tblPersonasMigrado.redraw(true);
     });
 
     // btnDJUnificadoMigrado?.addEventListener('click', async function () {
