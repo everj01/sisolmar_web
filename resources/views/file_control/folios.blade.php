@@ -19,7 +19,7 @@
 
                 {{-- Grupo 1: tipos (principal / adicional) --}}
                   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span class="text font-semibold">Tipos: </span>
+                      <span class="text font-semibold">Prioridad: </span>
                       <label class="flex items-center gap-1.5 cursor-pointer">
                           <input type="radio" class="form-radio text-primary" id="radioTod" name="filtroTipos" value="TODOS" checked>
                           <span class="text-sm">Todos ({{ $todos }})</span>
@@ -38,7 +38,7 @@
 
                   {{-- Grupo 2: clasificación (documento / formato / certificado) --}}
                   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span class="text font-semibold">Prioridad: </span>
+                      <span class="text font-semibold">Tipos: </span>
                       <label class="flex items-center gap-1.5 cursor-pointer">
                           <input type="radio" class="form-radio text-danger" id="radioTodClasif" name="filtroClasificacion" value="TODOS" checked>
                           <span class="text-sm">Todos</span>

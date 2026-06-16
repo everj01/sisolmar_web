@@ -885,6 +885,7 @@ class DjController extends Controller
             }
 
             $data = $request->all();
+            $source = $request->input('source', 'migracion');
 
             // ✅ 1. SOLO MARCAR COMO MIGRADO en sw_MIGRA_PERSONAL (NO actualizar otros campos)
             DB::update(
@@ -895,7 +896,7 @@ class DjController extends Controller
             );
 
             // ✅ 2. INSERTAR/ACTUALIZAR DIRECTAMENTE en DJ2026_PERSONAL
-            $this->insertOrUpdateDJ2026Personal($codiPers, $data);
+            $this->insertOrUpdateDJ2026Personal($codiPers, $data, $source);
 
             // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
             $this->syncDJ2026ToPersonal($codiPers);
@@ -1083,7 +1084,7 @@ class DjController extends Controller
         }
     }
 
-    private function insertOrUpdateDJ2026Personal($codiPers, $data)
+    private function insertOrUpdateDJ2026Personal($codiPers, $data, $source = 'migracion')
     {
         // ✅ 1. Obtener datos base de sw_MIGRA_PERSONAL
         $migraData = DB::select(
@@ -1092,10 +1093,15 @@ class DjController extends Controller
         );
 
         if (empty($migraData)) {
-            throw new \Exception("No se encontró registro en sw_MIGRA_PERSONAL para CODI_PERS: {$codiPers}");
+            if ($source !== 'pendiente') {
+                throw new \Exception("No se encontró registro en sw_MIGRA_PERSONAL para CODI_PERS: {$codiPers}");
+            }
+            $base = !empty($personalOriginal) ? (array) $personalOriginal[0] : [];
+        } else {
+            $base = (array) $migraData[0];
         }
 
-        $base = (array) $migraData[0];
+        //$base = (array) $migraData[0];
 
         // ✅ 2. Obtener datos de si_solm.dbo.PERSONAL (TABLA ORIGINAL/MAESTRA)
         $personalOriginal = DB::select(

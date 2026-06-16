@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
         tabla.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 const field = cell.getAttribute('tabulator-field');
-                if (i === cells.length - 1 || field === 'migrado' || field === 'estado') return;
+                if (i === cells.length - 1 || field === 'migrado' || field === 'estado' || field === 'tipoPer' || field === 'cambio') return;
                 const text = cell.textContent || '';
                 if (valor && text.toLowerCase().includes(valor)) {
                     const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -666,6 +666,18 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(err => console.error('Error card SP:', err));
     }
 
+
+    function matchBusqueda(data, texto) {
+        const palabras = texto.toLowerCase().split(/\s+/).filter(p => p);
+        const campos = [
+            (data.nombres   ?? '').toLowerCase(),
+            (data.apellido1 ?? '').toLowerCase(),
+            (data.apellido2 ?? '').toLowerCase(),
+            (data.dni       ?? '').toLowerCase(),
+        ];
+        return palabras.every(palabra => campos.some(campo => campo.includes(palabra)));
+    }
+
     // ============================================================
     // FILTROS
     // ============================================================
@@ -683,13 +695,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function aplicarFiltrosPEN() {
         const sucursal = document.getElementById('filtroSucursalPEN')?.value ?? '';
-        const tipoPer = document.getElementById('filtroTipoPerPEN')?.value ?? '';
-        const filtros = [];
-        if (sucursal) filtros.push({ field: "codSucursal", type: "=", value: sucursal });
-        if (tipoPer) filtros.push({ field: "tipoPer", type: "=", value: tipoPer });
-        const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
-        if (texto) filtros.push([{ field: "nombres", type: "like", value: texto }, { field: "dni", type: "like", value: texto }]);
-        tblPersonas.setFilter(filtros);
+        const tipoPer  = document.getElementById('filtroTipoPerPEN')?.value ?? '';
+        const texto    = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
+
+        tblPersonas.setFilter((data) => {
+            if (sucursal && data.codSucursal !== sucursal) return false;
+            if (tipoPer  && data.tipoPer     !== tipoPer)  return false;
+            if (texto    && !matchBusqueda(data, texto))   return false;
+            return true;
+        });
     }
 
     document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
@@ -748,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function () {
     buscarPersonalInput?.addEventListener("keyup", function () {
         const valor = this.value.toLowerCase().trim();
         if (tabActiva === 'pendiente') {
-            tblPersonas.setFilter([[{ field: "nombres", type: "like", value: valor }, { field: "dni", type: "like", value: valor }]]);
+            aplicarFiltrosPEN();
             tblPersonas._ultimoFiltro = valor;
             setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
         } else {
@@ -875,8 +889,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = Object.fromEntries(formData.entries());
                 console.log('📦 data object:', data);
 
+                const tabActiva = document.querySelector('.tab-btn.border-b-white')?.dataset?.tab ?? 'pendiente';
                 const payload = {
                     ...data,
+                    source: tabActiva,
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
                     FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
