@@ -166,6 +166,152 @@
                 </div>
             </div>
 
+<<<<<<< Updated upstream
+=======
+            {{-- TABLA PESTAÑA 2: sin columna Estado, con columna Migrado --}}
+
+
+<div id="panelMigrado" class="w-full px-5 py-2 mt-1 hidden">
+
+    {{-- FILTROS + BOTONES --}}
+    <div class="flex justify-between items-start gap-4 mb-4">
+
+    <div class="flex flex-col items-start gap-2">
+
+            {{-- Contador --}}
+            <div>
+                <div class="flex items-baseline gap-1 px-3 py-1 bg-gray-100 rounded-lg border border-gray-200">
+                <span id="contadorFiltrado" class="text-base font-medium text-gray-800">0</span>
+                <span class="text-sm text-gray-400">/</span>
+                <span id="contadorTotal" class="text-sm text-gray-500">0</span>
+            </div>
+            </div>
+            
+
+            {{-- Reportes --}}
+            <div class="flex items-center gap-2">
+                <button type="button" id="btnReporteFaltantes"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors">
+                    <i class='bx bx-download text-base'></i>
+                    Rep. faltantes
+                </button>
+                <button type="button" id="btnReporteActualizacion"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors">
+                    <i class='bx bx-download text-base'></i>
+                    Rep. Actualización
+                </button>
+            </div>
+
+            {{-- DJ Unificado --}}
+            <div class="flex items-center gap-2">
+                <button type="button" id="btnDJUnificado"
+                    class="btn border-warning text-warning hover:bg-warning hover:text-white">
+                    <i class='bx bx-file text-base'></i>
+                    DJ Unificado
+                </button>
+                <button type="button" id="btnDJUnificadoMigrado"
+                    class="btn border-primary text-primary hover:bg-primary hover:text-white">
+                    <i class='bx bx-file text-base'></i>
+                    DJ Unificado (Migrados)
+                </button>
+                <button type="button" id="btnResetearDJs"
+                    class="btn bg-danger text-white">
+                    <i class='bx bx-reset text-base'></i>
+                    Resetear marcas
+                </button>
+            </div>
+
+        </div>
+
+        {{-- IZQUIERDA: Filtros --}}
+        <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-gray-600">Sucursal:</label>
+                <!-- <select id="filtroSucursal"
+                    class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                    <option value="">Todas</option>
+                </select> -->
+                
+                @php
+                    $sucursalesFiltradas = array_slice($sucursales, 1);
+                @endphp
+
+                <select id="filtroSucursal" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                    
+                    @if(count($sucursalesFiltradas) > 1)
+                        <option value="">Todas</option>
+                    @endif
+
+                    @foreach ($sucursalesFiltradas as $sucursal)
+                        <option value="{{ $sucursal->codigo }}">
+                            {{ $sucursal->abreviatura }}
+                        </option>
+                    @endforeach
+
+ 
+
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-gray-600">Tipo:</label>
+                <!-- <select id="filtroTipoPer"
+                    class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                    <option value="">Todos</option>
+                    <option value="OPERATIVO">Operativo</option>
+                    <option value="ADMINISTRATIVO">Administrativo</option>
+                    <option value="ESPECIAL">Especial</option>
+                </select> -->
+                <select id="filtroTipoPer" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                    @if($tipoPerLimitar == 0)
+                        <option value="">Todos</option>
+                        <option value="OPERATIVO">Operativo</option>
+                        <option value="ADMINISTRATIVO">Administrativo</option>
+                        <!-- <option value="ESPECIAL">Especial</option> -->
+                    @elseif($tipoPerLimitar == 1)
+                        <option value="ADMINISTRATIVO" selected>Administrativo</option>
+                    @elseif($tipoPerLimitar == 2)
+                        <option value="OPERATIVO" selected>Operativo</option>
+                    @endif
+                </select>
+            </div>
+        </div>
+
+        {{-- DERECHA: Contador + Botones --}}
+        
+
+    </div>
+
+    {{-- DIVISOR ENTRE FILTROS Y TABLA --}}
+    <div class="flex items-center gap-3 mb-4">
+        <div class="flex-1 border-t border-gray-200"></div>
+        <span class="text-xs text-gray-400 font-medium uppercase tracking-wider px-2">
+            <i class='bx bx-table mr-1'></i>Resultados
+        </span>
+        <div class="flex-1 border-t border-gray-200"></div>
+    </div>
+
+    <div id="tblPersonasMigrado" class="w-full"></div>
+
+    <div class="flex items-center gap-2 mt-3">
+        <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
+        <select id="page-size-migrado" 
+            class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <span class="text-sm text-gray-600">registros</span>
+    </div>
+
+</div>
+
+
+        </div>
+    </div>
+
+>>>>>>> Stashed changes
     <div id="divCoincidencias" class="grid lg:grid-cols-1 gap-6 mt-8 hidden">
         <div class="card overflow-hidden">
             <div class="card-header">
@@ -213,3 +359,5 @@
        'resources/js/functions/nueva_dj.js', 
        'resources/js/functions/modal_reporte.js'
     ])
+
+
