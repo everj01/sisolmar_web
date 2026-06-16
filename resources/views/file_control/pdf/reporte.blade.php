@@ -129,11 +129,50 @@
         }
     </style>
 </head>
- <body>
-      @foreach ($personas as $pers)
 
-          <div class="container" style="page-break-after: auto;">
-              <img src="{{ public_path('images/gruposolmar/caratula_legajo.jpg') }}" class="fondo-pdf"
+<body>
+
+
+    @foreach ($personas as $pers)
+            @php
+                $documentosMostrados = [];
+            @endphp
+
+            {{-- <div class="container">
+                <img src="{{ public_path('images/gruposolmar/fondo_caratula.png') }}" class="fondo-pdf" alt="Fondo">
+
+                <div class="contenido_caratula ">
+                    <img class="logo_solmar" src="{{ public_path('images/gruposolmar/banner_security.png') }}" alt="LogoSolmar">
+
+                    <div class="datos_personal">
+                        <h1 id="title_caratula">FILE CONTROL</h1>
+                        <h2>MODULO DE LEGAJOS ELECTRONICOS</h2>
+                        <h3>SISOLMAR - SISTEMA INTEGRADO DE SOLMAR</h3>
+
+                        <img src="{{ public_path('images/gruposolmar/logo_5_normas.png') }}" alt="LogoSolmar"
+                            style="width: 105px;">
+
+                        <h2 class="info_personal"><i class="fa fa-user" aria-hidden="true"></i>{{ $pers['persona'] }}</h2>
+                        <h2 class="info_personal">SOLMAR {{ $pers['sucursal'] }}</h2>
+                        <h2 class="info_personal">{{ $pers['cargo'] }}</h2>
+                        <h2 class="info_personal">FILE ELECTRONICO N° {{ $pers['codPersonal'] }}</h2>
+                    </div>
+
+                    <div class="wrapper-aviso">
+                        <div class="aviso">
+                            <p>Este File Electrónico pertenece a la base de datos del SISOLMAR siendo la Jefe de RRHH la
+                                responsable de su custodia y actualización.</p>
+                            <p>No será impreso, salvo excepciones previamente autorizadas por la Jefe de RRHH</p>
+                            <p>Los datos personales de este file electrónico, están protegidos según lo estipulado en la Ley N°
+                                29733 - Ley de Portección de Datos Personales</p>
+                        </div>
+                    </div>
+                    <h3 class="fecha_emision">FECHA DE EMISION: {{ \Carbon\Carbon::now()->format('d/m/Y') }}</h3>
+                </div>
+            </div> --}}
+
+              <div class="container">
+      <img src="{{ public_path('images/gruposolmar/caratula_legajo.jpg') }}" class="fondo-pdf"
   alt="Carátula">
 
       <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;">
@@ -148,16 +187,87 @@
 
            <div style="position: absolute; top: 94.7%; left: 85%; font-size: 18px; font-weight: bold;
   color: #000;">
-                      {{ \Carbon\Carbon::now()->format('d/m/Y') }}
-                  </div>
-              </div>
+              {{ \Carbon\Carbon::now()->format('d/m/Y') }}
           </div>
+      </div>
+  </div>
+            <div style="page-break-after: always;"></div>
 
-          {{-- @if (!$loop->last)
-              <div style="page-break-after: always;"></div>
-          @endif --}}
 
-      @endforeach
-  </body>
+
+            @php
+                $documentosMostrados = [];
+            @endphp
+
+            @foreach ($items as $index => $item)
+
+                @if ($item['codPersonal'] === $pers['codPersonal'])
+
+                    {{-- Si es imagen --}}
+                    @if ($item['es_formato'] === '0')
+                        {{-- Mostrar título del documento solo una vez --}}
+                        @if (!in_array($item['documento'], $documentosMostrados))
+                            <h4 style="text-align: center;">{{ $item['documento'] }}</h4>
+                            @php
+                                $documentosMostrados[] = $item['documento'];
+                            @endphp
+                        @endif
+
+                        <div class="pagina-imagen">
+                            <img src="{{ $item['ruta'] }}" alt="Imagen de {{ $item['documento'] }}"
+                                style="max-width: {{ $item['ancho'] }}; max-height: 1250px; display: block; margin: 0 auto; object-fit: contain; margin-bottom: 10px;">
+                        </div>
+
+                        {{-- Verificar si es la última imagen del documento para aplicar salto de página --}}
+                        @php
+                            $esUltimaImagen = true;
+                            for ($i = $index + 1; $i < count($items); $i++) {
+                                if (
+                                    $items[$i]['codPersonal'] === $pers['codPersonal'] &&
+                                    $items[$i]['documento'] === $item['documento'] &&
+                                    $items[$i]['es_formato'] === '0'
+                                ) {
+                                    $esUltimaImagen = false;
+                                    break;
+                                }
+                            }
+                        @endphp
+
+                        @if ($esUltimaImagen)
+                            <div style="page-break-after: always;"></div>
+                        @endif
+
+                        {{-- Si es formato --}}
+                    @elseif ($item['es_formato'] === '1')
+                        @php
+                            $vista = $item['nombre_vista'];
+                        @endphp
+
+                        @if (view()->exists($vista))
+                            @include($vista, ['datos' => $item['datos'], 'firma' => $item['firma'], 'huella' => $item['huella']])
+                        @else
+                            <p>Vista no encontrada para {{ $item['documento'] }}</p>
+                        @endif
+
+                        {{-- Como solo hay un formato por documento, aplicamos salto de página directamente --}}
+                        <div style="page-break-after: always;"></div>
+                    @endif
+
+                @endif
+
+            @endforeach
+
+
+
+
+            <div style="page-break-after: always;"></div>
+
+    @endforeach
+
+
+
+
+
+</body>
 
 </html>

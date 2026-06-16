@@ -434,6 +434,11 @@ document.getElementById("btnLeg1").addEventListener("click", async function () {
     }
 });
 
+ function getModoGenerar() {
+      const radio = document.querySelector('input[name="modoGenerar"]:checked');
+      return radio ? radio.value : 'separado';
+  }
+
 
 document.getElementById("btnLeg2").addEventListener("click", async function () {
     const personas = getPersonasSeleccionadas();
