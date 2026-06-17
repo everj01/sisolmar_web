@@ -201,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
+            { title: "Cargo", field: "cargo", hozAlign: "left", widthGrow: 2 }, // 🔥 NUEVA COLUMNA 🔥
             {
                 title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
                 formatter: cell => {
@@ -466,12 +467,17 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
-                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                // const filtroSucursal = document.getElementById('filtroSucursalPEN');
-                // if (filtroSucursal) {
-                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-                // }
+                
+                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
+                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+                const filtroCargo = document.getElementById('filtroCargoPEN');
+                if (filtroCargo) {
+                    filtroCargo.innerHTML = '<option value="">Todos</option>';
+                    cargosUnicos.forEach(cargo => {
+                        filtroCargo.add(new Option(cargo, cargo));
+                    });
+                }
+                
                 aplicarFiltrosPEN();
             })
             .catch(error => console.error("Hubo un error:", error));
@@ -482,9 +488,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
         axios.get(`${VITE_URL_APP}/get-personal-dj`)
             .then(response => {
-                return tblPersonas.setData(response.data);
+                const datosTabla = response.data;
+                tblPersonas.setData(datosTabla);
+
+                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
+                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+                const filtroCargo = document.getElementById('filtroCargoPEN');
+                if (filtroCargo) {
+                    filtroCargo.innerHTML = '<option value="">Todos</option>';
+                    cargosUnicos.forEach(cargo => {
+                        filtroCargo.add(new Option(cargo, cargo));
+                    });
+                }
+
+                aplicarFiltrosPEN();
             })
-            .then(() => aplicarFiltrosPEN())
             .catch(console.error);
     };
 
@@ -530,11 +548,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function aplicarFiltrosPEN() {
         const sucursal = document.getElementById('filtroSucursalPEN')?.value ?? '';
         const tipoPer  = document.getElementById('filtroTipoPerPEN')?.value ?? '';
+        const cargo    = document.getElementById('filtroCargoPEN')?.value ?? ''; // 🔥 Capturar cargo
         const texto    = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
 
         tblPersonas.setFilter((data) => {
             if (sucursal && data.codSucursal !== sucursal) return false;
             if (tipoPer  && data.tipoPer     !== tipoPer)  return false;
+            
+            // 🔥 CAMBIO AQUÍ: Comparamos el nombre exacto del cargo
+            if (cargo    && data.cargo       !== cargo)    return false; 
+            
             if (texto    && !matchBusqueda(data, texto))   return false;
             return true;
         });
@@ -542,9 +565,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
     document.getElementById('filtroTipoPerPEN')?.addEventListener('change', aplicarFiltrosPEN);
-
-    getPersonal();
-
+    document.getElementById('filtroCargoPEN')?.addEventListener('change', aplicarFiltrosPEN); // 🔥 Nuevo Listener
     getPersonal();
 
     // ============================================================
@@ -2431,4 +2452,3 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
     });
 
 })();
-//hola

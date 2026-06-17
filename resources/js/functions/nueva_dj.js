@@ -615,7 +615,7 @@ import Swal from 'sweetalert2';
             if (p.PERS_VIGENCIA === 'SI') {
                 docErrorMsg.innerHTML = `
                     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 12px;margin-top:4px;">
-                        <span style="font-weight:700;color:#b91c1c;">⚠ Personal VIGENTE ya registrado:</span><br>
+                        <span style="font-weight:700;color:#b91c1c;">⚠ Personal YA REGISTRADO:</span><br>
                         <span style="color:#1d4ed8;font-weight:600;">${p.NOMB_1} ${p.NOMB_2} ${p.APEL_1} ${p.APEL_2}</span>
                         <span style="color:#64748b;">(${p.NRO_DOCU_IDEN})</span>
                         <br><span style="font-size:11px;color:#b91c1c;">No se puede crear un nuevo registro para este personal.</span>
@@ -626,7 +626,7 @@ import Swal from 'sweetalert2';
             const codiPers = p.codigo || p.CODI_PERS || '';
             docErrorMsg.innerHTML = `
                 <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;margin-top:4px;">
-                    <span style="font-weight:700;color:#92400e;">ℹ Personal NO VIGENTE encontrado:</span><br>
+                    <span style="font-weight:700;color:#92400e;">ℹ Personal Existente encontrado:</span><br>
                     <span style="color:#1d4ed8;font-weight:600;">${p.NOMB_1} ${p.NOMB_2} ${p.APEL_1} ${p.APEL_2}</span>
                     <span style="color:#64748b;">(${p.NRO_DOCU_IDEN})</span><br>
                     <button id="ndj_btnRecontratacion" type="button" data-codi-pers="${codiPers}"

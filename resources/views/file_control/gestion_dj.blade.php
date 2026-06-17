@@ -114,25 +114,31 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Tipo:</label>
-                          
                             <select id="filtroTipoPerPEN" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-    @if($tipoPerLimitar == 0)
-        <option value="">Todos</option>
-        <option value="OPERATIVO 4°">Operativo 4°</option>
-        <option value="OPERATIVO 5°">Operativo 5°</option>
-        <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
-        <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
-        <option value="ESPECIAL">Especial</option>
-    @elseif($tipoPerLimitar == 1)
-        <option value="">Todos</option>
-        <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
-        <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
-    @elseif($tipoPerLimitar == 2)
-        <option value="">Todos</option>
-        <option value="OPERATIVO 4°">Operativo 4°</option>
-        <option value="OPERATIVO 5°">Operativo 5°</option>
-    @endif
-</select>
+                                @if($tipoPerLimitar == 0)
+                                    <option value="">Todos</option>
+                                    <option value="OPERATIVO 4°">Operativo 4°</option>
+                                    <option value="OPERATIVO 5°">Operativo 5°</option>
+                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                                    <option value="ESPECIAL">Especial</option>
+                                @elseif($tipoPerLimitar == 1)
+                                    <option value="">Todos</option>
+                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                                @elseif($tipoPerLimitar == 2)
+                                    <option value="">Todos</option>
+                                    <option value="OPERATIVO 4°">Operativo 4°</option>
+                                    <option value="OPERATIVO 5°">Operativo 5°</option>
+                                @endif
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-600">Cargo:</label>
+                            <select id="filtroCargoPEN" class="w-48 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                <option value="">Todos</option>
+                                </select>
                         </div>
                          {{-- <button type="button" id="btnDescargarDJs_PEN"
                                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
@@ -166,8 +172,6 @@
                 </div>
             </div>
 
-<<<<<<< Updated upstream
-=======
             {{-- TABLA PESTAÑA 2: sin columna Estado, con columna Migrado --}}
 
 
@@ -311,7 +315,6 @@
         </div>
     </div>
 
->>>>>>> Stashed changes
     <div id="divCoincidencias" class="grid lg:grid-cols-1 gap-6 mt-8 hidden">
         <div class="card overflow-hidden">
             <div class="card-header">

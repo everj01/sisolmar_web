@@ -37,15 +37,16 @@ class FileController extends Controller
         $grados = FileControl::getGradosInstruccionDJ();
         $carreras = FileControl::getCarrerasDJ();
         $instituciones = FileControl::getInstitucionesDJ();
-
-        // NUevos
         $sucursales = FileControl::getSucursales();
+
+        // 🔥 1. Obtener cargos
+        $cargos = FileControl::getCargos();
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
-        // -------------------------------------
 
-        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
+        // 🔥 2. Añadir 'cargos' al compact
+        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'cargos', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
     public function indexActualizarDj()
