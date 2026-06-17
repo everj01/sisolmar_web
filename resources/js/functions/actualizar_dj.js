@@ -223,9 +223,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 formatter: cell => {
                     const d = cell.getData();
                     // Ahora la BD sí enviará correctamente 'Migrado' o 'Sin Migrar'
-                    const estado = d.migrado || 'Sin Migrar'; 
+                    const estado = d.migrado || 'NO'; 
                     
-                    const color = estado === 'Migrado' 
+                    const color = estado === 'SI' 
                         ? 'border-success bg-success text-white' 
                         : 'border-dark-100 bg-dark-100 text-yellow-800';
                         
@@ -288,20 +288,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
                 formatter: cell => {
                     const d = cell.getData();
-                    const disabled = (d.migrado === 'Migrado' || d.migrado === 'MIGRADO') ? 'disabled' : '';
-                    // 1. Apuntamos al modal correcto de edición/visualización (#modalDjGestion)
-                    return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white" data-hs-overlay="#modalDjGestion">DJ</button>`;
+                    const estado = d.migrado ? String(d.migrado).toUpperCase() : 'NO';
+                    
+                    // Bloqueamos el botón si el estado es 'SI'
+                    const disabled = estado === 'SI' ? 'disabled' : '';
+                    
+                    // Agregamos clases de opacidad para que visualmente se note que está bloqueado
+                    const opacityClass = disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-success hover:text-white';
+
+                    return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success ${opacityClass}" data-hs-overlay="#modalDjGestion">DJ</button>`;
                 },
                 cellClick: (e, cell) => {
                     const btn = e.target.closest('.form-btn-migrado');
                     if (!btn) return;
+                    // Si el botón está deshabilitado, evitamos que haga clic
+                    if (btn.hasAttribute('disabled')) return;
+
                     const rowData = cell.getRow().getData();
                     const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
                     
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
                     
-                    // 2. 🔥 CORRECCIÓN CLAVE: Usamos 'migracion' para que jale y pinte los datos del ERP correctamente
                     abrirFormularioDJ(codiPers, 'migracion');
                 }
             },

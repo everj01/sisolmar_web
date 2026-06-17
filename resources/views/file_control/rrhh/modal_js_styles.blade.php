@@ -315,8 +315,19 @@
 
     /* Estado: campo activo (cuando el usuario hace focus en el form) */
     .dj-panel-backup .bk-field.is-active {
-        background: #fde68a;
-        box-shadow: 0 0 0 2px #f59e0b;
+        background: #fef08a !important; 
+        border-left: 5px solid #ea580c !important; 
+        box-shadow: 0 4px 10px rgba(234, 88, 12, 0.4), inset 0 0 0 1px #ea580c !important;
+        transform: scale(1.03) translateX(4px) !important;
+        transition: all 0.2s ease !important;
+        border-radius: 6px !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+
+    .dj-panel-backup .bk-field.is-active label {
+        color: #9a3412 !important;
+        font-weight: 900 !important;
     }
 
     /* Panel derecho - FORMULARIO NUEVO */

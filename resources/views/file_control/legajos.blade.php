@@ -95,7 +95,18 @@
 
           <div class="px-5 py-4">
               <div id="notifiSoli" class="flex flex-col items-center gap-1 mb-3"></div>
+              
+              {{-- TABLA PRINCIPAL (Solo seleccionados) --}}
               <div id="tblFolio" class="w-full"></div>
+              
+              {{-- NUEVO BOTÓN PARA ABRIR MODAL --}}
+              <div class="mt-4 flex justify-start">
+                  <button type="button" id="btnAbrirModalFolios" onclick="document.getElementById('modalAgregarFolios').classList.remove('hidden')"
+                      class="btn rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white text-sm hidden transition-all">
+                      <i class="fa-solid fa-plus me-1"></i> Agregar más folios
+                  </button>
+              </div>
+
               <input type="hidden" id="txtNombre">
               <input type="hidden" id="hidLegajo">
 
@@ -110,6 +121,25 @@
 
       </div>
 
+  </div>
+
+  {{-- MODAL AGREGAR FOLIOS ADICIONALES --}}
+  <div id="modalAgregarFolios" class="fixed inset-0 z-[80] hidden bg-gray-900 bg-opacity-50 flex items-center justify-center transition-all">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl flex flex-col max-h-[90vh] mx-4">
+          <div class="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-list-check me-2 text-primary"></i>Seleccionar Folios Adicionales</h3>
+              <button type="button" onclick="document.getElementById('modalAgregarFolios').classList.add('hidden')" class="text-gray-400 hover:text-red-500 transition-colors">
+                  <i class="fa-solid fa-xmark text-2xl"></i>
+              </button>
+          </div>
+          <div class="p-4 overflow-y-auto flex-1 bg-white">
+              <div id="tblFolioModal" class="w-full"></div>
+          </div>
+          <div class="p-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
+              <button type="button" onclick="document.getElementById('modalAgregarFolios').classList.add('hidden')" class="btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 rounded-lg font-medium">Cancelar</button>
+              <button type="button" id="btnAgregarFoliosSeleccionados" class="btn bg-primary text-white hover:bg-blue-700 rounded-lg font-medium"><i class="fa-solid fa-check me-1"></i> Agregar Seleccionados</button>
+          </div>
+      </div>
   </div>
 
   @endsection
