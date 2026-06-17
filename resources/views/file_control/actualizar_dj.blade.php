@@ -138,9 +138,7 @@
         </div>
     </div>
 
-    <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
-
-    {{-- Incluimos el modal general de DJ que sirve para editar/ver --}}
+    {{-- Incluimos el modal general de DJ que sirve para editar/ver con los datos cargados --}}
     @include('file_control.rrhh.partials_modal_dj')
 
 @endsection
@@ -164,5 +162,6 @@
 @endsection
 
 @vite([
-    'resources/js/functions/actualizar_dj.js'
+    'resources/js/functions/actualizar_dj.js',
+    'resources/js/functions/nueva_dj.js'
 ])
