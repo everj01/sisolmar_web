@@ -24,51 +24,58 @@ class MatriculaMasivaJob implements ShouldQueue
     private const MODO_ESTANDAR       = 'estandar';
     private const MODO_POR_TIPO_CURSO = 'por_tipo_curso';
 
-    protected string $modo;
-    protected int    $cursoCodigo;
-    protected string $programacionCodigo;
     protected array  $personalIds;
+    protected string $modo;
+    protected string $programacionCodigo;
+    protected string|int|null $sucursalId;
+    protected int    $cursoCodigo;
     protected int    $usuarioId;
 
     private function __construct(
-        string $modo,
-        int    $cursoCodigo,
-        string $programacionCodigo,
-        int    $usuarioId,
-        array  $personalIds = []
+        string           $modo,
+        int              $cursoCodigo,
+        string           $programacionCodigo,
+        int              $usuarioId,
+        string|int|null  $sucursalId = null,
+        array            $personalIds = []
     ) {
         $this->modo               = $modo;
         $this->cursoCodigo        = $cursoCodigo;
         $this->programacionCodigo = $programacionCodigo;
         $this->usuarioId          = $usuarioId;
+        $this->sucursalId         = $sucursalId;
         $this->personalIds        = $personalIds;
     }
 
     public static function estandar(
-        int    $cursoCodigo,
-        string $programacionCodigo,
-        array  $personalIds,
-        int    $usuarioId
+        int              $cursoCodigo,
+        string           $programacionCodigo,
+        array            $personalIds,
+        int              $usuarioId,
+        string|int|null  $sucursalId = null
     ): static {
         return new static(
             self::MODO_ESTANDAR,
             $cursoCodigo,
             $programacionCodigo,
             $usuarioId,
+            $sucursalId,
             $personalIds
         );
     }
 
     public static function porTipoCurso(
-        int    $cursoCodigo,
-        string $programacionCodigo,
-        int    $usuarioId
+        int              $cursoCodigo,
+        string           $programacionCodigo,
+        int              $usuarioId,
+        string|int|null  $sucursalId = null
     ): static {
         return new static(
             self::MODO_POR_TIPO_CURSO,
             $cursoCodigo,
             $programacionCodigo,
-            $usuarioId
+            $usuarioId,
+            $sucursalId
         );
     }
 
@@ -172,8 +179,8 @@ class MatriculaMasivaJob implements ShouldQueue
 
         try {
             $rows = DB::select(
-                "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?",
-                [$codCliente]
+                "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_X_CLIENTE] @CodCliente = ?, @SucursalCodigo = ?",
+                [$codCliente, $this->sucursalId]
             );
 
             $ids = array_map(fn($row) => $row->codigo, $rows);
@@ -226,8 +233,8 @@ class MatriculaMasivaJob implements ShouldQueue
 
             foreach ($tipos as $tipoTrab) {
                 $rows = DB::select(
-                    "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_SOLMAR] @TIPOTRAB = ?",
-                    [$tipoTrab]
+                    "EXEC [dbo].[SP_OBTENER_PERSONAL_ACTIVO_SOLMAR] @TIPOTRAB = ?, @SucursalCodigo = ?",
+                    [$tipoTrab, $this->sucursalId]
                 );
 
                 foreach ($rows as $row) {

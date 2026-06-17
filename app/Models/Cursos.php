@@ -35,6 +35,7 @@ class Cursos extends Model
         'descripcion',
         'dirigido_a',
         'cod_cliente',
+        'sucursal',
     ];
 
     public $timestamps = false;
