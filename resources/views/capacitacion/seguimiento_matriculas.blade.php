@@ -1,6 +1,3 @@
-@php
-use Carbon\Traits\Date;
-@endphp
 @extends('layouts.vertical', ['title' => 'Seguimiento de Matrículas'])
 @section('css')
 <!-- Estilos -->
