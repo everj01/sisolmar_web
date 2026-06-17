@@ -12,7 +12,7 @@ let valorCliente, valorCargo;
 let nombreCliente = '', nombreCargo = '';
 
 let selectedCliente = null;
-  let selectedCargo   = null;
+let selectedCargo = null;
 
 // ── TABLA CLIENTES ──────────────────────────────────────────────
 const tblCliente = new Tabulator("#tblCliente", {
@@ -39,10 +39,10 @@ const tblCliente = new Tabulator("#tblCliente", {
         },
     ],
 
-    rowFormatter: function(row) {
-          row.getElement().style.backgroundColor =
-              selectedCliente && String(row.getData().codigo) === String(selectedCliente)
-                  ? '#bfdbfe' : '';
+    rowFormatter: function (row) {
+        row.getElement().style.backgroundColor =
+            selectedCliente && String(row.getData().codigo) === String(selectedCliente)
+                ? '#bfdbfe' : '';
     }
 });
 
@@ -80,24 +80,25 @@ const tblCargo = new Tabulator("#tblCargo", {
             },
         },
     ],
-    rowFormatter: function(row) {
-          row.getElement().style.backgroundColor =
-              selectedCargo && String(row.getData().codigo) === String(selectedCargo)
-                  ? '#bfdbfe' : '';
-      }
+    rowFormatter: function (row) {
+        row.getElement().style.backgroundColor =
+            selectedCargo && String(row.getData().codigo) === String(selectedCargo)
+                ? '#bfdbfe' : '';
+    }
 });
 
 document.querySelector("#tblCargo").classList.add("disabled-table");
 
 // ── TABLA FOLIOS ─────────────────────────────────────────────────
+let datosFoliosGlobal = [];
+
+// ── 1. TABLA FOLIOS (PRINCIPAL - SOLO SELECCIONADOS) ─────────────
 const tblFolio = new Tabulator("#tblFolio", {
     layout: "fitColumns",
     responsiveLayout: "collapse",
-    // pagination: true,
-    // paginationSize: 20,
-    height: "660px",
+    height: "400px",
     locale: "es",
-    //langs: { es: { pagination: { first: "Primero", last: "Último", prev: "Anterior", next: "Siguiente", all: "Todo" }, data: { empty: "Seleccione cliente y cargo" } } },
+    langs: { es: { data: { empty: "No hay folios en este legajo. Haga clic en 'Agregar más folios' abajo." } } },
     rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
     columns: [
         { title: "N°", formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
@@ -123,37 +124,88 @@ const tblFolio = new Tabulator("#tblFolio", {
             }
         },
         {
+            title: "Acción", hozAlign: "center", width: 70, headerSort: false,
+            formatter: function () {
+                return `<button type="button" class="text-danger hover:text-red-700 bg-red-100 hover:bg-red-200 px-2 py-1 rounded" title="Quitar folio"><i class="fa-solid fa-trash-can"></i></button>`;
+            },
+            cellClick: function (e, cell) {
+                if (e.target.closest('button')) {
+                    const cod = cell.getData().codigo;
+                    const item = datosFoliosGlobal.find(f => f.codigo === cod);
+                    if (item) item._selected = false;
+                    actualizarTablasFolios();
+                }
+            }
+        },
+    ]
+});
+document.querySelector("#tblFolio").classList.add("disabled-table");
+
+// ── 2. TABLA FOLIOS (MODAL - SOLO NO SELECCIONADOS) ──────────────
+const tblFolioModal = new Tabulator("#tblFolioModal", {
+    layout: "fitColumns",
+    responsiveLayout: "collapse",
+    height: "500px",
+    locale: "es",
+    langs: { es: { data: { empty: "¡Todos los folios ya han sido agregados a este legajo!" } } },
+    rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
+    columns: [
+        {
             title: "", hozAlign: "center", width: 50, headerSort: false,
             formatter: function (cell) {
                 const rowData = cell.getData();
-                const cod = rowData.codigo;
-
-                if (typeof rowData._selected === 'undefined') {
-                    rowData._selected = rowData.tiene != 0;
-                }
-
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
-                checkbox.className = "form-checkbox rounded text-primary chkFolio";
-                checkbox.value = cod;
-                checkbox.checked = rowData._selected;
-
+                checkbox.className = "form-checkbox rounded text-primary w-4 h-4 cursor-pointer";
+                checkbox.checked = !!rowData._tempSelected;
                 checkbox.addEventListener("change", function () {
-                    rowData._selected = this.checked;
+                    rowData._tempSelected = this.checked;
                 });
-
                 return checkbox;
             },
         },
-    ],
-    rowFormatter: function (row) {
-        if (row.getData().obligatorio != "0") {
-            row.getElement().style.backgroundColor = "#f2f5ff";
+        { title: "N°", formatter: "rownum", hozAlign: "center", width: 45, headerSort: false },
+        { title: "Folio", field: "nombre", hozAlign: "left", widthGrow: 2 },
+        {
+            title: "Tipo", hozAlign: "center", widthGrow: 1, headerSort: false,
+            formatter: function (cell) {
+                const obl = cell.getData().obligatorio;
+                return obl == '0'
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-default-100 text-default-800">ADICIONAL</span>`
+                    : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/25 text-primary-800">PRINCIPAL</span>`;
+            }
         }
-    }
+    ]
 });
 
-document.querySelector("#tblFolio").classList.add("disabled-table");
+// ── 3. LÓGICA DE REPARTO DE FOLIOS ───────────────────────────────
+function actualizarTablasFolios() {
+    const ordenarPorTipo = (a, b) => b.obligatorio - a.obligatorio;
+
+    const seleccionados = datosFoliosGlobal.filter(f => f._selected).sort(ordenarPorTipo);
+    tblFolio.setData(seleccionados);
+
+    const noSeleccionados = datosFoliosGlobal.filter(f => !f._selected).sort(ordenarPorTipo);
+    noSeleccionados.forEach(f => f._tempSelected = false);
+    tblFolioModal.setData(noSeleccionados);
+}
+
+document.getElementById('btnAgregarFoliosSeleccionados')?.addEventListener('click', () => {
+    let agregados = 0;
+    datosFoliosGlobal.forEach(f => {
+        if (f._tempSelected && !f._selected) {
+            f._selected = true;
+            agregados++;
+        }
+    });
+
+    if (agregados > 0) {
+        actualizarTablasFolios();
+        document.getElementById('modalAgregarFolios').classList.add('hidden');
+    } else {
+        Swal.fire({ title: "Atención", text: "No marcaste ningún folio.", icon: "warning" });
+    }
+});
 
 // ── FILTROS CARGO ────────────────────────────────────────────────
 function aplicarFiltros() {
@@ -206,10 +258,18 @@ function cargarClientes() {
 function cargarFolios(codCliente, codCargo) {
     axios.get(`${VITE_URL_APP}/api/get-folios/${codCliente}/${codCargo}`)
         .then(r => {
-            tblFolio.setData(r.data);
+            // Guardamos todos los folios en nuestra variable global "Cerebro"
+            datosFoliosGlobal = r.data.map(f => {
+                f._selected = (f.tiene != 0); // Si viene de BD con check, a la tabla principal
+                f._tempSelected = false;      // Limpio para el modal
+                return f;
+            });
+            
+            // Repartimos datos (seleccionados vs no seleccionados)
+            actualizarTablasFolios();
 
-             const legajoValido = r.data.find(f => f.codigo_legajo != 0);
-             document.getElementById('hidLegajo').value = legajoValido?.codigo_legajo ?? 0;
+            const legajoValido = r.data.find(f => f.codigo_legajo != 0);
+            document.getElementById('hidLegajo').value = legajoValido?.codigo_legajo ?? 0;
         })
         .catch(e => console.error("Error cargando folios:", e));
 }
@@ -219,64 +279,65 @@ cargarClientes();
 
 // ── SELECCIÓN CLIENTE / CARGO ────────────────────────────────────
 function manejarCambioSeleccion(event) {
-      if (!event.target.matches(".radCliente") && !event.target.matches(".radCargo")) return;
+    if (!event.target.matches(".radCliente") && !event.target.matches(".radCargo")) return;
 
-      const esCliente = event.target.matches(".radCliente");
+    const esCliente = event.target.matches(".radCliente");
 
-      if (esCliente) {
-          valorCliente  = event.target.value;
-          nombreCliente = event.target.dataset.nombre;
-          selectedCliente = valorCliente;
-          tblCliente.redraw(true);
-          document.querySelector("#tblCargo").classList.remove("disabled-table");
-      } else {
-          valorCargo  = event.target.value;
-          nombreCargo = event.target.dataset.nombre;
-          selectedCargo = valorCargo;
-          tblCargo.redraw(true);
-      }
+    if (esCliente) {
+        valorCliente = event.target.value;
+        nombreCliente = event.target.dataset.nombre;
+        selectedCliente = valorCliente;
+        tblCliente.redraw(true);
+        document.querySelector("#tblCargo").classList.remove("disabled-table");
+    } else {
+        valorCargo = event.target.value;
+        nombreCargo = event.target.dataset.nombre;
+        selectedCargo = valorCargo;
+        tblCargo.redraw(true);
+    }
 
-      if (valorCliente && valorCargo) {
-          const info = document.getElementById('infoSeleccion');
-          info.innerHTML = `
+    if (valorCliente && valorCargo) {
+        const info = document.getElementById('infoSeleccion');
+        info.innerHTML = `
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text font-medium bg-blue-100 text-blue-700">${nombreCliente}</span>
               <span class="text-gray-400 mx-1">›</span>
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text font-medium bg-primary/20 text-primary">${nombreCargo}</span>
           `;
-          info.className = 'flex items-center gap-1';
-          document.getElementById('txtNombre').value = `${nombreCliente} — ${nombreCargo}`;
+        info.className = 'flex items-center gap-1';
+        document.getElementById('txtNombre').value = `${nombreCliente} — ${nombreCargo}`;
           document.querySelector("#tblFolio").classList.remove("disabled-table");
           document.getElementById("btnRegistrar").disabled = false;
+          document.getElementById("btnAbrirModalFolios").classList.remove("hidden"); // 🔥 Muestra el botón
           cargarFolios(valorCliente, valorCargo);
-      }
-  }
+    }
+}
 
 document.addEventListener("change", manejarCambioSeleccion);
 
- // ── NOTIFICACIONES ───────────────────────────────────────────────
-  function formatFecha(fecha) {
-      if (!fecha) return '';
-      const d = new Date(fecha);
-      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  }
+// ── NOTIFICACIONES ───────────────────────────────────────────────
+function formatFecha(fecha) {
+    if (!fecha) return '';
+    const d = new Date(fecha);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
 
-  function renderNotificaciones(data) {
-      const badge     = document.getElementById('notifBadge');
-      const container = document.getElementById('notifContainer');
+function renderNotificaciones(data) {
+    const badge = document.getElementById('notifBadge');
+    const container = document.getElementById('notifContainer');
 
-      if (data.length > 0) {
-          badge.textContent = data.length;
-          badge.classList.remove('hidden');
-      } else {
-          badge.classList.add('hidden');
-      }
+    if (data.length > 0) {
+        badge.textContent = data.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
 
-      if (data.length === 0) {
-          container.innerHTML = '<p class="text-center text-gray-400 text-sm py-6">Sin notificaciones.</p>';
-          return;
-      }
+    if (data.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-400 text-sm py-6">Sin notificaciones.</p>';
+        return;
+    }
 
-      container.innerHTML = data.map(nf => `
+    container.innerHTML = data.map(nf => `
           <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
               <div class="flex gap-2">
                   <i class="fa-solid ${nf.tipo == 1 ? 'fa-trash-can text-red-500' : 'fa-plus text-green-500'} mt-0.5 flex-shrink-0"></i>
@@ -299,36 +360,36 @@ document.addEventListener("change", manejarCambioSeleccion);
               </div>
           </div>
       `).join('');
-  }
+}
 
-  function cargarNotificaciones() {
-      axios.get(`${VITE_URL_APP}/api/get-notificaciones`)
-          .then(r => renderNotificaciones(r.data))
-          .catch(e => console.error("Error cargando notificaciones:", e));
-  }
+function cargarNotificaciones() {
+    axios.get(`${VITE_URL_APP}/api/get-notificaciones`)
+        .then(r => renderNotificaciones(r.data))
+        .catch(e => console.error("Error cargando notificaciones:", e));
+}
 
-  cargarNotificaciones();
-  setInterval(cargarNotificaciones, 10000);
+cargarNotificaciones();
+setInterval(cargarNotificaciones, 10000);
 
-  window.quitarNotificacion = function (valor) {
-      Swal.fire({
-          title: "¿Quitar esta notificación?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#3085d6",
-          cancelButtonColor: "#d33",
-          confirmButtonText: "Sí",
-          cancelButtonText: "No",
-      }).then(result => {
-          if (!result.isConfirmed) return;
-          axios.post(`${VITE_URL_APP}/api/delete-notif`, { codigo: valor })
-              .then(() => {
-                  Swal.fire({ title: "Eliminado", icon: "success", timer: 1500, showConfirmButton: false })
-                      .then(() => cargarNotificaciones());
-              })
-              .catch(e => console.error("Error eliminando notificación:", e));
-      });
-  };
+window.quitarNotificacion = function (valor) {
+    Swal.fire({
+        title: "¿Quitar esta notificación?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Sí",
+        cancelButtonText: "No",
+    }).then(result => {
+        if (!result.isConfirmed) return;
+        axios.post(`${VITE_URL_APP}/api/delete-notif`, { codigo: valor })
+            .then(() => {
+                Swal.fire({ title: "Eliminado", icon: "success", timer: 1500, showConfirmButton: false })
+                    .then(() => cargarNotificaciones());
+            })
+            .catch(e => console.error("Error eliminando notificación:", e));
+    });
+};
 
 // ── GUARDAR LEGAJO ───────────────────────────────────────────────
 window.guardarLegajo = function () {
@@ -373,13 +434,13 @@ window.guardarLegajo = function () {
 
 // ── GUARDAR LEGAJO ───────────────────────────────────────────────
 window.guardarLegajo = function () {
-    const data = tblFolio.getData();
-    const selecFolios = data.filter(r => r._selected).map(r => r.codigo);
+    // Sacamos todos los codigos directo de la tabla principal
+    const selecFolios = tblFolio.getData().map(r => r.codigo);
 
     if (selecFolios.length === 0) {
         Swal.fire({
             title: "Sin folios seleccionados",
-            text: "Seleccione al menos un folio para guardar el legajo.",
+            text: "El legajo está vacío, agregue al menos un folio.",
             icon: "warning",
             confirmButtonText: "Entendido"
         });
