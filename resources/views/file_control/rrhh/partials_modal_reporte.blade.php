@@ -128,7 +128,7 @@
                 <i class='bx bx-id-card text-sm'></i> DNI
             </button>
             <button type="button" id="btnRptDescCUL"
-                    class="flex items-center gap-1 px-2.5 py-1 text-xs border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-colors">
+                    class="hidden items-center gap-1 px-2.5 py-1 text-xs border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-colors">
                 <i class='bx bx-check-shield text-sm'></i> CUL
             </button>
             <span class="text-gray-200">|</span>

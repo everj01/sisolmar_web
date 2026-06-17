@@ -288,8 +288,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
                 formatter: cell => {
                     const d = cell.getData();
-                    // Evaluamos seguro para bloquear el botón si ya está migrado
                     const disabled = (d.migrado === 'Migrado' || d.migrado === 'MIGRADO') ? 'disabled' : '';
+                    // 1. Apuntamos al modal correcto de edición/visualización (#modalDjGestion)
                     return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white" data-hs-overlay="#modalDjGestion">DJ</button>`;
                 },
                 cellClick: (e, cell) => {
@@ -301,9 +301,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
                     
-                    // 🔥 AQUÍ ESTÁ EL ARREGLO 🔥
-                    // Como están "Sin Migrar", extraemos sus datos base de 'pendiente'
-                    abrirFormularioDJ(codiPers, 'pendiente');
+                    // 2. 🔥 CORRECCIÓN CLAVE: Usamos 'migracion' para que jale y pinte los datos del ERP correctamente
+                    abrirFormularioDJ(codiPers, 'migracion');
                 }
             },
         ],
