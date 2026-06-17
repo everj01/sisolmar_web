@@ -131,14 +131,22 @@ async function ensureCatalogsLoaded() {
     if (!_catalogsPromise) {
         _catalogsPromise = (async () => {
             try {
-                const [sucursalesRes, sistemasRes, areasRes, cursosRes, personalesRes, empresasRes, personalTodasEmpresasRes] = await Promise.all([
-                    axios.get('/api/get-sucursales'),
-                    axios.get('/api/obtener-capacitacion-sistemas'),
-                    axios.get('/api/obtener-areas'),
-                    axios.get('/api/obtener-cursos'),
-                    axios.get('/api/obtener-personal'),
-                    axios.get('/api/get-empresas'),
-                    axios.get('/api/obtener-personal-todas-empresas'),
+                const [
+                    sucursalesRes,
+                    sistemasRes,
+                    areasRes,
+                    cursosRes,
+                    personalesRes,
+                    empresasRes,
+                    personalTodasEmpresasRes,
+                ] = await Promise.all([
+                    axios.get("/api/get-sucursales"),
+                    axios.get("/api/obtener-capacitacion-sistemas"),
+                    axios.get("/api/obtener-areas"),
+                    axios.get("/api/reporte-cursos"),
+                    axios.get("/api/obtener-personal"),
+                    axios.get("/api/get-empresas"),
+                    axios.get("/api/obtener-personal-todas-empresas"),
                 ]);
 
                 const personalesTodas = (personalTodasEmpresasRes.data.success && Array.isArray(personalTodasEmpresasRes.data.personal)) ? personalTodasEmpresasRes.data.personal : [];
@@ -298,7 +306,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get("/api/obtener-cursos");
+                const response = await axios.get("/api/reporte-cursos");
 
                 if (response.data.success) {
                     this.todosLosCursos = [...response.data.Cursos];
@@ -1890,7 +1898,9 @@ export default document.addEventListener("alpine:init", () => {
                 if (this.selectedSistema) params.systemId = this.selectedSistema;
                 if (this.selectedArea) params.areaId = this.selectedArea;
 
-                const response = await axios.get("/api/obtener-cursos", { params });
+                const response = await axios.get("/api/reporte-cursos", {
+                    params,
+                });
                 const cursosRaw = response.data.Cursos || response.data.cursos || [];
 
                 if (!response.data.success || !Array.isArray(cursosRaw)) {
@@ -2324,7 +2334,9 @@ export default document.addEventListener("alpine:init", () => {
                 if (this.selectedSistema) params.systemId = this.selectedSistema;
                 if (this.selectedArea) params.areaId = this.selectedArea;
 
-                const response = await axios.get("/api/obtener-cursos", { params });
+                const response = await axios.get("/api/reporte-cursos", {
+                    params,
+                });
 
                 const cursosRaw = response.data.Cursos || response.data.cursos || [];
 
@@ -2970,7 +2982,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get("/api/obtener-cursos");
+                const response = await axios.get("/api/reporte-cursos");
                 if (response.data.success) {
                     this.todosLosCursos = response.data.Cursos || [];
                     this.filtrarCursos();

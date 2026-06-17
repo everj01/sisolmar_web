@@ -142,6 +142,9 @@ Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula'])
 Route::post('/cursos/aplazar-curso', [CapacitacionController::class, 'aplazarCurso']);
 Route::get('/cursos/obtener-prog-actual/{courseId}', [CapacitacionController::class, 'obtenerProgActual']);
 Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual'])->middleware('web');
+Route::get('/obtener-programaciones/{courseId}', [CapacitacionController::class, 'obtenerProgramaciones']);
+Route::get('/obtener-matriculados/{courseId}', [CapacitacionController::class, 'obtenerMatriculados']);
+Route::get('/reporte-cursos', [CapacitacionController::class, 'obtenerCursosParaReportes']);
 Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
 Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
 Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
@@ -156,9 +159,12 @@ Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::cl
 
 Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
 Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
+Route::post('/capacitacion/suspender-usuario/{cursoId}', [CapacitacionController::class, 'suspenderUsuario']);
 
 Route::post('/capacitacion/registrar-reporte', [CapacitacionController::class, 'saveReporteCapacitacion']);
 Route::get('/capacitacion/listar-reportes', [CapacitacionController::class, 'listarReportesCapacitaciones']);
+
+Route::get('/obtener-sucursales', [CapacitacionController::class, 'listarSucursales']);
 
 Route::get('/obtener-memos-resumen/{nivelMemo}', [CapacitacionController::class, 'obtenerMemosResumen']);
 Route::get('/obtener-memos-enviados', [CapacitacionController::class, 'obtenerMemosEnviados']);

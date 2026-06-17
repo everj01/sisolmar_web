@@ -157,6 +157,7 @@ class CapacitacionController extends Controller
             "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
             "cod_moodle_area" => "nullable|integer",
             "dirigido_a" => "required",
+            "sucursal" => "nullable|string|max:10",
         ]);
 
         $validator->sometimes("area_conocimiento", "required", function ($input) {
@@ -207,6 +208,7 @@ class CapacitacionController extends Controller
                 "target_group" => $request->input("target_group", "TODOS"),
                 "descripcion" => $request->input("descripcion"),
                 "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? 0 : $request->input("dirigido_a"),
+                "sucursal" => $request->input("sucursal"),
                 "fecha_modificacion" => date("Y-m-d\TH:i:s.000"),
             ]);
 
@@ -464,6 +466,7 @@ class CapacitacionController extends Controller
         // ? Campos que se actualizaran solamente en Sisolmar web
         $areaConocimiento = $request->input('area_conocimiento');
         $dirigidoA = $request->input('dirigido_a');
+        $sucursal = $request->input('sucursal');
         $tipoCurso = $request->input('tipo_curso');
         $frecuencia = $request->input('frecuencia');
 
@@ -492,6 +495,10 @@ class CapacitacionController extends Controller
 
             if ($dirigidoA) {
                 $updateData['dirigido_a'] = $dirigidoA;
+            }
+
+            if ($sucursal !== null) {
+                $updateData['sucursal'] = $sucursal;
             }
 
             if ($areaResponsable) {
@@ -692,6 +699,7 @@ class CapacitacionController extends Controller
                 "nullable|string|in:TODOS,ADMINISTRATIVO,OPERATIVO",
                 "cod_moodle_area" => "nullable|integer",
                 "dirigido_a" => "required",
+                "sucursal" => "nullable|string|max:10",
                 "image_portada" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
                 "image_afiche" => "nullable|image|mimes:jpeg,jpg,png|max:1990",
             ]);
@@ -749,6 +757,7 @@ class CapacitacionController extends Controller
                 "target_group" => $request->input("target_group", "TODOS"),
                 "descripcion" => $request->input("descripcion"),
                 "dirigido_a" => $request->input("dirigido_a") === "OTROS" ? 0 : $request->input("dirigido_a"),
+                "sucursal" => $request->input("sucursal"),
                 "fecha_creacion" => date("Y-m-d\TH:i:s.000"),
             ]);
 
@@ -1984,6 +1993,11 @@ class CapacitacionController extends Controller
 
     public function storeProgramacionManual(Request $request): JsonResponse
     {
+        $request->validate([
+            'cod_curso'    => 'required',
+            'fecha_inicio' => 'required|date_format:Y-m-d H:i:s',
+        ]);
+
         try {
             DB::beginTransaction();
 
@@ -2004,8 +2018,6 @@ class CapacitacionController extends Controller
                 "ANUAL" => $fechaInicio->copy()->addYear(),
                 default => $fechaInicio->copy()->addMonth(),
             };
-
-            $fechaFin = $fechaFin->endOfDay();
 
             $startTimestamp = $fechaInicio->timestamp;
             $endTimestamp = $fechaFin->timestamp;
@@ -2028,7 +2040,6 @@ class CapacitacionController extends Controller
 
                 $newCode = $programacion->codigo_programacion;
             } else {
-
                 $last = DB::table('sw_cursos_programacion')
                     ->orderBy('codigo_programacion', 'desc')
                     ->first();
@@ -2037,16 +2048,23 @@ class CapacitacionController extends Controller
                     ? str_pad(((int)$last->codigo_programacion) + 1, 4, '0', STR_PAD_LEFT)
                     : '1001';
 
+                Log::info('Fechas', [
+                    'fecha_inicio' => $fechaInicio->toDateTimeString(),
+                    'fecha_fin'    => $fechaFin->toDateTimeString(),
+                ]);
+
+                $toSqlDate = fn(Carbon $d) => DB::raw("CONVERT(datetime, '{$d->format('Y-m-d H:i:s')}', 120)");
+
                 DB::table('sw_cursos_programacion')->insert([
                     'codigo_programacion' => $newCode,
-                    'cod_curso' => $curso->codigo,
-                    'periodo' => $fechaInicio->format('Y-m'),
-                    'tipo' => 'REGULAR',
-                    'fecha_inicio' => $fechaInicio->format('Y-m-d\TH:i:s.000'),
-                    'fecha_final' => $fechaFin->format('Y-m-d\TH:i:s.000'),
-                    'estado_periodo' => 'VIGENTE',
-                    'fecha_creacion' => now(),
-                    'habilitado' => 1,
+                    'cod_curso'           => $curso->codigo,
+                    'periodo'             => $fechaInicio->format('Y-m'),
+                    'tipo'                => 'REGULAR',
+                    'fecha_inicio'        => $toSqlDate($fechaInicio),
+                    'fecha_final'         => $toSqlDate($fechaFin),
+                    'estado_periodo'      => 'VIGENTE',
+                    'fecha_creacion'      => $toSqlDate(now()),
+                    'habilitado'          => 1,
                 ]);
             }
 
@@ -2062,6 +2080,12 @@ class CapacitacionController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
+
+            Log::error('Error en storeProgramacionManual', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
 
             return response()->json([
                 "success" => false,
@@ -2116,7 +2140,8 @@ class CapacitacionController extends Controller
             dispatch(MatriculaMasivaJob::porTipoCurso(
                 $curso->codigo,
                 $newCode,
-                Auth::id()
+                Auth::id(),
+                $curso->sucursal
             ))->onQueue('training');
         } catch (\Throwable $e) {
             Log::error("Error en matriculación automática al crear programación", [
@@ -2148,11 +2173,16 @@ class CapacitacionController extends Controller
 
     public function aplazarCurso(Request $request): JsonResponse
     {
+        $request->validate([
+            'cod_curso'         => 'required',
+            'nueva_fecha_final' => 'required|date',
+        ]);
+
         try {
             DB::beginTransaction();
 
-            $codCurso = $request->cod_curso;
-            $nuevaFechaFin = Carbon::parse($request->nueva_fecha_final)->endOfDay();
+            $codCurso      = $request->cod_curso;
+            $nuevaFechaFin = Carbon::parse($request->nueva_fecha_final);
 
             $curso = DB::table('sw_cursos')
                 ->where('codigo', $codCurso)
@@ -2178,7 +2208,9 @@ class CapacitacionController extends Controller
                 ], 404);
             }
 
-            if ($nuevaFechaFin->lessThanOrEqualTo(Carbon::parse($programacion->fecha_inicio))) {
+            $fechaInicioActual = Carbon::parse($programacion->fecha_inicio);
+
+            if ($nuevaFechaFin->lessThanOrEqualTo($fechaInicioActual)) {
                 return response()->json([
                     "success" => false,
                     "message" => "La fecha final no puede ser menor o igual a la fecha de inicio.",
@@ -2188,13 +2220,13 @@ class CapacitacionController extends Controller
             DB::table('sw_cursos_programacion')
                 ->where('codigo_programacion', $programacion->codigo_programacion)
                 ->update([
-                    'fecha_final' => $nuevaFechaFin->format('Y-m-d\TH:i:s.000'),
-                    'fecha_modificacion' => now(),
+                    'fecha_final'        => DB::raw("CONVERT(datetime, '{$nuevaFechaFin->format('Y-m-d H:i:s')}', 120)"),
+                    'fecha_modificacion' => DB::raw("CONVERT(datetime, '" . now()->format('Y-m-d H:i:s') . "', 120)"),
                 ]);
 
             $this->actualizarCursoMoodle(
                 $curso,
-                Carbon::parse($programacion->fecha_inicio)->timestamp,
+                $fechaInicioActual->timestamp,
                 $nuevaFechaFin->timestamp
             );
 
@@ -2453,6 +2485,13 @@ class CapacitacionController extends Controller
         $personalIds = $request->personalIds;
 
         $usuarioId = Auth::id();
+
+        if (is_null($usuarioId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no autenticado.',
+            ], 401);
+        }
 
         dispatch(MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId))->onQueue('training');
 
@@ -2831,6 +2870,48 @@ class CapacitacionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cargar el personal',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function obtenerProgramaciones(int $cursoId): JsonResponse {
+        try {
+            $programaciones = DB::connection('sqlsrv')
+                ->table('sw_cursos_programacion')
+                ->where('cod_curso', $cursoId)
+                ->orderBy('fecha_inicio', 'desc')
+                ->get();
+
+            return response()->json([
+                'success'         => true,
+                'Programaciones'  => $programaciones,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar las programaciones',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function obtenerMatriculados(int $cursoId): JsonResponse {
+        try {
+            $programaciones = DB::connection('sqlsrv')
+                ->table('sw_matriculas')
+                ->where('cod_curso', $cursoId)
+                ->orderBy('fecha_matricula', 'desc')
+                ->get();
+
+            return response()->json([
+                'success'         => true,
+                'Matriculados'  => $programaciones,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar los matriculados',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -3459,7 +3540,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function obtenerCursos(Request $request): JsonResponse
+    public function obtenerCursosParaReportes(Request $request): JsonResponse
     {
         try {
             $areaId   = $request->areaId   ?? null;
@@ -3507,6 +3588,82 @@ class CapacitacionController extends Controller
                         'Fecha_Creacion'     => strtotime($c->created_at)       ?? null,
                     ];
                 })
+                ->when($areaId,   fn($col) => $col->where('AreaId',    $areaId))
+                ->when($systemId, fn($col) => $col->where('SistemaId', $systemId))
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'Cursos'  => $cursos,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener cursos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function obtenerCursos(Request $request): JsonResponse {
+        try {
+            $areaId   = $request->areaId   ?? null;
+            $systemId = $request->systemId ?? null;
+
+            $cursosRaw = DB::connection('mysql_grupoihb')
+                ->select('CALL grupoihb_see.SP_OBTENER_CURSOS(NULL)');
+
+            $categories = collect(Consulta::obtenerAreas())->keyBy('codModdle');
+
+            $bdLocal = collect(
+                DB::select("
+                SELECT codigo, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable
+                FROM sisolm_web.dbo.sw_cursos
+            ")
+            )->keyBy('codigo_moodle');
+
+            $sistemas = collect(
+                DB::select("
+                SELECT codigo, descripcion
+                FROM sisolm_web.dbo.sw_capacitacion_areas
+                WHERE habilitado = 1
+            ")
+            )->keyBy('codigo');
+
+            $tiposCurso = collect(
+                DB::select("
+                SELECT codigo, descripcion
+                FROM sisolm_web.dbo.sw_capacitacion_tipo_curso
+            ")
+            )->keyBy('codigo');
+
+            $cursos = collect($cursosRaw)
+                ->map(function ($c) use ($categories, $bdLocal, $sistemas, $tiposCurso) {
+                    $cursoLocal = $bdLocal->get($c->course_id);
+                    $sistema    = $cursoLocal ? $sistemas->get($cursoLocal->area_conocimiento) : null;
+                    $area       = $categories->get($c->category_id);
+                    $tipoCurso = $cursoLocal
+                        ? $tiposCurso->get($cursoLocal->tipo_curso)
+                        : null;
+
+                    return [
+                        'Id'                 => $c->course_id,
+                        'LocalId'            => $c->course_idnumber ?? $cursoLocal->codigo ?? null,
+                        'AreaId'             => $area->codModdle                ?? null,
+                        'SistemaId'          => $cursoLocal?->area_conocimiento ?? null,
+                        'Nombre'             => $c->course_name,
+                        'Tipo'               => $tipoCurso?->descripcion         ?? 'Sin tipo',
+                        'Area'               => $area->nombre                  ?? 'Sin área',
+                        'Sistema'            => $sistema?->descripcion          ?? 'Sin sistema',
+                        'Cod_Responsable'    => $cursoLocal?->cod_responsable   ?? null,
+                        'Responsable'        => $c->responsable                 ?? 'Sin responsable',
+                        'Descripcion'        => $c->course_summary                     ?? 'Sin descripción',
+                        'Total_Matriculados' => (int) ($c->total_matriculados   ?? 0),
+                        'Fecha_Inicio'       => strtotime($c->startdate)        ?? null,
+                        'Fecha_Fin'          => strtotime($c->enddate)          ?? null,
+                        'Fecha_Creacion'     => strtotime($c->created_at)       ?? null,
+                    ];
+                })
+                ->filter(fn($c) => $bdLocal->has($c['Id']))
                 ->when($areaId,   fn($col) => $col->where('AreaId',    $areaId))
                 ->when($systemId, fn($col) => $col->where('SistemaId', $systemId))
                 ->values();
@@ -3829,23 +3986,6 @@ class CapacitacionController extends Controller
 
     public function desmatricularUsuario(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            "cursoId" => "required|integer",
-            "codPersonal" => "required|string",
-            "moodleUserId" => "nullable|integer",
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" => "Datos inválidos",
-                    "errors" => $validator->errors(),
-                ],
-                422,
-            );
-        }
-
         try {
             $curso = Cursos::find($request->cursoId);
             if (!$curso) {
@@ -3862,111 +4002,92 @@ class CapacitacionController extends Controller
                 STR_PAD_LEFT,
             );
 
-            $deleted = DB::table("sw_matriculas")
+            DB::table("sw_matriculas")
                 ->where("cod_curso", $request->cursoId)
                 ->where("cod_personal", $codPersonal)
                 ->delete();
 
-            if ($deleted === 0) {
-                return response()->json(
-                    [
-                        "success" => false,
-                        "message" => "No se encontró la matrícula local",
-                    ],
-                    404,
-                );
-            }
+            $personal = DB::table("si_solm.dbo.PERSONAL")
+                ->where("CODI_PERS", $codPersonal)
+                ->first(["NRO_DOCU_IDEN"]);
 
-            $moodleUserId = $request->moodleUserId;
+            $moodleUser = DB::connection("mysql_grupoihb")
+                ->table("mdl_user")
+                ->where("username", trim($personal->NRO_DOCU_IDEN))
+                ->orWhere("idnumber", trim($personal->NRO_DOCU_IDEN))
+                ->first(["id"]);
 
-            if (!$moodleUserId) {
-                $personal = DB::table("si_solm.dbo.PERSONAL")
-                    ->where("CODI_PERS", $codPersonal)
-                    ->first(["NRO_DOCU_IDEN"]);
-                if ($personal && $personal->NRO_DOCU_IDEN) {
-                    $moodleUser = DB::connection("mysql_grupoihb")
-                        ->table("mdl_user")
-                        ->where("username", trim($personal->NRO_DOCU_IDEN))
-                        ->orWhere("idnumber", trim($personal->NRO_DOCU_IDEN))
-                        ->first(["id"]);
-                    if ($moodleUser) {
-                        $moodleUserId = $moodleUser->id;
-                    }
-                }
-            }
+            $moodleCourse = DB::connection("mysql_grupoihb")
+                ->table("mdl_course")
+                ->where("id", $curso->codigo_moodle)
+                ->first(["idnumber"]);
 
-            if ($moodleUserId) {
-                $moodleCourse = DB::connection("mysql_grupoihb")
-                    ->table("mdl_course")
-                    ->where("id", $curso->codigo_moodle)
-                    ->first(["idnumber"]);
-
-                if (!$moodleCourse || !$moodleCourse->idnumber) {
-                    return response()->json(
-                        [
-                            "success" => false,
-                            "message" => "El curso no tiene idnumber en Moodle",
-                        ],
-                        404,
-                    );
-                }
-
-                $courseIdNumber = $moodleCourse->idnumber;
-                $observacion =
-                    $request->observacion ?: "Desmatriculación desde Intranet";
-
-                $resultado = DB::connection("mysql_grupoihb")->select(
-                    "SELECT F_USER_matricula_eliminar2(?, ?, ?, ?, ?) AS result",
-                    [$moodleUserId, $courseIdNumber, "00001", $observacion, 5],
-                );
-
-                $estado = $resultado[0]->result ?? null;
-
-                Log::info(
-                    "F_USER_matricula_eliminar2 result: estado={$estado}, userId={$moodleUserId}, course={$courseIdNumber}",
-                );
-
-                if ($estado === -2) {
-                    return response()->json(
-                        [
-                            "success" => false,
-                            "message" => "Curso '{$courseIdNumber}' no encontrado en Moodle",
-                        ],
-                        404,
-                    );
-                }
-
-                if ($estado === -1) {
-                    return response()->json(
-                        [
-                            "success" => false,
-                            "message" => "Usuario Moodle ID {$moodleUserId} no encontrado o eliminado",
-                        ],
-                        404,
-                    );
-                }
-
-                if ($estado !== 1) {
-                    return response()->json(
-                        [
-                            "success" => false,
-                            "message" => "Error inesperado en Moodle (estado: {$estado})",
-                        ],
-                        500,
-                    );
-                }
-            }
+            DB::connection("mysql_grupoihb")->select(
+                "SELECT F_USER_matricula_eliminar2(?, ?, ?, ?, ?) AS result",
+                [$moodleUser->id, $moodleCourse->idnumber, "00001", "Desmatriculación desde Intranet", 5],
+            );
 
             return response()->json([
                 "success" => true,
-                "message" =>
-                "Usuario desmatriculado correctamente" .
-                    ($moodleUserId
-                        ? " y sincronizado con Moodle"
-                        : " (Solo local, no se encontró ID Moodle)"),
+                "message" => "Personal desmatriculado correctamente" 
             ]);
         } catch (\Exception $e) {
             Log::error("Error en desmatricularUsuario: " . $e->getMessage());
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "Error al desmatricular: " . $e->getMessage(),
+                ],
+                500,
+            );
+        }
+    }
+
+    public function suspenderUsuario(Request $request): JsonResponse
+    {
+        try
+        {
+            $cursoId = $request->cursoId;
+            $codPersonal = str_pad(
+                trim($request->codPersonal),
+                5,
+                "0",
+                STR_PAD_LEFT,
+            );
+
+            $curso = Cursos::find($cursoId);
+            $personal = DB::table("si_solm.dbo.PERSONAL")
+                ->where("CODI_PERS", $codPersonal)
+                ->first(["NRO_DOCU_IDEN"]);
+
+            DB::table('sw_matriculas')
+                ->where('cod_curso', $curso->codigo)
+                ->where('cod_personal', $codPersonal)
+                ->update([
+                    'estado' => 'SUSPENDIDO'
+                ]);
+
+            $moodleUser = DB::connection("mysql_grupoihb")
+                ->table("mdl_user")
+                ->where("username", trim($personal->NRO_DOCU_IDEN))
+                ->orWhere("idnumber", trim($personal->NRO_DOCU_IDEN))
+                ->first(["id"]);
+
+            $moodleCourse = DB::connection("mysql_grupoihb")
+                ->table("mdl_course")
+                ->where("id", $curso->codigo_moodle)
+                ->first(["idnumber"]);
+
+            DB::connection("mysql_grupoihb")->select(
+                "SELECT F_Suspender_R(?, ?)",
+                [$moodleUser->id, $moodleCourse->idnumber],
+            );
+
+            return response()->json([
+                "success" => true,
+                "message" => "Personal suspendido correctamente"
+            ]);
+        } catch (\Exception $e) {
             return response()->json(
                 [
                     "success" => false,
@@ -4330,16 +4451,49 @@ class CapacitacionController extends Controller
             )->groupBy(fn($m) => strtoupper($m->estado))
                 ->map(fn($grupo) => $grupo->count());
 
+            $sistemaGestion = null;
+            if ($cursoBdLocal->area_conocimiento) {
+                $area = DB::connection('sqlsrv')->selectOne(
+                    'SELECT descripcion FROM sw_capacitacion_areas WHERE codigo = ?',
+                    [$cursoBdLocal->area_conocimiento]
+                );
+                $sistemaGestion = $area->descripcion ?? null;
+            }
+
+            $areaResponsable = null;
+            if ($cursoBdLocal->area) {
+                $area = DB::table('sw_curso_areas')
+                    ->select('nombre')
+                    ->where('codigo', $cursoBdLocal->area)
+                    ->first();
+                $areaResponsable = $area->nombre ?? null;
+            }
+
+            $nombreResponsable = null;
+            if ($cursoBdLocal->cod_responsable) {
+                $resp = DB::connection('sqlsrv')->selectOne(
+                    "SELECT LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre
+                    FROM si_solm.dbo.PERSONAL
+                    WHERE CODI_PERS = ?",
+                    [$cursoBdLocal->cod_responsable]
+                );
+                $nombreResponsable = $resp->nombre ?? null;
+            }
+
             return response()->json([
                 'success' => true,
                 'nombre'             => $cursoBdLocal->nombre ?? "Sin nombre",
+                'descripcion'        => $cursoBdLocal->descripcion ?? "Sin descripción.",
                 'codigo'             => $cursoBdLocal->codigo_curso ?? null,
                 'codigo_interno'     => $cursoBdLocal->codigo ?? null,
                 'codigo_moodle'      => (int) $codMoodle,
                 'fecha_creacion'     => $cursoBdLocal->fecha_creacion ?? null,
+                'sistema_gestion'    => $sistemaGestion,
+                'area_responsable'   => $areaResponsable,
+                'responsable'        => $nombreResponsable,
                 'programacion_actual'       => $programacionVigente ?? null,
-                'programacion_pendiente'  => $programacionPendiente ?? null,
-                'estadisticas'       => [
+                'programacion_pendiente'    => $programacionPendiente ?? null,
+                'estadisticas'     => [
                     'aprobados'    => $estadisticas->get('APROBADO', 0),
                     'desaprobados' => $estadisticas->get('DESAPROBADO', 0),
                     'en_curso'     => $estadisticas->get('EN CURSO', 0),
@@ -5258,6 +5412,35 @@ class CapacitacionController extends Controller
                 'Personales' => $personales,
             ]);
         } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function listarSucursales(): JsonResponse
+    {
+        try {
+            $sucursales = DB::table('si_solm.dbo.SISO_SUCURSAL')
+                ->select(
+                    'SUCU_CODIGO as Codigo',
+                    'SUCU_ABREVIATURA as Sucursal'
+                )
+                ->orderBy('SUCU_CODIGO', 'ASC')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $sucursales,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al listar sucursales", [
+                "error" => $e->getMessage(),
+                "line" => $e->getLine(),
+                "file" => $e->getFile(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
