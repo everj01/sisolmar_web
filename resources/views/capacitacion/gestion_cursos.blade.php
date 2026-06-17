@@ -318,7 +318,7 @@
             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
 
             <div
-                class="card w-auto min-w-[320px] max-w-[95vw] max-h-[95dvh] sm:max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+                class="card w-auto min-w-[320px] max-w-7xl max-h-[95dvh] sm:max-h-[95vh] flex flex-col shadow-2xl border border-slate-200">
 
                 <div class="overflow-y-auto custom-scrollbar flex-1 bg-white" x-data="formCursoGestion()"
                     @submit.prevent
@@ -377,9 +377,9 @@
 
                                             <div class="flex items-center gap-2" x-data="searchablePersonnel()">
                                                 <div class="relative flex-1">
-                                                    <div @click="toggle()"
-                                                        class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm flex items-center gap-2 cursor-pointer hover:border-indigo-300 transition-colors shadow-sm min-h-[38px]"
-                                                        :class="codResponsable ? 'border-indigo-300 ring-1 ring-indigo-100' : ''">
+                                                <div @click="open ? closeDropdown() : openDropdown($event)"
+                                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm flex items-center gap-2 cursor-pointer hover:border-indigo-300 transition-colors shadow-sm min-h-[38px]"
+                                                    :class="codResponsable ? 'border-indigo-300 ring-1 ring-indigo-100' : ''">
                                                         <span
                                                             class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded min-w-[40px] text-center"
                                                             x-text="codResponsable || 'Código'"></span>
@@ -390,11 +390,13 @@
                                                             :class="{ 'rotate-180': open }"></i>
                                                     </div>
 
-                                                    <div x-show="open" @click.away="open = false" x-cloak
+                                                    <div x-show="open" x-cloak
                                                         x-transition:enter="transition ease-out duration-100"
                                                         x-transition:enter-start="opacity-0 scale-95"
                                                         x-transition:enter-end="opacity-100 scale-100"
-                                                        class="absolute z-[100] mt-1 left-0 w-full min-w-[580px] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+                                                        :style="dropdownStyle"
+                                                        class="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+                                                        style="display: none; z-index: 99999 !important;">
 
                                                         <div
                                                             class="p-3 border-b bg-gradient-to-r from-indigo-50 to-white flex items-center gap-2">
@@ -763,6 +765,7 @@
                                             <div x-data="{
                                                     open: false,
                                                     searchTerm: '',
+                                                    dropdownStyle: {},
                                                     options: window.opcionesArea || [],
                                                     get filteredOptions() {
                                                         if (this.searchTerm === '') return this.options;
@@ -775,21 +778,39 @@
                                                         area = areaConocimiento;
                                                         cargarAreasResponsables(areaConocimiento);
                                                         this.searchTerm = '';
-                                                        this.open = false;
+                                                        this.closeDropdown();
                                                     },
                                                     init() {
                                                         if (window.opcionesArea && window.opcionesArea.length > 0) {
                                                             this.options = window.opcionesArea;
                                                         }
+                                                        this._closeHandler = (e) => {
+                                                            if (!this.$el.contains(e.target)) this.closeDropdown();
+                                                        };
                                                     },
                                                     get currentDescription() {
                                                         const found = this.options.find(opt => opt.codigo == areaConocimiento);
                                                         return found ? found.descripcion : '';
+                                                    },
+                                                    openDropdown(evt) {
+                                                        const rect = evt.currentTarget.getBoundingClientRect();
+                                                        this.dropdownStyle = {
+                                                            position: 'fixed',
+                                                            top: (rect.bottom + 4) + 'px',
+                                                            left: rect.left + 'px',
+                                                            width: rect.width + 'px',
+                                                        };
+                                                        this.open = true;
+                                                        this.$nextTick(() => document.addEventListener('click', this._closeHandler));
+                                                    },
+                                                    closeDropdown() {
+                                                        this.open = false;
+                                                        document.removeEventListener('click', this._closeHandler);
                                                     }
                                                 }" @areas-loaded.window="options = $event.detail"
                                                 class="relative w-full">
 
-                                                <button @click="open = !open" type="button"
+                                                <button @click="open ? closeDropdown() : openDropdown($event)" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
                                                     <span :class="areaConocimiento ? 'text-gray-800 font-semibold' :
                                                                 'text-gray-400'"
@@ -798,11 +819,12 @@
                                                         :class="open ? 'rotate-180' : ''"></i>
                                                 </button>
 
-                                                <div x-show="open" x-cloak @click.away="open = false"
+                                                <div x-show="open" x-cloak
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 scale-95"
                                                     x-transition:enter-end="opacity-100 scale-100"
-                                                    class="absolute mt-1 w-full border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
+                                                    :style="dropdownStyle"
+                                                    class="border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
                                                     style="display: none; background-color: white !important; opacity: 1 !important; z-index: 99999 !important;">
 
                                                     <div class="p-2 border-b border-gray-100"
@@ -847,12 +869,13 @@
                                             <div x-data="{
                                                     open: false,
                                                     searchTerm: '',
+                                                    dropdownStyle: {},
                                                     get options() { return areasResponsables; },
                                                     selectOption(option) {
                                                         areaResponsable = option ? option.codArea : '';
                                                         codMoodleArea = option ? option.codModdle : '';
                                                         this.searchTerm = '';
-                                                        this.open = false;
+                                                        this.closeDropdown();
                                                     },
                                                     get filteredOptions() {
                                                         if (this.searchTerm === '') return this.options;
@@ -864,10 +887,30 @@
                                                     get currentDescription() {
                                                         const found = this.options.find(opt => opt.codArea == areaResponsable);
                                                         return found ? (found.Area || found.nombre || found.descripcion) : '';
+                                                    },
+                                                    openDropdown(evt) {
+                                                        const rect = evt.currentTarget.getBoundingClientRect();
+                                                        this.dropdownStyle = {
+                                                            position: 'fixed',
+                                                            top: (rect.bottom + 4) + 'px',
+                                                            left: rect.left + 'px',
+                                                            width: rect.width + 'px',
+                                                        };
+                                                        this.open = true;
+                                                        this.$nextTick(() => document.addEventListener('click', this._closeHandler));
+                                                    },
+                                                    closeDropdown() {
+                                                        this.open = false;
+                                                        document.removeEventListener('click', this._closeHandler);
+                                                    },
+                                                    init() {
+                                                        this._closeHandler = (e) => {
+                                                            if (!this.$el.contains(e.target)) this.closeDropdown();
+                                                        };
                                                     }
                                                 }" class="relative w-full">
 
-                                                <button @click="open = !open" type="button"
+                                                <button @click="open ? closeDropdown() : openDropdown($event)" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
                                                     <span :class="areaResponsable ? 'text-gray-800 font-semibold' :
                                                                 'text-gray-400'"
@@ -876,11 +919,12 @@
                                                         :class="open ? 'rotate-180' : ''"></i>
                                                 </button>
 
-                                                <div x-show="open" x-cloak @click.away="open = false"
+                                                <div x-show="open" x-cloak
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 scale-95"
                                                     x-transition:enter-end="opacity-100 scale-100"
-                                                    class="absolute mt-1 w-full border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
+                                                    :style="dropdownStyle"
+                                                    class="border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
                                                     style="display: none; background-color: white !important; opacity: 1 !important; z-index: 99999 !important;">
 
                                                     <div class="p-2 border-b border-gray-100"
@@ -912,6 +956,106 @@
                                                         </template>
                                                     </ul>
                                                 </div>
+                                        </div>
+                                    </div>
+
+                                        <!-- Sucursal -->
+                                        <div x-show="!esDemanda" x-transition>
+                                            <label
+                                                class="text-gray-800 text-sm font-medium inline-block mb-1 text-primary">
+                                                Sucursal <span class="text-danger">*</span>
+                                            </label>
+
+                                            <div x-data="{
+                                                    open: false,
+                                                    searchTerm: '',
+                                                    dropdownStyle: {},
+                                                    get options() {
+                                                        const todas = { Codigo: 'TODAS', Sucursal: 'Todas las sucursales' };
+                                                        return [todas, ...sucursalesOpciones];
+                                                    },
+                                                    selectOption(option) {
+                                                        sucursal = option ? option.Codigo : '';
+                                                        this.searchTerm = '';
+                                                        this.closeDropdown();
+                                                    },
+                                                    get filteredOptions() {
+                                                        if (this.searchTerm === '') return this.options;
+                                                        return this.options.filter(opt =>
+                                                            (opt.Sucursal || '').toLowerCase().includes(this.searchTerm.toLowerCase())
+                                                        );
+                                                    },
+                                                    get currentDescription() {
+                                                        const found = this.options.find(opt => opt.Codigo == sucursal);
+                                                        return found ? found.Sucursal : '';
+                                                    },
+                                                    openDropdown(evt) {
+                                                        const rect = evt.currentTarget.getBoundingClientRect();
+                                                        this.dropdownStyle = {
+                                                            position: 'fixed',
+                                                            top: (rect.bottom + 4) + 'px',
+                                                            left: rect.left + 'px',
+                                                            width: rect.width + 'px',
+                                                        };
+                                                        this.open = true;
+                                                        this.$nextTick(() => document.addEventListener('click', this._closeHandler));
+                                                    },
+                                                    closeDropdown() {
+                                                        this.open = false;
+                                                        document.removeEventListener('click', this._closeHandler);
+                                                    },
+                                                    init() {
+                                                        this._closeHandler = (e) => {
+                                                            if (!this.$el.contains(e.target)) this.closeDropdown();
+                                                        };
+                                                    }
+                                                }" class="relative w-full">
+
+                                                <button @click="open ? closeDropdown() : openDropdown($event)" type="button"
+                                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
+                                                    <span :class="sucursal ? 'text-gray-800 font-semibold' :
+                                                                'text-gray-400'"
+                                                        x-text="currentDescription || 'Seleccione Sucursal'"></span>
+                                                    <i class="bx bx-chevron-down text-gray-400 text-lg"
+                                                        :class="open ? 'rotate-180' : ''"></i>
+                                                </button>
+
+                                                <div x-show="open" x-cloak
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="opacity-0 scale-95"
+                                                    x-transition:enter-end="opacity-100 scale-100"
+                                                    :style="dropdownStyle"
+                                                    class="border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
+                                                    style="display: none; background-color: white !important; opacity: 1 !important; z-index: 99999 !important;">
+
+                                                    <div class="p-2 border-b border-gray-100"
+                                                        style="background-color: white !important;">
+                                                        <input type="text" x-model="searchTerm"
+                                                            class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                                                            placeholder="Buscar sucursal...">
+                                                    </div>
+
+                                                    <ul class="max-h-60 overflow-y-auto py-1"
+                                                        style="background-color: white !important;">
+                                                        <template x-for="option in filteredOptions"
+                                                            :key="option.Codigo">
+                                                            <li @click="selectOption(option)"
+                                                                class="px-3 py-2 text-sm hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors"
+                                                                :class="{
+                                                                        'bg-primary/5 text-primary font-medium': sucursal ==
+                                                                            option.Codigo
+                                                                    }">
+                                                                <span x-text="option.Sucursal"></span>
+                                                            </li>
+                                                        </template>
+                                                        <template x-if="filteredOptions.length === 0">
+                                                            <li
+                                                                class="px-3 py-2 text-sm text-gray-500 italic text-center">
+                                                                No se encontraron sucursales
+                                                            </li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -925,6 +1069,7 @@
                                             <div x-data="{
                                                     open: false,
                                                     searchTerm: '',
+                                                    dropdownStyle: {},
                                                     _fullOptions: {{ Js::from($dirigidos->map(fn($d) => ['codigo' => $d->codigo, 'texto' => $d->texto])->values()->toArray()) }},
                                                     get options() {
                                                         const tc = this.tipoCurso;
@@ -963,15 +1108,35 @@
                                                     selectOption(option) {
                                                         dirigido = option ? option.codigo : '';
                                                         this.searchTerm = '';
-                                                        this.open = false;
+                                                        this.closeDropdown();
                                                     },
                                                     get currentDescription() {
                                                         const found = this.options.find(opt => opt.codigo == dirigido);
                                                         return found ? found.texto : '';
+                                                    },
+                                                    openDropdown(evt) {
+                                                        const rect = evt.currentTarget.getBoundingClientRect();
+                                                        this.dropdownStyle = {
+                                                            position: 'fixed',
+                                                            top: (rect.bottom + 4) + 'px',
+                                                            left: rect.left + 'px',
+                                                            width: rect.width + 'px',
+                                                        };
+                                                        this.open = true;
+                                                        this.$nextTick(() => document.addEventListener('click', this._closeHandler));
+                                                    },
+                                                    closeDropdown() {
+                                                        this.open = false;
+                                                        document.removeEventListener('click', this._closeHandler);
+                                                    },
+                                                    init() {
+                                                        this._closeHandler = (e) => {
+                                                            if (!this.$el.contains(e.target)) this.closeDropdown();
+                                                        };
                                                     }
                                                 }" class="relative w-full">
 
-                                                <button @click="open = !open" type="button"
+                                                <button @click="open ? closeDropdown() : openDropdown($event)" type="button"
                                                     class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-left text-sm flex justify-between items-center focus:outline-none focus:ring-1 focus:ring-primary h-[38px] transition-all shadow-sm">
                                                     <span :class="dirigido ? 'text-gray-800 font-semibold' :
                                                                 'text-gray-400'"
@@ -980,11 +1145,12 @@
                                                         :class="open ? 'rotate-180' : ''"></i>
                                                 </button>
 
-                                                <div x-show="open" x-cloak @click.away="open = false"
+                                                <div x-show="open" x-cloak
                                                     x-transition:enter="transition ease-out duration-100"
                                                     x-transition:enter-start="opacity-0 scale-95"
                                                     x-transition:enter-end="opacity-100 scale-100"
-                                                    class="absolute mt-1 w-full border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
+                                                    :style="dropdownStyle"
+                                                    class="border border-gray-300 rounded-lg shadow-2xl overflow-hidden"
                                                     style="display: none; background-color: white !important; opacity: 1 !important; z-index: 99999 !important;">
 
                                                     <div class="p-2 border-b border-gray-100"
@@ -1338,8 +1504,8 @@
                             <div x-show="frecuencia !== 'PERSONALIZADO'" class="w-full max-w-sm mb-4">
                                 <label for="fecha_inicio_modal"
                                     class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
-                                    de inicio de capacitación</label>
-                                <input type="date" x-model="fechaInicio" id="fecha_inicio_modal"
+                                    y hora de inicio de capacitación</label>
+                                <input type="datetime-local" x-model="fechaInicio" id="fecha_inicio_modal"
                                     :min="fechaMinima"
                                     class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                             </div>
@@ -1349,16 +1515,16 @@
                                     <div>
                                         <label for="fecha_inicio_personalizada"
                                             class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
-                                            de inicio</label>
-                                        <input type="date" x-model="fechaInicio" id="fecha_inicio_personalizada"
+                                            y hora de inicio</label>
+                                        <input type="datetime-local" x-model="fechaInicio" id="fecha_inicio_personalizada"
                                             :min="fechaMinima"
                                             class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                     </div>
                                     <div>
                                         <label for="fecha_fin_personalizada"
                                             class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
-                                            de fin</label>
-                                        <input type="date" x-model="fechaFin" id="fecha_fin_personalizada"
+                                            y hora de fin</label>
+                                        <input type="datetime-local" x-model="fechaFin" id="fecha_fin_personalizada"
                                             :min="fechaMinima"
                                             class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                     </div>
@@ -1539,15 +1705,16 @@
 
                         <div>
                             <label for="fechaNuevaFin" class="block text-sm font-semibold text-gray-900 mb-2">
-                                Nueva fecha de fin <span class="text-danger">*</span>
+                                Nueva fecha y hora de fin <span class="text-danger">*</span>
                             </label>
-                            <input type="date" id="fechaNuevaFin" x-model="fechaNuevaFin"
+                            <input type="datetime-local" id="fechaNuevaFin" x-model="fechaNuevaFin"
                                 :min="fechaMinima"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
                                 @change="validarFecha()">
                             <p x-show="errorFecha" class="mt-1 text-sm text-red-600" x-text="errorFecha"></p>
                             <p x-show="!errorFecha && fechaNuevaFin" class="mt-1 text-sm text-green-600">
-                                Se extenderá el curso por <strong x-text="diasExtension"></strong> día(s) adicional(es)
+                                Se extenderá el curso por
+                                <strong x-text="extensionInfo.dias + ' día(s)' + (extensionInfo.horas ? ' y ' + extensionInfo.horas + ' hora(s)' : '') + (extensionInfo.minutos ? ' y ' + extensionInfo.minutos + ' minuto(s)' : '')"></strong>
                             </p>
                         </div>
 
@@ -2209,7 +2376,9 @@
                     const yyyy = today.getFullYear();
                     const mm = String(today.getMonth() + 1).padStart(2, '0');
                     const dd = String(today.getDate()).padStart(2, '0');
-                    return `${yyyy}-${mm}-${dd}`;
+                    const hh = String(today.getHours()).padStart(2, '0');
+                    const min = String(today.getMinutes()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
                 },
 
                 get selectedClienteNombre() {
@@ -2353,6 +2522,11 @@
                     this.cargando = true;
 
 
+                    const formatDatetime = (dt) => {
+                        if (!dt) return '';
+                        return dt.replace('T', ' ') + ':00';
+                    };
+
                     try {
                         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
                             'content');
@@ -2363,7 +2537,7 @@
 
                         const payload = {
                             cod_curso: this.codigoCurso,
-                            fecha_inicio: this.fechaInicio,
+                            fecha_inicio: formatDatetime(this.fechaInicio),
                             incluir_automatico: this.incluirAutomatico,
                             sucursal_codigo: this.selectedSucursal,
                             cliente_id: this.selectedCliente,
@@ -2371,7 +2545,7 @@
                         };
 
                         if (this.frecuencia === 'PERSONALIZADO') {
-                            payload.fecha_final = this.fechaFin;
+                            payload.fecha_final = formatDatetime(this.fechaFin);
                         }
 
                         if (dnisLimpios.length > 0) {

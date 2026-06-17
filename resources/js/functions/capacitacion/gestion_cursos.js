@@ -520,6 +520,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.frecuencia = curso.frecuencia ?? "";
 
                 alpineData.dirigido = curso.dirigido_a == 0 ? 'OTROS' : (curso.dirigido_a ?? '');
+                alpineData.sucursal = curso.sucursal ?? '';
 
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
@@ -573,6 +574,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                     codMoodleArea: alpineData.codMoodleArea,
                     descripcion: alpineData.descripcion,
                     dirigido: alpineData.dirigido,
+                    sucursal: alpineData.sucursal,
                     clienteSeleccionado: alpineData.clienteSeleccionado,
                 };
             } else {
@@ -683,7 +685,7 @@ window.gestionListarCursos = (op) => {
     }
 }
 
-window.editarFormGestionCurso = (e) => {
+window.editarFormGestionCurso = async (e) => {
     if (e) e.preventDefault();
 
     const formElement = document.querySelector('[x-data="formCursoGestion()"]');
@@ -745,13 +747,45 @@ window.editarFormGestionCurso = (e) => {
     if (isChanged('codMoodleArea')) formData.append('cod_moodle_area', alpineData.codMoodleArea);
     if (isChanged('descripcion')) formData.append('descripcion', alpineData.descripcion);
     if (isChanged('dirigido')) formData.append('dirigido_a', alpineData.dirigido);
+    if (isChanged('sucursal')) formData.append('sucursal', alpineData.sucursal);
 
     // cod_cliente: send when tipo_curso is PCA (6) and either tipoCurso or clienteSeleccionado changed
     if (alpineData.tipoCurso == '6' && (isChanged('tipoCurso') || isChanged('clienteSeleccionado'))) {
         formData.append('cod_cliente', alpineData.clienteSeleccionado || '');
     }
 
-    console.log(formData);
+    // Modal informativo si cambió sucursal o dirigido
+    const sucursalChanged = isChanged('sucursal');
+    const dirigidoChanged = isChanged('dirigido');
+
+    if (sucursalChanged || dirigidoChanged) {
+        const opciones = alpineData.sucursalesOpciones || [];
+        const sucursalObj = opciones.find(o => o.Codigo == alpineData.sucursal);
+        const sucursalNombre = sucursalObj ? sucursalObj.Sucursal : '';
+
+        const dirigidoTexto = {
+            '1': 'a todo el personal',
+            '2': 'a todo el personal administrativo',
+            '3': 'a todo el personal operativo',
+        }[alpineData.dirigido] || 'al personal seleccionado';
+
+        const partes = [];
+        if (dirigidoChanged) partes.push(dirigidoTexto);
+        if (sucursalChanged && sucursalNombre) partes.push(`de ${sucursalNombre}`);
+
+        const mensaje = `Para la próxima apertura del curso se tendrá en cuenta estos parámetros y se matriculará ${partes.join(' ')}.`;
+
+        const confirm = await Swal.fire({
+            title: 'Cambio en parámetros de matrícula',
+            html: mensaje,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, actualizar',
+            cancelButtonText: 'Cancelar',
+        });
+
+        if (!confirm.isConfirmed) return;
+    }
 
     axios.post(`${VITE_URL_APP}/api/actualizar-curso/${alpineData.codigo}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -822,6 +856,14 @@ window.restaurarFormCurso = (abrir = true) => {
     const codEditar = document.getElementById('codGestionEditar');
     if (codEditar) codEditar.value = '';
 
+    // Si es cancelar, cerrar modal y salir sin limpiar campos (evita flicker por la transición de salida)
+    if (!abrir) {
+        window.dispatchEvent(new CustomEvent('close-modal-gestion'));
+        if (btn) btn.classList.remove('hidden');
+        if (btnEdit) btnEdit.classList.add('hidden');
+        return;
+    }
+
     // Al llamar a restaurarFormCurso (Crear curso), limpiamos el estado de Alpine
     const formElement = document.querySelector('[x-data="formCursoGestion()"]');
     if (formElement && window.Alpine) {
@@ -834,12 +876,7 @@ window.restaurarFormCurso = (abrir = true) => {
     if (btn) btn.classList.remove('hidden');
     if (btnEdit) btnEdit.classList.add('hidden');
 
-    // Abrir o cerrar el modal según el parámetro
-    if (abrir) {
-        window.dispatchEvent(new CustomEvent('open-modal-gestion'));
-    } else {
-        window.dispatchEvent(new CustomEvent('close-modal-gestion'));
-    }
+    window.dispatchEvent(new CustomEvent('open-modal-gestion'));
 }
 
 window.formCursoGestion = function () {
@@ -860,6 +897,8 @@ window.formCursoGestion = function () {
         areaResponsable: '',
         codMoodleArea: '',
         areasResponsables: [],
+        sucursal: '',
+        sucursalesOpciones: [],
         lastSistemaId: null,
         async cargarAreasResponsables(sistemaId) {
             if (!sistemaId) {
@@ -1202,6 +1241,17 @@ window.formCursoGestion = function () {
                     this.empresasDisponibles = res.data || [];
                 });
 
+            // Cargar sucursales para el dropdown principal
+            axios.get(`${VITE_URL_APP}/api/obtener-sucursales`)
+                .then(res => {
+                    if (res.data.success) {
+                        this.sucursalesOpciones = res.data.data || [];
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al cargar sucursales", err);
+                });
+
             // Eliminado el bloque de exclusión mutua ($watch) entre obligatorioAlta y esDemanda,
             // ya que ahora obligatorioAlta siempre es true y esDemanda siempre es false por requerimiento.
 
@@ -1221,6 +1271,7 @@ window.formCursoGestion = function () {
             const areaResponsableOk = this.areaResponsable !== undefined && this.areaResponsable !== null && this.areaResponsable !== '';
             const dirigidoOk = this.dirigido?.length > 0;
             const areaOk = this.tipoCurso == '6' || (this.areaConocimiento !== undefined && this.areaConocimiento !== null && this.areaConocimiento !== '');
+            const sucursalOk = this.sucursal !== undefined && this.sucursal !== null && this.sucursal !== '';
 
             let examenOk = true;
             if (this.aplicaEvaluacion) {
@@ -1232,7 +1283,7 @@ window.formCursoGestion = function () {
                     && this.archivoWord && this.preguntasExamen.length > 0;
             }
 
-            return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && examenOk;
+            return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && sucursalOk && examenOk;
         },
 
         get tituloCamposFaltantes() {
@@ -1244,6 +1295,7 @@ window.formCursoGestion = function () {
             if (this.areaResponsable === undefined || this.areaResponsable === null || this.areaResponsable === '') faltantes.push('Área responsable');
             if (!this.dirigido) faltantes.push('Dirigido a');
             if (this.tipoCurso != '6' && (this.areaConocimiento === undefined || this.areaConocimiento === null || this.areaConocimiento === '')) faltantes.push('Área de conocimiento');
+            if (!this.sucursal) faltantes.push('Sucursal');
 
             if (this.aplicaEvaluacion) {
                 if (parseInt(this.limiteTiempo) < 5) faltantes.push('Tiempo de examen (mín. 5 min)');
@@ -1281,6 +1333,7 @@ window.formCursoGestion = function () {
             this.lastSistemaId = null;
             this.areasResponsables = [];
             this.codMoodleArea = '';
+            this.sucursal = '';
             this.frecuencia = '';
             this.fechaInicio = '';
             this.fechaFinal = '';
@@ -1441,6 +1494,7 @@ window.formCursoGestion = function () {
             formData.append('cod_moodle_area', this.codMoodleArea);
             formData.append('descripcion', this.descripcion);
             formData.append('dirigido_a', this.dirigido);
+            formData.append('sucursal', this.sucursal);
 
             if (this.archivoWord) {
                 formData.append('archivo', this.archivoWord);
@@ -1875,6 +1929,7 @@ window.searchablePersonnel = function () {
         jefaturasCache: [],
         loading: false,
         error: null,
+        dropdownStyle: {},
         toggle() {
             this.open = !this.open;
             if (this.open) {
@@ -1884,6 +1939,31 @@ window.searchablePersonnel = function () {
                     this.filtrarLocal();
                 }
             }
+        },
+        openDropdown(evt) {
+            const rect = evt.currentTarget.getBoundingClientRect();
+            this.dropdownStyle = {
+                position: 'fixed',
+                top: (rect.bottom + 4) + 'px',
+                left: rect.left + 'px',
+                width: Math.max(rect.width, 580) + 'px',
+            };
+            this.open = true;
+            if (this.jefaturasCache.length === 0) {
+                this.cargarJefaturas();
+            } else if (this.query.length > 0) {
+                this.filtrarLocal();
+            }
+            this.$nextTick(() => document.addEventListener('click', this._closeHandler));
+        },
+        closeDropdown() {
+            this.open = false;
+            document.removeEventListener('click', this._closeHandler);
+        },
+        init() {
+            this._closeHandler = (e) => {
+                if (!this.$el.contains(e.target)) this.closeDropdown();
+            };
         },
         cargarJefaturas() {
             this.loading = true;
@@ -1921,7 +2001,7 @@ window.searchablePersonnel = function () {
                 alpineData.codResponsable = p.codigo;
                 alpineData.nombreResponsable = p.nombre_completo;
             }
-            this.open = false;
+            this.closeDropdown();
         }
     }
 }
@@ -1958,12 +2038,17 @@ window.modalAplazarCurso = function() {
             return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
         },
 
-        get diasExtension() {
-            if (!this.fechaNuevaFin || !this.programacionActual) return 0;
-            const fechaFinActual = new Date(this.programacionActual.fecha_final.split(' ')[0]);
+        get extensionInfo() {
+            if (!this.fechaNuevaFin || !this.programacionActual) return null;
+            const fechaFinActual = new Date(this.programacionActual.fecha_final.replace(' ', 'T'));
             const fechaNueva = new Date(this.fechaNuevaFin);
-            const diff = Math.ceil((fechaNueva - fechaFinActual) / (1000 * 60 * 60 * 24));
-            return diff > 0 ? diff : 0;
+            const diffMs = fechaNueva - fechaFinActual;
+            if (diffMs <= 0) return null;
+            const totalMinutos = Math.floor(diffMs / (1000 * 60));
+            const dias = Math.floor(totalMinutos / (24 * 60));
+            const horas = Math.floor((totalMinutos % (24 * 60)) / 60);
+            const minutos = totalMinutos % 60;
+            return { dias, horas, minutos, totalMinutos };
         },
 
         init() {
@@ -1972,8 +2057,10 @@ window.modalAplazarCurso = function() {
 
         formatearFecha(fechaStr) {
             if (!fechaStr) return '-';
-            const partes = fechaStr.split(' ')[0].split('-');
-            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            const [datePart, timePart] = fechaStr.split(' ');
+            const partes = datePart.split('-');
+            const hora = timePart ? timePart.substring(0, 5) : '';
+            return `${partes[2]}/${partes[1]}/${partes[0]} ${hora}`.trim();
         },
 
         validarFecha() {
@@ -1981,11 +2068,8 @@ window.modalAplazarCurso = function() {
             this.fechaValida = false;
             if (!this.fechaNuevaFin || !this.programacionActual) return;
 
-            const fechaFinActual = new Date(this.programacionActual.fecha_final.split(' ')[0]);
+            const fechaFinActual = new Date(this.programacionActual.fecha_final.replace(' ', 'T'));
             const fechaNueva = new Date(this.fechaNuevaFin);
-
-            fechaFinActual.setHours(0, 0, 0, 0);
-            fechaNueva.setHours(0, 0, 0, 0);
 
             if (fechaNueva <= fechaFinActual) {
                 this.errorFecha = 'La nueva fecha de fin debe ser posterior a la fecha actual de fin.';
@@ -2055,9 +2139,14 @@ window.modalAplazarCurso = function() {
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
 
+                const formatDatetime = (dt) => {
+                    if (!dt) return '';
+                    return dt.replace('T', ' ') + ':00';
+                };
+
                 const res = await axios.post(`${VITE_URL_APP}/api/cursos/aplazar-curso`, {
                     cod_curso: this.cursoCodigo,
-                    nueva_fecha_final: this.fechaNuevaFin
+                    nueva_fecha_final: formatDatetime(this.fechaNuevaFin)
                 }, { headers });
 
                 if (res.data.success) {
