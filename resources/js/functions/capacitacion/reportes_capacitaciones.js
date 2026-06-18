@@ -55,22 +55,22 @@ function _cargarImagen(url) {
 }
 
 async function _fetchSistemas() {
-    const { data } = await axios.get("/api/obtener-capacitacion-sistemas");
+    const { data } = await axios.get(`${VITE_URL_APP}/api/obtener-capacitacion-sistemas`);
     return data;
 }
 
 async function _fetchAreas() {
-    const { data } = await axios.get(`/api/obtener-areas`);
+    const { data } = await axios.get(`${VITE_URL_APP}/api/obtener-areas`);
     return data.success ? data.areas : [];
 }
 
 async function _fetchSucursales() {
-    const { data } = await axios.get(`/api/get-sucursales`);
+    const { data } = await axios.get(`${VITE_URL_APP}/api/get-sucursales`);
     return data.success ? data.sucursales : [];
 }
 
 async function _fetchPersonales() {
-    const { data } = await axios.get('/api/obtener-personal');
+    const { data } = await axios.get(`${VITE_URL_APP}/api/obtener-personal`);
     return data.success ? data.personal : [];
 }
 
@@ -140,13 +140,13 @@ async function ensureCatalogsLoaded() {
                     empresasRes,
                     personalTodasEmpresasRes,
                 ] = await Promise.all([
-                    axios.get("/api/get-sucursales"),
-                    axios.get("/api/obtener-capacitacion-sistemas"),
-                    axios.get("/api/obtener-areas"),
-                    axios.get("/api/reporte-cursos"),
-                    axios.get("/api/obtener-personal"),
-                    axios.get("/api/get-empresas"),
-                    axios.get("/api/obtener-personal-todas-empresas"),
+                    axios.get(`${VITE_URL_APP}/api/get-sucursales`),
+                    axios.get(`${VITE_URL_APP}/api/obtener-capacitacion-sistemas`),
+                    axios.get(`${VITE_URL_APP}/api/obtener-areas`),
+                    axios.get(`${VITE_URL_APP}/api/reporte-cursos`),
+                    axios.get(`${VITE_URL_APP}/api/obtener-personal`),
+                    axios.get(`${VITE_URL_APP}/api/get-empresas`),
+                    axios.get(`${VITE_URL_APP}/api/obtener-personal-todas-empresas`),
                 ]);
 
                 const personalesTodas = (personalTodasEmpresasRes.data.success && Array.isArray(personalTodasEmpresasRes.data.personal)) ? personalTodasEmpresasRes.data.personal : [];
@@ -252,7 +252,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarSucursales() {
             this.loadingSucursales = true;
             try {
-                const response = await axios.get("/api/get-sucursales");
+                const response = await axios.get(`${VITE_URL_APP}/api/get-sucursales`);
                 if (response.data.success) {
                     this.sucursales = response.data.sucursales;
                 }
@@ -306,7 +306,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get("/api/reporte-cursos");
+                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`);
 
                 if (response.data.success) {
                     this.todosLosCursos = [...response.data.Cursos];
@@ -1386,7 +1386,7 @@ export default document.addEventListener("alpine:init", () => {
                 }
 
                 await axios.post(
-                    "/api/capacitacion/registrar-reporte",
+                    `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
                     formData,
                 );
 
@@ -1481,7 +1481,7 @@ export default document.addEventListener("alpine:init", () => {
 
             try {
                 const response = await axios.post(
-                    "/api/obtener-personal-reporte",
+                    `${VITE_URL_APP}/api/obtener-personal-reporte`,
                     params,
                 );
 
@@ -1549,7 +1549,7 @@ export default document.addEventListener("alpine:init", () => {
 
             try {
                 const response = await axios.post(
-                    "/api/obtener-personal-reporte",
+                    `${VITE_URL_APP}/api/obtener-personal-reporte`,
                     params,
                 );
                 if (response.data.success) {
@@ -1898,7 +1898,7 @@ export default document.addEventListener("alpine:init", () => {
                 if (this.selectedSistema) params.systemId = this.selectedSistema;
                 if (this.selectedArea) params.areaId = this.selectedArea;
 
-                const response = await axios.get("/api/reporte-cursos", {
+                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`, {
                     params,
                 });
                 const cursosRaw = response.data.Cursos || response.data.cursos || [];
@@ -2334,7 +2334,7 @@ export default document.addEventListener("alpine:init", () => {
                 if (this.selectedSistema) params.systemId = this.selectedSistema;
                 if (this.selectedArea) params.areaId = this.selectedArea;
 
-                const response = await axios.get("/api/reporte-cursos", {
+                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`, {
                     params,
                 });
 
@@ -2419,7 +2419,7 @@ export default document.addEventListener("alpine:init", () => {
                 }
 
                 await axios.post(
-                    "/api/capacitacion/registrar-reporte",
+                    `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
                     formData,
                 );
 
@@ -2492,7 +2492,7 @@ export default document.addEventListener("alpine:init", () => {
             this.loading = true;
             try {
                 const response = await axios.get(
-                    "/api/capacitacion/listar-reportes",
+                    `${VITE_URL_APP}/api/capacitacion/listar-reportes`,
                 );
                 if (response.data.success) {
                     this.reportes = response.data.reportes;
@@ -2787,7 +2787,7 @@ export default document.addEventListener("alpine:init", () => {
             this.downloadingZip = true;
             try {
                 const response = await axios.post(
-                    "/api/capacitacion/descargar-reportes-zip",
+                    `${VITE_URL_APP}/api/capacitacion/descargar-reportes-zip`,
                     {
                         ids: this.selectedReportes,
                     },
@@ -2982,7 +2982,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get("/api/reporte-cursos");
+                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`);
                 if (response.data.success) {
                     this.todosLosCursos = response.data.Cursos || [];
                     this.filtrarCursos();
@@ -3026,7 +3026,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarClientes() {
             this.loadingClientes = true;
             try {
-                const { data } = await axios.get("/api/get-clientes-pac");
+                const { data } = await axios.get(`${VITE_URL_APP}/api/get-clientes-pac`);
                 this.clientes = Array.isArray(data) ? data : [];
             } catch (e) {
                 console.error(e);
@@ -3282,7 +3282,7 @@ export default document.addEventListener("alpine:init", () => {
                 };
 
                 const response = await axios.post(
-                    "/api/obtener-personal-record",
+                    `${VITE_URL_APP}/api/obtener-personal-record`,
                     payload,
                 );
 
@@ -3658,7 +3658,7 @@ export default document.addEventListener("alpine:init", () => {
                     formData.append("nombre_archivo", nombreArchivo);
                     formData.append("archivo_pdf", pdfBlob, nombreArchivo);
                     await axios.post(
-                        "/api/capacitacion/registrar-reporte",
+                        `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
                         formData,
                     );
                     window.dispatchEvent(
@@ -3692,7 +3692,7 @@ export default document.addEventListener("alpine:init", () => {
                     formData.append("archivo_excel", excelBlob, nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx");
                 }
 
-                await axios.post("/api/capacitacion/registrar-reporte", formData);
+                await axios.post(`${VITE_URL_APP}/api/capacitacion/registrar-reporte`, formData);
 
                 window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
             } catch (error) {
@@ -3722,7 +3722,7 @@ export default document.addEventListener("alpine:init", () => {
                     estadoId: parseInt(this.selectedEstadoId) || 0,
                 };
 
-                const response = await axios.post("/api/obtener-personal-record", payload);
+                const response = await axios.post(`${VITE_URL_APP}/api/obtener-personal-record`, payload);
 
                 if (!response.data.success) {
                     Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
@@ -3949,7 +3949,7 @@ export default document.addEventListener("alpine:init", () => {
         async cargarClientes() {
             this.loadingClientes = true;
             try {
-                const { data } = await axios.get("/api/get-clientes-pac");
+                const { data } = await axios.get(`${VITE_URL_APP}/api/get-clientes-pac`);
                 this.clientes = Array.isArray(data) ? data : [];
             } catch (e) {
                 console.error(e);
@@ -4111,7 +4111,7 @@ export default document.addEventListener("alpine:init", () => {
                     cliente: this.selectedCliente || null,
                 };
 
-                const response = await axios.post("/api/obtener-reporte-general", payload);
+                const response = await axios.post(`${VITE_URL_APP}/api/obtener-reporte-general`, payload);
 
                 if (!response.data.success) {
                     Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
@@ -4307,7 +4307,7 @@ export default document.addEventListener("alpine:init", () => {
                     const formData = new FormData();
                     formData.append("nombre_archivo", nombreArchivo);
                     formData.append("archivo_pdf", pdfBlob, nombreArchivo);
-                    await axios.post("/api/capacitacion/registrar-reporte", formData);
+                    await axios.post(`${VITE_URL_APP}/api/capacitacion/registrar-reporte`, formData);
                     window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
                 } catch (error) {
                     console.error("Error al guardar en historial:", error);
@@ -4345,7 +4345,7 @@ export default document.addEventListener("alpine:init", () => {
                     cliente: this.selectedCliente || null,
                 };
 
-                const response = await axios.post("/api/obtener-reporte-general", payload);
+                const response = await axios.post(`${VITE_URL_APP}/api/obtener-reporte-general`, payload);
 
                 if (!response.data.success) {
                     Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
@@ -4466,7 +4466,7 @@ export default document.addEventListener("alpine:init", () => {
                     const formData = new FormData();
                     formData.append("nombre_archivo", nombreArchivo);
                     formData.append("archivo_excel", blob, nombreArchivo);
-                    await axios.post("/api/capacitacion/registrar-reporte", formData);
+                    await axios.post(`${VITE_URL_APP}/api/capacitacion/registrar-reporte`, formData);
                     window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
                 } catch (error) {
                     console.error("Error al guardar en historial:", error);

@@ -1980,7 +1980,7 @@
                     formData.append('archivo', file);
 
                     try {
-                        const response = await fetch('/api/capacitacion/validar-excel-matricula', {
+                        const response = await fetch(`${VITE_URL_APP}/api/capacitacion/validar-excel-matricula`, {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -2041,7 +2041,7 @@
 
                     this.procesandoMatricula = true;
                     try {
-                        const response = await fetch('/api/capacitacion/confirmar-matricula-masiva', {
+                        const response = await fetch(`${VITE_URL_APP}/api/capacitacion/confirmar-matricula-masiva`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',

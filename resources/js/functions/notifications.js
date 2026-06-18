@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadNotifications() {
     try {
-        const response = await fetch('/api/notificaciones/folios-por-vencer');
+        const response = await fetch(`${VITE_URL_APP}/api/notificaciones/folios-por-vencer`);
         const data = await response.json();
 
         const list = document.getElementById('notif-list');

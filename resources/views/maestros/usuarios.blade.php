@@ -240,7 +240,7 @@ let _codUsuarioSucursal = null;
   async function cargarUsuarios() {
       const tbody = document.getElementById('tbody-usuarios');
       try {
-          const res  = await fetch('/api/get-usuarios');
+          const res  = await fetch(`${VITE_URL_APP}/api/get-usuarios`);
           const list = await res.json();
 
           if (!list.length) {
@@ -430,7 +430,7 @@ let _codUsuarioSucursal = null;
       document.getElementById('__toggle-sucursales').click();
 
       try {
-          const res  = await fetch(`/api/get-sucursales-usuario/${codUsuario}`);
+          const res  = await fetch(`${VITE_URL_APP}/api/get-sucursales-usuario/${codUsuario}`);
           const list = await res.json();
 
           if (!list.length) {

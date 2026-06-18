@@ -1,4 +1,4 @@
-import Tabulator from "tabulator-tables";
+import { TabulatorFull as Tabulator } from "tabulator-tables";
 
 document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("tblTrabajosFallidos")) {

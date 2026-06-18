@@ -397,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function initTablaCursosSeguimiento() {
         const table = new Tabulator("#tblCursosSeguimiento", {
-            ajaxURL: "/api/get-cursos-seguimiento",
+            ajaxURL: `${VITE_URL_APP}/api/get-cursos-seguimiento`,
             layout: "fitColumns",
             placeholder: "No se encontraron cursos",
             pagination: "local",
@@ -621,7 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function initTablaMemosEnviados() {
         const table = new Tabulator("#tblMemosEnviados", {
-            ajaxURL: "/api/obtener-memos-enviados",
+            ajaxURL: `${VITE_URL_APP}/api/obtener-memos-enviados`,
             ajaxResponse(url, params, response) {
                 const data = response.data || [];
 

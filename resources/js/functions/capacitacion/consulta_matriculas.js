@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function initTableCursos() {
         const table = new Tabulator("#tblCursos", {
-            ajaxURL: "/api/obtener-cursos",
+            ajaxURL: `${VITE_URL_APP}/api/obtener-cursos`,
             ajaxResponse: function (url, params, response) {
                 return response.Cursos;
             },
@@ -377,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!cursoId) return;
 
         try {
-            const resProgramaciones = await axios.get(`/api/obtener-programaciones/${cursoId}`);
+            const resProgramaciones = await axios.get(`${VITE_URL_APP}/api/obtener-programaciones/${cursoId}`);
             const programaciones = resProgramaciones.data.programaciones || resProgramaciones.data.Programaciones || resProgramaciones.data || [];
             
             const slcProg = document.getElementById('slcProgramacion');
@@ -405,8 +405,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const [resPersonal, resMatriculados] = await Promise.all([
-                axios.get('/api/obtener-personal'),
-                axios.get(`/api/obtener-matriculados/${cursoId}`)
+                axios.get(`${VITE_URL_APP}/api/obtener-personal`),
+                axios.get(`${VITE_URL_APP}/api/obtener-matriculados/${cursoId}`)
             ]);
 
             const personalData = resPersonal.data.personal || resPersonal.data || [];
@@ -613,7 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                             const codPersonal = String(rowData.codigo || rowData.dni || rowData.id);
                                             try {
                                                 Swal.fire({ title: 'Desmatriculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                                                const resp = await axios.post(`/api/capacitacion/desmatricular-usuario`, { codPersonal, cursoId });
+                                                const resp = await axios.post(`${VITE_URL_APP}/api/capacitacion/desmatricular-usuario`, { codPersonal, cursoId });
                                                 Swal.close();
                                                 if (resp.data.success) {
                                                     const row = cell.getRow();
@@ -784,7 +784,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                                 try {
                                     const resp = await axios.post(
-                                        "/capacitacion/save-matricula",
+                                        `${VITE_URL_APP}/capacitacion/save-matricula`,
                                         {
                                             cursoId: String(cId),
                                             programacionId: String(progId),

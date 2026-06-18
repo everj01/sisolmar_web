@@ -61,8 +61,14 @@ export default defineConfig({
                 'resources/js/functions/reportes.js',
                 'resources/js/functions/notifications.js',
                 /* CAPACITACION */
-                'resources/js/functions/capacitacion/gestion_cursos.js',
-                'resources/js/functions/capacitacion/consulta_matriculas.js',
+                 'resources/js/functions/capacitacion/gestion_cursos.js',
+                  'resources/js/functions/capacitacion/gestion_cursos_file.js',
+                  'resources/js/functions/capacitacion/gestion_matricula.js',
+                  'resources/js/functions/capacitacion/gestion_programacion.js',
+                  'resources/js/functions/capacitacion/consulta_matriculas.js',
+                  'resources/js/functions/capacitacion/seguimiento_matriculas.js',
+                  'resources/js/functions/capacitacion/trabajos_fallidos.js',
+                   'resources/js/functions/capacitacion/planes_capacitaciones.js',
 
 
                 'resources/js/functions/modal_reporte.js',
