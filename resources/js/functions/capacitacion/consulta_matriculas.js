@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function initTableCursos() {
         const table = new Tabulator("#tblCursos", {
-            ajaxURL: "/api/obtener-cursos",
+            ajaxURL: `${VITE_URL_APP}/api/obtener-cursos`,
             ajaxResponse: function (url, params, response) {
                 return response.Cursos;
             },
