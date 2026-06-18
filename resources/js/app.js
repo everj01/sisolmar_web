@@ -1,80 +1,96 @@
 /**
-* Theme: Taildash - Tailwind CSS 3 Admin Layout & UI Kit Template
-* Author: MyraStudio
-* Module/App: App js
-*/
-
+ * Theme: Taildash - Tailwind CSS 3 Admin Layout & UI Kit Template
+ * Author: MyraStudio
+ * Module/App: App js
+ */
 
 // import _ from 'lodash/lodash';
 
+import "dropzone/dist/dropzone-min";
 
-import 'dropzone/dist/dropzone-min'
+import "preline";
+import "jquery";
+import "simplebar";
+import "boxicons/css/boxicons.min.css";
+import "./functions/capacitacion/reportes_capacitaciones.js";
+import "./functions/capacitacion/planes_capacitaciones.js";
+import Waves from "node-waves";
+import Alpine from "alpinejs";
+import DataTable from "vanilla-datatables";
+import "vanilla-datatables/dist/vanilla-dataTables.min.css"; // Import Styles
+import Swal from "sweetalert2";
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
 
-import 'preline'
-import 'jquery'
-import 'simplebar'
-import 'boxicons/css/boxicons.min.css'
-import './functions/capacitacion/reportes_capacitaciones.js'
-import './functions/capacitacion/planes_capacitaciones.js'
-import Waves from 'node-waves'
-import Alpine from 'alpinejs'
-import DataTable from 'vanilla-datatables'
-import 'vanilla-datatables/dist/vanilla-dataTables.min.css'; // Import Styles
-import Swal from 'sweetalert2'
-window.Swal = Swal
-window.Alpine = Alpine
-Alpine.start()
+window.Pusher = Pusher;
 
+window.Echo = new Echo({
+    broadcaster: "pusher",
+    key: import.meta.env.VITE_PUSHER_APP_KEY,
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+    forceTLS: true,
+});
 
-
-
-
+window.Swal = Swal;
+window.Alpine = Alpine;
+Alpine.start();
 
 class App {
-
     constructor() {
-        this.html = document.getElementsByTagName('html')[0]
+        this.html = document.getElementsByTagName("html")[0];
         this.config = {};
         this.defaultConfig = window.config;
     }
 
     initComponents() {
-
         // Wave Effect
-        Waves.init()
+        Waves.init();
     }
 
     initSidenav() {
         var self = this;
         var pageUrl = window.location.href.split(/[?#]/)[0];
-        document.querySelectorAll("ul.admin-menu .menu-item a").forEach((element) => {
-            if (element.href === pageUrl) {
-                element.classList.add("active");
+        document
+            .querySelectorAll("ul.admin-menu .menu-item a")
+            .forEach((element) => {
+                if (element.href === pageUrl) {
+                    element.classList.add("active");
 
-                let parentMenuItem = element.closest(".menu-item");
-                parentMenuItem.classList.add("active");
+                    let parentMenuItem = element.closest(".menu-item");
+                    parentMenuItem.classList.add("active");
 
-                let parentMenu = element.parentElement.parentElement.parentElement.parentElement;
-                if (parentMenu && parentMenu.classList.contains("menu-item")) {
-                    const collapseElement = parentMenu.querySelector(".hs-accordion-toggle",);
+                    let parentMenu =
+                        element.parentElement.parentElement.parentElement
+                            .parentElement;
+                    if (
+                        parentMenu &&
+                        parentMenu.classList.contains("menu-item")
+                    ) {
+                        const collapseElement = parentMenu.querySelector(
+                            ".hs-accordion-toggle",
+                        );
 
-                    if (collapseElement) {
-                        // collapseElement.classList.add("active");
-                        collapseElement.classList.add("open");
-                        parentMenu.classList.add("active");
-                        const nextE = collapseElement.nextElementSibling;
-                        if (nextE) {
-                            nextE.classList.remove("hidden");
+                        if (collapseElement) {
+                            // collapseElement.classList.add("active");
+                            collapseElement.classList.add("open");
+                            parentMenu.classList.add("active");
+                            const nextE = collapseElement.nextElementSibling;
+                            if (nextE) {
+                                nextE.classList.remove("hidden");
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
 
         setTimeout(function () {
-            var activatedItem = document.querySelector("ul.admin-menu .menu-item.active a.active");
+            var activatedItem = document.querySelector(
+                "ul.admin-menu .menu-item.active a.active",
+            );
             if (activatedItem != null) {
-                var simplebarContent = document.querySelector("#app-menu .simplebar-content-wrapper",);
+                var simplebarContent = document.querySelector(
+                    "#app-menu .simplebar-content-wrapper",
+                );
 
                 var offset = activatedItem.offsetTop - 300;
                 if (simplebarContent && offset > 100) {
@@ -82,7 +98,6 @@ class App {
                 }
             }
         }, 200);
-
 
         // scrollTo (Sidenav Active Menu)
         function easeInOutQuad(t, b, c, d) {
@@ -112,7 +127,8 @@ class App {
     reverseQuery(element, query) {
         while (element) {
             if (element.parentElement) {
-                if (element.parentElement.querySelector(query) === element) return element
+                if (element.parentElement.querySelector(query) === element)
+                    return element;
             }
             element = element.parentElement;
         }
@@ -122,19 +138,29 @@ class App {
     // Topbar Fullscreen Button
     initfullScreenListener() {
         var self = this;
-        var fullScreenBtn = document.querySelector('[data-toggle="fullscreen"]');
+        var fullScreenBtn = document.querySelector(
+            '[data-toggle="fullscreen"]',
+        );
 
         if (fullScreenBtn) {
-            fullScreenBtn.addEventListener('click', function (e) {
+            fullScreenBtn.addEventListener("click", function (e) {
                 e.preventDefault();
-                document.body.classList.toggle('group-fullscreen')
-                if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement) {
+                document.body.classList.toggle("group-fullscreen");
+                if (
+                    !document.fullscreenElement &&
+                    !document.mozFullScreenElement &&
+                    !document.webkitFullscreenElement
+                ) {
                     if (document.documentElement.requestFullscreen) {
                         document.documentElement.requestFullscreen();
                     } else if (document.documentElement.mozRequestFullScreen) {
                         document.documentElement.mozRequestFullScreen();
-                    } else if (document.documentElement.webkitRequestFullscreen) {
-                        document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                    } else if (
+                        document.documentElement.webkitRequestFullscreen
+                    ) {
+                        document.documentElement.webkitRequestFullscreen(
+                            Element.ALLOW_KEYBOARD_INPUT,
+                        );
                     }
                 } else {
                     if (document.cancelFullScreen) {
@@ -151,35 +177,36 @@ class App {
 
     // Dark Mode Toggle
     initThemeToggle() {
-        const themeToggle = document.getElementById('theme-toggle');
-        const iconLight = document.getElementById('theme-icon-light');
-        const iconDark = document.getElementById('theme-icon-dark');
+        const themeToggle = document.getElementById("theme-toggle");
+        const iconLight = document.getElementById("theme-icon-light");
+        const iconDark = document.getElementById("theme-icon-dark");
 
         if (themeToggle && iconLight && iconDark) {
             // Sincronizar iconos con el estado actual
             const updateIcons = () => {
-                const isDark = document.documentElement.classList.contains('dark');
+                const isDark =
+                    document.documentElement.classList.contains("dark");
                 if (isDark) {
-                    iconLight.classList.add('hidden');
-                    iconDark.classList.remove('hidden');
+                    iconLight.classList.add("hidden");
+                    iconDark.classList.remove("hidden");
                 } else {
-                    iconLight.classList.remove('hidden');
-                    iconDark.classList.add('hidden');
+                    iconLight.classList.remove("hidden");
+                    iconDark.classList.add("hidden");
                 }
             };
 
             // Inicializar iconos
             updateIcons();
 
-            themeToggle.addEventListener('click', function () {
+            themeToggle.addEventListener("click", function () {
                 const html = document.documentElement;
 
-                if (html.classList.contains('dark')) {
-                    html.classList.remove('dark');
-                    localStorage.setItem('theme', 'light');
+                if (html.classList.contains("dark")) {
+                    html.classList.remove("dark");
+                    localStorage.setItem("theme", "light");
                 } else {
-                    html.classList.add('dark');
-                    localStorage.setItem('theme', 'dark');
+                    html.classList.add("dark");
+                    localStorage.setItem("theme", "dark");
                 }
 
                 updateIcons();
@@ -196,6 +223,6 @@ class App {
 }
 
 // Esperar a que el DOM esté listo antes de inicializar
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener("DOMContentLoaded", function () {
     new App().init();
 });

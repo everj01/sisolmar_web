@@ -30,5 +30,10 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
-
+    'moodle' => [
+        'dataroot' => env('MOODLE_DATAROOT', ''),
+        'ws_token' => env('MOODLE_WS_TOKEN', ''),
+        'url'      => env('MOODLE_URL', ''),
+        'admin_id' => env('MOODLE_ADMIN_ID', 2),
+    ],
 ];
