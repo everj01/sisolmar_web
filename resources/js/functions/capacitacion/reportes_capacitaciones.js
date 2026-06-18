@@ -1018,6 +1018,7 @@ export default document.addEventListener("alpine:init", () => {
                         pdfBlob,
                         nombreArchivo.replace(/\.pdf$/i, "") + ".pdf",
                     );
+                    formData.append("tipo_archivo", "pdf");
                 }
 
                 if (excelBlob) {
@@ -1026,6 +1027,7 @@ export default document.addEventListener("alpine:init", () => {
                         excelBlob,
                         nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx",
                     );
+                    formData.append("tipo_archivo", "xlsx");
                 }
 
                 await axios.post(
@@ -2073,6 +2075,7 @@ export default document.addEventListener("alpine:init", () => {
                         pdfBlob,
                         nombreArchivo.replace(/\.pdf$/i, "") + ".pdf",
                     );
+                    formData.append("tipo_archivo", "pdf");
                 }
 
                 if (excelBlob) {
@@ -2081,6 +2084,7 @@ export default document.addEventListener("alpine:init", () => {
                         excelBlob,
                         nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx",
                     );
+                    formData.append("tipo_archivo", "xlsx");
                 }
 
                 await axios.post(

@@ -4533,20 +4533,16 @@ class CapacitacionController extends Controller
             $data = [
                 "nombre_archivo" => $request->nombre_archivo,
                 "descripcion" => $request->input("descripcion", ""),
-                "archivo_pdf" => null,
-                "archivo_excel" => null,
             ];
 
             if ($request->hasFile("archivo_pdf")) {
-                $data["archivo_pdf"] = file_get_contents(
-                    $request->file("archivo_pdf")->getRealPath(),
-                );
+                $data["archivo_pdf_binario"] = file_get_contents($request->file("archivo_pdf")->getRealPath());
+                $data["tipo_archivo"] = "pdf";
             }
 
             if ($request->hasFile("archivo_excel")) {
-                $data["archivo_excel"] = file_get_contents(
-                    $request->file("archivo_excel")->getRealPath(),
-                );
+                $data["archivo_excel_binario"] = file_get_contents($request->file("archivo_excel")->getRealPath());
+                $data["tipo_archivo"] = "xlsx";
             }
 
             $id = CapacitacionReporteHistorial::crearReporte($data);
@@ -4583,8 +4579,7 @@ class CapacitacionController extends Controller
                         "id" => $reporte->id,
                         "nombre_archivo" => $reporte->nombre_archivo,
                         "descripcion" => $reporte->descripcion,
-                        "tiene_pdf" => !is_null($reporte->archivo_pdf),
-                        "tiene_excel" => !is_null($reporte->archivo_excel),
+                        "tipo_archivo" => $reporte->tipo_archivo,
                         "fecha_creacion" => $reporte->fecha_creacion,
                         "fecha_actualizacion" => $reporte->fecha_actualizacion,
                         "habilitado" => (bool) $reporte->habilitado,
