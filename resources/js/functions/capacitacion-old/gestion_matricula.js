@@ -70,14 +70,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (response.status === 200 || response.status === 201) {
-                window.dispatchEvent(new CustomEvent('mostrar-alerta', {
-                    detail: {
-                        mensaje: response.data?.message || `Solicitud recibida. Pronto recibirá una notificación con los resultados de la matrícula de ${seleccionados.length} persona(s).`,
-                        tipo: "success",
-                        toast: true,
-                        recargar: false
-                    }
-                }));
+                Swal.fire({
+                    title: 'Éxito',
+                    text: `✓ ${seleccionados.length} persona(s) matriculada(s) exitosamente.`,
+                    icon: 'success',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
                 personasSeleccionadas.clear();
                 HSOverlay.close('#modal-registro');
             }
@@ -147,9 +146,7 @@ async function listarTipoCurso(selectId, esFiltro = false) {
 
 async function listarAreas(selectId, esFiltro = false) {
     try {
-        const res = await axios.get(
-            `${VITE_URL_APP}/api/obtener-capacitacion-sistemas`,
-        );
+        const res = await axios.get(`${VITE_URL_APP}/api/get-capacitacion-areas`);
         const areasData = Array.isArray(res.data) ? res.data : [];
 
         const select = document.getElementById(selectId);

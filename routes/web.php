@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 
+
 Route::middleware(['auth'])->group(function () {
 
     // ─── RUTAS WEB (vistas y acciones directas) ───────────────────────────────
@@ -162,6 +163,55 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
         Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 
+        // ── Nuevas rutas de Capacitación (Rodrigo) ───────────────────────
+        Route::post('/obtener-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
+        Route::post('/actualizar-curso/{codigo}', [CapacitacionController::class, 'actualizarCurso']);
+        Route::get('/obtener-capacitacion-sistemas', [CapacitacionController::class, 'obtenerSistemas']);
+        Route::get('/capacitacion/exportar-excel-matriculas/{cursoId}', [CapacitacionController::class, 'exportMatriculasExcel']);
+        Route::get('/listar-jefaturas', [CapacitacionController::class, 'listarJefaturas']);
+        Route::get('/obtener-personal-por-sucursal/{sucursalId}', [CapacitacionController::class, 'getPersonalPorSucursal']);
+        Route::get('/get-cursos-seguimiento', [CapacitacionController::class, 'getCursosSeguimiento']);
+        Route::get('/obtener-detalle-curso/{course_id}', [CapacitacionController::class, 'obtenerDetalleCurso']);
+        Route::get('/get-estudiantes-curso', [CapacitacionController::class, 'obtenerEstudiantesCurso']);
+        Route::get('/obtener-cursos-alumno', [CapacitacionController::class, 'obtenerEstadoCursosAlumno']);
+        Route::post('/comparar-memos', [CapacitacionController::class, 'compararMemos']);
+        Route::post('/cursos/aplazar-curso', [CapacitacionController::class, 'aplazarCurso']);
+        Route::get('/cursos/obtener-prog-actual/{courseId}', [CapacitacionController::class, 'obtenerProgActual']);
+        Route::get('/obtener-programaciones/{courseId}', [CapacitacionController::class, 'obtenerProgramaciones']);
+        Route::get('/obtener-matriculados/{courseId}', [CapacitacionController::class, 'obtenerMatriculados']);
+        Route::get('/reporte-cursos', [CapacitacionController::class, 'obtenerCursosParaReportes']);
+        Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
+        Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
+        Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
+        Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
+        Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
+        Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
+        Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
+        Route::post('/capacitacion/suspender-usuario/{cursoId}', [CapacitacionController::class, 'suspenderUsuario']);
+        Route::post('/capacitacion/registrar-reporte', [CapacitacionController::class, 'saveReporteCapacitacion']);
+        Route::get('/capacitacion/listar-reportes', [CapacitacionController::class, 'listarReportesCapacitaciones']);
+        Route::get('/obtener-sucursales', [CapacitacionController::class, 'listarSucursales']);
+        Route::get('/obtener-memos-resumen/{nivelMemo}', [CapacitacionController::class, 'obtenerMemosResumen']);
+        Route::get('/obtener-memos-enviados', [CapacitacionController::class, 'obtenerMemosEnviados']);
+        Route::get('/obtener-detalle-memo/{memoId}', [CapacitacionController::class, 'obtenerDetalleMemo']);
+        Route::post('/obtener-memos-personal', [CapacitacionController::class, 'obtenerMemosPersonal']);
+        Route::get('/obtener-info-memo/{nroDoc}', [CapacitacionController::class, 'obtenerInfoMemo']);
+        Route::get('/obtener-personal', [CapacitacionController::class, 'obtenerPersonal']);
+        Route::get('/obtener-personal-todas-empresas', [CapacitacionController::class, 'obtenerPersonalTodasEmpresas']);
+        Route::post('/obtener-personal-record', [CapacitacionController::class, 'obtenerPersonalParaRecord']);
+        Route::post('/obtener-reporte-general', [CapacitacionController::class, 'obtenerReporteGeneral']);
+        Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
+        Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
+        Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);
+        Route::post('/capacitacion/descargar-reportes-zip', [CapacitacionController::class, 'descargarReportesZip']);
+        Route::delete('/capacitacion/eliminar-reporte/{id}', [CapacitacionController::class, 'eliminarReporte']);
+        Route::post('/enviar-memos-varios', [CapacitacionController::class, 'enviarMemos']);
+        Route::post('/enviar-memo-personal', [CapacitacionController::class, 'enviarMemo']);
+
+        // ── Mail (nuevo en Rodrigo) ───────────────────────────────────────
+        Route::post('/mail/enviar-recordatorios', [\App\Http\Controllers\Api\MailController::class, 'enviarRecordatorioCursos']);
+        Route::post('/mail/enviar-recordatorio', [\App\Http\Controllers\Api\MailController::class, 'enviarRecordatorioCurso']);
+
         // Ubicación
         Route::get('/ubicacion/departamentos', [UbicacionController::class, 'departamentos']);
         Route::get('/ubicacion/provincias/{departamento_id}', [UbicacionController::class, 'provincias']);
@@ -224,6 +274,7 @@ Route::middleware(['auth'])->group(function () {
 
     }); // fin prefix('api')
 
+    Route::get('/reportes', [FileController::class, 'ViewReportes'])->name('reportes');
     // ─── RUTAS DE VISTAS (catchall al final) ─────────────────────────────────
     Route::group(['prefix' => '/', 'where' => ['first' => '^(?!api|\.well-known).*']], function () {
         Route::get('', [RoutingController::class, 'index'])->name('root');

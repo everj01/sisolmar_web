@@ -63,6 +63,16 @@ class FileController extends Controller
         return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
+
+    public function ViewReportes()
+      {
+          $clientes = FileControl::getClientes();
+          $sucursales = FileControl::getSucursales();
+          $cargos = FileControl::getCargos();
+
+          return view('file_control.reportes', compact('clientes', 'sucursales', 'cargos'));
+      }
+
   
 
     public function getCargosXCliente(Request $request)

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web\\\\app\\\\Http\\\\Controllers\\\\CapacitacionController.php\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web-rodrigo\\\\resources\" | Where-Object { $_.Extension -eq \".php\" } | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web\\\\resources\\\\views\\\\capacitacion\" | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web\\\\resources\\\\views\\\\emails\" | ForEach-Object { $_.FullName })",
+      "Bash(php *)"
+    ]
+  }
+}
