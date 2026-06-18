@@ -221,12 +221,15 @@ export default document.addEventListener("alpine:init", () => {
         loadingSucursales: false,
 
         currentPage: 1,
-        perPage: 15,
+        perPage: 20,
 
         sortColumn: null,
         sortDirection: null,
 
         exportando: false,
+
+        selectedCursoIndex: -1,
+        selectedSucursalIdx: 0,
 
         cacheReportes: {},
         _cursosExportData: [],
@@ -392,6 +395,8 @@ export default document.addEventListener("alpine:init", () => {
             this.totalPersonal = 0;
             this.currentPage = 1;
             this.loadingPersonal = false;
+            this.selectedCursoIndex = -1;
+            this.selectedSucursalIdx = 0;
 
             this.cacheReportes = {};
         },
@@ -404,6 +409,35 @@ export default document.addEventListener("alpine:init", () => {
             this.sortColumn = null;
             this.sortDirection = null;
             this.loadingPersonal = false;
+            this.selectedCursoIndex = -1;
+            this.selectedSucursalIdx = 0;
+        },
+
+        get todosCursosSeleccionados() {
+            const visibles = this.cursos.filter(
+                (c) => !this.searchCurso || c.Nombre.toLowerCase().includes(this.searchCurso.toLowerCase()),
+            );
+            return visibles.length > 0 && visibles.every((c) => this.courseIds.includes(c.Id));
+        },
+
+        toggleSeleccionarTodos() {
+            const visibles = this.cursos.filter(
+                (c) => !this.searchCurso || c.Nombre.toLowerCase().includes(this.searchCurso.toLowerCase()),
+            );
+            if (this.todosCursosSeleccionados) {
+                this.courseIds = this.courseIds.filter(
+                    (id) => !visibles.some((v) => v.Id === id),
+                );
+            } else {
+                visibles.forEach((v) => {
+                    if (!this.courseIds.includes(v.Id)) {
+                        this.courseIds.push(v.Id);
+                    }
+                });
+            }
+            this.courseIds = this.courseIds.map((id) =>
+                typeof id === "string" ? parseInt(id) : id,
+            );
         },
 
         ordenar(columna) {
@@ -418,6 +452,21 @@ export default document.addEventListener("alpine:init", () => {
                 this.sortColumn = columna;
                 this.sortDirection = "asc";
             }
+            this.currentPage = 1;
+        },
+
+        seleccionarCurso(index) {
+            if (this.selectedCursoIndex === index) {
+                this.selectedCursoIndex = -1;
+                this.selectedSucursalIdx = 0;
+            } else {
+                this.selectedCursoIndex = index;
+                this.selectedSucursalIdx = 0;
+            }
+        },
+
+        seleccionarSucursal(idx) {
+            this.selectedSucursalIdx = idx;
             this.currentPage = 1;
         },
 
@@ -446,21 +495,75 @@ export default document.addEventListener("alpine:init", () => {
                 .join(", ");
         },
 
-        get personalPaginado() {
-            if (this.esReportePorCursos) return [];
+        get cursoActual() {
+            if (this.personal.length > 0) {
+                return this.personal[this.selectedCursoIndex] || this.personal[0];
+            }
+            return null;
+        },
+
+        get personalCursoActual() {
+            return this.cursoActual?.Personales || [];
+        },
+
+        get personalCursoActualPaginado() {
             const datos = _ordenarPersonal(
-                [...this.personal],
+                [...this.personalCursoActual],
                 this.sortColumn,
                 this.sortDirection,
             );
             const start = (this.currentPage - 1) * this.perPage;
-            const end = start + this.perPage;
-            return datos.slice(start, end);
+            return datos.slice(start, start + this.perPage);
         },
 
-        get totalPages() {
-            if (this.esReportePorCursos) return 1;
-            return Math.ceil(this.personal.length / this.perPage);
+        get sucursalesDelCursoActual() {
+            const personas = this.personalCursoActual;
+            const grupos = {};
+            personas.forEach((p) => {
+                const codigo = p.SucursalCodigo || "SIN_SUCURSAL";
+                if (!grupos[codigo]) {
+                    const suc = this.sucursales.find(
+                        (s) => s.codigo == p.SucursalCodigo,
+                    );
+                    grupos[codigo] = {
+                        SucursalCodigo: codigo,
+                        SucursalNombre: suc
+                            ? suc.sucursal.toUpperCase()
+                            : "SIN SUCURSAL",
+                        Personales: [],
+                    };
+                }
+                grupos[codigo].Personales.push(p);
+            });
+            const todas = {
+                SucursalCodigo: "TODAS",
+                SucursalNombre: "TODAS LAS SUCURSALES",
+                Personales: personas,
+            };
+            return [todas, ...Object.values(grupos)];
+        },
+
+        get personalSucursalActual() {
+            const sucs = this.sucursalesDelCursoActual;
+            return sucs[this.selectedSucursalIdx]?.Personales || [];
+        },
+
+        get personalSucursalActualPaginado() {
+            const datos = _ordenarPersonal(
+                [...this.personalSucursalActual],
+                this.sortColumn,
+                this.sortDirection,
+            );
+            const start = (this.currentPage - 1) * this.perPage;
+            return datos.slice(start, start + this.perPage);
+        },
+
+        get totalPagesSucursal() {
+            return Math.ceil(this.personalSucursalActual.length / this.perPage);
+        },
+
+        get totalPagesCursoActual() {
+            return Math.ceil(this.personalCursoActual.length / this.perPage);
         },
 
         _escribirEncabezadoExcel(
@@ -597,157 +700,65 @@ export default document.addEventListener("alpine:init", () => {
                 const logoImageId = await _cargarLogoExcel(workbook);
                 const sheet = workbook.addWorksheet("Personal");
 
-                if (this.esReportePorCursos) {
-                    this._escribirEncabezadoExcel(
-                        sheet,
-                        logoImageId,
-                        "REPORTE GENERAL - TODOS LOS CURSOS",
-                        sucursalNombre,
-                        `Total general: ${this.totalPersonal} personal(es)`,
-                    );
+                this._escribirEncabezadoExcel(
+                    sheet,
+                    logoImageId,
+                    "REPORTE POR CAPACITACIÓN",
+                    sucursalNombre,
+                    `Total general: ${this.totalPersonal} personal(es)`,
+                );
 
-                    let currentRow = 6;
+                let currentRow = 6;
 
-                    this.personal.forEach((grupo, gi) => {
-                        if (gi > 0) {
-                            currentRow += 1;
-                        }
+                this.personal.forEach((grupo, gi) => {
+                    if (gi > 0) {
+                        currentRow += 1;
+                    }
 
-                        const cursoRow = sheet.getRow(currentRow);
-                        cursoRow.height = 22;
-                        const cursoCell = cursoRow.getCell(1);
-                        cursoCell.value = grupo.Curso?.toUpperCase() || "CURSO";
-                        cursoCell.font = {
-                            bold: true,
-                            size: 11,
-                            color: { argb: "FF1F4E79" },
-                        };
-                        cursoCell.alignment = {
-                            vertical: "middle",
-                        };
-                        sheet.mergeCells(`A${currentRow}:G${currentRow}`);
-                        currentRow++;
-
-                        const subRow = sheet.getRow(currentRow);
-                        subRow.height = 16;
-                        const subCell = subRow.getCell(1);
-                        subCell.value = `Total: ${grupo.Total} personal(es) - ${sucursalNombre}`;
-                        subCell.font = {
-                            size: 9,
-                            italic: true,
-                            color: { argb: "FF666666" },
-                        };
-                        sheet.mergeCells(`A${currentRow}:G${currentRow}`);
-                        currentRow++;
-
-                        currentRow = this._agregarFilasPersonalExcel(
-                            sheet,
-                            grupo.Personales || [],
-                            currentRow,
-                        );
-                    });
-
-                    sheet.columns = [
-                        { width: 5 },
-                        { width: 15 },
-                        { width: 40 },
-                        { width: 15 },
-                        { width: 25 },
-                        { width: 30 },
-                        { width: 12 },
-                        { width: 15 },
-                    ];
-                } else if (this.hayAgrupacionPorSucursal) {
-                    const nombreCurso = this.nombreCursosSeleccionados;
-
-                    this._escribirEncabezadoExcel(
-                        sheet,
-                        logoImageId,
-                        `Curso: ${nombreCurso}`,
-                        "TODAS LAS SUCURSALES",
-                        `Total general: ${this.personal.length} personal(es)`,
-                    );
-
-                    let currentRow = 6;
-
-                    this.personalPorSucursal.forEach((grupo, gi) => {
-                        if (gi > 0) {
-                            currentRow += 1;
-                        }
-
-                        const sucRow = sheet.getRow(currentRow);
-                        sucRow.height = 22;
-                        const sucCell = sucRow.getCell(1);
-                        sucCell.value = grupo.SucursalNombre;
-                        sucCell.font = {
-                            bold: true,
-                            size: 11,
-                            color: { argb: "FF1F4E79" },
-                        };
-                        sucCell.alignment = {
-                            vertical: "middle",
-                        };
-                        sheet.mergeCells(`A${currentRow}:G${currentRow}`);
-                        currentRow++;
-
-                        const subRow = sheet.getRow(currentRow);
-                        subRow.height = 16;
-                        const subCell = subRow.getCell(1);
-                        subCell.value = `Total: ${grupo.Personales.length} personal(es)`;
-                        subCell.font = {
-                            size: 9,
-                            italic: true,
-                            color: { argb: "FF666666" },
-                        };
-                        sheet.mergeCells(`A${currentRow}:G${currentRow}`);
-                        currentRow++;
-
-                        currentRow = this._agregarFilasPersonalExcel(
-                            sheet,
-                            grupo.Personales || [],
-                            currentRow,
-                        );
-                    });
-
-                    sheet.columns = [
-                        { width: 5 },
-                        { width: 15 },
-                        { width: 40 },
-                        { width: 15 },
-                        { width: 25 },
-                        { width: 30 },
-                        { width: 12 },
-                        { width: 15 },
-                    ];
-                } else {
-                    const nombreCurso = this.nombreCursosSeleccionados;
-
-                    this._escribirEncabezadoExcel(
-                        sheet,
-                        logoImageId,
-                        `Curso: ${nombreCurso}`,
-                        sucursalNombre,
-                        `Total: ${this.personal.length} personal(es)`,
-                    );
-
-                    this._agregarFilasPersonalExcel(sheet, this.personal, 5);
-
-                    sheet.columns = [
-                        { width: 5 },
-                        { width: 15 },
-                        { width: 40 },
-                        { width: 15 },
-                        { width: 25 },
-                        { width: 30 },
-                        { width: 12 },
-                        { width: 15 },
-                    ];
-
-                    sheet.autoFilter = {
-                        from: `A5`,
-                        to: `H5`,
+                    const cursoRow = sheet.getRow(currentRow);
+                    cursoRow.height = 22;
+                    const cursoCell = cursoRow.getCell(1);
+                    cursoCell.value = grupo.Curso?.toUpperCase() || "CURSO";
+                    cursoCell.font = {
+                        bold: true,
+                        size: 11,
+                        color: { argb: "FF1F4E79" },
                     };
-                }
+                    cursoCell.alignment = {
+                        vertical: "middle",
+                    };
+                    sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+                    currentRow++;
+
+                    const subRow = sheet.getRow(currentRow);
+                    subRow.height = 16;
+                    const subCell = subRow.getCell(1);
+                    subCell.value = `Total: ${grupo.Total} personal(es) - ${sucursalNombre}`;
+                    subCell.font = {
+                        size: 9,
+                        italic: true,
+                        color: { argb: "FF666666" },
+                    };
+                    sheet.mergeCells(`A${currentRow}:G${currentRow}`);
+                    currentRow++;
+
+                    currentRow = this._agregarFilasPersonalExcel(
+                        sheet,
+                        grupo.Personales || [],
+                        currentRow,
+                    );
+                });
+
+                sheet.columns = [
+                    { width: 5 },
+                    { width: 15 },
+                    { width: 40 },
+                    { width: 15 },
+                    { width: 25 },
+                    { width: 30 },
+                    { width: 12 },
+                    { width: 15 },
+                ];
 
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = _blobExcel(buffer);
@@ -952,388 +963,20 @@ export default document.addEventListener("alpine:init", () => {
                     });
                 };
 
-                if (this.esReportePorCursos) {
-                    this.personal.forEach((cursoData, index) => {
-                        if (index > 0) {
-                            doc.addPage();
-                        }
-
-                        const { startX, startY } = dibujarEncabezado();
-
-                        generarTablaCurso(
-                            cursoData.Curso,
-                            cursoData.Personales || [],
-                            startX,
-                            startY,
-                        );
-                    });
-                } else if (this.hayAgrupacionPorSucursal) {
-                    const pageHeight = doc.internal.pageSize.height;
-                    const marginBottom = 20;
-                    const espacioMinimo = 25;
-                    const esMultiCurso =
-                        this.courseIds.length > 1 &&
-                        this._cursosExportData.length > 0;
-
-                    if (!esMultiCurso) {
-                        const { startX, startY } = dibujarEncabezado();
-                        let currentY = startY;
-                        const pageWidth = doc.internal.pageSize.width;
-                        const centerX = pageWidth / 2;
-                        const titulo = nombreCurso.toUpperCase();
-
-                        doc.setFont("helvetica", "bold");
-                        doc.setFontSize(20);
-                        doc.setTextColor(0, 0, 0);
-                        doc.text(titulo, centerX, currentY, {
-                            align: "center",
-                        });
-                        currentY += 10;
-
-                        this.personalPorSucursal.forEach((grupo, index) => {
-                            if (index > 0) currentY += 10;
-
-                            if (
-                                currentY + espacioMinimo >
-                                pageHeight - marginBottom
-                            ) {
-                                doc.addPage();
-                                currentY = 20;
-                            }
-
-                            doc.setFont("helvetica", "bold");
-                            doc.setFontSize(11);
-                            doc.setTextColor(0, 0, 0);
-                            doc.text(grupo.SucursalNombre, startX, currentY);
-                            currentY += 5;
-
-                            doc.setFont("helvetica", "normal");
-                            doc.setFontSize(9);
-                            doc.text(
-                                `${grupo.Personales.length} personal(es)`,
-                                startX,
-                                currentY,
-                            );
-                            currentY += 4;
-
-                            const personalOrdenado = [
-                                ...grupo.Personales,
-                            ].sort((a, b) => {
-                                const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
-                                if (cmpNombre !== 0) return cmpNombre;
-                                return (a.Estado || "").localeCompare(b.Estado || "");
-                            });
-
-                            const filas = personalOrdenado.map((p) => [
-                                p.CodigoPers || "",
-                                p.NombreCompleto || "",
-                                p.DNI || "",
-                                p.TipoTrabajador || "",
-                                p.Cargo || "Sin cargo",
-                                p.Nota_Final || "Sin nota",
-                                p.Estado || "",
-                            ]);
-
-                            doc.autoTable({
-                                startY: currentY,
-                                head: [
-                                    [
-                                        "Código\nPers.",
-                                        "Nombre Completo",
-                                        "DNI",
-                                        "Tipo Trabajador",
-                                        "Cargo",
-                                        "Nota final",
-                                        "Estado",
-                                    ],
-                                ],
-                                body: filas,
-                                theme: "grid",
-                                styles: {
-                                    fontSize: 8,
-                                    textColor: [0, 0, 0],
-                                    lineColor: [0, 0, 0],
-                                    lineWidth: 0.1,
-                                    valign: "middle",
-                                    halign: "center",
-                                },
-                                headStyles: {
-                                    fillColor: [253, 245, 230],
-                                    textColor: [0, 0, 0],
-                                    fontStyle: "bold",
-                                    halign: "center",
-                                },
-                                columnStyles: {
-                                    0: { cellWidth: 17 },
-                                    1: {
-                                        cellWidth: "auto",
-                                        halign: "left",
-                                    },
-                                    2: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    3: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    4: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    5: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    6: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                },
-                                margin: { left: 14, right: 14 },
-                            });
-
-                            currentY = doc.lastAutoTable.finalY;
-                        });
-                    } else {
-                        const { startX, startY } = dibujarEncabezado();
-                        let currentY = startY;
-
-                        this._cursosExportData.forEach((curso, ci) => {
-                            const grupos = this._agruparPorSucursal(
-                                curso.Personales || [],
-                            );
-
-                            grupos.forEach((grupo, gi) => {
-                                if (ci > 0 || gi > 0) currentY += 10;
-
-                                if (
-                                    currentY + espacioMinimo >
-                                    pageHeight - marginBottom
-                                ) {
-                                    doc.addPage();
-                                    currentY = 20;
-                                }
-
-                                const tituloSeccion = `${(curso.Curso || "CURSO").toUpperCase()} | ${grupo.SucursalNombre} - ${grupo.Personales.length} personal(es)`;
-
-                                doc.setFont("helvetica", "bold");
-                                doc.setFontSize(11);
-                                doc.setTextColor(0, 0, 0);
-                                doc.text(
-                                    tituloSeccion,
-                                    startX,
-                                    currentY,
-                                );
-                                currentY += 5;
-
-                                const personalOrdenado = [
-                                    ...grupo.Personales,
-                                ].sort((a, b) => {
-                                    const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
-                                    if (cmpNombre !== 0) return cmpNombre;
-                                    return (a.Estado || "").localeCompare(b.Estado || "");
-                                });
-
-                                const filas = personalOrdenado.map(
-                                    (p) => [
-                                        p.CodigoPers || "",
-                                        p.NombreCompleto || "",
-                                        p.DNI || "",
-                                        p.TipoTrabajador || "",
-                                        p.Cargo || "Sin cargo",
-                                        p.Nota_Final || "Sin nota",
-                                        p.Estado || "",
-                                    ],
-                                );
-
-                                doc.autoTable({
-                                    startY: currentY,
-                                    head: [
-                                        [
-                                            "Código\nPers.",
-                                            "Nombre Completo",
-                                            "DNI",
-                                            "Tipo Trabajador",
-                                            "Cargo",
-                                            "Nota final",
-                                            "Estado",
-                                        ],
-                                    ],
-                                    body: filas,
-                                    theme: "grid",
-                                    styles: {
-                                        fontSize: 8,
-                                        textColor: [0, 0, 0],
-                                        lineColor: [0, 0, 0],
-                                        lineWidth: 0.1,
-                                        valign: "middle",
-                                        halign: "center",
-                                    },
-                                    headStyles: {
-                                        fillColor: [253, 245, 230],
-                                        textColor: [0, 0, 0],
-                                        fontStyle: "bold",
-                                        halign: "center",
-                                    },
-                                    columnStyles: {
-                                        0: { cellWidth: 17 },
-                                        1: {
-                                            cellWidth: "auto",
-                                            halign: "left",
-                                        },
-                                        2: {
-                                            cellWidth: "auto",
-                                            halign: "center",
-                                        },
-                                        3: {
-                                            cellWidth: "auto",
-                                            halign: "center",
-                                        },
-                                        4: {
-                                            cellWidth: "auto",
-                                            halign: "center",
-                                        },
-                                        5: {
-                                            cellWidth: "auto",
-                                            halign: "center",
-                                        },
-                                        6: {
-                                            cellWidth: "auto",
-                                            halign: "center",
-                                        },
-                                    },
-                                    margin: { left: 14, right: 14 },
-                                });
-
-                                currentY = doc.lastAutoTable.finalY;
-                            });
-                        });
+                this.personal.forEach((cursoData, index) => {
+                    if (index > 0) {
+                        doc.addPage();
                     }
-                } else {
-                    const esMultiCurso =
-                        this.courseIds.length > 1 &&
-                        this._cursosExportData.length > 0;
 
-                    if (!esMultiCurso) {
-                        const { startX, startY } = dibujarEncabezado();
-                        generarTablaCurso(
-                            nombreCurso,
-                            this.personal,
-                            startX,
-                            startY,
-                        );
-                    } else {
-                        const { startX, startY } = dibujarEncabezado();
-                        let currentY = startY;
-                        const pageHeight = doc.internal.pageSize.height;
-                        const marginBottom = 20;
-                        const espacioMinimo = 25;
+                    const { startX, startY } = dibujarEncabezado();
 
-                        this._cursosExportData.forEach((curso, ci) => {
-                            if (ci > 0) currentY += 10;
-
-                            if (
-                                currentY + espacioMinimo >
-                                pageHeight - marginBottom
-                            ) {
-                                doc.addPage();
-                                currentY = 20;
-                            }
-
-                            const tituloSeccion = `${(curso.Curso || "CURSO").toUpperCase()} | ${sucursalNombre} - ${(curso.Personales || []).length} personal(es)`;
-
-                            doc.setFont("helvetica", "bold");
-                            doc.setFontSize(11);
-                            doc.setTextColor(0, 0, 0);
-                            doc.text(
-                                tituloSeccion,
-                                startX,
-                                currentY,
-                            );
-                            currentY += 5;
-
-                            const personalOrdenado = [
-                                ...(curso.Personales || []),
-                            ].sort((a, b) => {
-                                const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
-                                if (cmpNombre !== 0) return cmpNombre;
-                                return (a.Estado || "").localeCompare(b.Estado || "");
-                            });
-
-                            const filas = personalOrdenado.map((p) => [
-                                p.CodigoPers || "",
-                                p.NombreCompleto || "",
-                                p.DNI || "",
-                                p.TipoTrabajador || "",
-                                p.Cargo || "Sin cargo",
-                                p.Nota_Final || "Sin nota",
-                                p.Estado || "",
-                            ]);
-
-                            doc.autoTable({
-                                startY: currentY,
-                                head: [
-                                    [
-                                        "Código\nPers.",
-                                        "Nombre Completo",
-                                        "DNI",
-                                        "Tipo Trabajador",
-                                        "Cargo",
-                                        "Nota final",
-                                        "Estado",
-                                    ],
-                                ],
-                                body: filas,
-                                theme: "grid",
-                                styles: {
-                                    fontSize: 8,
-                                    textColor: [0, 0, 0],
-                                    lineColor: [0, 0, 0],
-                                    lineWidth: 0.1,
-                                    valign: "middle",
-                                    halign: "center",
-                                },
-                                headStyles: {
-                                    fillColor: [253, 245, 230],
-                                    textColor: [0, 0, 0],
-                                    fontStyle: "bold",
-                                    halign: "center",
-                                },
-                                columnStyles: {
-                                    0: { cellWidth: 17 },
-                                    1: {
-                                        cellWidth: "auto",
-                                        halign: "left",
-                                    },
-                                    2: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    3: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    4: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    5: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                    6: {
-                                        cellWidth: "auto",
-                                        halign: "center",
-                                    },
-                                },
-                                margin: { left: 14, right: 14 },
-                            });
-
-                            currentY = doc.lastAutoTable.finalY;
-                        });
-                    }
-                }
+                    generarTablaCurso(
+                        cursoData.Curso,
+                        cursoData.Personales || [],
+                        startX,
+                        startY,
+                    );
+                });
 
                 const d = new Date();
                 const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
@@ -1402,55 +1045,7 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         get esReportePorCursos() {
-            return (
-                this.courseIds.length === 0 &&
-                Array.isArray(this.personal) &&
-                this.personal.length > 0
-            );
-        },
-
-        get personalPorSucursal() {
-            if (this.selectedSucursal || this.esReportePorCursos) {
-                return [];
-            }
-            const grupos = {};
-            this.personal.forEach((p) => {
-                const codigo = p.SucursalCodigo || "SIN_SUCURSAL";
-                if (!grupos[codigo]) {
-                    const suc = this.sucursales.find(
-                        (s) => s.codigo == p.SucursalCodigo,
-                    );
-                    grupos[codigo] = {
-                        SucursalCodigo: codigo,
-                        SucursalNombre: suc
-                            ? suc.sucursal.toUpperCase()
-                            : "SIN SUCURSAL",
-                        Personales: [],
-                    };
-                }
-                grupos[codigo].Personales.push(p);
-            });
-            return Object.values(grupos);
-        },
-
-        get hayAgrupacionPorSucursal() {
-            return (
-                !this.selectedSucursal &&
-                !this.esReportePorCursos &&
-                this.personal.length > 0
-            );
-        },
-
-        get personalAplanado() {
-            if (!this.hayAgrupacionPorSucursal) return [];
-            const result = [];
-            this.personalPorSucursal.forEach((grupo) => {
-                result.push({ tipo: "separador", grupo });
-                grupo.Personales.forEach((persona, pi) => {
-                    result.push({ tipo: "fila", persona, idx: pi + 1 });
-                });
-            });
-            return result;
+            return this.personal.length > 0;
         },
 
         async obtenerPersonal() {
@@ -1465,6 +1060,8 @@ export default document.addEventListener("alpine:init", () => {
                 this.personal = cached.personal;
                 this.totalPersonal = cached.total;
                 this.currentPage = 1;
+                this.selectedCursoIndex = -1;
+                this.selectedSucursalIdx = 0;
                 this.view = "personal";
                 return;
             }
@@ -1485,22 +1082,18 @@ export default document.addEventListener("alpine:init", () => {
                     params,
                 );
 
-                    if (response.data.success) {
+                if (response.data.success) {
                     const cursos = response.data.Cursos || [];
                     this._cursosExportData = cursos;
 
-                    if (this.courseIds.length > 0) {
-                        this.personal = cursos;
-                        this.totalPersonal = cursos.reduce(
-                            (sum, c) => sum + (c.Personales?.length ?? 0),
-                            0,
-                        );
-                    } else {
-                        this.personal = cursos.flatMap(
-                            (c) => c.Personales || [],
-                        );
-                        this.totalPersonal = this.personal.length;
-                    }
+                    this.personal = cursos;
+                    this.totalPersonal = cursos.reduce(
+                        (sum, c) => sum + (c.Personales?.length ?? 0),
+                        0,
+                    );
+
+                    this.selectedCursoIndex = this.personal.length > 0 ? 0 : -1;
+                    this.selectedSucursalIdx = 0;
 
                     this.cacheReportes[cacheKey] = {
                         personal: this.personal,
@@ -1655,6 +1248,9 @@ export default document.addEventListener("alpine:init", () => {
         sortDirection: null,
 
         exportando: false,
+
+        selectedSistemaIndex: 0,
+        selectedAreaIdx: 0,
 
         cacheReportes: {},
 
@@ -1840,6 +1436,66 @@ export default document.addEventListener("alpine:init", () => {
             return Math.ceil(n / this.perPage);
         },
 
+        get sistemasEnCursos() {
+            const map = {};
+            this.cursosFilas.forEach(c => { map[c.Sistema] = true; });
+            return Object.keys(map).sort();
+        },
+
+        get areasDelSistemaActual() {
+            if (this.selectedSistemaIndex < 0 || this.selectedSistemaIndex >= this.sistemasEnCursos.length) return [];
+            const sistemaNombre = this.sistemasEnCursos[this.selectedSistemaIndex];
+            const areas = {};
+            this.cursosFilas.forEach(c => {
+                if (c.Sistema === sistemaNombre) areas[c.Area] = true;
+            });
+            return Object.keys(areas).sort();
+        },
+
+        get cursosAreaActual() {
+            if (this.selectedSistemaIndex < 0 || this.selectedSistemaIndex >= this.sistemasEnCursos.length) return [];
+            const sistemaNombre = this.sistemasEnCursos[this.selectedSistemaIndex];
+            let filtered = this.cursosFilas.filter(c => c.Sistema === sistemaNombre);
+            if (this.selectedAreaIdx > 0 && this.selectedAreaIdx <= this.areasDelSistemaActual.length) {
+                const areaNombre = this.areasDelSistemaActual[this.selectedAreaIdx - 1];
+                filtered = filtered.filter(c => c.Area === areaNombre);
+            }
+            return filtered;
+        },
+
+        get cursosAreaActualPaginado() {
+            const datos = _ordenarCursosConFechas(
+                [...this.cursosAreaActual],
+                this.sortColumn,
+                this.sortDirection,
+                (fila, col) => this.valorOrden(fila, col),
+            );
+            const start = (this.currentPage - 1) * this.perPage;
+            return datos.slice(start, start + this.perPage);
+        },
+
+        get totalPagesArea() {
+            const n = this.cursosAreaActual.length;
+            if (n === 0) return 1;
+            return Math.ceil(n / this.perPage);
+        },
+
+        seleccionarSistema(index) {
+            if (this.selectedSistemaIndex === index) {
+                this.selectedSistemaIndex = -1;
+                this.selectedAreaIdx = 0;
+            } else {
+                this.selectedSistemaIndex = index;
+                this.selectedAreaIdx = 0;
+            }
+            this.currentPage = 1;
+        },
+
+        seleccionarArea(idx) {
+            this.selectedAreaIdx = idx;
+            this.currentPage = 1;
+        },
+
         formatearYmdADmY(ymd) {
             if (!ymd) {
                 return "";
@@ -1960,10 +1616,9 @@ export default document.addEventListener("alpine:init", () => {
             const sistema = this.sistemas.find(
                 (s) => String(s.codigo) === String(this.selectedSistema),
             );
-            const area = this.areas.find(
-                (a) => String(a.codModdle) === String(this.selectedArea),
-            );
-            const nombreArea = area ? area.Area : "Área";
+            const nombreArea = this.selectedAreaIdx > 0
+                ? (this.areasDelSistemaActual[this.selectedAreaIdx - 1] || "Área")
+                : "Todas las áreas";
             const nombreSistema = sistema
                 ? sistema.descripcion
                 : "Sistema de gestión";
@@ -2138,9 +1793,9 @@ export default document.addEventListener("alpine:init", () => {
                 const sistema = this.sistemas.find(
                     (s) => String(s.codigo) === String(this.selectedSistema),
                 );
-                const area = this.areas.find(
-                    (a) => String(a.codModdle) === String(this.selectedArea),
-                );
+                const nombreAreaPdf = this.selectedAreaIdx > 0
+                    ? (this.areasDelSistemaActual[this.selectedAreaIdx - 1] || "")
+                    : "TODAS LAS ÁREAS";
 
                 const logoSol = await _cargarImagen("/images/logo_sol.png");
 
@@ -2171,7 +1826,7 @@ export default document.addEventListener("alpine:init", () => {
                 doc.text("RUC: 20445414833", startX, lineY + 7);
 
                 const title = sistema ? `${sistema.descripcion.toUpperCase()}` : "";
-                const subtitle = area ? area.Area : "";
+                const subtitle = nombreAreaPdf;
 
                 doc.setTextColor(0, 0, 0);
                 doc.setFont("helvetica", "bold");
@@ -2325,6 +1980,9 @@ export default document.addEventListener("alpine:init", () => {
                 this.currentPage = 1;
                 this.loadingCursos = false;
 
+                this.selectedSistemaIndex = 0;
+                this.selectedAreaIdx = 0;
+
                 return;
             }
 
@@ -2356,6 +2014,9 @@ export default document.addEventListener("alpine:init", () => {
                 this.sortColumn = null;
                 this.sortDirection = null;
                 this.currentPage = 1;
+
+                this.selectedSistemaIndex = 0;
+                this.selectedAreaIdx = 0;
             } catch (error) {
                 console.error(error);
                 this.cursosFilas = [];
@@ -2375,6 +2036,8 @@ export default document.addEventListener("alpine:init", () => {
             this.currentPage = 1;
             this.sortColumn = null;
             this.sortDirection = null;
+            this.selectedSistemaIndex = 0;
+            this.selectedAreaIdx = 0;
         },
 
         async abrir() {
@@ -2394,6 +2057,8 @@ export default document.addEventListener("alpine:init", () => {
             this.sortColumn = null;
             this.sortDirection = null;
             this.cacheReportes = {};
+            this.selectedSistemaIndex = 0;
+            this.selectedAreaIdx = 0;
         },
 
         async registrarReporteEnHistorial(nombreArchivo, pdfBlob, excelBlob) {
