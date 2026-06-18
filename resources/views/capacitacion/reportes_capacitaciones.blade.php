@@ -479,10 +479,13 @@
                             <button
                                 type="button"
                                 @click="toggleSeleccionarTodos()"
+                                :disabled="!searchCurso"
                                 class="shrink-0 text-[11px] font-semibold px-2.5 h-6 rounded-md transition-colors whitespace-nowrap"
-                                :class="todosCursosSeleccionados
-                ? 'text-danger bg-danger/10 hover:bg-danger/20'
-                : 'text-primary bg-primary/10 hover:bg-primary/20'"
+                                :class="!searchCurso
+                ? 'text-default-300 bg-default-50 cursor-not-allowed'
+                : (todosCursosSeleccionados
+                    ? 'text-danger bg-danger/10 hover:bg-danger/20'
+                    : 'text-primary bg-primary/10 hover:bg-primary/20')"
                                 x-text="todosCursosSeleccionados ? 'Quitar todos' : 'Todos'">
                             </button>
                         </div>
