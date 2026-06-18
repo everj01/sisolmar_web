@@ -833,15 +833,6 @@
                             </template>
                         </div>
                     </div>
-
-                    {{-- Total general --}}
-                    <div x-show="personal.length > 0"
-                        class="flex items-center justify-between px-5 py-3 border-t border-default-200 bg-default-50/80 rounded-b-xl">
-                        <div class="text-sm text-default-500">
-                            Total general: <span class="font-semibold text-default-700" x-text="totalPersonal"></span> personal(es)
-                            en <span class="font-semibold text-default-700" x-text="personal.length"></span> curso(s)
-                        </div>
-                    </div>
                 </template>
             </div>
 
@@ -1259,286 +1250,6 @@
         </div>
     </div>
 
-    {{-- Modal Historial de Reportes --}}
-    <div id="modal-historial-reportes" x-data="modalHistorialReportes" x-show="open" x-cloak
-        @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
-        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-        style="background: rgba(36,39,70,0.45);">
-
-        <div class="flex flex-col w-full max-w-5xl bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
-            x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
-            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-            x-transition:leave="transition ease-in duration-200"
-            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-            x-transition:leave-end="opacity-0 scale-95 translate-y-4">
-
-            <div class="flex justify-between items-start py-5 px-6 border-b border-default-100">
-                <div class="flex items-center gap-3.5">
-                    <div
-                        class="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-sm shrink-0">
-                        <i class="ti ti-clock text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
-                            Historial de reportes
-                        </h3>
-                        <p class="text-xs text-default-500 mt-0.5">Reportes de capacitaciones generados</p>
-                    </div>
-                </div>
-                <button type="button" @click="cerrar()"
-                    class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
-                    <i class="ti ti-x text-base"></i>
-                </button>
-            </div>
-
-            <div class="px-6 pt-4 pb-6">
-                <div class="mb-4 flex items-center gap-3">
-                    <div class="relative flex-1">
-                        <i
-                            class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-default-400 text-sm w-4 h-4 flex items-center justify-center"></i>
-                        <input type="text" x-model="searchQuery" @input="currentPage = 1"
-                            placeholder="Buscar por nombre, fecha o ID..."
-                            class="w-full h-9 pl-10 pr-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    </div>
-                    <label class="inline-flex items-center gap-2 cursor-pointer shrink-0">
-                        <input type="checkbox" x-model="showDeletedOnly" @change="currentPage = 1" class="sr-only peer">
-                        <div
-                            class="w-9 h-5 bg-default-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-default-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500 relative">
-                        </div>
-                        <span class="text-xs font-medium text-default-600">Eliminados</span>
-                    </label>
-                </div>
-
-                <template x-if="loading">
-                    <div class="flex flex-col items-center justify-center py-16 text-default-400">
-                        <i class="ti ti-loader animate-spin text-2xl mb-2"></i>
-                        <p class="text-sm">Cargando reportes...</p>
-                    </div>
-                </template>
-
-                <template x-if="!loading && reportes.length === 0">
-                    <div class="text-center py-16">
-                        <div class="w-16 h-16 mx-auto rounded-2xl bg-default-100 flex items-center justify-center mb-4">
-                            <i class="ti ti-file-off text-2xl text-default-400"></i>
-                        </div>
-                        <p class="text-sm text-default-500">No se encontraron reportes generados.</p>
-                        <p class="text-xs text-default-400 mt-1">Los reportes aparecerán aquí al exportar a Excel o PDF.
-                        </p>
-                    </div>
-                </template>
-
-                <template x-if="!loading && reportes.length > 0">
-                    <div class="flex flex-col max-h-[550px] border border-default-200 rounded-xl">
-                        <template x-if="reportesFiltrados.length === 0">
-                            <div class="text-center py-10 text-default-500 text-sm">
-                                <template x-if="showDeletedOnly">
-                                    <span>No se encontraron reportes eliminados.</span>
-                                </template>
-                                <template x-if="!showDeletedOnly">
-                                    <span>No se encontraron reportes que coincidan con "<span x-text="searchQuery"
-                                            class="font-medium"></span>".</span>
-                                </template>
-                            </div>
-                        </template>
-                        <template x-if="reportesFiltrados.length > 0">
-                            <div class="flex-1 overflow-auto custom-scrollbar">
-                                <table class="min-w-full text-sm">
-                                    <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
-                                        <tr>
-                                            <th class="px-4 py-3 text-center font-semibold text-default-700 w-12">
-                                                <input type="checkbox"
-                                                    @change="toggleSeleccionTodos($event.target.checked)"
-                                                    :checked="todosSeleccionados"
-                                                    class="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary cursor-pointer">
-                                            </th>
-                                            <th class="px-4 py-3 text-left font-semibold text-default-700 w-14">#</th>
-                                            <th @click="ordenar('nombre_archivo')"
-                                                class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
-                                                Nombre del archivo
-                                                <span class="ml-1 text-xs"
-                                                    :class="sortColumn === 'nombre_archivo' ? 'text-primary' : 'text-default-300'"
-                                                    x-text="sortColumn === 'nombre_archivo' ? (sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕') : '↕'"></span>
-                                            </th>
-                                            <th @click="ordenar('descripcion')"
-                                                class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
-                                                Descripción
-                                                <span class="ml-1 text-xs"
-                                                    :class="sortColumn === 'descripcion' ? 'text-primary' : 'text-default-300'"
-                                                    x-text="sortColumn === 'descripcion' ? (sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕') : '↕'"></span>
-                                            </th>
-                                            <th class="px-4 py-3 text-center font-semibold text-default-700 w-32">
-                                                Descargar</th>
-                                            <th @click="ordenar('fecha_creacion')"
-                                                class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors whitespace-nowrap">
-                                                Fecha
-                                                <span class="ml-1 text-xs"
-                                                    :class="sortColumn === 'fecha_creacion' ? 'text-primary' : 'text-default-300'"
-                                                    x-text="sortColumn === 'fecha_creacion' ? (sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕') : '↕'"></span>
-                                            </th>
-                                            <th class="px-4 py-3 text-center font-semibold text-default-700 w-20"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-default-100 bg-white">
-                                        <template x-for="(reporte, index) in reportesFiltrados" :key="reporte.id">
-                                            <tr class="hover:bg-default-50 transition-colors"
-                                                :class="!reporte.habilitado ? 'bg-default-100/50 opacity-60' : ''">
-                                                <td class="px-4 py-3 text-center">
-                                                    <template x-if="reporte.habilitado">
-                                                        <input type="checkbox" :value="reporte.id"
-                                                            @change="toggleSeleccion(reporte.id, $event.target.checked)"
-                                                            :checked="selectedReportes.includes(reporte.id)"
-                                                            class="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary cursor-pointer">
-                                                    </template>
-                                                </td>
-                                                <td class="px-4 py-3 text-default-500" x-text="index + 1"></td>
-
-                                                <template x-if="editingId !== reporte.id">
-                                                    <td class="px-4 py-3 font-medium max-w-[18rem] truncate"
-                                                        :class="reporte.habilitado ? 'text-default-800' : 'text-default-500 line-through'"
-                                                        x-text="reporte.nombre_archivo" :title="reporte.nombre_archivo">
-                                                    </td>
-                                                </template>
-                                                <template x-if="editingId === reporte.id">
-                                                    <td class="px-4 py-3">
-                                                        <input type="text" x-model="editForm.nombre_archivo"
-                                                            class="w-full h-8 px-2.5 text-sm bg-white border border-primary/30 rounded-lg text-default-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                                                            placeholder="Nombre del archivo">
-                                                    </td>
-                                                </template>
-
-                                                <template x-if="editingId !== reporte.id">
-                                                    <td class="px-4 py-3 max-w-[14rem] truncate"
-                                                        :class="reporte.habilitado ? 'text-default-600' : 'text-default-400'"
-                                                        x-text="reporte.descripcion || '—'"
-                                                        :title="reporte.descripcion"></td>
-                                                </template>
-                                                <template x-if="editingId === reporte.id">
-                                                    <td class="px-4 py-3">
-                                                        <input type="text" x-model="editForm.descripcion"
-                                                            class="w-full h-8 px-2.5 text-sm bg-white border border-primary/30 rounded-lg text-default-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                                                            placeholder="Descripción">
-                                                    </td>
-                                                </template>
-
-                                                <td class="px-4 py-3">
-                                                    <template x-if="reporte.habilitado">
-                                                        <div class="flex items-center justify-center gap-2">
-                                                            <button x-show="reporte.tipo_archivo === 'pdf'"
-                                                                @click="descargarArchivo(reporte.id, 'pdf')"
-                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                                                                title="Descargar PDF">
-                                                                <i class="ti ti-download text-sm"></i>
-                                                            </button>
-                                                            <button x-show="reporte.tipo_archivo === 'xlsx'"
-                                                                @click="descargarArchivo(reporte.id, 'excel')"
-                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
-                                                                title="Descargar Excel">
-                                                                <i class="ti ti-download text-sm"></i>
-                                                            </button>
-                                                        </div>
-                                                    </template>
-                                                    <template x-if="!reporte.habilitado">
-                                                        <span class="text-xs text-default-400 italic">Eliminado</span>
-                                                    </template>
-                                                </td>
-                                                <td class="px-4 py-3 whitespace-nowrap text-xs"
-                                                    :class="reporte.habilitado ? 'text-default-600' : 'text-default-400'"
-                                                    x-text="formatearFecha(reporte.fecha_creacion)"></td>
-
-                                                <td class="px-4 py-3">
-                                                    <div class="flex items-center justify-center gap-1.5">
-                                                        <template x-if="reporte.habilitado && editingId !== reporte.id">
-                                                            <button @click="iniciarEdicion(reporte)"
-                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-default-100 text-default-500 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                                                                title="Editar">
-                                                                <i class="ti ti-pencil text-sm"></i>
-                                                            </button>
-                                                        </template>
-                                                        <template x-if="reporte.habilitado && editingId === reporte.id">
-                                                            <div class="flex items-center gap-1">
-                                                                <button @click="guardarEdicion()" :disabled="savingEdit"
-                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer disabled:opacity-50"
-                                                                    title="Guardar">
-                                                                    <i class="ti ti-check text-sm"></i>
-                                                                </button>
-                                                                <button @click="cancelarEdicion()"
-                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                                                                    title="Cancelar">
-                                                                    <i class="ti ti-x text-sm"></i>
-                                                                </button>
-                                                            </div>
-                                                        </template>
-
-                                                        <template x-if="reporte.habilitado">
-                                                            <button @click="cambiarEstado(reporte.id, false)"
-                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                                                                title="Eliminar">
-                                                                <i class="ti ti-trash text-sm"></i>
-                                                            </button>
-                                                        </template>
-                                                        <template x-if="!reporte.habilitado">
-                                                            <div class="flex items-center gap-1">
-                                                                <button @click="eliminarDefinitivamente(reporte.id)"
-                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                                                                    title="Eliminar permanentemente">
-                                                                    <i class="ti ti-trash-off text-sm"></i>
-                                                                </button>
-                                                                <button @click="cambiarEstado(reporte.id, true)"
-                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
-                                                                    title="Recuperar">
-                                                                    <i class="ti ti-refresh text-sm"></i>
-                                                                </button>
-                                                            </div>
-                                                        </template>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </template>
-
-                        <div
-                            class="flex items-center justify-between px-4 py-3 border-t border-default-200 bg-default-50">
-                            <div class="text-sm text-default-500">
-                                <template x-if="searchQuery">
-                                    <span>Mostrando <span x-text="reportesFiltrados.length"></span> de <span
-                                            x-text="reportes.length"></span> reporte(s)</span>
-                                </template>
-                                <template x-if="!searchQuery">
-                                    <span>Total: <span x-text="reportes.length"></span> reporte(s)</span>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
-                <div class="flex items-center gap-3 flex-1">
-                    <span x-show="selectedReportes.length > 0" class="text-sm text-default-600">
-                        <span x-text="selectedReportes.length"></span>
-                        seleccionado(s)
-                    </span>
-                    <button x-show="selectedReportes.length > 0" @click="descargarSeleccionadosZip()"
-                        :disabled="downloadingZip"
-                        class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="ti ti-file-zip text-sm"></i>
-                        <span x-text="downloadingZip ? 'Generando ZIP...' : 'Descargar ZIP'"></span>
-                    </button>
-                </div>
-                <button type="button" @click="cerrar()"
-                    class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
-                    Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-
     {{-- Modal Record Histórico de Capacitaciones por Personal --}}
     <div id="modal-record-personal" x-data="modalRecordPersonal" x-show="open" x-cloak
         @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
@@ -1547,7 +1258,7 @@
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
         style="background: rgba(36,39,70,0.45);">
 
-        <div :class="view === 'filters' ? 'max-w-[1200px]' : 'max-w-[1300px]'"
+        <div :class="view === 'filters' ? 'max-w-[1200px]' : 'max-w-[90vw] max-h-[100vh]'"
             class="flex flex-col w-full bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
             x-transition:enter="transition ease-out duration-300"
             x-transition:enter-start="opacity-0 scale-95 translate-y-4"
@@ -1935,7 +1646,7 @@
             </div>
 
             {{-- Results view --}}
-            <div x-show="view === 'results'" class="px-6 pb-6">
+            <div x-show="view === 'results'" class="px-6 pt-4 pb-6 flex-1 overflow-hidden min-h-0">
 
                 <template x-if="buscando">
                     <div class="flex flex-col items-center justify-center py-10 text-default-400">
@@ -1951,58 +1662,158 @@
                 </template>
 
                 <template x-if="!buscando && resultados.length > 0">
-                    <div class="flex flex-col max-h-[550px] border border-default-200 rounded-xl">
-                        <div class="flex-1 overflow-auto custom-scrollbar">
-                            <div class="divide-y divide-default-200">
-                                <template x-for="(personal, pi) in resultados" :key="pi">
-                                    <div>
-                                        <div class="top-0 z-10 bg-gradient-to-r from-green-500/5 via-green-500/[0.02] to-transparent px-5 py-3 border-b border-default-200">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-1.5 h-8 rounded-full bg-green-500/60"></div>
-                                                    <div>
-                                                        <h4 class="text-sm font-bold text-default-800 leading-tight">
-                                                            <span x-text="personal.NombreCompleto"></span>
-                                                            <span class="font-normal text-default-500"> · </span>
-                                                            <span class="font-normal text-default-500 text-xs" x-text="personal.NroDoc"></span>
-                                                        </h4>
-                                                        <p class="text-[11px] text-default-500 mt-0.5">
-                                                            <template x-if="personal.Cargo">
-                                                                <span><span class="font-semibold text-default-700" x-text="personal.Cargo"></span> · </span>
-                                                            </template>
-                                                            <span x-text="personal.Cursos ? personal.Cursos.length : 0"></span> curso(s) registrados
-                                                            <template x-if="personal.Sucursal">
-                                                                <span> · <span x-text="personal.Sucursal"></span></span>
-                                                            </template>
-                                                        </p>
-                                                    </div>
+                    <div class="grid grid-rows-[auto_minmax(0,1fr)] grid-cols-[2fr_8fr] max-h-[600px] min-h-0 border border-default-200 rounded-xl">
+                        {{-- Sidebar izquierdo (personal) --}}
+                        <div class="w-full shrink-0 border-r border-default-200 overflow-y-auto custom-scrollbar">
+                            <div class="px-4 py-3 border-b border-default-100 bg-default-50/50">
+                                <span class="text-xs font-semibold text-default-600 uppercase tracking-wider">Personal(es) seleccionado(s)</span>
+                            </div>
+                            <template x-for="(personal, pi) in resultados" :key="pi">
+                                <button type="button"
+                                    @click="seleccionarPersonal(pi)"
+                                    :title="personal.NombreCompleto"
+                                    class="w-full text-left px-4 py-3 border-b border-default-100 transition-colors cursor-pointer"
+                                    :class="selectedPersonalIdx === pi ? 'bg-primary/5' : 'hover:bg-default-50'">
+                                    <div class="flex items-start gap-2.5">
+                                        <div class="w-1 h-8 rounded-full shrink-0 mt-0.5"
+                                            :class="selectedPersonalIdx === pi ? 'bg-primary' : 'bg-default-300'"></div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-semibold text-default-900 leading-tight truncate" x-text="personal.NombreCompleto"></p>
+                                            <p class="text-[10px] text-default-400 mt-0.5">
+                                                <span class="font-medium text-default-500" x-text="personal.NroDoc"></span>
+                                                <span> · </span>
+                                                <span class="font-medium text-default-500" x-text="personal.CodigoPersonal"></span>
+                                            </p>
+                                            <p class="text-[10px] text-default-500 mt-0.5 truncate">
+                                                <i class="ti ti-briefcase text-[9px] mr-0.5"></i><span x-text="personal.Cargo || '—'"></span>
+                                            </p>
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-default-100 text-default-600 leading-tight">
+                                                    <i class="ti ti-building-community text-[8px]"></i>
+                                                    <span x-text="personal.Sucursal || '—'"></span>
+                                                </span>
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-default-100 text-default-600 leading-tight">
+                                                    <i class="ti ti-tag text-[8px]"></i>
+                                                    <span x-text="personal.TipoTrabajador || '—'"></span>
+                                                </span>
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-default-100 text-default-600 leading-tight">
+                                                    <i class="ti ti-user-check text-[8px]"></i>
+                                                    <span x-text="(personal.Cursos ? personal.Cursos.length : 0) + ' curso(s)'"></span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            </template>
+                        </div>
+
+                        {{-- Tabla de cursos del personal seleccionado --}}
+                        <div class="flex flex-col min-w-0 overflow-hidden">
+                            <template x-if="selectedPersonalIdx >= 0">
+                                <div class="px-5 py-3 border-b border-default-200 bg-gradient-to-r from-primary/5 to-transparent">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <div class="w-1 h-6 rounded-full bg-primary/60 shrink-0"></div>
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <h4 class="text-sm font-bold text-default-800 leading-tight truncate" x-text="resultados[selectedPersonalIdx]?.NombreCompleto"></h4>
+                                                    <span class="text-xs text-default-400">·</span>
+                                                    <span class="text-xs font-semibold text-primary whitespace-nowrap" x-text="resultados[selectedPersonalIdx]?.NroDoc"></span>
+                                                    <span class="text-[11px] text-default-400 whitespace-nowrap" x-text="'(' + cursosPersonalActual.length + ' curso(s))'"></span>
+                                                </div>
+                                                <div class="flex flex-wrap gap-1.5 mt-1">
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-default-100/80 text-default-600 leading-tight">
+                                                        <i class="ti ti-briefcase text-[9px]"></i>
+                                                        <span x-text="resultados[selectedPersonalIdx]?.Cargo || '—'"></span>
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-default-100/80 text-default-600 leading-tight">
+                                                        <i class="ti ti-building-community text-[9px]"></i>
+                                                        <span x-text="resultados[selectedPersonalIdx]?.Sucursal || '—'"></span>
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-default-100/80 text-default-600 leading-tight">
+                                                        <i class="ti ti-tag text-[9px]"></i>
+                                                        <span x-text="resultados[selectedPersonalIdx]?.TipoTrabajador || '—'"></span>
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-default-100/80 text-default-600 leading-tight">
+                                                        <i class="ti ti-mail text-[9px]"></i>
+                                                        <span class="truncate max-w-[180px]" x-text="resultados[selectedPersonalIdx]?.Correo || '—'"></span>
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary/10 text-primary whitespace-nowrap shrink-0">
+                                            <span x-text="resultados[selectedPersonalIdx]?.CodigoPersonal"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="selectedPersonalIdx < 0">
+                                <div class="px-5 py-3 border-b border-default-200 bg-gradient-to-r from-default-50 to-transparent">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-1 h-6 rounded-full bg-default-300 shrink-0"></div>
+                                        <span class="text-sm text-default-400 italic">Seleccione un personal de la lista para ver sus cursos</span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="selectedPersonalIdx >= 0">
+                                <div class="flex flex-col flex-1 min-h-0">
+                                    <div class="flex-1 overflow-auto custom-scrollbar">
                                         <table class="min-w-full text-sm">
-                                            <thead>
-                                                <tr class="bg-default-50/80 border-b border-default-200">
+                                            <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
+                                                <tr>
                                                     <th class="px-5 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider w-14">#</th>
-                                                    <th class="px-5 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Curso</th>
-                                                    <th class="px-5 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Nota final</th>
-                                                    <th class="px-5 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Estado</th>
+                                                    <th @click="ordenarCursos('Nombre')"
+                                                        class="px-5 py-3 text-left font-semibold text-default-700 cursor-pointer hover:text-primary transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Curso
+                                                            <span :class="sortColumn === 'Nombre' ? 'text-primary' : 'text-default-300'"
+                                                                x-text="sortColumn === 'Nombre' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                    <th @click="ordenarCursos('Nota_Final')"
+                                                        class="px-5 py-3 text-center font-semibold text-default-700 cursor-pointer hover:text-primary transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Nota final
+                                                            <span :class="sortColumn === 'Nota_Final' ? 'text-primary' : 'text-default-300'"
+                                                                x-text="sortColumn === 'Nota_Final' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                    <th @click="ordenarCursos('Estado')"
+                                                        class="px-5 py-3 text-center font-semibold text-default-700 cursor-pointer hover:text-primary transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Estado
+                                                            <span :class="sortColumn === 'Estado' ? 'text-primary' : 'text-default-300'"
+                                                                x-text="sortColumn === 'Estado' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                    <th @click="ordenarCursos('Fecha_Acceso')"
+                                                        class="px-5 py-3 text-center font-semibold text-default-700 cursor-pointer hover:text-primary transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Fecha / Últ. Acceso
+                                                            <span :class="sortColumn === 'Fecha_Acceso' ? 'text-primary' : 'text-default-300'"
+                                                                x-text="sortColumn === 'Fecha_Acceso' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody class="bg-white">
-                                                <template x-for="(curso, ci) in personal.Cursos" :key="ci">
+                                                <template x-for="(curso, ci) in cursosPersonalActualPaginado" :key="ci">
                                                     <tr class="table-row border-b border-default-100"
                                                         :class="ci % 2 === 1 ? 'table-row-even' : ''">
-                                                        <td class="px-5 py-3 text-center text-default-400 text-xs font-mono" x-text="ci + 1"></td>
-                                                        <td class="px-5 py-3 text-default-800 font-medium text-sm" x-text="curso.Nombre"></td>
-                                                        <td class="px-5 py-3 text-center">
-                                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border"
-                                                                :class="parseFloat(curso.Nota_Final) >= 11 ? 'bg-green-50 text-green-700 border-green-200' : (curso.Nota_Final && curso.Nota_Final !== 'Sin nota' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-600 border-gray-200')">
-                                                                <span class="badge-dot" :class="parseFloat(curso.Nota_Final) >= 11 ? 'bg-green-500' : (curso.Nota_Final && curso.Nota_Final !== 'Sin nota' ? 'bg-red-500' : 'bg-gray-400')"></span>
+                                                        <td class="px-5 py-2.5 text-center text-default-400 text-xs font-mono" x-text="((cursosPage - 1) * cursosPerPage) + ci + 1"></td>
+                                                        <td class="px-5 py-2.5 text-default-800 font-medium text-sm" x-text="curso.Nombre"></td>
+                                                        <td class="px-5 py-2.5 text-center">
+                                                            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border-l-4"
+                                                                :class="parseFloat(curso.Nota_Final) >= 10 ? 'bg-green-50 text-green-700 border-l-green-500' : (curso.Nota_Final != null && curso.Nota_Final !== 'Sin nota' ? 'bg-red-50 text-red-700 border-l-red-500' : 'bg-gray-50 text-gray-500 border-l-gray-400')">
                                                                 <span x-text="curso.Nota_Final || '—'"></span>
                                                             </span>
                                                         </td>
-                                                        <td class="px-5 py-3 text-center">
-                                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border" :class="{
+                                                        <td class="px-5 py-2.5 text-center">
+                                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border" :class="{
                                                                     'bg-amber-50 text-amber-700 border-amber-200': curso.Estado === 'PENDIENTE',
                                                                     'bg-green-50 text-green-700 border-green-200': curso.Estado === 'APROBADO',
                                                                     'bg-red-50 text-red-700 border-red-200': curso.Estado === 'DESAPROBADO',
@@ -2016,22 +1827,61 @@
                                                                         'bg-gray-400': curso.Estado === 'SIN ACCEDER' || curso.Estado === 'SIN NOTA',
                                                                         'bg-blue-500': curso.Estado === 'EN CURSO'
                                                                     }"></span>
+                                                                <i class="ti text-[11px]" :class="{
+                                                                        'ti-clock': curso.Estado === 'PENDIENTE',
+                                                                        'ti-circle-check': curso.Estado === 'APROBADO',
+                                                                        'ti-circle-x': curso.Estado === 'DESAPROBADO',
+                                                                        'ti-player-off': curso.Estado === 'SIN ACCEDER' || curso.Estado === 'SIN NOTA',
+                                                                        'ti-player-play': curso.Estado === 'EN CURSO'
+                                                                    }"></i>
                                                                 <span x-text="curso.Estado"></span>
                                                             </span>
+                                                        </td>
+                                                        <td class="px-5 py-2.5 text-center text-xs text-default-500 font-mono whitespace-nowrap">
+                                                            <span x-text="curso.Fecha_Nota ? (curso.Fecha_Nota.includes(' ') ? curso.Fecha_Nota.split(' ')[0].split('-').reverse().join('/') + ' ' + curso.Fecha_Nota.split(' ')[1].slice(0,5) : curso.Fecha_Nota) : (curso.Fecha_Ultimo_Acceso ? (curso.Fecha_Ultimo_Acceso.includes(' ') ? curso.Fecha_Ultimo_Acceso.split(' ')[0].split('-').reverse().join('/') + ' ' + curso.Fecha_Ultimo_Acceso.split(' ')[1].slice(0,5) : curso.Fecha_Ultimo_Acceso) : '—')"></span>
                                                         </td>
                                                     </tr>
                                                 </template>
                                             </tbody>
                                         </table>
+                                        <template x-if="cursosPersonalActual.length === 0">
+                                            <div class="flex items-center justify-center py-10 text-default-400 text-sm">
+                                                Este personal no tiene cursos registrados.
+                                            </div>
+                                        </template>
                                     </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between px-5 py-3 border-t border-default-200 bg-default-50/80">
-                            <div class="text-sm text-default-500">
-                                Total: <span class="font-semibold text-default-700" x-text="totalResultados"></span> personal(es)
-                            </div>
+                                    {{-- Paginación de cursos --}}
+                                    <div x-show="cursosPersonalActual.length > cursosPerPage"
+                                        class="flex items-center justify-between px-5 py-3 border-t border-default-200 bg-default-50/80 shrink-0">
+                                        <div class="text-sm text-default-500">
+                                            <span class="font-medium text-default-700" x-text="cursosPersonalActual.length"></span> cursos
+                                            <span class="mx-1.5 text-default-300">·</span>
+                                            Pág. <span class="font-medium text-default-700" x-text="cursosPage"></span>
+                                            de <span class="font-medium text-default-700" x-text="totalPagesCursosPersonal"></span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="button" @click="cursosPage--" :disabled="cursosPage === 1"
+                                                class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border border-default-200 bg-white text-sm font-medium text-default-600 hover:bg-default-100 hover:text-default-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                                <i class="ti ti-chevron-left text-xs"></i>
+                                                Anterior
+                                            </button>
+                                            <button type="button" @click="cursosPage++" :disabled="cursosPage >= totalPagesCursosPersonal"
+                                                class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border border-default-200 bg-white text-sm font-medium text-default-600 hover:bg-default-100 hover:text-default-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                                Siguiente
+                                                <i class="ti ti-chevron-right text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="selectedPersonalIdx < 0">
+                                <div class="flex-1 flex items-center justify-center text-default-400 text-sm">
+                                    <div class="text-center py-10">
+                                        <i class="ti ti-user-search text-3xl mb-2 block"></i>
+                                        <span>Seleccione un personal para ver sus cursos</span>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </template>
@@ -2044,19 +1894,12 @@
                             class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
                             Cancelar
                         </button>
-                        <button type="button" @click="exportarExcelRecord()"
-                            :disabled="exportando || selectedCourseIds.length === 0 || selectedUsernames.length === 0"
-                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="ti ti-file-spreadsheet text-sm" x-show="!exportando"></i>
-                            <i class="ti ti-loader animate-spin text-sm" x-show="exportando"></i>
-                            <span x-text="exportando ? 'Generando Excel...' : 'Exportar Excel'"></span>
-                        </button>
-                        <button type="button" @click="exportarPDFRecord()"
+                        <button type="button" @click="obtenerPersonalRecord()"
                             :disabled="buscando || selectedCourseIds.length === 0 || selectedUsernames.length === 0"
-                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 shadow-sm shadow-red-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="ti ti-file-type-pdf text-sm" x-show="!buscando"></i>
+                            class="px-5 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ti ti-search text-sm" x-show="!buscando"></i>
                             <i class="ti ti-loader animate-spin text-sm" x-show="buscando"></i>
-                            <span x-text="buscando ? 'Generando PDF...' : 'Exportar PDF'"></span>
+                            <span x-text="buscando ? 'Buscando...' : 'Obtener récord'"></span>
                         </button>
                     </div>
                 </template>
@@ -2437,6 +2280,284 @@
                     <i class="ti ti-file-type-pdf text-base" x-show="!buscando"></i>
                     <i class="ti ti-loader animate-spin text-base" x-show="buscando"></i>
                     <span x-text="buscando ? 'Generando PDF...' : 'Exportar PDF'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Historial de Reportes --}}
+    <div id="modal-historial-reportes" x-data="modalHistorialReportes" x-show="open" x-cloak
+        @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+        style="background: rgba(36,39,70,0.45);">
+
+        <div class="flex flex-col w-full max-w-5xl bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+            <div class="flex justify-between items-start py-5 px-6 border-b border-default-100">
+                <div class="flex items-center gap-3.5">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                        <i class="ti ti-clock text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                            Historial de reportes
+                        </h3>
+                        <p class="text-xs text-default-500 mt-0.5">Reportes de capacitaciones generados</p>
+                    </div>
+                </div>
+                <button type="button" @click="cerrar()"
+                    class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer">
+                    <i class="ti ti-x text-base"></i>
+                </button>
+            </div>
+
+            <div class="px-6 pt-4 pb-6">
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="relative flex-1">
+                        <input type="text" x-model="searchQuery" @input="currentPage = 1"
+                            placeholder="Buscar por nombre, fecha o ID..."
+                            class="w-full h-9 pl-10 pr-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    </div>
+                    <label class="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                        <input type="checkbox" x-model="showDeletedOnly" @change="currentPage = 1" class="sr-only peer">
+                        <div
+                            class="w-9 h-5 bg-default-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-default-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500 relative">
+                        </div>
+                        <span class="text-xs font-medium text-default-600">Eliminados</span>
+                    </label>
+                </div>
+
+                <template x-if="loading">
+                    <div class="flex flex-col items-center justify-center py-16 text-default-400">
+                        <i class="ti ti-loader animate-spin text-2xl mb-2"></i>
+                        <p class="text-sm">Cargando reportes...</p>
+                    </div>
+                </template>
+
+                <template x-if="!loading && reportes.length === 0">
+                    <div class="text-center py-16">
+                        <div class="w-16 h-16 mx-auto rounded-2xl bg-default-100 flex items-center justify-center mb-4">
+                            <i class="ti ti-file-off text-2xl text-default-400"></i>
+                        </div>
+                        <p class="text-sm text-default-500">No se encontraron reportes generados.</p>
+                        <p class="text-xs text-default-400 mt-1">Los reportes aparecerán aquí al exportar a Excel o PDF.
+                        </p>
+                    </div>
+                </template>
+
+                <template x-if="!loading && reportes.length > 0">
+                    <div class="flex flex-col max-h-[550px] border border-default-200 rounded-xl">
+                        <template x-if="reportesFiltrados.length === 0">
+                            <div class="text-center py-10 text-default-500 text-sm">
+                                <template x-if="showDeletedOnly">
+                                    <span>No se encontraron reportes eliminados.</span>
+                                </template>
+                                <template x-if="!showDeletedOnly">
+                                    <span>No se encontraron reportes que coincidan con "<span x-text="searchQuery"
+                                            class="font-medium"></span>".</span>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="reportesFiltrados.length > 0">
+                            <div class="flex-1 overflow-auto custom-scrollbar">
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="px-4 py-3 text-center font-semibold text-default-700 w-12">
+                                                <input type="checkbox"
+                                                    @change="toggleSeleccionTodos($event.target.checked)"
+                                                    :checked="todosSeleccionados"
+                                                    class="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary cursor-pointer">
+                                            </th>
+                                            <th class="px-4 py-3 text-left font-semibold text-default-700 w-14">#</th>
+                                            <th @click="ordenar('nombre_archivo')"
+                                                class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
+                                                Nombre del archivo
+                                                <span class="ml-1 text-xs"
+                                                    :class="sortColumn === 'nombre_archivo' ? 'text-primary' : 'text-default-300'"
+                                                    x-text="sortColumn === 'nombre_archivo' ? (sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕') : '↕'"></span>
+                                            </th>
+                                            <th @click="ordenar('descripcion')"
+                                                class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors">
+                                                Descripción
+                                                <span class="ml-1 text-xs"
+                                                    :class="sortColumn === 'descripcion' ? 'text-primary' : 'text-default-300'"
+                                                    x-text="sortColumn === 'descripcion' ? (sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕') : '↕'"></span>
+                                            </th>
+                                            <th class="px-4 py-3 text-center font-semibold text-default-700 w-32">
+                                                Descargar</th>
+                                            <th @click="ordenar('fecha_creacion')"
+                                                class="px-4 py-3 text-left font-semibold text-default-700 cursor-pointer select-none hover:text-primary transition-colors whitespace-nowrap">
+                                                Fecha
+                                                <span class="ml-1 text-xs"
+                                                    :class="sortColumn === 'fecha_creacion' ? 'text-primary' : 'text-default-300'"
+                                                    x-text="sortColumn === 'fecha_creacion' ? (sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕') : '↕'"></span>
+                                            </th>
+                                            <th class="px-4 py-3 text-center font-semibold text-default-700 w-20"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-default-100 bg-white">
+                                        <template x-for="(reporte, index) in reportesFiltrados" :key="reporte.id">
+                                            <tr class="hover:bg-default-50 transition-colors"
+                                                :class="!reporte.habilitado ? 'bg-default-100/50 opacity-60' : ''">
+                                                <td class="px-4 py-3 text-center">
+                                                    <template x-if="reporte.habilitado">
+                                                        <input type="checkbox" :value="reporte.id"
+                                                            @change="toggleSeleccion(reporte.id, $event.target.checked)"
+                                                            :checked="selectedReportes.includes(reporte.id)"
+                                                            class="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary cursor-pointer">
+                                                    </template>
+                                                </td>
+                                                <td class="px-4 py-3 text-default-500" x-text="index + 1"></td>
+
+                                                <template x-if="editingId !== reporte.id">
+                                                    <td class="px-4 py-3 font-medium max-w-[18rem] truncate"
+                                                        :class="reporte.habilitado ? 'text-default-800' : 'text-default-500 line-through'"
+                                                        x-text="reporte.nombre_archivo" :title="reporte.nombre_archivo">
+                                                    </td>
+                                                </template>
+                                                <template x-if="editingId === reporte.id">
+                                                    <td class="px-4 py-3">
+                                                        <input type="text" x-model="editForm.nombre_archivo"
+                                                            class="w-full h-8 px-2.5 text-sm bg-white border border-primary/30 rounded-lg text-default-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                                            placeholder="Nombre del archivo">
+                                                    </td>
+                                                </template>
+
+                                                <template x-if="editingId !== reporte.id">
+                                                    <td class="px-4 py-3 max-w-[14rem] truncate"
+                                                        :class="reporte.habilitado ? 'text-default-600' : 'text-default-400'"
+                                                        x-text="reporte.descripcion || '—'"
+                                                        :title="reporte.descripcion"></td>
+                                                </template>
+                                                <template x-if="editingId === reporte.id">
+                                                    <td class="px-4 py-3">
+                                                        <input type="text" x-model="editForm.descripcion"
+                                                            class="w-full h-8 px-2.5 text-sm bg-white border border-primary/30 rounded-lg text-default-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                                            placeholder="Descripción">
+                                                    </td>
+                                                </template>
+
+                                                <td class="px-4 py-3">
+                                                    <template x-if="reporte.habilitado">
+                                                        <div class="flex items-center justify-center gap-2">
+                                                            <button x-show="reporte.tipo_archivo === 'pdf'"
+                                                                @click="descargarArchivo(reporte.id, 'pdf')"
+                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
+                                                                title="Descargar PDF">
+                                                                <i class="ti ti-download text-sm"></i>
+                                                            </button>
+                                                            <button x-show="reporte.tipo_archivo === 'xlsx'"
+                                                                @click="descargarArchivo(reporte.id, 'excel')"
+                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
+                                                                title="Descargar Excel">
+                                                                <i class="ti ti-download text-sm"></i>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="!reporte.habilitado">
+                                                        <span class="text-xs text-default-400 italic">Eliminado</span>
+                                                    </template>
+                                                </td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-xs"
+                                                    :class="reporte.habilitado ? 'text-default-600' : 'text-default-400'"
+                                                    x-text="formatearFecha(reporte.fecha_creacion)"></td>
+
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center justify-center gap-1.5">
+                                                        <template x-if="reporte.habilitado && editingId !== reporte.id">
+                                                            <button @click="iniciarEdicion(reporte)"
+                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-default-100 text-default-500 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                                                                title="Editar">
+                                                                <i class="ti ti-pencil text-sm"></i>
+                                                            </button>
+                                                        </template>
+                                                        <template x-if="reporte.habilitado && editingId === reporte.id">
+                                                            <div class="flex items-center gap-1">
+                                                                <button @click="guardarEdicion()" :disabled="savingEdit"
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer disabled:opacity-50"
+                                                                    title="Guardar">
+                                                                    <i class="ti ti-check text-sm"></i>
+                                                                </button>
+                                                                <button @click="cancelarEdicion()"
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
+                                                                    title="Cancelar">
+                                                                    <i class="ti ti-x text-sm"></i>
+                                                                </button>
+                                                            </div>
+                                                        </template>
+
+                                                        <template x-if="reporte.habilitado">
+                                                            <button @click="cambiarEstado(reporte.id, false)"
+                                                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
+                                                                title="Eliminar">
+                                                                <i class="ti ti-trash text-sm"></i>
+                                                            </button>
+                                                        </template>
+                                                        <template x-if="!reporte.habilitado">
+                                                            <div class="flex items-center gap-1">
+                                                                <button @click="eliminarDefinitivamente(reporte.id)"
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
+                                                                    title="Eliminar permanentemente">
+                                                                    <i class="ti ti-trash-off text-sm"></i>
+                                                                </button>
+                                                                <button @click="cambiarEstado(reporte.id, true)"
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
+                                                                    title="Recuperar">
+                                                                    <i class="ti ti-refresh text-sm"></i>
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <div
+                            class="flex items-center justify-between px-4 py-3 border-t border-default-200 bg-default-50">
+                            <div class="text-sm text-default-500">
+                                <template x-if="searchQuery">
+                                    <span>Mostrando <span x-text="reportesFiltrados.length"></span> de <span
+                                            x-text="reportes.length"></span> reporte(s)</span>
+                                </template>
+                                <template x-if="!searchQuery">
+                                    <span>Total: <span x-text="reportes.length"></span> reporte(s)</span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
+                <div class="flex items-center gap-3 flex-1">
+                    <span x-show="selectedReportes.length > 0" class="text-sm text-default-600">
+                        <span x-text="selectedReportes.length"></span>
+                        seleccionado(s)
+                    </span>
+                    <button x-show="selectedReportes.length > 0" @click="descargarSeleccionadosZip()"
+                        :disabled="downloadingZip"
+                        class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ti ti-file-zip text-sm"></i>
+                        <span x-text="downloadingZip ? 'Generando ZIP...' : 'Descargar ZIP'"></span>
+                    </button>
+                </div>
+                <button type="button" @click="cerrar()"
+                    class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                    Cerrar
                 </button>
             </div>
         </div>

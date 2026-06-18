@@ -2552,6 +2552,9 @@ export default document.addEventListener("alpine:init", () => {
         cursosPerPage: 15,
         personalPage: 1,
         cursosPage: 1,
+        selectedPersonalIdx: -1,
+        sortColumn: null,
+        sortDirection: null,
 
         get personalTotalPages() {
             return Math.max(
@@ -2566,6 +2569,18 @@ export default document.addEventListener("alpine:init", () => {
                 1,
                 Math.ceil(this.cursos.length / this.cursosPerPage),
             );
+        },
+
+        get cursosPersonalActual() {
+            const p = this.selectedPersonalIdx >= 0 ? this.resultados[this.selectedPersonalIdx] : null;
+            return p?.Cursos || [];
+        },
+        get cursosPersonalActualPaginado() {
+            const start = (this.cursosPage - 1) * this.cursosPerPage;
+            return this.cursosPersonalActual.slice(start, start + this.cursosPerPage);
+        },
+        get totalPagesCursosPersonal() {
+            return Math.max(1, Math.ceil(this.cursosPersonalActual.length / this.cursosPerPage));
         },
 
         personalesPaginados() {
@@ -2891,6 +2906,96 @@ export default document.addEventListener("alpine:init", () => {
             }
         },
 
+        async obtenerPersonalRecord() {
+            if (this.selectedUsernames.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
+                return;
+            }
+            if (this.selectedCourseIds.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
+                return;
+            }
+
+            this.buscando = true;
+
+            try {
+                const payload = {
+                    usernames: this.selectedUsernames || null,
+                    courseIds: this.selectedCourseIds || null,
+                    desde: this.selectedFechaDesde || null,
+                    hasta: this.selectedFechaHasta || null,
+                    estadoId: parseInt(this.selectedEstadoId) || 0,
+                };
+
+                const response = await axios.post(`${VITE_URL_APP}/api/obtener-personal-record`, payload);
+
+                if (!response.data.success) {
+                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                    return;
+                }
+
+                const personales = response.data.Personales || [];
+                if (personales.length === 0) {
+                    Swal.fire("Atención", "No se encontraron resultados con los criterios seleccionados.", "warning");
+                    return;
+                }
+
+                this.resultados = personales;
+                this.totalResultados = personales.length;
+                this.selectedPersonalIdx = 0;
+                this.cursosPage = 1;
+                this.sortColumn = null;
+                this.sortDirection = null;
+                this.view = "results";
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", error.response?.data?.message || "No se pudo obtener el récord.", "error");
+            } finally {
+                this.buscando = false;
+            }
+        },
+
+        seleccionarPersonal(idx) {
+            this.selectedPersonalIdx = idx;
+            this.cursosPage = 1;
+            this.sortColumn = null;
+            this.sortDirection = null;
+        },
+
+        ordenarCursos(columna) {
+            if (this.sortColumn === columna) {
+                this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
+            } else {
+                this.sortColumn = columna;
+                this.sortDirection = "asc";
+            }
+
+            const cursos = this.cursosPersonalActual;
+            const dir = this.sortDirection;
+            const col = this.sortColumn;
+
+            cursos.sort((a, b) => {
+                if (col === "Nota_Final") {
+                    const va = parseFloat(a[col]) || 0;
+                    const vb = parseFloat(b[col]) || 0;
+                    return dir === "asc" ? va - vb : vb - va;
+                }
+                if (col === "Fecha_Acceso") {
+                    const va = a.Fecha_Nota || a.Fecha_Ultimo_Acceso || "";
+                    const vb = b.Fecha_Nota || b.Fecha_Ultimo_Acceso || "";
+                    if (va < vb) return dir === "asc" ? -1 : 1;
+                    if (va > vb) return dir === "asc" ? 1 : -1;
+                    return 0;
+                }
+                const va = (a[col] || "").toString().toLowerCase();
+                const vb = (b[col] || "").toString().toLowerCase();
+                const cmp = va.localeCompare(vb, "es", { sensitivity: "base" });
+                return dir === "asc" ? cmp : -cmp;
+            });
+
+            this.cursosPage = 1;
+        },
+
         cerrar() {
             this.open = false;
             this.view = "filters";
@@ -2911,6 +3016,7 @@ export default document.addEventListener("alpine:init", () => {
             this.selectAllPersonal = false;
             this.resultados = [];
             this.totalResultados = 0;
+            this.selectedPersonalIdx = -1;
             this.buscando = false;
         },
 
@@ -2918,6 +3024,7 @@ export default document.addEventListener("alpine:init", () => {
             this.view = "filters";
             this.resultados = [];
             this.totalResultados = 0;
+            this.selectedPersonalIdx = -1;
             this.buscando = false;
         },
 
