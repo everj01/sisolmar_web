@@ -3618,6 +3618,7 @@ class CapacitacionController extends Controller
                 DB::select("
                 SELECT codigo, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable
                 FROM sisolm_web.dbo.sw_cursos
+                WHERE habilitado = 1
             ")
             )->keyBy('codigo_moodle');
 
