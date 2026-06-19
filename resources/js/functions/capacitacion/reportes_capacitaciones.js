@@ -2916,6 +2916,8 @@ export default document.addEventListener("alpine:init", () => {
                 return;
             }
 
+            this.view = "results";
+            this.resultados = [];
             this.buscando = true;
 
             try {
@@ -2946,7 +2948,6 @@ export default document.addEventListener("alpine:init", () => {
                 this.cursosPage = 1;
                 this.sortColumn = null;
                 this.sortDirection = null;
-                this.view = "results";
             } catch (error) {
                 console.error(error);
                 Swal.fire("Error", error.response?.data?.message || "No se pudo obtener el récord.", "error");
@@ -3864,39 +3865,157 @@ export default document.addEventListener("alpine:init", () => {
 
         exportando: false,
         buscando: false,
+        view: "filters",
+        resultados: [],
+        selectedSucursalIdx: -1,
+        selectedPersonalIdx: -1,
+        cursosSortColumn: null,
+        cursosSortDirection: null,
+        cursosPage: 1,
+        cursosPerPage: 15,
 
-        async exportarPDFReporteGeneral() {
+        get sucursalesEnResultados() {
+            const sucs = new Set();
+            this.resultados.forEach(p => {
+                if (p.Sucursal) sucs.add(p.Sucursal);
+            });
+            return Array.from(sucs).sort();
+        },
+
+        get personalesDeSucursalActual() {
+            if (this.selectedSucursalIdx < 0) return [];
+            const suc = this.sucursalesEnResultados[this.selectedSucursalIdx];
+            if (!suc) return [];
+            return this.resultados.filter(p => p.Sucursal === suc);
+        },
+
+        get cursosPersonalActual() {
+            if (this.selectedPersonalIdx < 0) return [];
+            const personal = this.personalesDeSucursalActual[this.selectedPersonalIdx];
+            if (!personal) return [];
+            let cursos = personal.Cursos || [];
+            if (this.cursosSortColumn) {
+                const dir = this.cursosSortDirection === 'desc' ? -1 : 1;
+                cursos = [...cursos].sort((a, b) => {
+                    let va = (a[this.cursosSortColumn] || '').toString().toLowerCase();
+                    let vb = (b[this.cursosSortColumn] || '').toString().toLowerCase();
+                    if (this.cursosSortColumn === 'Nota_Final') {
+                        va = parseFloat(va) || 0;
+                        vb = parseFloat(vb) || 0;
+                        return (va - vb) * dir;
+                    }
+                    return va.localeCompare(vb) * dir;
+                });
+            }
+            return cursos;
+        },
+
+        get cursosPersonalActualPaginado() {
+            const start = (this.cursosPage - 1) * this.cursosPerPage;
+            return this.cursosPersonalActual.slice(start, start + this.cursosPerPage);
+        },
+
+        get totalPagesCursosPersonal() {
+            return Math.max(1, Math.ceil(this.cursosPersonalActual.length / this.cursosPerPage));
+        },
+
+        seleccionarSucursal(idx) {
+            if (this.selectedSucursalIdx === idx) {
+                this.selectedSucursalIdx = -1;
+                this.selectedPersonalIdx = -1;
+            } else {
+                this.selectedSucursalIdx = idx;
+                this.selectedPersonalIdx = -1;
+            }
+            this.cursosPage = 1;
+        },
+
+        seleccionarPersonal(idx) {
+            this.selectedPersonalIdx = idx;
+            this.cursosPage = 1;
+        },
+
+        ordenarCursos(col) {
+            if (this.cursosSortColumn === col) {
+                this.cursosSortDirection = this.cursosSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.cursosSortColumn = col;
+                this.cursosSortDirection = 'asc';
+            }
+        },
+
+        volverAFiltros() {
+            this.view = 'filters';
+            this.resultados = [];
+            this.selectedSucursalIdx = -1;
+            this.selectedPersonalIdx = -1;
+            this.cursosPage = 1;
+        },
+
+        async _fetchReporte() {
             if (this.selectedUsernames.length === 0) {
                 Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
-                return;
+                return null;
             }
             if (this.selectedCourseIds.length === 0) {
                 Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
-                return;
+                return null;
             }
 
+            const payload = {
+                usernames: this.selectedUsernames || null,
+                courseIds: this.selectedCourseIds || null,
+                estado: this.selectedEstado || null,
+                desde: this.selectedFechaDesde || null,
+                hasta: this.selectedFechaHasta || null,
+                cliente: this.selectedCliente || null,
+            };
+
+            const response = await axios.post(`${VITE_URL_APP}/api/obtener-reporte-general`, payload);
+
+            if (!response.data.success) {
+                Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                return null;
+            }
+
+            const personales = response.data.Personales || [];
+            if (personales.length === 0) {
+                Swal.fire("Atención", "No se encontraron resultados.", "warning");
+                return null;
+            }
+
+            return personales;
+        },
+
+        async obtenerReporte() {
+            this.view = 'results';
+            this.resultados = [];
+            this.selectedSucursalIdx = -1;
+            this.selectedPersonalIdx = -1;
             this.buscando = true;
+            try {
+                const personales = await this._fetchReporte();
+                if (personales) {
+                    this.resultados = personales;
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", "No se pudo obtener el reporte.", "error");
+            } finally {
+                this.buscando = false;
+            }
+        },
+
+        async exportarPDFReporteGeneral() {
+            this.exportando = true;
 
             try {
-                const payload = {
-                    usernames: this.selectedUsernames || null,
-                    courseIds: this.selectedCourseIds || null,
-                    estado: this.selectedEstado || null,
-                    desde: this.selectedFechaDesde || null,
-                    hasta: this.selectedFechaHasta || null,
-                    cliente: this.selectedCliente || null,
-                };
+                const personales = this.resultados.length > 0
+                    ? this.resultados
+                    : await this._fetchReporte();
 
-                const response = await axios.post(`${VITE_URL_APP}/api/obtener-reporte-general`, payload);
-
-                if (!response.data.success) {
-                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
-                    return;
-                }
-
-                const personales = response.data.Personales || [];
-                if (personales.length === 0) {
-                    Swal.fire("Atención", "No se encontraron resultados para generar el PDF.", "warning");
+                if (!personales || personales.length === 0) {
+                    if (!this.resultados.length) Swal.fire("Atención", "No se encontraron resultados para generar el PDF.", "warning");
                     return;
                 }
 
@@ -4095,42 +4214,20 @@ export default document.addEventListener("alpine:init", () => {
                 console.error(error);
                 Swal.fire("Error", "No se pudo generar el PDF.", "error");
             } finally {
-                this.buscando = false;
+                this.exportando = false;
             }
         },
 
         async exportarExcelReporteGeneral() {
-            if (this.selectedUsernames.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
-                return;
-            }
-            if (this.selectedCourseIds.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
-                return;
-            }
-
-            this.buscando = true;
+            this.exportando = true;
 
             try {
-                const payload = {
-                    usernames: this.selectedUsernames || null,
-                    courseIds: this.selectedCourseIds || null,
-                    estado: this.selectedEstado || null,
-                    desde: this.selectedFechaDesde || null,
-                    hasta: this.selectedFechaHasta || null,
-                    cliente: this.selectedCliente || null,
-                };
+                const personales = this.resultados.length > 0
+                    ? this.resultados
+                    : await this._fetchReporte();
 
-                const response = await axios.post(`${VITE_URL_APP}/api/obtener-reporte-general`, payload);
-
-                if (!response.data.success) {
-                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
-                    return;
-                }
-
-                const personales = response.data.Personales || [];
-                if (personales.length === 0) {
-                    Swal.fire("Atención", "No se encontraron resultados para exportar.", "warning");
+                if (!personales || personales.length === 0) {
+                    if (!this.resultados.length) Swal.fire("Atención", "No se encontraron resultados para exportar.", "warning");
                     return;
                 }
 
@@ -4254,12 +4351,19 @@ export default document.addEventListener("alpine:init", () => {
                 console.error(error);
                 Swal.fire("Error", "No se pudo generar el Excel.", "error");
             } finally {
-                this.buscando = false;
+                this.exportando = false;
             }
         },
 
         cerrar() {
             this.open = false;
+            this.view = "filters";
+            this.resultados = [];
+            this.selectedSucursalIdx = -1;
+            this.selectedPersonalIdx = -1;
+            this.cursosSortColumn = null;
+            this.cursosSortDirection = null;
+            this.cursosPage = 1;
             this.selectedCliente = "";
             this.selectedEmpresa = "";
             this.selectedSucursal = "";

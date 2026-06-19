@@ -1944,7 +1944,7 @@
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
         style="background: rgba(36,39,70,0.45);">
 
-        <div class="flex flex-col w-full max-w-4xl bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
+        <div :class="view === 'results' ? 'max-w-[90vw] max-h-[100vh]' : 'max-w-4xl'" class="flex flex-col w-full bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
             x-transition:enter="transition ease-out duration-300"
             x-transition:enter-start="opacity-0 scale-95 translate-y-4"
             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -1959,10 +1959,20 @@
                         <i class="ti ti-report-analytics text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
-                            Reporte General de Capacitaciones
-                        </h3>
-                        <p class="text-xs text-default-500 mt-0.5">Filtros avanzados para generar reportes consolidados</p>
+                        <div x-show="view === 'filters'">
+                            <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                                Reporte General de Capacitaciones
+                            </h3>
+                            <p class="text-xs text-default-500 mt-0.5">Filtros avanzados para generar reportes consolidados</p>
+                        </div>
+                        <div x-show="view === 'results'">
+                            <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                                Resultados del reporte general
+                            </h3>
+                            <p class="text-xs text-default-500 mt-0.5">
+                                <span x-text="resultados.length"></span> personal(es) encontrados
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <button type="button" @click="cerrar()"
@@ -1978,7 +1988,7 @@
                 </div>
             </template>
 
-            <div x-show="!loadingInicial" class="px-6 pt-4 pb-6 overflow-y-auto max-h-[72vh] custom-scrollbar">
+            <div x-show="!loadingInicial && view === 'filters'" class="px-6 pt-4 pb-6 overflow-y-auto max-h-[72vh] custom-scrollbar">
                 <div class="grid grid-cols-2 gap-6">
                     {{-- Left column: Personal --}}
                     <div class="space-y-4">
@@ -2262,25 +2272,301 @@
                 </div>
             </div>
 
+            {{-- Results view --}}
+            <div x-show="view === 'results'" class="px-6 pt-4 pb-6 flex-1 overflow-hidden min-h-0">
+
+                <template x-if="buscando">
+                    <div class="flex flex-col items-center justify-center py-10 text-default-400">
+                        <i class="ti ti-loader animate-spin text-2xl mb-2"></i>
+                        <p class="text-sm">Consultando reporte general...</p>
+                    </div>
+                </template>
+
+                <template x-if="!buscando && resultados.length === 0">
+                    <div class="text-center py-10 text-default-500 text-sm">
+                        No se encontraron resultados para los criterios seleccionados.
+                    </div>
+                </template>
+
+                <template x-if="!buscando && resultados.length > 0">
+                    <div class="grid grid-rows-[auto_minmax(0,1fr)] grid-cols-[2fr_8fr] max-h-[600px] min-h-0 border border-default-200 rounded-xl">
+                        {{-- Sidebar izquierdo (Sucursales > Personal) --}}
+                        <div class="w-full shrink-0 border-r border-default-200 overflow-y-auto custom-scrollbar">
+                            <div class="px-4 py-3 border-b border-default-100 bg-default-50/50">
+                                <span class="text-xs font-semibold text-default-600 uppercase tracking-wider">Sucursales</span>
+                            </div>
+                            <template x-for="(sucursalNombre, si) in sucursalesEnResultados" :key="si">
+                                <div>
+                                    <button type="button"
+                                        @click="seleccionarSucursal(si)"
+                                        class="w-full text-left px-4 py-3 border-b border-default-100 transition-colors cursor-pointer"
+                                        :class="selectedSucursalIdx === si ? 'bg-violet-50' : 'hover:bg-default-50'">
+                                        <div class="flex items-center gap-2.5">
+                                            <i class="ti text-xs shrink-0 transition-transform"
+                                                :class="selectedSucursalIdx === si ? 'ti-chevron-down text-violet-500' : 'ti-chevron-right text-default-400'"></i>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="text-sm font-semibold text-default-900 leading-tight truncate" x-text="sucursalNombre"></p>
+                                                <p class="text-xs text-default-500 mt-0.5">
+                                                    <span class="font-semibold" x-text="resultados.filter(p => p.Sucursal === sucursalNombre).length"></span> personal(es)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    {{-- Personal list under selected sucursal --}}
+                                    <template x-if="selectedSucursalIdx === si">
+                                        <div class="border-b border-default-100"
+                                            x-transition:enter="transition-all duration-200 ease-out"
+                                            x-transition:enter-start="opacity-0 -translate-y-1"
+                                            x-transition:enter-end="opacity-100 translate-y-0"
+                                            x-transition:leave="transition-all duration-150 ease-in"
+                                            x-transition:leave-start="opacity-100 translate-y-0"
+                                            x-transition:leave-end="opacity-0 -translate-y-1">
+                                            <template x-for="(personal, pi) in personalesDeSucursalActual" :key="pi">
+                                                <button type="button"
+                                                    @click="seleccionarPersonal(pi)"
+                                                    class="w-full text-left pl-9 pr-4 py-2.5 transition-colors cursor-pointer border-t border-default-100/50"
+                                                    :class="selectedPersonalIdx === pi ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-default-50'"
+                                                    x-transition:enter="transition-all duration-300 ease-out"
+                                                    x-transition:enter-start="opacity-0 translate-x-[-8px]"
+                                                    x-transition:enter-end="opacity-100 translate-x-0"
+                                                    :style="`transition-delay: ${pi * 60}ms`">
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="w-1 h-4 rounded-full shrink-0"
+                                                            :class="selectedPersonalIdx === pi ? 'bg-primary' : 'bg-default-300'"></div>
+                                                        <span class="text-xs font-medium truncate"
+                                                            :class="selectedPersonalIdx === pi ? 'text-primary' : 'text-default-600'"
+                                                            x-text="personal.NombreCompleto"></span>
+                                                        <span class="text-[10px] text-default-400 ml-auto shrink-0" x-text="(personal.Cursos ? personal.Cursos.length : 0) + ' curso(s)'"></span>
+                                                    </div>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- Right: Cursos table for selected personal --}}
+                        <div class="flex flex-col min-w-0 overflow-hidden">
+                            <template x-if="selectedPersonalIdx >= 0">
+                                <div class="px-5 py-3 border-b border-default-200 bg-gradient-to-r from-violet-50 to-transparent">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <div class="w-1 h-6 rounded-full bg-violet-500/60 shrink-0"></div>
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <h4 class="text-sm font-bold text-default-800 leading-tight truncate" x-text="personalesDeSucursalActual[selectedPersonalIdx]?.NombreCompleto"></h4>
+                                                    <span class="text-xs text-default-400">·</span>
+                                                    <span class="text-xs font-semibold text-violet-600 whitespace-nowrap" x-text="personalesDeSucursalActual[selectedPersonalIdx]?.NroDoc"></span>
+                                                    <span class="text-[11px] text-default-400 whitespace-nowrap" x-text="'(' + cursosPersonalActual.length + ' curso(s))'"></span>
+                                                </div>
+                                                <div class="flex flex-wrap gap-1.5 mt-1">
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-default-100/80 text-default-600 leading-tight">
+                                                        <i class="ti ti-briefcase text-[9px]"></i>
+                                                        <span x-text="personalesDeSucursalActual[selectedPersonalIdx]?.Cargo || '—'"></span>
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-default-100/80 text-default-600 leading-tight">
+                                                        <i class="ti ti-tag text-[9px]"></i>
+                                                        <span x-text="personalesDeSucursalActual[selectedPersonalIdx]?.TipoTrabajador || '—'"></span>
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700 leading-tight">
+                                                        <i class="ti ti-building-community text-[9px]"></i>
+                                                        <span x-text="sucursalesEnResultados[selectedSucursalIdx] || '—'"></span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-violet-100 text-violet-700 whitespace-nowrap shrink-0">
+                                            <span x-text="personalesDeSucursalActual[selectedPersonalIdx]?.CodigoPersonal"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="selectedPersonalIdx < 0">
+                                <div class="px-5 py-3 border-b border-default-200 bg-gradient-to-r from-default-50 to-transparent">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-1 h-6 rounded-full bg-default-300 shrink-0"></div>
+                                        <span class="text-sm text-default-400 italic">Expanda una sucursal y seleccione un personal para ver sus cursos</span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="selectedPersonalIdx >= 0">
+                                <div class="flex flex-col flex-1 min-h-0">
+                                    <div class="flex-1 overflow-auto custom-scrollbar">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
+                                                <tr>
+                                                    <th class="px-5 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider w-14">#</th>
+                                                    <th @click="ordenarCursos('Nombre')"
+                                                        class="px-5 py-3 text-left font-semibold text-default-700 cursor-pointer hover:text-violet-600 transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Curso
+                                                            <span :class="cursosSortColumn === 'Nombre' ? 'text-violet-600' : 'text-default-300'"
+                                                                x-text="cursosSortColumn === 'Nombre' ? (cursosSortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                    <th @click="ordenarCursos('Nota_Final')"
+                                                        class="px-5 py-3 text-center font-semibold text-default-700 cursor-pointer hover:text-violet-600 transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Nota final
+                                                            <span :class="cursosSortColumn === 'Nota_Final' ? 'text-violet-600' : 'text-default-300'"
+                                                                x-text="cursosSortColumn === 'Nota_Final' ? (cursosSortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                    <th @click="ordenarCursos('Estado')"
+                                                        class="px-5 py-3 text-center font-semibold text-default-700 cursor-pointer hover:text-violet-600 transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Estado
+                                                            <span :class="cursosSortColumn === 'Estado' ? 'text-violet-600' : 'text-default-300'"
+                                                                x-text="cursosSortColumn === 'Estado' ? (cursosSortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                    <th @click="ordenarCursos('Fecha_Acceso')"
+                                                        class="px-5 py-3 text-center font-semibold text-default-700 cursor-pointer hover:text-violet-600 transition-colors text-xs uppercase tracking-wider table-sortable">
+                                                        <div class="inline-flex items-center gap-1.5">
+                                                            Fecha / Últ. Acceso
+                                                            <span :class="cursosSortColumn === 'Fecha_Acceso' ? 'text-violet-600' : 'text-default-300'"
+                                                                x-text="cursosSortColumn === 'Fecha_Acceso' ? (cursosSortDirection === 'asc' ? '▲' : '▼') : '⇅'"
+                                                                class="text-[10px] transition-colors"></span>
+                                                        </div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white">
+                                                <template x-for="(curso, ci) in cursosPersonalActualPaginado" :key="ci">
+                                                    <tr class="table-row border-b border-default-100"
+                                                        :class="ci % 2 === 1 ? 'table-row-even' : ''">
+                                                        <td class="px-5 py-2.5 text-center text-default-400 text-xs font-mono" x-text="((cursosPage - 1) * cursosPerPage) + ci + 1"></td>
+                                                        <td class="px-5 py-2.5 text-default-800 font-medium text-sm" x-text="curso.Nombre"></td>
+                                                        <td class="px-5 py-2.5 text-center">
+                                                            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border-l-4"
+                                                                :class="parseFloat(curso.Nota_Final) >= 10 ? 'bg-green-50 text-green-700 border-l-green-500' : (curso.Nota_Final != null && curso.Nota_Final !== 'Sin nota' ? 'bg-red-50 text-red-700 border-l-red-500' : 'bg-gray-50 text-gray-500 border-l-gray-400')">
+                                                                <span x-text="curso.Nota_Final || '—'"></span>
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-5 py-2.5 text-center">
+                                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border" :class="{
+                                                                'bg-amber-50 text-amber-700 border-amber-200': curso.Estado === 'PENDIENTE',
+                                                                'bg-green-50 text-green-700 border-green-200': curso.Estado === 'APROBADO',
+                                                                'bg-red-50 text-red-700 border-red-200': curso.Estado === 'DESAPROBADO',
+                                                                'bg-gray-50 text-gray-600 border-gray-200': curso.Estado === 'SIN ACCEDER' || curso.Estado === 'SIN NOTA',
+                                                                'bg-blue-50 text-blue-700 border-blue-200': curso.Estado === 'EN CURSO'
+                                                            }">
+                                                                <span class="badge-dot" :class="{
+                                                                    'bg-amber-500': curso.Estado === 'PENDIENTE',
+                                                                    'bg-green-500': curso.Estado === 'APROBADO',
+                                                                    'bg-red-500': curso.Estado === 'DESAPROBADO',
+                                                                    'bg-gray-400': curso.Estado === 'SIN ACCEDER' || curso.Estado === 'SIN NOTA',
+                                                                    'bg-blue-500': curso.Estado === 'EN CURSO'
+                                                                }"></span>
+                                                                <i class="ti text-[11px]" :class="{
+                                                                    'ti-clock': curso.Estado === 'PENDIENTE',
+                                                                    'ti-circle-check': curso.Estado === 'APROBADO',
+                                                                    'ti-circle-x': curso.Estado === 'DESAPROBADO',
+                                                                    'ti-player-off': curso.Estado === 'SIN ACCEDER' || curso.Estado === 'SIN NOTA',
+                                                                    'ti-player-play': curso.Estado === 'EN CURSO'
+                                                                }"></i>
+                                                                <span x-text="curso.Estado"></span>
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-5 py-2.5 text-center text-xs text-default-500 font-mono whitespace-nowrap">
+                                                            <span x-text="curso.Fecha_Nota ? (curso.Fecha_Nota.includes(' ') ? curso.Fecha_Nota.split(' ')[0].split('-').reverse().join('/') + ' ' + curso.Fecha_Nota.split(' ')[1].slice(0,5) : curso.Fecha_Nota) : (curso.Fecha_Ultimo_Acceso ? (curso.Fecha_Ultimo_Acceso.includes(' ') ? curso.Fecha_Ultimo_Acceso.split(' ')[0].split('-').reverse().join('/') + ' ' + curso.Fecha_Ultimo_Acceso.split(' ')[1].slice(0,5) : curso.Fecha_Ultimo_Acceso) : '—')"></span>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                        <template x-if="cursosPersonalActual.length === 0">
+                                            <div class="flex items-center justify-center py-10 text-default-400 text-sm">
+                                                Este personal no tiene cursos registrados.
+                                            </div>
+                                        </template>
+                                    </div>
+                                    {{-- Paginación --}}
+                                    <div x-show="cursosPersonalActual.length > cursosPerPage"
+                                        class="flex items-center justify-between px-5 py-3 border-t border-default-200 bg-default-50/80 shrink-0">
+                                        <div class="text-sm text-default-500">
+                                            <span class="font-medium text-default-700" x-text="cursosPersonalActual.length"></span> cursos
+                                            <span class="mx-1.5 text-default-300">·</span>
+                                            Pág. <span class="font-medium text-default-700" x-text="cursosPage"></span>
+                                            de <span class="font-medium text-default-700" x-text="totalPagesCursosPersonal"></span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="button" @click="cursosPage--" :disabled="cursosPage === 1"
+                                                class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border border-default-200 bg-white text-sm font-medium text-default-600 hover:bg-default-100 hover:text-default-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                                <i class="ti ti-chevron-left text-xs"></i>
+                                                Anterior
+                                            </button>
+                                            <button type="button" @click="cursosPage++" :disabled="cursosPage >= totalPagesCursosPersonal"
+                                                class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border border-default-200 bg-white text-sm font-medium text-default-600 hover:bg-default-100 hover:text-default-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                                Siguiente
+                                                <i class="ti ti-chevron-right text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="selectedPersonalIdx < 0">
+                                <div class="flex-1 flex items-center justify-center text-default-400 text-sm">
+                                    <div class="text-center py-10">
+                                        <i class="ti ti-user-search text-3xl mb-2 block"></i>
+                                        <span>Seleccione un personal para ver sus cursos</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <div class="flex justify-end items-center gap-2 py-4 px-6 border-t border-default-100">
-                <button type="button" @click="cerrar()"
-                    class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
-                    Cancelar
-                </button>
-                <button type="button" @click="exportarExcelReporteGeneral()"
-                    :disabled="buscando || selectedUsernames.length === 0 || selectedCourseIds.length === 0"
-                    class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer">
-                    <i class="ti ti-file-spreadsheet text-base" x-show="!buscando"></i>
-                    <i class="ti ti-loader animate-spin text-base" x-show="buscando"></i>
-                    <span x-text="buscando ? 'Generando Excel...' : 'Exportar Excel'"></span>
-                </button>
-                <button type="button" @click="exportarPDFReporteGeneral()"
-                    :disabled="buscando || selectedUsernames.length === 0 || selectedCourseIds.length === 0"
-                    class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer">
-                    <i class="ti ti-file-type-pdf text-base" x-show="!buscando"></i>
-                    <i class="ti ti-loader animate-spin text-base" x-show="buscando"></i>
-                    <span x-text="buscando ? 'Generando PDF...' : 'Exportar PDF'"></span>
-                </button>
+                <template x-if="view === 'filters'">
+                    <div class="flex items-center justify-end gap-2 w-full">
+                        <button type="button" @click="cerrar()"
+                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer">
+                            Cancelar
+                        </button>
+                        <button type="button" @click="obtenerReporte()"
+                            :disabled="buscando || selectedUsernames.length === 0 || selectedCourseIds.length === 0"
+                            class="px-5 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold text-white bg-violet-500 hover:bg-violet-600 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ti ti-search text-sm" x-show="!buscando"></i>
+                            <i class="ti ti-loader animate-spin text-sm" x-show="buscando"></i>
+                            <span x-text="buscando ? 'Buscando...' : 'Obtener reporte'"></span>
+                        </button>
+                    </div>
+                </template>
+
+                <template x-if="view === 'results'">
+                    <div class="flex items-center justify-between w-full">
+                        <button type="button" @click="volverAFiltros()"
+                            class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 transition-all cursor-pointer">
+                            <i class="ti ti-arrow-left text-sm"></i>
+                            Atrás
+                        </button>
+                        <div x-show="resultados.length > 0 && !buscando" class="flex items-center gap-2">
+                            <span class="text-sm text-default-500 mr-2">
+                                <span x-text="resultados.length"></span> personal(es) · <span x-text="resultados.reduce((acc, p) => acc + (p.Cursos ? p.Cursos.length : 0), 0)"></span> registro(s) de cursos
+                            </span>
+                            <button type="button" @click="exportarExcelReporteGeneral()"
+                                :disabled="exportando"
+                                class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="ti ti-file-spreadsheet text-sm" x-show="!exportando"></i>
+                                <i class="ti ti-loader animate-spin text-sm" x-show="exportando"></i>
+                                <span x-text="exportando ? 'Generando Excel...' : 'Exportar Excel'"></span>
+                            </button>
+                            <button type="button" @click="exportarPDFReporteGeneral()"
+                                :disabled="exportando"
+                                class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="ti ti-file-type-pdf text-sm" x-show="!exportando"></i>
+                                <i class="ti ti-loader animate-spin text-sm" x-show="exportando"></i>
+                                <span x-text="exportando ? 'Generando PDF...' : 'Exportar PDF'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
     </div>
