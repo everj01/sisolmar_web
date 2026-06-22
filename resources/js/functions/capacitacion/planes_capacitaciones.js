@@ -71,6 +71,8 @@ export default document.addEventListener("alpine:init", () => {
                         continue;
                     }
 
+                    let item = 0;
+
                     for (const curso of sistema.Cursos) {
                         item++;
                         const row = {
