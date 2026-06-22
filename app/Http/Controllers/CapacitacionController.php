@@ -5443,4 +5443,88 @@ class CapacitacionController extends Controller
             ], 500);
         }
     }
+
+    public function obtenerPlanPCE(): JsonResponse
+    {
+        try {
+            $anio = now()->format('Y');
+
+            $sistemas = CapacitacionAreas::where('habilitado', 1)
+                ->pluck('descripcion', 'codigo');
+
+            $dirigidos = DB::table('sw_cursos_dirigido')
+                ->where('habilitado', 1)
+                ->pluck('opcion', 'codigo');
+
+            $areasResp = DB::table('sw_curso_areas')
+                ->where('habilitado', 1)
+                ->pluck('nombre', 'codigo');
+
+            $cursos = Cursos::with([
+                    'programaciones' => fn($q) => $q->where('habilitado', 1),
+                ])
+                ->where('habilitado', 1)
+                ->where('tipo_curso', 5)
+                ->whereNotNull('area_conocimiento')
+                ->get()
+                ->groupBy('area_conocimiento');
+
+            $sistemasData = [];
+
+            foreach ($sistemas as $sistemaId => $sistemaNombre) {
+                $cursosData = [];
+
+                foreach ($cursos->get($sistemaId, collect()) as $curso) {
+                    $programacionesData = [];
+
+                    foreach ($curso->programaciones as $prog) {
+                        $fechaInicio = Carbon::parse($prog->fecha_inicio);
+                        $fechaFin = Carbon::parse($prog->fecha_final);
+
+                        $programacionesData[] = [
+                            'Mes'        => strtoupper($fechaInicio->translatedFormat('F')),
+                            'Bloque'     => $fechaInicio->day <= 15 ? 1 : 2,
+                            'Ejecutado'  => $fechaFin->isPast(),
+                            'Programado' => $fechaFin->isFuture() || $fechaFin->isToday(),
+                        ];
+                    }
+
+                    $dirigidoTexto = match (true) {
+                        $curso->dirigido_a == 0 || $curso->dirigido_a === '0' => 'OTROS',
+                        default => $dirigidos->get($curso->dirigido_a) ?? strtoupper((string) $curso->dirigido_a),
+                    };
+
+                    $cursosData[] = [
+                        'Nombre'       => strtoupper($curso->nombre),
+                        'Dirigido_a'   => $dirigidoTexto,
+                        'Area_Resp'    => strtoupper($areasResp->get($curso->area) ?? ''),
+                        'Tiempo_Horas' => '1',
+                        'Programaciones' => $programacionesData,
+                    ];
+                }
+
+                $sistemasData[] = [
+                    'Nombre' => strtoupper($sistemaNombre),
+                    'Cursos' => $cursosData,
+                ];
+            }
+
+            return response()->json([
+                'success'  => true,
+                'Anio'     => $anio,
+                'Sistemas' => $sistemasData,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerPlanPCE', [
+                'error' => $e->getMessage(),
+                'line'  => $e->getLine(),
+                'file'  => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el plan PCE.',
+            ], 500);
+        }
+    }
 }

@@ -185,6 +185,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
         Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
+        Route::get('/obtener-plan-pce', [CapacitacionController::class, 'obtenerPlanPCE']);
         Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
         Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
         Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
