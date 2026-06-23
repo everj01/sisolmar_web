@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,174 +8,219 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-blue: #34A1E4;
-            --dark-navy: #242746;
-        }
-        
         body {
-            margin: 0;
-            overflow: hidden;
-            background: linear-gradient(135deg, var(--dark-navy) 0%, #1a1c38 40%, #2c3e60 100%);
+            background: linear-gradient(145deg, #0a1628 0%, #0d1e36 50%, #0a1e3d 100%);
             min-height: 100vh;
         }
-        
-        .background {
+
+        /* Círculos decorativos sutiles en el fondo */
+        body::before {
+            content: '';
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
-        }
-        
-        /* PRUEBA DE MODIFICACION - EVER */
-        
-        .shape {
-            position: absolute;
-            opacity: 0.15;
-        }
-        
-        .circle {
+            top: -150px;
+            right: -150px;
+            width: 500px;
+            height: 500px;
             border-radius: 50%;
-            background-color: var(--primary-blue);
+            background: radial-gradient(circle, rgba(250, 185, 50, 0.07) 0%, transparent 65%);
+            pointer-events: none;
         }
-        
-        .square {
-            background-color: var(--primary-blue);
-            transform: rotate(45deg);
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -150px;
+            left: -100px;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(250, 185, 50, 0.05) 0%, transparent 65%);
+            pointer-events: none;
         }
-        
-        .triangle {
-            width: 0;
-            height: 0;
-            border-left: 50px solid transparent;
-            border-right: 50px solid transparent;
-            border-bottom: 86px solid var(--primary-blue);
+
+        .login-card {
+            animation: slideUp 0.45s ease-out both;
         }
-        
-        @keyframes cardEntrance {
-            0% {
+
+        @keyframes slideUp {
+            from {
                 opacity: 0;
-                transform: translateY(25px);
+                transform: translateY(18px);
             }
-            100% {
+
+            to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
-        .login-card {
-            animation: cardEntrance 0.8s ease-out forwards;
-            backdrop-filter: blur(10px);
-            background-color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+
+        .input-field {
+            border: 1.5px solid #e8edf3;
+            background-color: #f8fafc;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        
-        .btn-primary {
-            background-color: var(--primary-blue);
-            transition: all 0.3s ease;
+
+        .input-field:focus {
+            outline: none;
+            border-color: #FAB932;
+            box-shadow: 0 0 0 3px rgba(250, 185, 50, 0.18);
+            background-color: #fff;
         }
-        
-        .btn-primary:hover {
-            background-color: #2b8ac5;
-            transform: translateY(-2px);
+
+        .btn-login {
+            background-color: #FAB932;
+            color: #0a1628;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
         }
-        
-        .input-focus:focus {
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 2px rgba(52, 161, 228, 0.2);
+
+        .btn-login:hover {
+            background-color: #e5a620;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(250, 185, 50, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+            box-shadow: none;
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
-    <!-- Background with minimalist shapes -->
-    <div class="background">
-        <!-- Large circle -->
-        <div class="shape circle" style="width: 300px; height: 300px; top: -100px; right: -50px;"></div>
-        
-        <!-- Small square -->
-        <div class="shape square" style="width: 100px; height: 100px; bottom: 100px; left: 150px;"></div>
-        
-        <!-- Medium circle -->
-        <div class="shape circle" style="width: 200px; height: 200px; bottom: -50px; right: 25%;"></div>
-        
-        <!-- Triangle -->
-        <div class="shape triangle" style="top: 20%; left: 10%;"></div>
-        
-        <!-- Small circle -->
-        <div class="shape circle" style="width: 80px; height: 80px; top: 30%; right: 20%;"></div>
+
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-sm login-card">
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+            {{-- Barra superior amarilla --}}
+            <div class="h-1" style="background: #FAB932;"></div>
+
+            <div class="px-8 pt-8 pb-6">
+
+                {{-- Logo: agrega el src de tu imagen aquí --}}
+                {{-- Ejemplo: src="{{ asset('images/logo.png') }}" --}}
+                <div class="flex justify-center mb-7">
+                    <img src="{{ asset('images/logo_sol.png') }}" alt="Logo" class="h-14 object-contain">
+                </div>
+
+                {{-- Título --}}
+                <div class="text-center mb-7">
+                    <h1 class="text-xl font-bold tracking-tight" style="color: #0a1628;">
+                        Iniciar Sesión
+                    </h1>
+                    <p class="text-xs text-gray-400 mt-1">Ingresa tus credenciales para continuar</p>
+                </div>
+
+                {{-- Error de sesión --}}
+                @if(session('error'))
+                    <div
+                        class="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2 text-sm text-red-700">
+                        <i class="fas fa-circle-exclamation mt-0.5 text-red-400 flex-shrink-0"></i>
+                        <span>{{ session('error') }}</span>
+                    </div>
+                @endif
+
+                {{-- Formulario --}}
+                <form action="{{ url('validate') }}" method="POST" class="space-y-4">
+                    @csrf
+
+                    {{-- Usuario --}}
+                    <div>
+                        <label for="username"
+                            class="block text-xs font-semibold mb-1.5 text-gray-600 uppercase tracking-wide">
+                            Usuario
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+                                <i class="fas fa-user text-xs"></i>
+                            </span>
+                            <input type="text" id="username" name="username"
+                                class="input-field w-full pl-9 pr-4 py-2.5 rounded-lg text-sm text-gray-800"
+                                placeholder="Nombre de usuario" required autocomplete="username">
+                        </div>
+                    </div>
+
+                    {{-- Contraseña --}}
+                    <div>
+                        <label for="password"
+                            class="block text-xs font-semibold mb-1.5 text-gray-600 uppercase tracking-wide">
+                            Contraseña
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+                                <i class="fas fa-lock text-xs"></i>
+                            </span>
+                            <input type="password" id="password" name="password"
+                                class="input-field w-full pl-9 pr-10 py-2.5 rounded-lg text-sm text-gray-800"
+                                placeholder="Contraseña" required autocomplete="current-password">
+                            <button type="button" id="toggle-password"
+                                class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                                <i class="fas fa-eye text-xs" id="eye-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Recordarme --}}
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="remember_me" name="remember_me"
+                            class="w-4 h-4 rounded border-gray-300 cursor-pointer" style="accent-color: #FAB932;">
+                        <label for="remember_me" class="text-xs text-gray-500 cursor-pointer select-none">
+                            Recordarme
+                        </label>
+                    </div>
+
+                    {{-- Botón --}}
+                    <button type="submit" class="btn-login w-full py-2.5 rounded-lg text-sm mt-2">
+                        <i class="fas fa-right-to-bracket me-2"></i>
+                        Ingresar
+                    </button>
+
+                </form>
+            </div>
+
+            {{-- Pie de card --}}
+            <div class="px-8 py-3 text-center border-t border-gray-100 bg-gray-50">
+                <p class="text-xs text-gray-400">Sol Security &copy; {{ date('Y') }}</p>
+            </div>
+
+        </div>
     </div>
 
-    <div class="w-full max-w-md p-8 space-y-6 rounded-xl login-card transition-all duration-300 hover:shadow-2xl mx-4">
-        <div class="text-center">
-            <div class="inline-flex items-center justify-center w-20 h-20 mb-4 rounded-full" style="background-color: #34A1E4;">
-                <i class="fas fa-user-circle text-4xl text-white"></i>
-            </div>
-            <h2 class="text-3xl font-bold" style="color: #242746;">Bienvenido</h2>
-            <p class="mt-2 text-sm" style="color: #242746;">Ingresa tus credenciales para acceder a tu cuenta</p>
-        </div>
-        
-        @if(session('error'))
-        <div class="p-3 text-sm text-red-700 bg-red-100 rounded-lg">
-            {{ session('error') }}
-        </div>
-        @endif
-        
-        <form action="{{ url('validate') }}" method="post" class="space-y-5">
-            @csrf
-            <div>
-                <label for="username" class="block text-sm font-medium" style="color: #242746;">Nombre de usuario</label>
-                <div class="relative mt-1">
-                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <i class="fas fa-user" style="color: #34A1E4;"></i>
-                    </div>
-                    <input type="text" id="username" name="username" 
-                           class="w-full py-3 pl-10 pr-4 border rounded-lg focus:outline-none input-focus transition-all"
-                           style="border-color: #e5e7eb;"
-                           placeholder="Ingresa tu nombre de usuario" required>
-                </div>
-            </div>
-            
-            <div>
-                <label for="password" class="block text-sm font-medium" style="color: #242746;">Contraseña</label>
-                <div class="relative mt-1">
-                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <i class="fas fa-lock" style="color: #34A1E4;"></i>
-                    </div>
-                    <input type="password" id="password" name="password" 
-                           class="w-full py-3 pl-10 pr-4 border rounded-lg focus:outline-none input-focus transition-all"
-                           style="border-color: #e5e7eb;"
-                           placeholder="Ingresa tu contraseña" required>
-                </div>
-            </div>
-            
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <input id="remember_me" name="remember_me" type="checkbox" 
-                           class="w-4 h-4 border-gray-300 rounded focus:ring-2"
-                           style="--tw-ring-color: #34A1E4; color: #34A1E4;">
-                    <label for="remember_me" class="block ml-2 text-sm" style="color: #242746;">Recordarme</label>
-                </div>
-                <div class="text-sm">
-                    <a href="#" class="font-medium hover:underline" style="color: #34A1E4;">¿Olvidaste tu contraseña?</a>
-                </div>
-            </div>
-            
-            <button type="submit" 
-                    class="w-full px-4 py-3 font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 btn-primary shadow-md hover:shadow-lg"
-                    style="--tw-ring-color: #34A1E4;">
-                Iniciar Sesión
-            </button>
-        </form>
-        
-        <!-- <div class="pt-4">
-            <p class="text-sm text-center" style="color: #242746;">
-                ¿No tienes cuenta? <a href="#" class="font-medium hover:underline" style="color: #34A1E4;">Regístrate ahora</a>
-            </p>
-        </div> -->
-    </div>
+    <script>
+
+        document.getElementById('toggle-password').addEventListener('click', function () {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('eye-icon');
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isPassword);
+            icon.classList.toggle('fa-eye-slash', isPassword);
+        });
+
+        // Recordarme — localStorage
+        const inputUsuario = document.getElementById('username');
+        const chkRecordarme = document.getElementById('remember_me');
+
+        // Al cargar: si hay usuario guardado, precargarlo
+        const usuarioGuardado = localStorage.getItem('login_usuario');
+        if (usuarioGuardado) {
+            inputUsuario.value = usuarioGuardado;
+            chkRecordarme.checked = true;
+        }
+
+        // Al enviar el form: guardar o limpiar según el checkbox
+        document.querySelector('form').addEventListener('submit', function () {
+            if (chkRecordarme.checked) {
+                localStorage.setItem('login_usuario', inputUsuario.value.trim());
+            } else {
+                localStorage.removeItem('login_usuario');
+            }
+        });
+    </script>
+
+
+
 </body>
-</html>
 
+</html>

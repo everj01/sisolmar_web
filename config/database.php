@@ -80,41 +80,47 @@ return [
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
-            'host' => env('DB_HOST', 'localhost'),
+            'host' => env('DB_HOST', '192.168.10.21'),
             'port' => env('DB_PORT', '1433'),
-            'database' => env('DB_DATABASE', 'forge'),
-            'username' => env('DB_USERNAME', 'forge'),
-            'password' => env('DB_PASSWORD', ''),
+            'database' => env('DB_DATABASE', 'sisolm_web'),
+            'username' => env('DB_USERNAME', 'usr_solmar_vb'),
+            'password' => env('DB_PASSWORD', '11hotelbravo'),
             'charset' => 'utf8',
             'prefix' => '',
             'encrypt' => env('DB_ENCRYPT', 'yes'),
-            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', true),
+            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
         ],
 
         'sqlsrv_prueba1' => [
             'driver' => 'sqlsrv',
-            'host' => env('DB_HOST_PRUEBA1', '192.168.10.20'),
+            'host' => env('DB_HOST_PRUEBA1', '192.168.10.21'),
             'port' => env('DB_PORT_PRUEBA1', '1433'),
             'database' => env('DB_DATABASE_PRUEBA1', 'reclusol'),
-            'username' => env('DB_USERNAME_PRUEBA1', 'sa'),
-            'password' => env('DB_PASSWORD_PRUEBA1', ''),
+            'username' => env('DB_USERNAME_PRUEBA1', 'usr_solmar_vb'),
+            'password' => env('DB_PASSWORD_PRUEBA1', '11hotelbravo'),
             'charset' => 'utf8',
             'prefix' => '',
             'encrypt' => env('DB_ENCRYPT', 'yes'),
-            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', true),
+            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
+            'options' => [
+                 // TOTALMENTE VACÍO
+            ],
         ],
-
+        
         'sqlsrv_controlclientes' => [
             'driver' => 'sqlsrv',
-            'host' => env('DB_HOST_CONTROL', '192.168.10.20'),
+            'host' => env('DB_HOST_CONTROL', '192.168.10.21'),
             'port' => env('DB_PORT_CONTROL', '1433'),
             'database' => env('DB_DATABASE_CONTROL', 'CONTROLCLIENTES2018'),
-            'username' => env('DB_USERNAME_CONTROL', 'sa'),
-            'password' => env('DB_PASSWORD_CONTROL', ''),
+            'username' => env('DB_USERNAME_CONTROL', 'usr_solmar_vb'),
+            'password' => env('DB_PASSWORD_CONTROL', '11hotelbravo'),
             'charset' => 'utf8',
             'prefix' => '',
             'encrypt' => env('DB_ENCRYPT', 'yes'),
-            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', true),
+            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
+            'options' => [
+                 // TOTALMENTE VACÍO
+            ],
         ],
 
         'mysql_grupoihb' => [

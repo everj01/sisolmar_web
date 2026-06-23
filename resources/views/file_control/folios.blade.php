@@ -2,12 +2,12 @@
 
 @section('content')
 
-@include('layouts.shared/page-title', ['subtitle' => 'Recursos Humanos', 'title' => 'Folios'])
+@include('layouts.shared/page-title', ['subtitle' => 'File Control', 'title' => 'Gestíon de Folios'])
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+ <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
 
     {{-- ── CARD IZQUIERDA: Listado de Folios ───────────────────────────── --}}
-    <div class="card overflow-hidden">
+     <div class="card overflow-hidden lg:col-span-8">
         <div class="card-header">
             <h4 class="card-title">Listado de Folios</h4>
         </div>
@@ -17,39 +17,65 @@
             {{-- Filtros de tipo --}}
             <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
 
-                {{-- Grupo 1: clasificación general --}}
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioTod" name="folioFiltro" value="TODOS" checked>
-                        <span class="text-sm">Todos ({{ $todos }})</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioPri" name="folioFiltro" value="PRINCIPAL">
-                        <span class="text-sm">Principal ({{ $principal }})</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioAdic" name="folioFiltro" value="ADICIONAL">
-                        <span class="text-sm">Adicional ({{ $adicional }})</span>
-                    </label>
-                </div>
+                {{-- Grupo 1: tipos (principal / adicional) --}}
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <span class="text font-semibold">Prioridad: </span>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-primary" id="radioTod" name="filtroTipos" value="TODOS" checked>
+                          <span class="text-sm">Todos ({{ $todos }})</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-primary" id="radioPri" name="filtroTipos" value="PRINCIPAL">
+                          <span class="text-sm">Principal ({{ $principal }})</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-primary" id="radioAdic" name="filtroTipos" value="ADICIONAL">
+                          <span class="text-sm">Adicional ({{ $adicional }})</span>
+                      </label>
+                  </div>
 
-                <div class="w-px h-5 bg-gray-200 hidden sm:block"></div>
+                  <div class="w-px h-5 bg-gray-200 hidden sm:block"></div>
 
-                {{-- Grupo 2: subtipo --}}
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-danger" id="radioDoc" name="folioFiltro" value="DOCUMENTO">
-                        <span class="text-sm">Documento ({{ $documento }})</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-danger" id="radioForm" name="folioFiltro" value="FORMATO">
-                        <span class="text-sm">Formato ({{ $formato }})</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-danger" id="radioCert" name="folioFiltro" value="CERTIFICADO">
-                        <span class="text-sm">Certificado ({{ $certificado }})</span>
-                    </label>
-                </div>
+                  {{-- Grupo 2: clasificación (documento / formato / certificado) --}}
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <span class="text font-semibold">Tipos: </span>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-danger" id="radioTodClasif" name="filtroClasificacion" value="TODOS" checked>
+                          <span class="text-sm">Todos</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-danger" id="radioDoc" name="filtroClasificacion" value="DOCUMENTO">
+                          <span class="text-sm">Documento ({{ $documento }})</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-danger" id="radioForm" name="filtroClasificacion" value="FORMATO">
+                          <span class="text-sm">Formato ({{ $formato }})</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-danger" id="radioCert" name="filtroClasificacion" value="CERTIFICADO">
+                          <span class="text-sm">Certificado ({{ $certificado }})</span>
+                      </label>
+                  </div>
+         
+
+                  {{-- Grupo 3: vencimiento --}}
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <span class="text font-semibold">Vencimiento: </span>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-success" id="radioVenTod" name="vencimientoFiltro" value="TODOS" checked>
+                          <span class="text-sm">Todos</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-success" id="radioConVen" name="vencimientoFiltro" value="CON_VENCIMIENTO">
+                          <span class="text-sm">Con vencimiento</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" class="form-radio text-success" id="radioSinVen" name="vencimientoFiltro" value="SIN_VENCIMIENTO">
+                          <span class="text-sm">Sin vencimiento</span>
+                      </label>
+                  </div>
+             
+
             </div>
 
             {{-- Buscador + switch Solo activos --}}
@@ -64,7 +90,8 @@
                 <div x-data="{ soloActivos: true }" class="flex items-center gap-2">
                     <input type="checkbox" class="form-switch text-primary" role="switch"
                            id="chkEliminados" x-model="soloActivos">
-                    <label for="chkEliminados" class="text-sm cursor-pointer">Solo activos</label>
+                    {{-- AQUÍ LE METEMOS ALPINE.JS PARA QUE EL TEXTO CAMBIE DINÁMICAMENTE --}}
+                    <label for="chkEliminados" class="text-sm cursor-pointer" x-text="soloActivos ? 'Solo activos' : 'Solo inactivos'"></label>
                     <div x-effect="soloActivos ? aplicarFiltroSoloActivos(1) : aplicarFiltroSoloActivos(0)"></div>
                 </div>
             </div>
@@ -75,13 +102,13 @@
             {{-- Selector de registros --}}
             <div class="flex items-center gap-2">
                 <label for="page-size" class="text-sm text-gray-600">Mostrar</label>
-                <select id="page-size" class="form-select text-sm w-20">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
+                 <select id="page-size" class="form-select text-sm w-20">
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="20" selected>20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                  </select>
                 <span class="text-sm text-gray-600">registros</span>
             </div>
 
@@ -89,7 +116,7 @@
     </div>
 
     {{-- ── CARD DERECHA: Formulario de Gestión ────────────────────────── --}}
-    <div class="card">
+   <div class="card lg:col-span-4">
         <div class="card-header flex items-center gap-3">
             <h3 class="card-title">Gestión de Folios</h3>
             <span id="txtMensajeNuevo"
@@ -111,12 +138,16 @@
                     {{-- Nombre + Tipo --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                            <input type="text" id="nombre" class="form-input w-full"
-                                   x-model="nameFolio"
-                                   @input="nameFolio = nameFolio.toUpperCase()"
-                                   placeholder="Nombre del folio" required>
-                        </div>
+                              <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                              <input type="text" id="nombre" class="form-input w-full"
+                                     x-model="nameFolio"
+                                     @input="nameFolio = nameFolio.toUpperCase()"
+                                     placeholder="Nombre del folio" required>
+                              <div id="avisoNombreRepetidoFolio" class="hidden mt-1 flex items-center gap-2 px-3 py-2 rounded-md bg-yellow-50 border border-yellow-300 text-yellow-800 text-xs">
+                                  <i class="fa-solid fa-triangle-exclamation"></i>
+                                  <span>Ya existe un folio con este nombre.</span>
+                              </div>
+                          </div>
                         <div>
                             <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                             <select id="tipo" class="form-select w-full" x-model="tipoSeleccionado" required>
@@ -128,15 +159,26 @@
                         </div>
                     </div>
 
-                    {{-- Responsable --}}
-                    <div>
-                        <label for="responsable" class="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
-                        <select id="responsable" class="form-select w-full" required>
-                            <option value="" disabled selected>— Seleccionar —</option>
-                            @foreach ($roles as $rol)
-                                <option value="{{ $rol->codigo }}">{{ $rol->nombre }}</option>
-                            @endforeach
-                        </select>
+                    {{-- Responsable y Categoría --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="responsable" class="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
+                            <select id="responsable" class="form-select w-full" required>
+                                <option value="" disabled selected>— Seleccionar —</option>
+                                @foreach ($roles as $rol)
+                                    <option value="{{ $rol->codigo }}">{{ $rol->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                            <select id="categoria" class="form-select w-full" required>
+                                <option value="" disabled selected>— Seleccionar —</option>
+                                @foreach ($categorias as $cat)
+                                    <option value="{{ $cat->codigo }}">{{ $cat->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     {{-- Descripción contextual por tipo --}}
@@ -205,10 +247,6 @@
                     <button type="submit" id="submitButton"
                             class="btn rounded-full bg-success/25 text-success hover:bg-success hover:text-white">
                         Guardar <i class="fa-solid fa-floppy-disk"></i>
-                    </button>
-                    <button type="button" id="cancelButton"
-                            class="btn rounded-full bg-danger/25 text-danger hover:bg-danger hover:text-white">
-                        Cancelar <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
 

@@ -522,6 +522,11 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.dirigido = curso.dirigido_a == 0 ? 'OTROS' : (curso.dirigido_a ?? '');
                 alpineData.sucursal = curso.sucursal ?? '';
 
+                 alpineData.imagePreviewPortada = curso.imagen_portada_url ?? null;
+                  alpineData.imagePreviewAfiche = curso.imagen_afiche_url ?? null;
+                  alpineData.imageFilePortada = null;
+                  alpineData.imageFileAfiche = null;
+
                 // Responsable (NUEVO)
                 alpineData.codResponsable = curso.cod_responsable ?? "";
                 alpineData.nombreResponsable = curso.nombre_responsable ?? "";
@@ -748,6 +753,9 @@ window.editarFormGestionCurso = async (e) => {
     if (isChanged('descripcion')) formData.append('descripcion', alpineData.descripcion);
     if (isChanged('dirigido')) formData.append('dirigido_a', alpineData.dirigido);
     if (isChanged('sucursal')) formData.append('sucursal', alpineData.sucursal);
+
+    if (alpineData.imageFilePortada) formData.append('image_portada', alpineData.imageFilePortada);
+      if (alpineData.imageFileAfiche) formData.append('image_afiche', alpineData.imageFileAfiche);
 
     // cod_cliente: send when tipo_curso is PCA (6) and either tipoCurso or clienteSeleccionado changed
     if (alpineData.tipoCurso == '6' && (isChanged('tipoCurso') || isChanged('clienteSeleccionado'))) {

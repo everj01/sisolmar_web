@@ -8,13 +8,22 @@ use Illuminate\Http\Request;
 
 class ReporteController extends Controller
 {
+    public function index()
+    {
+        $clientes = FileControl::getClientes();
+        $sucursales = FileControl::getSucursales();
+        $cargos = FileControl::getCargos();
+        $tiposPersonal = Reporte::getTiposPersonal();
+        $categoriasCarnet = Reporte::getCategoriasCarnet();
+        $clasesBrevete = Reporte::getClasesBrevete();
+        $categoriasBrevete = Reporte::getCategoriasBrevete();
+        $certificados = Reporte::getCertificados();
 
-    public function index(){
-    $sucursales = FileControl::getSucursales();
-    $clientes = FileControl::getClientes();
-
-    return view('file_control.reportes', compact('sucursales', 'clientes'));
-}
+        return view('file_control.reportes', compact(
+            'clientes', 'sucursales', 'cargos', 'tiposPersonal', 'categoriasCarnet',
+            'clasesBrevete', 'categoriasBrevete', 'certificados'
+        ));
+    }
 
     public function foliosPendientesPorSucursal(Request $request)
     {
@@ -34,27 +43,27 @@ class ReporteController extends Controller
 
         foreach ($rows as $row) {
             $nombreSucursal = $row->sucursal;
-            $codPersonal    = $row->codPersonal;
+            $codPersonal = $row->codPersonal;
 
-            if (!isset($reporte[$nombreSucursal])) {
+            if (! isset($reporte[$nombreSucursal])) {
                 $reporte[$nombreSucursal] = [
                     'sucursal' => $nombreSucursal,
-                    'personal' => []
+                    'personal' => [],
                 ];
             }
 
             // Usar referencia para evitar copias de arrays grandes en memoria
-            if (!isset($reporte[$nombreSucursal]['personal'][$codPersonal])) {
+            if (! isset($reporte[$nombreSucursal]['personal'][$codPersonal])) {
                 $reporte[$nombreSucursal]['personal'][$codPersonal] = [
                     'codPersonal' => $codPersonal,
-                    'personal'    => $row->personal,
-                    'documentos'  => []
+                    'personal' => $row->personal,
+                    'documentos' => [],
                 ];
             }
 
             $reporte[$nombreSucursal]['personal'][$codPersonal]['documentos'][] = [
-                'documento'       => $row->documento,
-                'tipo_folio'      => $row->tipo_folio,
+                'documento' => $row->documento,
+                'tipo_folio' => $row->tipo_folio,
                 // Omitir fechas si no son necesarias para reducir tamaño del JSON (opcional)
                 // 'fecha_emision'   => $row->fecha_emision,
                 // 'fecha_caducidad' => $row->fecha_caducidad,
@@ -67,35 +76,120 @@ class ReporteController extends Controller
 
         return response()->json(array_values($reporte));
     }
-    
-   public function foliosPorVencer(Request $request)
-{
-    try {
-        $sucursal = $request->filled('sucursal') ? $request->sucursal : 0;
-        $dias = $request->filled('dias') ? $request->dias : 30;
 
-        $folios = \App\Models\Reporte::getFoliosPorVencer($sucursal, $dias);
+    public function foliosPendientesRegistro(Request $request)
+    {
+        $sucursal = $request->get('sucursal', '0');
+        $cliente = $request->get('cliente', '');
+        $parametros = $request->get('parametros', '');
 
-        return response()->json($folios);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+        $datos = Reporte::getFoliosPendientesRegistro($sucursal, $cliente, $parametros);
+
+        return response()->json($datos);
     }
-}
 
-public function foliosPorVencerXCliente(Request $request)
-{
-    try {
-        $cliente = $request->filled('cliente') ? $request->cliente : 0;
-        $dias = $request->filled('dias') ? $request->dias : 30;
+    public function foliosPorVencer(Request $request)
+    {
+        try {
+            $sucursal = $request->filled('sucursal') ? $request->sucursal : 0;
+            $dias = $request->filled('dias') ? $request->dias : 30;
 
-        $folios = \App\Models\Reporte::getFoliosPorVencerXCliente($cliente, $dias);
+            $folios = \App\Models\Reporte::getFoliosPorVencer($sucursal, $dias);
 
-        return response()->json($folios);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json($folios);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
-}
 
+    public function carnet(Request $request)
+    {
+        $sucursal = $request->get('sucursal', 'T');
+        $tipoPers = $request->get('tipo_pers', 'T');
+        $vigencia = $request->get('vigencia', 'T');
+        $estado = $request->get('estado', 'T');
+        $categoria = $request->get('categoria');
 
+        if (! $categoria) {
+            return response()->json(['error' => 'Categoría requerida'], 422);
+        }
 
+        $datos = Reporte::getCarnet($sucursal, $tipoPers, $vigencia, $estado, (int) $categoria);
+
+        return response()->json($datos);
+    }
+
+    public function foliosPorVencerXCliente(Request $request)
+    {
+        try {
+            $cliente = $request->filled('cliente') ? $request->cliente : 0;
+            $dias = $request->filled('dias') ? $request->dias : 30;
+
+            $folios = \App\Models\Reporte::getFoliosPorVencerXCliente($cliente, $dias);
+
+            return response()->json($folios);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function vigenciaDni(Request $request)
+    {
+        $sucursal = $request->get('sucursal');
+        $tipoPers = $request->get('tipo_pers', 'A');
+        $vigente = $request->get('vigente', 'NO');
+
+        if (! $sucursal) {
+            return response()->json(['error' => 'Sucursal requerida'], 422);
+        }
+
+        [$tipo1, $tipo2] = $tipoPers === 'O' ? ['01', '03'] : ['02', '05'];
+
+        return response()->json(Reporte::getVigenciaDni($sucursal, $tipo1, $tipo2, $vigente));
+    }
+
+    public function vigenciaBrevete(Request $request)
+    {
+        $sucursal = $request->get('sucursal');
+        $tipoPers = $request->get('tipo_pers', 'A');
+        $vigente = $request->get('vigente', 'NO');
+        $clase = $request->get('clase', 'T');
+        $categoria = $request->get('categoria', 'T');
+
+        if (! $sucursal) {
+            return response()->json(['error' => 'Sucursal requerida'], 422);
+        }
+
+        [$tipo1, $tipo2] = $tipoPers === 'O' ? ['01', '03'] : ['02', '05'];
+
+        return response()->json(Reporte::getVigenciaBrevete($sucursal, $tipo1, $tipo2, $clase, $categoria, $vigente));
+    }
+
+    public function categoriasBrevete(Request $request)
+    {
+        return response()->json(Reporte::getCategoriasBrevete($request->get('cod_clase')));
+    }
+
+    public function certificados(Request $request)
+    {
+        $sucursal = $request->get('sucursal', 'T');
+        $tipoPers = $request->get('tipo_pers', 'T');
+        $vigencia = $request->get('vigencia', 'T');
+        $estado = $request->get('estado', 'T');
+        $requisito = $request->get('certificado');
+        $fechaVenc = $request->get('fecha_venc');
+
+        if (! $requisito) {
+            return response()->json(['error' => 'Certificado requerido'], 422);
+        }
+        if (! $fechaVenc) {
+            return response()->json(['error' => 'Fecha de vencimiento requerida'], 422);
+        }
+
+        $fecha = \Carbon\Carbon::parse($fechaVenc)->format('d/m/Y');
+
+        return response()->json(
+            Reporte::getCertificadosReporte($sucursal, $tipoPers, $vigencia, $estado, $requisito, $fecha)
+        );
+    }
 }

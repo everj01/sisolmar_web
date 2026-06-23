@@ -174,7 +174,7 @@
     </div>
 
     {{-- Modal previsualización PDF --}}
-    <div x-data="modalPDF()" x-show="open" x-cloak
+    <div x-show="open" x-cloak
         @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
@@ -202,12 +202,12 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="{{ asset('pdfs/plan_capac_PCE.pdf') }}" target="_blank"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors">
+                    <button type="button" @click="window.open(pdfUrl)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer">
                         <i class="ti ti-external-link text-sm"></i>
                         Abrir en ventana
-                    </a>
-                    <a href="{{ asset('pdfs/plan_capac_PCE.pdf') }}" download="Plan_Capacitacion_Estandar_PCE.pdf"
+                    </button>
+                    <a :href="pdfUrl" :download="'Plan_Capacitacion_Estandar_PCE_' + new Date().getFullYear() + '.pdf'"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition-colors">
                         <i class="ti ti-download text-sm"></i>
                         Descargar
@@ -219,12 +219,16 @@
                 </div>
             </div>
 
-            <div class="flex-1 bg-default-50">
-                <iframe src="{{ asset('pdfs/plan_capac_PCE.pdf') }}#toolbar=1"
-                    class="w-full h-full border-0" title="Plan de Capacitación Estándar (PCE)"></iframe>
+            <div class="flex-1 bg-default-50 flex items-center justify-center">
+                <template x-if="pdfUrl">
+                    <iframe :src="pdfUrl" class="w-full h-full border-0" title="Plan de Capacitación Estándar (PCE)"></iframe>
+                </template>
+                <template x-if="!pdfUrl">
+                    <div class="text-default-500 text-sm">Generando PDF...</div>
+                </template>
             </div>
         </div>
     </div>
 </div>
-@vite(['resources/js/app.js'])
+@vite(['resources/js/app.js', 'resources/js/functions/capacitacion/planes_capacitaciones.js'])
 @endsection

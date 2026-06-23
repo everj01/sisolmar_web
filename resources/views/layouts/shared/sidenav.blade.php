@@ -13,8 +13,8 @@
         <div class="p-4 h-[calc(100%-theme('spacing.topbar'))] flex-grow" data-simplebar>
             <!-- Menu -->
             <ul class="admin-menu hs-accordion-group flex w-full flex-col gap-1">
-                @if(session()->has('permisos') && !empty(session('permisos')))
-                    @foreach(session('permisos') as $menu)
+                @if(isset($permisos) && !empty($permisos))
+                        @foreach($permisos as $menu)
                         <li class="menu-item hs-accordion" id="menu-{{ $menu['modulo'] }}">
                             <a href="javascript:void(0)"
                                 class="hs-accordion-toggle group flex items-center gap-x-3.5 rounded-md px-3 py-2 text-sm font-medium text-default-100 transition-all hover:bg-default-100/5 hs-accordion-active:bg-default-100/5 hs-accordion-active:text-default-100">
@@ -23,9 +23,6 @@
                                 <span class="menu-text"> {{ $menu['nombre'] ?? ucfirst($menu['modulo']) }} </span>
                                 <span class="menu-arrow"></span>
                             </a>
-
-
-
                             
                             <div class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300">
                                 <ul class="mt-1 space-y-1">

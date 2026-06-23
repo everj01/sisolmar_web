@@ -1,17 +1,15 @@
-<!-- Page Title Start -->
-<div class="flex items-center md:justify-between flex-wrap gap-2 mb-5">
-    <h4 class="text-default-900 text-lg font-medium">{{ $title }}</h4>
 
-    <div class="md:flex hidden items-center gap-3 text-sm font-semibold">
-        <a href="#" class="text-sm font-medium text-default-700">Sisolmar Web</a>
-
-        <i class="i-tabler-chevron-right text-lg flex-shrink-0 text-default-500 rtl:rotate-180"></i>
-
-        <a href="#" class="text-sm font-medium text-default-700">{{ $subtitle }}</a>
-
-        <i class="i-tabler-chevron-right text-lg flex-shrink-0 text-default-500 rtl:rotate-180"></i>
-
-        <a href="#" class="text-sm font-medium text-default-700" aria-current="page">{{ $title }}</a>
-    </div>
-</div>
-<!-- Page Title End -->
+  @push('page-heading')
+  <div class="hidden md:flex flex-col justify-center leading-tight">
+      <h5 class="text-lg font-bold text-gray-900 dark:text-slate-100 tracking-tight">
+          {{ $title }}
+      </h5>
+      <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text text-gray-400 dark:text-slate-500">Sisolmar Web</span>
+          <i class="i-tabler-chevron-right text-xs text-gray-300 dark:text-slate-600 flex-shrink-0"></i>
+          <span class="text text-gray-400 dark:text-slate-500">{{ $subtitle }}</span>
+          <i class="i-tabler-chevron-right text-xs text-gray-300 dark:text-slate-600 flex-shrink-0"></i>
+          <span class="text font-semibold text-gray-500 dark:text-slate-400">{{ $title }}</span>
+      </div>
+  </div>
+  @endpush

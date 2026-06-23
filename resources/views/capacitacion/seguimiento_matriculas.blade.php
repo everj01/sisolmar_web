@@ -2436,7 +2436,7 @@
                 this.open = true;
 
                 const courseId = data.course_id || data.codigo_moodle || data.codigo;
-                fetch(`/api/obtener-detalle-curso/${courseId}`)
+                fetch(`${VITE_URL_APP}/api/obtener-detalle-curso/${courseId}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Error en la respuesta del servidor');
@@ -2706,7 +2706,7 @@
                 if (this.enviandoRecordatorio[p.nroDoc] || this.recordatoriosEnviados[p.nroDoc]) return;
                 this.enviandoRecordatorio[p.nroDoc] = true;
                 try {
-                    const res = await fetch(`/api/mail/enviar-recordatorio?course_id=${this.cursoId}`, {
+                    const res = await fetch(`${VITE_URL_APP}/api/mail/enviar-recordatorio?course_id=${this.cursoId}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2759,7 +2759,7 @@
                 this.enviandoRecordatorio = {};
                 this.recordatoriosEnviados = {};
 
-                fetch(`/api/get-estudiantes-curso?course_id=${cursoId}&statusId=${statusId}`)
+                fetch(`${VITE_URL_APP}/api/get-estudiantes-curso?course_id=${cursoId}&statusId=${statusId}`)
                     .then(response => {
                         if (!response.ok) throw new Error('Error en la respuesta del servidor');
                         return response.json();

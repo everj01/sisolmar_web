@@ -39,6 +39,8 @@
   background-color: #1e293b !important;
 }
 
+
+
 /* =====================================================
    END MAIN LAYOUT OVERRIDES
    ===================================================== */
@@ -827,20 +829,38 @@ span.tabulator-paginator {
 }
 
 /* =====================================================
-   NOTIFICATION ANIMATIONS
-   ===================================================== */
+     LAYOUT LIGERO
+     ===================================================== */
 
-@keyframes slideUpIn {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.96);
+  /* Header — fondo blanco sólido, sin blur */
+  .app-header {
+      background-color: #ffffff !important;
+      border-bottom: 1px solid #eaecf0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      backdrop-filter: none !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
-.animate-slide-up {
-  animation: slideUpIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+  .dark .app-header {
+      background-color: #1e293b !important;
+      border-bottom-color: #334155;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Área de contenido — fondo más liviano */
+  .page-content {
+      background-color: #f4f6f9 !important;
+      border-radius: 0 !important;
+  }
+
+  .dark .page-content {
+      background-color: #0f172a !important;
+  }
+
+  /* Cards ligeramente más definidas sobre el nuevo fondo */
+  .card {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07) !important;
+  }
+
+  .dark .card {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+  }

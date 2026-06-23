@@ -27,7 +27,6 @@
 
     </div>
 
-    </div>
 
     <!-- Popup notificación folios por vencer -->
     <div id="folio-toast"
@@ -175,7 +174,6 @@
     @endauth
 
     @include('layouts.shared/footer-scripts')
-
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {

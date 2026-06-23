@@ -3618,6 +3618,7 @@ class CapacitacionController extends Controller
                 DB::select("
                 SELECT codigo, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable
                 FROM sisolm_web.dbo.sw_cursos
+                WHERE habilitado = 1
             ")
             )->keyBy('codigo_moodle');
 
@@ -4532,20 +4533,16 @@ class CapacitacionController extends Controller
             $data = [
                 "nombre_archivo" => $request->nombre_archivo,
                 "descripcion" => $request->input("descripcion", ""),
-                "archivo_pdf" => null,
-                "archivo_excel" => null,
             ];
 
             if ($request->hasFile("archivo_pdf")) {
-                $data["archivo_pdf"] = file_get_contents(
-                    $request->file("archivo_pdf")->getRealPath(),
-                );
+                $data["archivo_pdf_binario"] = file_get_contents($request->file("archivo_pdf")->getRealPath());
+                $data["tipo_archivo"] = "pdf";
             }
 
             if ($request->hasFile("archivo_excel")) {
-                $data["archivo_excel"] = file_get_contents(
-                    $request->file("archivo_excel")->getRealPath(),
-                );
+                $data["archivo_excel_binario"] = file_get_contents($request->file("archivo_excel")->getRealPath());
+                $data["tipo_archivo"] = "xlsx";
             }
 
             $id = CapacitacionReporteHistorial::crearReporte($data);
@@ -4582,8 +4579,7 @@ class CapacitacionController extends Controller
                         "id" => $reporte->id,
                         "nombre_archivo" => $reporte->nombre_archivo,
                         "descripcion" => $reporte->descripcion,
-                        "tiene_pdf" => !is_null($reporte->archivo_pdf),
-                        "tiene_excel" => !is_null($reporte->archivo_excel),
+                        "tipo_archivo" => $reporte->tipo_archivo,
                         "fecha_creacion" => $reporte->fecha_creacion,
                         "fecha_actualizacion" => $reporte->fecha_actualizacion,
                         "habilitado" => (bool) $reporte->habilitado,
@@ -5444,6 +5440,90 @@ class CapacitacionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function obtenerPlanPCE(): JsonResponse
+    {
+        try {
+            $anio = now()->format('Y');
+
+            $sistemas = CapacitacionAreas::where('habilitado', 1)
+                ->pluck('descripcion', 'codigo');
+
+            $dirigidos = DB::table('sw_cursos_dirigido')
+                ->where('habilitado', 1)
+                ->pluck('opcion', 'codigo');
+
+            $areasResp = DB::table('sw_curso_areas')
+                ->where('habilitado', 1)
+                ->pluck('nombre', 'codigo');
+
+            $cursos = Cursos::with([
+                    'programaciones' => fn($q) => $q->where('habilitado', 1),
+                ])
+                ->where('habilitado', 1)
+                ->where('tipo_curso', 5)
+                ->whereNotNull('area_conocimiento')
+                ->get()
+                ->groupBy('area_conocimiento');
+
+            $sistemasData = [];
+
+            foreach ($sistemas as $sistemaId => $sistemaNombre) {
+                $cursosData = [];
+
+                foreach ($cursos->get($sistemaId, collect()) as $curso) {
+                    $programacionesData = [];
+
+                    foreach ($curso->programaciones as $prog) {
+                        $fechaInicio = Carbon::parse($prog->fecha_inicio);
+                        $fechaFin = Carbon::parse($prog->fecha_final);
+
+                        $programacionesData[] = [
+                            'Mes'        => strtoupper($fechaInicio->translatedFormat('F')),
+                            'Bloque'     => $fechaInicio->day <= 15 ? 1 : 2,
+                            'Ejecutado'  => $fechaFin->isPast(),
+                            'Programado' => $fechaFin->isFuture() || $fechaFin->isToday(),
+                        ];
+                    }
+
+                    $dirigidoTexto = match (true) {
+                        $curso->dirigido_a == 0 || $curso->dirigido_a === '0' => 'OTROS',
+                        default => $dirigidos->get($curso->dirigido_a) ?? strtoupper((string) $curso->dirigido_a),
+                    };
+
+                    $cursosData[] = [
+                        'Nombre'       => strtoupper($curso->nombre),
+                        'Dirigido_a'   => $dirigidoTexto,
+                        'Area_Resp'    => strtoupper($areasResp->get($curso->area) ?? ''),
+                        'Tiempo_Horas' => '1',
+                        'Programaciones' => $programacionesData,
+                    ];
+                }
+
+                $sistemasData[] = [
+                    'Nombre' => strtoupper($sistemaNombre),
+                    'Cursos' => $cursosData,
+                ];
+            }
+
+            return response()->json([
+                'success'  => true,
+                'Anio'     => $anio,
+                'Sistemas' => $sistemasData,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerPlanPCE', [
+                'error' => $e->getMessage(),
+                'line'  => $e->getLine(),
+                'file'  => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el plan PCE.',
             ], 500);
         }
     }

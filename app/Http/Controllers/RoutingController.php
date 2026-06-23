@@ -2,57 +2,60 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\CapacitacionController;
-
-use Illuminate\Http\Request;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\UsuarioController;
 
 class RoutingController extends Controller
 {
-    public function __construct()
+     private function getVistasPermitidas(): array
     {
-        // $this->
-        // middleware('auth')->
-        // except('index');
+        $permisos = session('permisos', []);
+        $vistas = [];
+        foreach ($permisos as $menu) {
+            foreach ($menu['submenus'] ?? [] as $sub) {
+                if (!empty($sub['vista'])) {
+                    $vistas[] = $menu['modulo'] . '.' . $sub['vista'];
+                }
+            }
+        }
+        return $vistas;
     }
 
+    private function tienePermiso(string $vista): bool
+    {
+        // El rol 1 (o el que sea admin) pasa siempre — ajustá el valor si es distinto
+        if (Auth::user()?->tipo_rol == 1) {
+            return true;
+        }
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+        return in_array($vista, $this->getVistasPermitidas());
+    }
+
     public function index(Request $request)
     {
-        // if (Auth::user()) {
-            return redirect('index');
-        // } else {
-        //     return redirect('login');
-        // }
+        return redirect('index');
     }
 
-    /**
-     * Display a view based on first route param
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function root(Request $request, $first)
     {
-        if ($first == "assets")
+        if ($first === 'assets') {
             return redirect('home');
+        }
 
         return view($first);
     }
 
-    /**
-     * second level route
-     */
     public function secondLevel(Request $request, $first, $second)
-    {
-        // Controladores específicos para cada vista
-        $controllers = [
+    {$controllers = [
+            'dj' => [
+                'gestion_dj' => [FileController::class, 'indexGestionDj'],
+                'actualizar_dj' => [FileController::class, 'indexActualizarDj'],
+            ],
             'file_control' => [
                 'chargefile' => [FileController::class, 'index'],
                 'cargos' => [FileController::class, 'ViewCargo'],
@@ -62,40 +65,48 @@ class RoutingController extends Controller
                 'search_legajos' => [FileController::class, 'ViewBusquedaLegajo'],
                 'legajos_pdf' => [FileController::class, 'ViewLegajoPdf'],
                 'dashboard' => [FileController::class, 'ViewDashboard'],
-                'gestion_dj' => [FileController::class, 'indexGestionDj'],
                 'reportes' => [ReporteController::class, 'index'],
             ],
             'capacitacion' => [
-                'consulta_matriculas' => [CapacitacionController::class, 'vistaConsultaMatriculas'],
-                'historial_capacitaciones'=> [CapacitacionController::class,'vistaHistorialCapacitaciones'],
-                'gestion_cursos'=> [CapacitacionController::class,'vistaGestionCursos'],
-                'seguimiento_matriculas'=> [CapacitacionController::class,'vistaSeguimientoMatriculas'],
-                'reportes_capacitaciones'=> [CapacitacionController::class,'vistaReportesCapacitaciones'],
-                'planes_capacitacion'=> [CapacitacionController::class,'vistaPlanesCapacitacion'],
-            ]
+                'consulta_matriculas'      => [CapacitacionController::class, 'vistaConsultaMatriculas'],
+                'historial_capacitaciones' => [CapacitacionController::class, 'vistaHistorialCapacitaciones'],
+                'gestion_cursos'           => [CapacitacionController::class, 'vistaGestionCursos'],
+                'seguimiento_matriculas'   => [CapacitacionController::class, 'vistaSeguimientoMatriculas'],
+                'reportes_capacitaciones'  => [CapacitacionController::class, 'vistaReportesCapacitaciones'],
+                'planes_capacitacion'      => [CapacitacionController::class, 'vistaPlanesCapacitacion'],
+            ],
+            'maestros' => [
+                'usuarios' => [UsuarioController::class, 'index'],
+            ],
         ];
 
-        if(isset($controllers[$first][$second])){
-            $controllerAction = $controllers[$first][$second];
+        $vistaKey = $first.'.'.$second;
 
-            // Instanciando y llamando al método
-            $controller = app($controllerAction[0]);
-            return $controller->{$controllerAction[1]}($request);
+        if (! $this->tienePermiso($vistaKey)) {
+            abort(403);
         }
 
-        return view($first . '.' . $second);
-       
+        if (isset($controllers[$first][$second])) {
+            [$clase, $metodo] = $controllers[$first][$second];
+
+            return app($clase)->{$metodo}($request);
+        }
+
+        return view($vistaKey);
     }
 
-    /**
-     * third level route
-     */
     public function thirdLevel(Request $request, $first, $second, $third)
     {
-
-        if ($first == "assets")
+        if ($first === 'assets') {
             return redirect('home');
+        }
 
-        return view($first . '.' . $second . '.' . $third);
+        $vistaKey = $first.'.'.$second.'.'.$third;
+
+        if (! $this->tienePermiso($vistaKey)) {
+            abort(403);
+        }
+
+        return view($vistaKey);
     }
 }

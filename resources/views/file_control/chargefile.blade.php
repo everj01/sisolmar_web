@@ -2,12 +2,12 @@
 
 @section('content')
 
-@include('layouts.shared/page-title', ['subtitle' => 'Recursos Humanos', 'title' => 'File Control'])
+@include('layouts.shared/page-title', ['subtitle' => 'File Control', 'title' => 'Carga de archivos'])
 
 {{-- =====================================================================
      PANEL PRINCIPAL: Listado de personal + Folios / Legajos
      ===================================================================== --}}
-<div class="grid lg:grid-cols-2 gap-6 mt-8">
+<div class="grid lg:grid-cols-[3.1fr_2.05fr] gap-6 mt-8">
 
     {{-- ── CARD: Listado de Personal ────────────────────────────────────── --}}
     <div class="card overflow-hidden">
@@ -48,6 +48,17 @@
                         @endforeach
                     </select>
                 </div>
+
+                <div class="flex items-center gap-2">
+                    <label for="filtroDJ" class="text-sm font-medium text-gray-700 whitespace-nowrap">
+                        DJ actualizada
+                    </label>
+                    <select id="filtroDJ" class="form-select text-sm" name="filtroDJ">
+                        <option value="TODOS" selected>Todos</option>
+                        <option value="SI">Sí</option>
+                        <option value="NO">No</option>
+                    </select>
+                </div>
             </div>
 
             {{-- Filtros: Tipo de personal + Vigencia en una sola fila --}}
@@ -79,17 +90,17 @@
                         </label>
                     @endif
 
-                    @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
+                    @if (/*$tipoPerLimitar == 0 ||*/ $tipoPerLimitar == 3 )
                         <label class="flex items-center gap-1.5 cursor-pointer">
                             <input type="radio" class="form-radio text-primary" id="radioEsp" name="tipo_per" value="ESPECIAL">
                             <span class="text-sm">Especial</span>
                         </label>
                     @endif
                 </div>
-
+                 <br>
                 {{-- Separador vertical --}}
                 <div class="hidden sm:block w-px h-5 bg-gray-200"></div>
-
+                <br>
                 {{-- Vigencia --}}
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Vigencia</span>

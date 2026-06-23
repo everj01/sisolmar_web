@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Permisos;
 
@@ -20,21 +19,12 @@ class AuthenticatedSessionController extends Controller
 
     public function store(Request $request)
     {
-        $credentials = $request->only('username', 'password');
-
-        $user = User::where('usuario', $credentials['username'])
+        $user = User::where('usuario', $request->username)
             ->where('habilitado', 1)
             ->first();
 
-        if ($user && Hash::check($credentials['password'], $user->clave)) {
-            Auth::login($user); // Iniciar sesión
-
-            $menus_per = DB::table('sw_submenus')
-            ->join('sw_roles_permisos', 'sw_submenus.codigo', '=', 'sw_roles_permisos.codSubmenu')
-            ->where('sw_roles_permisos.codRol', $user->tipo_rol)
-            ->orderBy('sw_submenus.orden', 'asc')  
-            ->select('sw_submenus.*')
-            ->get();
+        if ($user && Hash::check($request->password, $user->clave)) {
+            Auth::login($user);
 
             session()->put('nombre', $user->nombre_1);
             session()->put('apellido', $user->apellido_1);
@@ -42,15 +32,14 @@ class AuthenticatedSessionController extends Controller
             session()->put('tipo_rol', $user->tipo_rol);
             session()->put('limitarTipoPer', $user->limitarTipoPer);
             session()->put('limitarSucursales', $user->limitarSucursal);
-            session()->put('menu', $menus_per);
-            $rolId = $user->tipo_rol; // o como tengas el rol en tu tabla users
-            $permisos = Permisos::getPermissionsByRole($rolId);
-            session(['permisos' => $permisos]); // Guardar en sesión
+
+            $permisos = Permisos::getPermissionsByRole($user->tipo_rol);
+            session(['permisos' => $permisos]);
 
             return redirect()->intended('/home');
         }
 
-        return redirect()->route('login')->withErrors(['error' => 'Credenciales inválidas']);
+        return redirect()->route('login')->with('error', 'Credenciales inválidas. Verifica tu usuario y contraseña.');
     }
 
     public function destroy(Request $request)

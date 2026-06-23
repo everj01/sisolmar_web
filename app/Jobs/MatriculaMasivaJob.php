@@ -318,14 +318,14 @@ class MatriculaMasivaJob implements ShouldQueue
                 }
             }
 
-            foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
-                EnviarCorreosBienvenidaJob::dispatch(
-                    personalIds: $chunkCorreos,
-                    nombreCurso: $curso->nombre,
-                    fechaInicio: Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
-                    fechaFin: Carbon::parse($prog->fecha_fin)->format('d/m/Y'),
-                )->onQueue('emails');
-            }
+            // foreach (array_chunk($matriculados, 50) as $chunkCorreos) {
+            //     EnviarCorreosBienvenidaJob::dispatch(
+            //         personalIds: $chunkCorreos,
+            //         nombreCurso: $curso->nombre,
+            //         fechaInicio: Carbon::parse($prog->fecha_inicio)->format('d/m/Y'),
+            //           fechaFin: Carbon::parse($prog->fecha_final)->format('d/m/Y'),
+            //     )->onQueue('emails');
+            // }
 
             Log::info("MatriculaMasivaJob [{$this->modo}] finalizado. Éxitos: {$enviados}, Fallos: {$fallidos}", [
                 'curso_id' => $this->cursoCodigo,

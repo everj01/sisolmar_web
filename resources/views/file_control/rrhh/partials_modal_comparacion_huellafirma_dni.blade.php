@@ -1,7 +1,7 @@
 <div id="modal-biometrico"
     class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-y-auto hidden pointer-events-none">
     <div class="translate-y-10 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 w-full my-8 mx-auto flex flex-col bg-white shadow-sm rounded pointer-events-auto"
-         style="max-width: 1100px;">
+         style="max-width: 1300px;">
         <div class="flex flex-col border border-default-200 shadow-sm rounded-lg overflow-hidden">
 
             <!-- HEADER -->

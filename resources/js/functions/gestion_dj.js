@@ -35,7 +35,7 @@ const PAUSA_ENTRE_REGISTROS = 800;
 
 async function esperarConBackoff(intento, baseMs = 1000) {
     const espera = baseMs * Math.pow(2, intento); // 1s, 2s, 4s, 8s...
-    const jitter  = Math.random() * 300;           // evita que todo reintente al mismo tiempo
+    const jitter = Math.random() * 300;           // evita que todo reintente al mismo tiempo
     await new Promise(r => setTimeout(r, espera + jitter));
 }
 
@@ -53,7 +53,7 @@ async function obtenerDatosConRetry(codiPers, source = 'migracion', maxReintento
             if (status === 429 && intento < maxReintentos) {
                 // Leer el header Retry-After si el servidor lo manda
                 const retryAfter = err.response?.headers?.['retry-after'];
-                const esperaMs   = retryAfter
+                const esperaMs = retryAfter
                     ? parseInt(retryAfter) * 1000
                     : null;
 
@@ -77,10 +77,10 @@ async function obtenerDatosConRetry(codiPers, source = 'migracion', maxReintento
 function actualizarCategorias() {
     const claseSel = document.getElementById('clase_brevete').value;
     const catSelect = document.getElementById('tipo_vehiculo');
-    
+
     // Limpiar opciones previas
     catSelect.innerHTML = '<option value="">-- Seleccione Categoría --</option>';
-    
+
     if (claseSel && categoriasSe[claseSel]) {
         categoriasSe[claseSel].forEach(item => {
             let opt = document.createElement('option');
@@ -113,56 +113,56 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
 
     // ── Referencias DOM ──────────────────────────────────────
-    const modalDjGestion        = document.getElementById('modalDjGestion');
-    const form                  = document.getElementById('formDatos');
-    const buscarPersonalInput   = document.getElementById("buscarPersonal");
-    const btnNuevaDJ            = document.getElementById('btnNuevaDJ');
-    const cerrarModalBtn        = document.getElementById('cerrarModal');
-    const btnPrevisualizar      = document.getElementById("btnPrevisualizar");
-    const pageSizeSelect        = document.getElementById("page-size");
+    const modalDjGestion = document.getElementById('modalDjGestion');
+    const form = document.getElementById('formDatos');
+    const buscarPersonalInput = document.getElementById("buscarPersonal");
+    const btnNuevaDJ = document.getElementById('btnNuevaDJ');
+    const cerrarModalBtn = document.getElementById('cerrarModal');
+    const btnPrevisualizar = document.getElementById("btnPrevisualizar");
+    const pageSizeSelect = document.getElementById("page-size");
     const pageSizeMigradoSelect = document.getElementById("page-size-migrado");
 
     // Pestañas
     const tabBtnPendiente = document.getElementById('tabBtnPendiente');
-    const tabBtnMigrado   = document.getElementById('tabBtnMigrado');
-    const panelPendiente  = document.getElementById('panelPendiente');
-    const panelMigrado    = document.getElementById('panelMigrado');
+    const tabBtnMigrado = document.getElementById('tabBtnMigrado');
+    const panelPendiente = document.getElementById('panelPendiente');
+    const panelMigrado = document.getElementById('panelMigrado');
 
     // Familia
     const container = document.getElementById('familyContainer');
-    const addBtn    = document.getElementById('addFamilyMember');
+    const addBtn = document.getElementById('addFamilyMember');
 
     // Foto
-    const inputFoto    = document.getElementById("inputFoto");
-    const preview      = document.getElementById("previewFoto");
-    const placeholder  = document.getElementById("placeholderFoto");
-    const btnSubir     = document.getElementById("btnSubirFoto");
-    const btnEliminar  = document.getElementById("btnEliminarFoto");
+    const inputFoto = document.getElementById("inputFoto");
+    const preview = document.getElementById("previewFoto");
+    const placeholder = document.getElementById("placeholderFoto");
+    const btnSubir = document.getElementById("btnSubirFoto");
+    const btnEliminar = document.getElementById("btnEliminarFoto");
 
     // SUCAMEC
-    const cursoSucamec        = document.getElementById("curso_sucamec");
+    const cursoSucamec = document.getElementById("curso_sucamec");
     const institucionContainer = document.getElementById("institucion_container");
-    const institucionInput     = document.getElementById("institucion_laboral");
+    const institucionInput = document.getElementById("institucion_laboral");
 
     // Ubigeos
-    const departamentoSelect    = document.getElementById("departamento_actual");
-    const provinciaSelect       = document.getElementById("provincia_actual");
-    const distritoSelect        = document.getElementById("distrito_actual");
+    const departamentoSelect = document.getElementById("departamento_actual");
+    const provinciaSelect = document.getElementById("provincia_actual");
+    const distritoSelect = document.getElementById("distrito_actual");
 
     const departamentoSelectDni = document.getElementById("departamento_dni");
-    const provinciaSelectDni    = document.getElementById("provincia_dni");
-    const distritoSelectDni     = document.getElementById("distrito_dni");
+    const provinciaSelectDni = document.getElementById("provincia_dni");
+    const distritoSelectDni = document.getElementById("distrito_dni");
 
-    const departamentoSelectNac    = document.getElementById("departamento_nac");
-    const provinciaSelectNac       = document.getElementById("provincia_nac");
-    const distritoSelectNac        = document.getElementById("distrito_nac");
+    const departamentoSelectNac = document.getElementById("departamento_nac");
+    const provinciaSelectNac = document.getElementById("provincia_nac");
+    const distritoSelectNac = document.getElementById("distrito_nac");
 
     // Campos validación PDF
-    const nombreDJtxt   = document.getElementById("nombres_apellidos");
-    const dniDJtxt      = document.getElementById("dni");
+    const nombreDJtxt = document.getElementById("nombres_apellidos");
+    const dniDJtxt = document.getElementById("dni");
 
     // Tagify licencia
-    const inputLicencia  = document.getElementById("licencia_arma");
+    const inputLicencia = document.getElementById("licencia_arma");
     // const tagifyLicencia = inputLicencia ? new Tagify(inputLicencia, { maxTags: 2 }) : null;
 
     const API_BASE = `${VITE_URL_APP}/api/ubicacion`;
@@ -182,36 +182,41 @@ document.addEventListener('DOMContentLoaded', function () {
         locale: "es",
         langs: {
             "es": {
-                pagination: { first:"Primero", first_title:"Primera Página", last:"Final", last_title:"Última Página", prev:"<", prev_title:"Página Anterior", next:">", next_title:"Página Siguiente", all:"Todo" },
+                pagination: { first: "Primero", first_title: "Primera Página", last: "Final", last_title: "Última Página", prev: "<", prev_title: "Página Anterior", next: ">", next_title: "Página Siguiente", all: "Todo" },
                 headerFilters: { default: "Filtrar..." },
-                ajax:  { loading: "Cargando datos...", error: "Error al cargar datos" },
-                data:  { empty: "No hay datos disponibles" }
+                ajax: { loading: "Cargando datos...", error: "Error al cargar datos" },
+                data: { empty: "No hay datos disponibles" }
             }
         },
         columns: [
             { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 3,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres??''} ${d.apellido1??''} ${d.apellido2??''}`.trim(); }
+                title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim(); }
             },
-            { title: "DNI",      field: "dni",      hozAlign: "center", widthGrow: 2 },
+            {
+                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? ''} `.trim(); }
+            },
+
+            { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
+            { title: "Cargo", field: "cargo", hozAlign: "left", widthGrow: 2 }, // 🔥 NUEVA COLUMNA 🔥
             {
                 title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
                     let color = '';
-                    if(val === 'OPERATIVO'){
-                       color = 'border-blue-300 bg-blue-100 text-blue-800' ;
-
-                    }else if (val === 'ADMINISTRATIVO'){
+                    if (val.includes('OPERATIVO')) {
+                        color = 'border-blue-300 bg-blue-100 text-blue-800';
+                    } else if (val.includes('ADMINISTRATIVO')) {
                         color = 'border-purple-300 bg-purple-100 text-purple-800';
-
-                    }else{
-                        color = 'border-black-300 bg-black-100 text-black-800' ;
-
+                    } else if (val.includes('ESPECIAL')) {
+                        color = 'border-orange-300 bg-orange-100 text-orange-800';
+                    } else {
+                        color = 'border-gray-300 bg-gray-100 text-gray-800';
                     }
-                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium">${capitalizeWords(val)}</span>` : '';
+                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium whitespace-nowrap">${capitalizeWords(val)}</span>` : '';
                 }
             },
             {
@@ -242,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     registroSeleccionado._sinSplit = true;
 
                     const codiPers = registroSeleccionado.codPersonal || registroSeleccionado.CODI_PERS || registroSeleccionado.id;
-                    
+
                     // Limpiar caché solo de esta persona
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
@@ -254,129 +259,16 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
 
-    // ── Tabla 2: Migración ───────────────────────────────────
-    const tblPersonasMigrado = new Tabulator("#tblPersonasMigrado", {
-        height: "100%",
-        layout: "fitColumns",
-        responsiveLayout: "collapse",
-        pagination: true,
-        paginationSize: 20,
-        rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
-        locale: "es",
-        langs: {
-            "es": {
-                pagination: { first:"Primero", first_title:"Primera Página", last:"Final", last_title:"Última Página", prev:"<", prev_title:"Página Anterior", next:">", next_title:"Página Siguiente", all:"Todo" },
-                headerFilters: { default: "Filtrar..." },
-                ajax:  { loading: "Cargando datos...", error: "Error al cargar datos" },
-                data:  { empty: "No hay datos disponibles" }
-            }
-        },
-        columns: [
-            { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
-            {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 3,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres??''} ${d.apellido1??''} ${d.apellido2??''}`.trim(); }
-            },
-            { title: "DNI",      field: "dni",      hozAlign: "center", widthGrow: 2 },
-            { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
-            {
-                title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
-                formatter: cell => {
-                    const val = cell.getValue() ?? '';
-                    const color = val === 'OPERATIVO' ? 'border-blue-300 bg-blue-100 text-blue-800' : 'border-purple-300 bg-purple-100 text-purple-800';
-                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium">${capitalizeWords(val)}</span>` : '';
-                }
-            },
-            {
-                title: "Migrado", field: "migrado", hozAlign: "center", widthGrow: 2,
-                formatter: cell => {
-                    const d = cell.getData();
-                    const color = d.migrado === 'Migrado' ? 'border-success bg-success text-white' : 'border-dark-100 bg-dark-100 text-yellow-800';
-                    return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium">${capitalizeWords(d.migrado ?? '')}</span>`.trim();
-                }
-            },
-            {
-                title: "Ultimo Cambio", field: "cambio", hozAlign: "center", widthGrow: 3,
-                formatter: cell => {
-                    const d = cell.getData();
-                    if (d.cambio != null) {
-                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700">
-                            <span class="flex items-center gap-1"><i class='bx bx-calendar'></i> <span>${formatearFechaHora(d.cambio).fecha}</span></span>
-                            <span class="flex items-center gap-1"><i class='bx bx-time-five'></i> <span>${formatearFechaHora(d.cambio).hora}</span></span>
-                        </div>`.trim();
-                    }
-                    return `${d.cambio ?? 'Sin cambios'}`.trim();
-                }
-            },
-            // ── NUEVA COLUMNA ──────────────────────────────────────
-            {
-                title: "PDF", field: "pdf_generado", hozAlign: "center", widthGrow: 1,
-                headerSort: false,
-                formatter: cell => {
-                    const d      = cell.getData();
-                    const cod    = d.codPersonal || d.CODI_PERS || d.id;
-                    const gen    = estaGenerado(cod, d.cambio);
-                    const titulo = gen ? 'Generado — click para resetear' : 'Pendiente';
-                    const color  = gen
-                        ? 'color:#16a34a;font-size:18px;cursor:pointer;'
-                        : 'color:#d1d5db;font-size:18px;cursor:default;';
-                    return `<span title="${titulo}" style="${color}" data-pdf-cod="${cod}" data-pdf-cambio="${d.cambio || ''}">
-                                ${gen ? '✅' : '○'}
-                            </span>`;
-                },
-                cellClick: (e, cell) => {
-                    const span = e.target.closest('[data-pdf-cod]');
-                    if (!span) return;
-                    const cod = span.getAttribute('data-pdf-cod');
-                    if (!estaGenerado(cod, span.getAttribute('data-pdf-cambio'))) return;
-
-                    Swal.fire({
-                        icon: 'question',
-                        title: '¿Resetear marca?',
-                        text: 'Se marcará este registro como pendiente de generar PDF.',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, resetear',
-                        cancelButtonText: 'Cancelar',
-                    }).then(r => {
-                        if (!r.isConfirmed) return;
-                        desmarcarDJGenerado(cod);
-                        cell.getTable().updateOrAddData([{ ...cell.getData() }]);
-                        // Forzar re-render de la fila
-                        cell.getRow().reformat();
-                    });
-                }
-            },
-            // ── FIN NUEVA COLUMNA ──────────────────────────────────
-            {
-                title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
-                formatter: cell => {
-                    const d = cell.getData();
-                    const disabled = d.migrado === 'Migrado' ? 'disabled' : '';
-                    return `<button ${disabled} type="button" class="btn rounded-full form-btn-migrado bg-success/25 text-success hover:bg-success hover:text-white" data-hs-overlay="#modalDjGestion">DJ</button>`;
-                },
-                cellClick: (e, cell) => {
-                    const btn = e.target.closest('.form-btn-migrado');
-                    if (!btn) return;
-                    const rowData  = cell.getRow().getData();
-                    const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
-                    personalDataCache.delete(`${codiPers}_pendiente`);
-                    personalDataCache.delete(`${codiPers}_migracion`);
-                    abrirFormularioDJ(codiPers);
-                }
-            },
-        ],
-    });
-
     // ── Tabla coincidencias ──────────────────────────────────
     const tblPersonasCN = new Tabulator("#tblPersonasCN", {
         height: "100%",
         layout: "fitDataFill",
         responsiveLayout: "collapse",
         columns: [
-            { title: "Código",       field: "CODI_PERS", hozAlign: "center", width: '10%' },
-            { title: "Personal",     field: "personal",  hozAlign: "left",   width: '30%' },
-            { title: "Nro Documento",field: "nroDoc",    hozAlign: "center", width: '15%' },
-            { title: "Sucursal",     field: "sucursal",  hozAlign: "center", width: '18%' },
+            { title: "Código", field: "CODI_PERS", hozAlign: "center", width: '10%' },
+            { title: "Personal", field: "personal", hozAlign: "left", width: '30%' },
+            { title: "Nro Documento", field: "nroDoc", hozAlign: "center", width: '15%' },
+            { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '18%' },
         ],
     });
 
@@ -391,8 +283,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function formatearFechaHora(fechaStr) {
         const fecha = new Date(fechaStr);
         return {
-            fecha: `${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')}/${fecha.getFullYear()}`,
-            hora:  `${String(fecha.getHours()).padStart(2,'0')}:${String(fecha.getMinutes()).padStart(2,'0')}`
+            fecha: `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}/${fecha.getFullYear()}`,
+            hora: `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`
         };
     }
 
@@ -401,8 +293,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function limpiarPreviewFoto() {
-        if (inputFoto)  inputFoto.value = "";
-        if (preview)    { preview.src = ""; preview.classList.add("hidden"); }
+        if (inputFoto) inputFoto.value = "";
+        if (preview) { preview.src = ""; preview.classList.add("hidden"); }
         if (placeholder) placeholder.classList.remove("hidden");
         if (btnEliminar) btnEliminar.classList.add("hidden");
     }
@@ -478,16 +370,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (container) { container.innerHTML = ''; container.insertAdjacentHTML('beforeend', makeFamilyRow()); }
         if (institucionContainer) institucionContainer.classList.add("hidden");
-        if (institucionInput)     institucionInput.value = "";
+        if (institucionInput) institucionInput.value = "";
 
-        if (provinciaSelect)      provinciaSelect.innerHTML = '<option value="">Seleccionar</option>';
-        if (distritoSelect)       distritoSelect.innerHTML  = '<option value="">Seleccionar</option>';
+        if (provinciaSelect) provinciaSelect.innerHTML = '<option value="">Seleccionar</option>';
+        if (distritoSelect) distritoSelect.innerHTML = '<option value="">Seleccionar</option>';
 
-        if (provinciaSelectDni)   provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
-        if (distritoSelectDni)    distritoSelectDni.innerHTML  = '<option value="">Seleccionar</option>';
+        if (provinciaSelectDni) provinciaSelectDni.innerHTML = '<option value="">Seleccionar</option>';
+        if (distritoSelectDni) distritoSelectDni.innerHTML = '<option value="">Seleccionar</option>';
 
-        if (provinciaSelectNac)   provinciaSelectNac.innerHTML = '<option value="">Seleccionar</option>';
-        if (distritoSelectNac)    distritoSelectNac.innerHTML  = '<option value="">Seleccionar</option>';
+        if (provinciaSelectNac) provinciaSelectNac.innerHTML = '<option value="">Seleccionar</option>';
+        if (distritoSelectNac) distritoSelectNac.innerHTML = '<option value="">Seleccionar</option>';
 
         setValue('dj2026_laboral_1', '');
         setValue('dj2026_laboral_2', '');
@@ -502,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
         tabla.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 const field = cell.getAttribute('tabulator-field');
-                if (i === cells.length - 1 || field === 'migrado' || field === 'estado') return;
+                if (i === cells.length - 1 || field === 'migrado' || field === 'estado' || field === 'tipoPer' || field === 'cambio') return;
                 const text = cell.textContent || '';
                 if (valor && text.toLowerCase().includes(valor)) {
                     const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -555,102 +447,125 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => console.error("Error cargando departamentos:", error));
     }
 
-  
 
-    departamentoSelect?.addEventListener("change",    async function () { await cargarProvincias(provinciaSelect, distritoSelect, this.value); });
-    provinciaSelect?.addEventListener("change",       async function () { await cargarDistritos(distritoSelect, this.value); });
-    
+
+    departamentoSelect?.addEventListener("change", async function () { await cargarProvincias(provinciaSelect, distritoSelect, this.value); });
+    provinciaSelect?.addEventListener("change", async function () { await cargarDistritos(distritoSelect, this.value); });
+
     departamentoSelectDni?.addEventListener("change", async function () { await cargarProvincias(provinciaSelectDni, distritoSelectDni, this.value); });
-    provinciaSelectDni?.addEventListener("change",    async function () { await cargarDistritos(distritoSelectDni, this.value); });
-    
+    provinciaSelectDni?.addEventListener("change", async function () { await cargarDistritos(distritoSelectDni, this.value); });
+
     departamentoSelectNac?.addEventListener("change", async function () { await cargarProvincias(provinciaSelectNac, distritoSelectNac, this.value); });
-    provinciaSelectNac?.addEventListener("change",    async function () { await cargarDistritos(distritoSelectNac, this.value); });
+    provinciaSelectNac?.addEventListener("change", async function () { await cargarDistritos(distritoSelectNac, this.value); });
 
     // ============================================================
     // CARGA DE DATOS (API)
     // ============================================================
     function getPersonal() {
+
         axios.get(`${VITE_URL_APP}/get-personal-dj`)
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
-                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                // const filtroSucursal = document.getElementById('filtroSucursalPEN');
-                // if (filtroSucursal) {
-                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-                // }
+                
+                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
+                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+                const filtroCargo = document.getElementById('filtroCargoPEN');
+                if (filtroCargo) {
+                    filtroCargo.innerHTML = '<option value="">Todos</option>';
+                    cargosUnicos.forEach(cargo => {
+                        filtroCargo.add(new Option(cargo, cargo));
+                    });
+                }
+                
                 aplicarFiltrosPEN();
             })
             .catch(error => console.error("Hubo un error:", error));
     }
 
-    function getPersonalMigracion() {
-        axios.get(`${VITE_URL_APP}/api/get-personal-dj-migracion`)
+
+    window.getPersonalSoloDJ = function () {
+
+        axios.get(`${VITE_URL_APP}/get-personal-dj`)
             .then(response => {
                 const datosTabla = response.data;
-                tblPersonasMigrado.setData(datosTabla);
-                // const sucursales = [...new Map(datosTabla.filter(d => d.sucursal).map(d => [d.codSucursal, { cod: d.codSucursal, nombre: d.sucursal }])).values()];
-                // const filtroSucursal = document.getElementById('filtroSucursal');
-                // if (filtroSucursal) {
-                //     filtroSucursal.innerHTML = '<option value="">Todas</option>';
-                //     sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(s => filtroSucursal.add(new Option(s.nombre, s.cod)));
-                // }
-                aplicarFiltrosMigracion();  // ← agrega esta línea al final
-                actualizarCardDesdeSP();
+                tblPersonas.setData(datosTabla);
+
+                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
+                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+                const filtroCargo = document.getElementById('filtroCargoPEN');
+                if (filtroCargo) {
+                    filtroCargo.innerHTML = '<option value="">Todos</option>';
+                    cargosUnicos.forEach(cargo => {
+                        filtroCargo.add(new Option(cargo, cargo));
+                    });
+                }
+
+                aplicarFiltrosPEN();
             })
-            .catch(error => console.error("Hubo un error:", error));
-    }
+            .catch(console.error);
+    };
 
     function actualizarCardDesdeSP(sucursal = '', tipoPer = '') {
         const codSucursal = sucursal || '00';
-        const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+        let codTipoPer = '00';
+
+        if (tipoPer === 'OPERATIVO 4°') codTipoPer = '01';
+        else if (tipoPer === 'OPERATIVO 5°') codTipoPer = '03';
+        else if (tipoPer === 'ADMINISTRATIVO 4°') codTipoPer = '02';
+        else if (tipoPer === 'ADMINISTRATIVO 5°') codTipoPer = '05';
+        else if (tipoPer === 'ESPECIAL') codTipoPer = '06';
+
         axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`, { params: { codSucursal, codTipoPer } })
             .then(response => {
                 if (!response.data.success) return;
-                const datos  = response.data.data;
+                const datos = response.data.data;
                 const listos = datos.filter(d => d.SIP_CAMBIO === 'Ok').length;
-                const total  = datos.length;
+                const total = datos.length;
                 const elFilt = document.getElementById('contadorFiltrado');
-                const elTot  = document.getElementById('contadorTotal');
+                const elTot = document.getElementById('contadorTotal');
                 animarContador(elFilt, parseInt(elFilt?.textContent.replace(/,/g, '')) || 0, listos);
-                animarContador(elTot,  parseInt(elTot?.textContent.replace(/,/g,  '')) || 0, total);
+                animarContador(elTot, parseInt(elTot?.textContent.replace(/,/g, '')) || 0, total);
             })
             .catch(err => console.error('Error card SP:', err));
+    }
+
+
+    function matchBusqueda(data, texto) {
+        const palabras = texto.toLowerCase().split(/\s+/).filter(p => p);
+        const campos = [
+            (data.nombres   ?? '').toLowerCase(),
+            (data.apellido1 ?? '').toLowerCase(),
+            (data.apellido2 ?? '').toLowerCase(),
+            (data.dni       ?? '').toLowerCase(),
+        ];
+        return palabras.every(palabra => campos.some(campo => campo.includes(palabra)));
     }
 
     // ============================================================
     // FILTROS
     // ============================================================
-    function aplicarFiltrosMigracion() {
-        const sucursal = document.getElementById('filtroSucursal')?.value ?? '';
-        const tipoPer  = document.getElementById('filtroTipoPer')?.value ?? '';
-        const filtros  = [];
-        if (sucursal) filtros.push({ field: "codSucursal", type: "=", value: sucursal });
-        if (tipoPer)  filtros.push({ field: "tipoPer",     type: "=", value: tipoPer });
-        const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
-        if (texto) filtros.push([{ field: "nombres", type: "like", value: texto }, { field: "dni", type: "like", value: texto }]);
-        tblPersonasMigrado.setFilter(filtros);
-        actualizarCardDesdeSP(sucursal, tipoPer);
-    }
-
     function aplicarFiltrosPEN() {
         const sucursal = document.getElementById('filtroSucursalPEN')?.value ?? '';
         const tipoPer  = document.getElementById('filtroTipoPerPEN')?.value ?? '';
-        const filtros  = [];
-        if (sucursal) filtros.push({ field: "codSucursal", type: "=", value: sucursal });
-        if (tipoPer)  filtros.push({ field: "tipoPer",     type: "=", value: tipoPer });
-        const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
-        if (texto) filtros.push([{ field: "nombres", type: "like", value: texto }, { field: "dni", type: "like", value: texto }]);
-        tblPersonas.setFilter(filtros);
+        const cargo    = document.getElementById('filtroCargoPEN')?.value ?? ''; // 🔥 Capturar cargo
+        const texto    = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
+
+        tblPersonas.setFilter((data) => {
+            if (sucursal && data.codSucursal !== sucursal) return false;
+            if (tipoPer  && data.tipoPer     !== tipoPer)  return false;
+            
+            // 🔥 CAMBIO AQUÍ: Comparamos el nombre exacto del cargo
+            if (cargo    && data.cargo       !== cargo)    return false; 
+            
+            if (texto    && !matchBusqueda(data, texto))   return false;
+            return true;
+        });
     }
 
-    document.getElementById('filtroSucursal')?.addEventListener('change', aplicarFiltrosMigracion);
-    document.getElementById('filtroTipoPer')?.addEventListener('change',  aplicarFiltrosMigracion);
     document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
-    document.getElementById('filtroTipoPerPEN')?.addEventListener('change',  aplicarFiltrosPEN);
-
-    getPersonalMigracion();
+    document.getElementById('filtroTipoPerPEN')?.addEventListener('change', aplicarFiltrosPEN);
+    document.getElementById('filtroCargoPEN')?.addEventListener('change', aplicarFiltrosPEN); // 🔥 Nuevo Listener
     getPersonal();
 
     // ============================================================
@@ -658,50 +573,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     let tabActiva = 'pendiente';
 
-    function activarTab(tab) {
-        tabActiva = tab;
-
-        // Título dinámico
-        const tituloEl = document.getElementById('tituloTabActiva');
-        const titulos  = { pendiente: 'DJ Listos', migrado: 'Migración' };
-        if (tituloEl) {
-            tituloEl.innerHTML = `<span class="font-medium text-primary">${titulos[tab]}</span>`;
-        }
-
-        if (tab === 'pendiente') {
-            panelPendiente?.classList.remove('hidden');
-            panelMigrado?.classList.add('hidden');
-
-            tabBtnPendiente?.classList.add('bg-white', 'text-primary', 'border-gray-200', 'border-b-white');
-            tabBtnPendiente?.classList.remove('bg-gray-50', 'text-gray-500', 'border-transparent');
-            tabBtnMigrado?.classList.add('bg-gray-50', 'text-gray-500', 'border-transparent');
-            tabBtnMigrado?.classList.remove('bg-white', 'text-primary', 'border-gray-200', 'border-b-white');
-
-        } else {
-            panelPendiente?.classList.add('hidden');
-            panelMigrado?.classList.remove('hidden');
-
-            tabBtnMigrado?.classList.add('bg-white', 'text-primary', 'border-gray-200', 'border-b-white');
-            tabBtnMigrado?.classList.remove('bg-gray-50', 'text-gray-500', 'border-transparent');
-            tabBtnPendiente?.classList.add('bg-gray-50', 'text-gray-500', 'border-transparent');
-            tabBtnPendiente?.classList.remove('bg-white', 'text-primary', 'border-gray-200', 'border-b-white');
-
-            tblPersonasMigrado.redraw(true);
-        }
-    }
-
-    activarTab('pendiente');
-
-    tabBtnPendiente?.addEventListener('click', () => activarTab('pendiente'));
-    tabBtnMigrado?.addEventListener('click',   () => activarTab('migrado'));
-
     // ============================================================
     // BÚSQUEDA Y RESALTADO
     // ============================================================
     buscarPersonalInput?.addEventListener("keyup", function () {
         const valor = this.value.toLowerCase().trim();
         if (tabActiva === 'pendiente') {
-            tblPersonas.setFilter([[{ field:"nombres", type:"like", value:valor }, { field:"dni", type:"like", value:valor }]]);
+            tblPersonas.setFilter([[{ field: "nombres", type: "like", value: valor }, { field: "dni", type: "like", value: valor }]]);
             tblPersonas._ultimoFiltro = valor;
             setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
         } else {
@@ -711,37 +589,41 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    tblPersonas.on("renderComplete",       () => { if (tblPersonas._ultimoFiltro)       resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro); });
-    tblPersonasMigrado.on("renderComplete",() => { if (tblPersonasMigrado._ultimoFiltro) resaltarTexto(tblPersonasMigrado, tblPersonasMigrado._ultimoFiltro); });
+    tblPersonas.on("renderComplete", () => { if (tblPersonas._ultimoFiltro) resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro); });
 
     // ============================================================
     // BOTONES MODAL
     // ============================================================
-    btnNuevaDJ?.addEventListener('click', async function () {
-        const { value: tipoCod, isConfirmed } = await Swal.fire({
-            title: 'Nueva Declaración Jurada',
-            text: 'Selecciona el tipo de personal:',
-            input: 'radio',
-            inputOptions: {
-                '03': 'Operativo',
-                '05': 'Administrativo',
-            },
-            inputValidator: (value) => !value && 'Debes seleccionar un tipo.',
-            showCancelButton: true,
-            confirmButtonText: 'Continuar',
-            cancelButtonText: 'Cancelar',
-        });
+    // btnNuevaDJ?.addEventListener('click', async function () {
+    //     const { value: tipoCod, isConfirmed } = await Swal.fire({
+    //         title: 'Nueva Declaración Jurada',
+    //         text: 'Selecciona el tipo de personal:',
+    //         input: 'radio',
+    //         inputOptions: {
+    //             '03': 'Operativo',
+    //             '05': 'Administrativo',
+    //         },
+    //         inputValidator: (value) => !value && 'Debes seleccionar un tipo.',
+    //         showCancelButton: true,
+    //         confirmButtonText: 'Continuar',
+    //         cancelButtonText: 'Cancelar',
+    //     });
 
-        if (!isConfirmed || !tipoCod) return;
+    //     if (!isConfirmed || !tipoCod) return;
 
-        // Abrir modal con catálogos cargados
-        await abrirFormularioDJ(null);
+    //     // Abrir modal con catálogos cargados
+    //     await abrirFormularioDJ(null);
 
-        // Setear tipo DESPUÉS de que el modal esté abierto
-        setTimeout(() => {
-            setValue('tipo_personal', tipoCod);
-            aplicarVisibilidadPorTipo(tipoCod);
-        }, 150);
+    //     // Setear tipo DESPUÉS de que el modal esté abierto
+    //     setTimeout(() => {
+    //         setValue('tipo_personal', tipoCod);
+    //         aplicarVisibilidadPorTipo(tipoCod);
+    //     }, 150);
+    // });
+
+    btnNuevaDJ?.addEventListener('click', function () {
+        if (window.NuevaDJ) window.NuevaDJ.abrir();
+
     });
 
 
@@ -760,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cursoSucamec?.addEventListener("change", () => actualizarInstitucionVisibility());
 
     // Foto
-    btnSubir?.addEventListener("click",   () => inputFoto?.click());
+    btnSubir?.addEventListener("click", () => inputFoto?.click());
     inputFoto?.addEventListener("change", () => {
         const file = inputFoto.files?.[0];
         if (file) {
@@ -776,8 +658,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btnEliminar?.addEventListener("click", () => limpiarPreviewFoto());
 
     // Page size
-    pageSizeSelect?.addEventListener("change",        function () { tblPersonas.setPageSize(parseInt(this.value)); });
-    pageSizeMigradoSelect?.addEventListener("change", function () { tblPersonasMigrado.setPageSize(parseInt(this.value)); });
+    pageSizeSelect?.addEventListener("change", function () { tblPersonas.setPageSize(parseInt(this.value)); });
 
     // ============================================================
     // PREVISUALIZAR PDF
@@ -813,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 const formData = new FormData(form);
-                
+
                 // Verificar que formData tiene datos
                 console.log('📋 FormData entries:');
                 for (let [key, val] of formData.entries()) {
@@ -823,10 +704,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = Object.fromEntries(formData.entries());
                 console.log('📦 data object:', data);
 
+                const tabActiva = document.querySelector('.tab-btn.border-b-white')?.dataset?.tab ?? 'pendiente';
                 const payload = {
                     ...data,
+                    source: tabActiva,
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
-                    FAM_NOMBRES:    formData.getAll('apellidosNombres[]'),
+                    FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
                     FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
                     dj2026_descripcion: formData.getAll('ocupacion_alterna[]')
                 };
@@ -843,15 +726,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log(esNuevaDJ ? '🆕 Nueva DJ' : '✏️ DJ Existente', payload);
 
 
-                 const response = await axios.post(url, payload);
+                const response = await axios.post(url, payload);
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
                     Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
-                    
+
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
-                        if (window.HSOverlay) { try { HSOverlay.close(modal); } catch (e) {} }
+                        if (window.HSOverlay) { try { HSOverlay.close(modal); } catch (e) { } }
                         modal.classList.add('hidden');
                         modal.classList.remove('hs-overlay-open');
                         document.querySelectorAll('.hs-overlay-backdrop').forEach(el => el.remove());
@@ -860,7 +743,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     getPersonal();
-                    getPersonalMigracion();
                 }
             } catch (error) {
                 console.error('❌ Error completo:', error);
@@ -868,7 +750,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('❌ error.message:', error.message);
 
                 let msg = 'Hubo un error al guardar los datos.';
-                if (error.response?.data?.message)  msg = error.response.data.message;
+                if (error.response?.data?.message) msg = error.response.data.message;
                 else if (error.response?.data?.errors) msg = Object.values(error.response.data.errors).flat().join('<br>');
 
                 Swal.fire({ icon: 'error', title: 'Error', html: msg });
@@ -905,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try { await cargarCatalogos(); } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los catálogos.' }); return; }
 
         for (let i = 0; i < filasVisibles.length; i++) {
-            const fila     = filasVisibles[i];
+            const fila = filasVisibles[i];
             const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
             Swal.update({ html: `Procesando <b>${i + 1}</b> de <b>${filasVisibles.length}</b><br><small>${fila.nombres || codiPers}</small>` });
             try {
@@ -921,8 +803,8 @@ document.addEventListener('DOMContentLoaded', function () {
         Swal.update({ html: 'Comprimiendo archivos...' });
         try {
             const contenidoZip = await zip.generateAsync({ type: 'blob' });
-            const f  = new Date();
-            const ts = f.getFullYear() + String(f.getMonth()+1).padStart(2,'0') + String(f.getDate()).padStart(2,'0') + '_' + String(f.getHours()).padStart(2,'0') + String(f.getMinutes()).padStart(2,'0');
+            const f = new Date();
+            const ts = f.getFullYear() + String(f.getMonth() + 1).padStart(2, '0') + String(f.getDate()).padStart(2, '0') + '_' + String(f.getHours()).padStart(2, '0') + String(f.getMinutes()).padStart(2, '0');
             const link = document.createElement('a');
             link.href = URL.createObjectURL(contenidoZip);
             link.download = `DJ_Masivo_${ts}.zip`;
@@ -931,156 +813,6 @@ document.addEventListener('DOMContentLoaded', function () {
             Swal.fire({ icon: 'success', title: 'Descarga completada', html: `Se generaron <b>${generados}</b> PDF(s) correctamente.` + (errores > 0 ? `<br><small class="text-red-500">${errores} con error.</small>` : '') });
         } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un error al generar el archivo ZIP.' }); }
     });
-
-    // ============================================================
-    // DJ UNIFICADO (un solo PDF — Migración)
-    // ============================================================
-    const btnDJUnificado = document.getElementById('btnDJUnificado');
-    const btnDJUnificadoMigrado = document.getElementById('btnDJUnificadoMigrado');
-
-    btnDJUnificado?.addEventListener('click', async function () {
-        const filasVisibles = tblPersonasMigrado.getData("active");
-        if (!filasVisibles || filasVisibles.length === 0) {
-            Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros visibles para descargar.' });
-            return;
-        }
-
-        const confirmacion = await Swal.fire({
-            icon: 'question', title: 'DJ Unificado',
-            html: `Se generará <b>1 PDF</b> con las <b>${filasVisibles.length}</b> declaraciones juradas.<br>¿Desea continuar?`,
-            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
-        });
-        if (!confirmacion.isConfirmed) return;
-
-        await _generarUnificado(filasVisibles, 'DJ_Unificado');
-    });
-
-
-    btnDJUnificadoMigrado?.addEventListener('click', async function () {
-
-    const todasMigradas = tblPersonasMigrado.getData("active")
-        .filter(fila => fila.migrado === 'Migrado');
-
-    if (!todasMigradas.length) {
-        Swal.fire({ icon: 'info', title: 'Sin resultados', text: 'No hay registros migrados visibles.' });
-        return;
-    }
-
-    const pendientes  = todasMigradas.filter(f => !estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
-    const yaGenerados = todasMigradas.filter(f =>  estaGenerado(f.codPersonal || f.CODI_PERS || f.id, f.cambio));
-
-    const { value: opcion, isConfirmed } = await Swal.fire({
-        title: 'DJ Unificado — Migrados',
-        html: `
-            <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
-                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend">
-                    <input type="radio" name="djopcion" value="pendientes" ${pendientes.length ? '' : 'disabled'}
-                        style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
-                    <div>
-                        <div style="font-weight:600;color:${pendientes.length ? '#111827' : '#9ca3af'};">
-                            Solo pendientes
-                            <span style="margin-left:6px;background:${pendientes.length ? '#dcfce7' : '#f3f4f6'};color:${pendientes.length ? '#16a34a' : '#9ca3af'};font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
-                                ${pendientes.length}
-                            </span>
-                        </div>
-                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
-                            Registros sin ✅ o con cambios nuevos desde la última generación
-                        </div>
-                    </div>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-todos">
-                    <input type="radio" name="djopcion" value="todos"
-                        style="width:16px;height:16px;cursor:pointer;accent-color:#6366f1;">
-                    <div>
-                        <div style="font-weight:600;color:#111827;">
-                            Todos los migrados
-                            <span style="margin-left:6px;background:#dbeafe;color:#1e40af;font-size:11px;padding:1px 8px;border-radius:20px;font-weight:700;">
-                                ${todasMigradas.length}
-                            </span>
-                        </div>
-                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
-                            Incluye los ${yaGenerados.length} ya generados anteriormente
-                        </div>
-                    </div>
-                </label>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Generar PDF',
-        cancelButtonText: 'Cancelar',
-        didOpen: () => {
-            const radios = document.querySelectorAll('input[name="djopcion"]');
-            radios.forEach(r => {
-                r.addEventListener('change', () => {
-                    document.getElementById('lbl-pend').style.borderColor  = r.value === 'pendientes' && r.checked ? '#6366f1' : '#e5e7eb';
-                    document.getElementById('lbl-todos').style.borderColor = r.value === 'todos'      && r.checked ? '#6366f1' : '#e5e7eb';
-                });
-            });
-            const def = pendientes.length ? 'pendientes' : 'todos';
-            const defRadio = document.querySelector(`input[name="djopcion"][value="${def}"]`);
-            if (defRadio) {
-                defRadio.checked = true;
-                document.getElementById(def === 'pendientes' ? 'lbl-pend' : 'lbl-todos').style.borderColor = '#6366f1';
-            }
-        },
-        preConfirm: () => {
-            const sel = document.querySelector('input[name="djopcion"]:checked');
-            if (!sel) { Swal.showValidationMessage('Selecciona una opción.'); return false; }
-            return sel.value;
-        }
-    });
-
-    if (!isConfirmed) return;
-
-    const filasSeleccionadas = opcion === 'pendientes' ? pendientes : todasMigradas;
-
-    if (!filasSeleccionadas.length) {
-        Swal.fire({ icon: 'info', title: 'Sin pendientes', text: 'Todos los registros ya fueron generados. Usa "Todos" para regenerar.' });
-        return;
-    }
-
-    // ── NUEVO: cruzar DNIs contra tblPersonas ──────────────────
-    const dnisMigrados     = filasSeleccionadas.map(f => f.dni);
-    const todasEnTabla1    = tblPersonas.getData();
-    const filasDesdeTabla1 = todasEnTabla1.filter(f => dnisMigrados.includes(f.dni));
-
-    if (!filasDesdeTabla1.length) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Sin coincidencias',
-            text: 'No se encontraron los registros migrados en la tabla de listos/pendientes.'
-        });
-        return;
-    }
-
-    const confirmacion = await Swal.fire({
-        icon: 'question',
-        title: 'Confirmar generación',
-        html: `Se generará <b>1 PDF</b> con <b>${filasDesdeTabla1.length}</b> declaración(es).<br>¿Desea continuar?`,
-        showCancelButton: true,
-        confirmButtonText: 'Sí, generar',
-        cancelButtonText: 'Cancelar'
-    });
-    if (!confirmacion.isConfirmed) return;
-
-    // Usar filasDesdeTabla1 y source 'pendiente' para tomar datos frescos
-    const resultadoGen = await _generarUnificado(filasDesdeTabla1, 'DJ_Unificado_Migrados', 'pendiente');
-
-    if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
-        // Marcar usando los codPersonal originales de la tabla de migrados (por DNI)
-        const marcados = resultadoGen.generadosOk.map(fila1 => {
-            const filaMig = filasSeleccionadas.find(f => f.dni === fila1.dni);
-            return {
-                codPersonal: filaMig?.codPersonal || filaMig?.CODI_PERS || filaMig?.id,
-                fechaCambio: filaMig?.cambio
-            };
-        }).filter(x => x.codPersonal);
-
-        marcarDJGeneradosBatch(marcados);
-    }
-
-    tblPersonasMigrado.redraw(true);
-});
 
     // btnDJUnificadoMigrado?.addEventListener('click', async function () {
 
@@ -1239,7 +971,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         return response.data;
     }
-    
+
 
     // Helper interno para unificar PDFs
     // async function _generarUnificado(filas, nombreBase, source = 'migracion') {
@@ -1359,11 +1091,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // await new Promise(resolve => setTimeout(resolve, 250));
-           // await new Promise(r => setTimeout(r, PAUSA_ENTRE_REGISTROS));
+            // await new Promise(r => setTimeout(r, PAUSA_ENTRE_REGISTROS));
             const pausa = filas.length > 30
-    ? PAUSA_ENTRE_REGISTROS * 1.5
-    : PAUSA_ENTRE_REGISTROS;
-await new Promise(r => setTimeout(r, pausa));
+                ? PAUSA_ENTRE_REGISTROS * 1.5
+                : PAUSA_ENTRE_REGISTROS;
+            await new Promise(r => setTimeout(r, pausa));
         }
 
         if (pdfBlobs.length === 0) {
@@ -1427,20 +1159,19 @@ await new Promise(r => setTimeout(r, pausa));
                             <span style="color:#b91c1c; font-weight:700;">${generadosError.length}</span>
                         </div>
 
-                        ${
-                            generadosError.length > 0
-                                ? `
+                        ${generadosError.length > 0
+                        ? `
                                 <div style="margin-top:10px; font-size:12px; color:#b91c1c;">
                                     <b>Detalle de fallas:</b><br>
                                     ${generadosError.map(x => {
-                                        const fila = x.fila || {};
-                                        const nombre = fila.nombres || fila.CODI_PERS || fila.id || 'Registro';
-                                        return `• ${nombre}: ${x.motivo}`;
-                                    }).join('<br>')}
+                            const fila = x.fila || {};
+                            const nombre = fila.nombres || fila.CODI_PERS || fila.id || 'Registro';
+                            return `• ${nombre}: ${x.motivo}`;
+                        }).join('<br>')}
                                 </div>
                                 `
-                                : ''
-                        }
+                        : ''
+                    }
                     </div>
                 `
             });
@@ -1506,7 +1237,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
     try {
         const modal = document.getElementById('modalDjGestion');
 
-       if (codiPers == null) {
+        if (codiPers == null) {
             Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             // En lugar de limpiarFormulario() — reset manual con lo que sí es global
@@ -1519,8 +1250,8 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             // Cargar departamentos para los 3 ubigeos
             const depts = await getUbicacionCached({ type: 'dept' });
             populateSelect('#departamento_actual', depts);
-            populateSelect('#departamento_dni',    depts);
-            populateSelect('#departamento_nac',    depts);
+            populateSelect('#departamento_dni', depts);
+            populateSelect('#departamento_nac', depts);
 
             Swal.close();
 
@@ -1576,6 +1307,11 @@ async function cargarCatalogos(source = 'migracion') {
             populateSelect('#PERS_GRUP_SANGRE', sangre);
             populateSelect('#PERS_ESTADO_CIVIL', estados_civiles);
             populateSelect('#LAB_TIPO_ARMA', tipos_arma);
+            // Poblar estado civil del modal original
+            populateSelect('#estado_civil', response.data.estados_civiles ?? []);
+
+            // Poblar sistema previsional del modal original
+            populateSelect('#sistema_previsional', response.data.sistemas_previsionales ?? []);
 
             window.allCarreras = carreras;
             catalogosCache = response.data;
@@ -1636,41 +1372,41 @@ async function llenarFormulario(data) {
     setValue('tipo_personal', tipotrab);
     aplicarVisibilidadPorTipo(tipotrab);
 
-    setValue('#nombres_apellidos', `${data.NOMB_1||''} ${data.NOMB_2||''} ${data.APEL_1||''} ${data.APEL_2||''}`);
-    setValue('#nombre1',          data.NOMB_1 || '');
-    setValue('#nombre2',          data.NOMB_2 || '');
+    setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
+    setValue('#nombre1', data.NOMB_1 || '');
+    setValue('#nombre2', data.NOMB_2 || '');
     setValue('#apellido_paterno', data.APEL_1 || '');
     setValue('#apellido_materno', data.APEL_2 || '');
-    setValue('#dni',              data.NRO_DOCU_IDEN      ? data.NRO_DOCU_IDEN.trim()      : '');
-    setValue('#caduca',           formatDateForInput(data.PERS_FECHCADUCADNI) ? formatDateForInput(data.PERS_FECHCADUCADNI) : '');
-    setValue('#estado_civil',     data.ESCI_CODIGO        ? data.ESCI_CODIGO.trim()        : '');
-    setValue('#sexo',             data.PERS_SEXO          ? data.PERS_SEXO.trim()          : data.SEXO ? data.SEXO.trim() : '');
+    setValue('#dni', data.NRO_DOCU_IDEN ? data.NRO_DOCU_IDEN.trim() : '');
+    setValue('#caduca', formatDateForInput(data.PERS_FECHCADUCADNI) ? formatDateForInput(data.PERS_FECHCADUCADNI) : '');
+    setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
+    setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
-    setValue('#sabe_nadar',       data.PERS_SNADAR        ? data.PERS_SNADAR.trim()        : '');
-    setValue('#ciudad_nacimiento',data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
+    setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
+    setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
     // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
     // setValue('#distrito_nac',data.DIST_NACI ? data.DIST_NACI.trim() : '');
 
-    setValue('#dj2026_laboral_1', data.dj2026_laboral_1   ? data.dj2026_laboral_1.trim()   : '');
-    setValue('#dj2026_laboral_2', data.dj2026_laboral_2   ? data.dj2026_laboral_2.trim()   : '');
+    setValue('#dj2026_laboral_1', data.dj2026_laboral_1 ? data.dj2026_laboral_1.trim() : '');
+    setValue('#dj2026_laboral_2', data.dj2026_laboral_2 ? data.dj2026_laboral_2.trim() : '');
 
-    setValue('#celular',  data.PERS_TELEFONO ? data.PERS_TELEFONO.trim() : '');
-    setValue('#correo',   data.PERS_EMAIL    ? data.PERS_EMAIL.trim()    : '');
+    setValue('#celular', data.PERS_TELEFONO ? data.PERS_TELEFONO.trim() : '');
+    setValue('#correo', data.PERS_EMAIL ? data.PERS_EMAIL.trim() : '');
     setValue('#whatsapp', data.PERS_WHATSAPP ? data.PERS_WHATSAPP.trim() : '');
 
     setValue('#tipo_sangre', data.tipo_sangr ? data.tipo_sangr.trim() : '');
-    setValue('#peso',        data.peso_kilo  ? data.peso_kilo.trim()  : '');
-    setValue('#talla',       data.tall_metr  ? data.tall_metr.trim()  : '');
+    setValue('#peso', data.peso_kilo ? data.peso_kilo.trim() : '');
+    setValue('#talla', data.tall_metr ? data.tall_metr.trim() : '');
 
-    setValue('#sistema_previsional', data.CODI_SIST_PENS   ? data.CODI_SIST_PENS.trim()   : '');
-    setValue('#essalud',             data.ESSALUD           ? data.ESSALUD.trim()           : '');
-    setValue('#pensionista',         data.PERS_PENSIONISTA  ? data.PERS_PENSIONISTA.trim()  : '');
+    setValue('#sistema_previsional', data.CODI_SIST_PENS ? data.CODI_SIST_PENS.trim() : '');
+    setValue('#essalud', data.ESSALUD ? data.ESSALUD.trim() : '');
+    setValue('#pensionista', data.PERS_PENSIONISTA ? data.PERS_PENSIONISTA.trim() : '');
 
     setValue('#grado_instruccion', data.PERS_GRADO_INSTRUCCION ? data.PERS_GRADO_INSTRUCCION.trim() : '');
-    if(data.CARR_CODIGO  == '999999'){
-        setValue('#institucion',     data.IEDU_CODIGO   ? data.IEDU_CODIGO.trim()     :  '299999999');
+    if (data.CARR_CODIGO == '999999') {
+        setValue('#institucion', data.IEDU_CODIGO ? data.IEDU_CODIGO.trim() : '299999999');
         if (data.IEDU_CODIGO && window.allCarreras) {
             const selCarrera = document.getElementById('carrera');
             if (selCarrera) {
@@ -1687,8 +1423,8 @@ async function llenarFormulario(data) {
             }
         }
 
-    }else{
-        setValue('#institucion',       data.IEDU_CODIGO            ? data.IEDU_CODIGO.trim()            : '999999');
+    } else {
+        setValue('#institucion', data.IEDU_CODIGO ? data.IEDU_CODIGO.trim() : '999999');
         if (data.IEDU_CODIGO && window.allCarreras) {
             const selCarrera = document.getElementById('carrera');
             if (selCarrera) {
@@ -1705,53 +1441,53 @@ async function llenarFormulario(data) {
             }
         }
     }
-    
-    setValue('#carrera',           data.CARR_CODIGO            ? data.CARR_CODIGO.trim()            : '999999');
-    setValue('#anio_egreso',       data.EGRESO_EDUCATIVO       ? data.EGRESO_EDUCATIVO.trim()       : '');
 
-    setValue('#embargos',          data.PERS_EMBARGO  ? data.PERS_EMBARGO.trim()  : '');
-    setValue('#consumo_sustancias',data.PERS_SMO   ? data.PERS_SMO.trim()   : '');
-    setValue('#cuenta_banco',      data.dj2026_banco  ? data.dj2026_banco.trim()  : '');
+    setValue('#carrera', data.CARR_CODIGO ? data.CARR_CODIGO.trim() : '999999');
+    setValue('#anio_egreso', data.EGRESO_EDUCATIVO ? data.EGRESO_EDUCATIVO.trim() : '');
 
-    setValue('#direccion_actual',  data.DIRECCION      ? data.DIRECCION.trim()      : '');
-    setValue('#direccion_dni',     data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
+    setValue('#embargos', data.PERS_EMBARGO ? data.PERS_EMBARGO.trim() : '');
+    setValue('#consumo_sustancias', data.PERS_SMO ? data.PERS_SMO.trim() : '');
+    setValue('#cuenta_banco', data.dj2026_banco ? data.dj2026_banco.trim() : '');
 
-    cargarUbicaciones('actual', data.PERS_DEPT_ACT   ?.trim()??'', data.PERS_PROV_ACT   ?.trim()??'', data.PERS_DIST_ACT   ?.trim()??'');
-    cargarUbicaciones('dni',    data.PERS_DPTO_DIRDNI?.trim()??'', data.PERS_PROV_DIRDNI?.trim()??'', data.PERS_DIST_DIRDNI?.trim()??'');
-    cargarUbicaciones('nac',    data.DEPA_CODIGO_NACI  ?.trim()??'', data.PROVI_CODIGO_NACI ?.trim()??'', data.DIST_NACI?.trim()??'');
+    setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
+    setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
+
+    cargarUbicaciones('actual', data.PERS_DEPT_ACT?.trim() ?? '', data.PERS_PROV_ACT?.trim() ?? '', data.PERS_DIST_ACT?.trim() ?? '');
+    cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI?.trim() ?? '', data.PERS_PROV_DIRDNI?.trim() ?? '', data.PERS_DIST_DIRDNI?.trim() ?? '');
+    cargarUbicaciones('nac', data.DEPA_CODIGO_NACI?.trim() ?? '', data.PROVI_CODIGO_NACI?.trim() ?? '', data.DIST_NACI?.trim() ?? '');
 
 
-    setValue('#ocupacion_principal',  data.dj2026_ocupacion_principal);
-    setValue('#experiencia_anios',    data.dj2026_experiencia_anios ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
-    setValue('#familiar_empresa',     data.dj2026_familiar_empresa    ? data.dj2026_familiar_empresa.trim()    : '');
-    setValue('#familiar_nombre',      data.dj2026_familiar_nombre     ? data.dj2026_familiar_nombre.trim()     : '');
-    setValue('#familiar_parentesco',  data.dj2026_familiar_parentesco ? data.dj2026_familiar_parentesco.trim() : '');
+    setValue('#ocupacion_principal', data.dj2026_ocupacion_principal);
+    setValue('#experiencia_anios', data.dj2026_experiencia_anios ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
+    setValue('#familiar_empresa', data.dj2026_familiar_empresa ? data.dj2026_familiar_empresa.trim() : '');
+    setValue('#familiar_nombre', data.dj2026_familiar_nombre ? data.dj2026_familiar_nombre.trim() : '');
+    setValue('#familiar_parentesco', data.dj2026_familiar_parentesco ? data.dj2026_familiar_parentesco.trim() : '');
 
-    setValue('#curso_sucamec',  data.PERS_CONDISCAMEC    ? data.PERS_CONDISCAMEC.trim()    : '');
-    setValue('#sucamec_obs',    data.PERS_NRODISCAMEC    ? data.PERS_NRODISCAMEC.trim()    : '');
-    setValue('#smo',            data.PERS_SMO            ? data.PERS_SMO.trim()            : '');
-    setValue('#licencia_arma',  data.PERS_NROLICENCIA    ? data.PERS_NROLICENCIA.trim()    : '');
-    setValue('#tipo_arma',      data.PERS_TIPOARMA       ? data.PERS_TIPOARMA.trim()       : '');
-    setValue('#arma_propia',    data.PERS_CONARMAS       ? data.PERS_CONARMAS.trim()       : '');
-    setValue('#brevete',        data.PERS_BREVETE        ? data.PERS_BREVETE.trim()        : '');
-    setValue('#clase_brevete',  data.CLASE_BREVETE       ? data.CLASE_BREVETE.trim()       : '');
+    setValue('#curso_sucamec', data.PERS_CONDISCAMEC ? data.PERS_CONDISCAMEC.trim() : '');
+    setValue('#sucamec_obs', data.PERS_NRODISCAMEC ? data.PERS_NRODISCAMEC.trim() : '');
+    setValue('#smo', data.PERS_SMO ? data.PERS_SMO.trim() : '');
+    setValue('#licencia_arma', data.PERS_NROLICENCIA ? data.PERS_NROLICENCIA.trim() : '');
+    setValue('#tipo_arma', data.PERS_TIPOARMA ? data.PERS_TIPOARMA.trim() : '');
+    setValue('#arma_propia', data.PERS_CONARMAS ? data.PERS_CONARMAS.trim() : '');
+    setValue('#brevete', data.PERS_BREVETE ? data.PERS_BREVETE.trim() : '');
+    setValue('#clase_brevete', data.CLASE_BREVETE ? data.CLASE_BREVETE.trim() : '');
     actualizarCategorias();  // ← puebla el select tipo_vehiculo según la clase
-    setValue('#tipo_vehiculo',  data.CATEGORIA_BREVETE  ? data.CATEGORIA_BREVETE.trim()  : '');
-    setValue('#vehiculo_propio',data.PERS_VEHICULO_PROPIO? data.PERS_VEHICULO_PROPIO.trim(): '');
+    setValue('#tipo_vehiculo', data.CATEGORIA_BREVETE ? data.CATEGORIA_BREVETE.trim() : '');
+    setValue('#vehiculo_propio', data.PERS_VEHICULO_PROPIO ? data.PERS_VEHICULO_PROPIO.trim() : '');
 
-    setValue('#empresa_anterior',  data.PERS_CTRABANT    ? data.PERS_CTRABANT.trim()    : '');
-    setValue('#cargo_anterior',    data.PERS_CARGOTRABANT? data.PERS_CARGOTRABANT.trim(): '');
+    setValue('#empresa_anterior', data.PERS_CTRABANT ? data.PERS_CTRABANT.trim() : '');
+    setValue('#cargo_anterior', data.PERS_CARGOTRABANT ? data.PERS_CARGOTRABANT.trim() : '');
     setValue('#duracion_anterior', data.PERS_DURACIONANT ? data.PERS_DURACIONANT.trim() : '');
 
-    setValue('#contacto_emergencia',   data.PERS_NOMCONTACTO  ? data.PERS_NOMCONTACTO.trim()  : '');
-    setValue('#celular_emergencia',    data.PERS_NROEMERGENCIA? data.PERS_NROEMERGENCIA.trim(): '');
-    setValue('#parentesco_emergencia', data.PERS_EMERC_FAMILIAR      ? data.PERS_EMERC_FAMILIAR.trim()      : '');
+    setValue('#contacto_emergencia', data.PERS_NOMCONTACTO ? data.PERS_NOMCONTACTO.trim() : '');
+    setValue('#celular_emergencia', data.PERS_NROEMERGENCIA ? data.PERS_NROEMERGENCIA.trim() : '');
+    setValue('#parentesco_emergencia', data.PERS_EMERC_FAMILIAR ? data.PERS_EMERC_FAMILIAR.trim() : '');
 
     if (data.FOTO_PATH) {
         const img = document.getElementById('previewFoto');
         const placeholderEl = document.getElementById('placeholderFoto');
         if (img) {
-            img.src = data.FOTO_PATH;
+            img.src = data.FOTO_PATH + '?v=' + (Math.floor(Math.random() * 900) + 100);
             img.classList.remove('hidden');
             if (placeholderEl) placeholderEl.classList.add('hidden');
             document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
@@ -1766,9 +1502,9 @@ function renderFamiliares(familiares) {
     container.innerHTML = '';
 
     const allFam = [
-        ...(familiares.padres   || []),
-        ...(familiares.madre    || []),
-        ...(familiares.hijos    || []),
+        ...(familiares.padres || []),
+        ...(familiares.madre || []),
+        ...(familiares.hijos || []),
         ...(familiares.conyugue || [])
     ];
 
@@ -1784,7 +1520,7 @@ function addFamiliarRow(data = {}, container = null) {
     if (data.FECH_NACI) {
         const f = String(data.FECH_NACI);
         fechaFormateada = (f.length >= 8 && !f.includes('-') && !f.includes('/'))
-            ? `${f.substring(0,4)}-${f.substring(4,6)}-${f.substring(6,8)}`
+            ? `${f.substring(0, 4)}-${f.substring(4, 6)}-${f.substring(6, 8)}`
             : formatDateForInput(f);
     }
 
@@ -1796,13 +1532,13 @@ function addFamiliarRow(data = {}, container = null) {
             <label class="dj-label">Parentesco</label>
             <select name="parentesco[]" class="dj-select">
                 <option value="">—</option>
-                ${['PADRE','MADRE','CONYUGE','HIJO']
-                    .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
+                ${['PADRE', 'MADRE', 'CONYUGE', 'HIJO']
+            .map(p => `<option value="${p}" ${data.TIPO_RELA === p ? 'selected' : ''}>${p.charAt(0) + p.slice(1).toLowerCase()}</option>`).join('')}
             </select>
         </div>
         <div>
             <label class="dj-label">Apellidos y Nombres</label>
-            <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres||''}" placeholder="Apellidos y nombres completos">
+            <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres || ''}" placeholder="Apellidos y nombres completos">
         </div>
         <div>
             <label class="dj-label">Fecha de Nacimiento</label>
@@ -1811,26 +1547,26 @@ function addFamiliarRow(data = {}, container = null) {
         <div>
             <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
         </div>`;
-        // row.innerHTML = `
-        // <div>
-        //     <label class="dj-label">Parentesco</label>
-        //     <select name="parentesco[]" class="dj-select">
-        //         <option value="">—</option>
-        //         ${['PADRE','MADRE','ESPOSO','ESPOSA','CONYUGE','HIJO','HIJA','HERMANO','HERMANA','ABUELO','ABUELA']
-        //             .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
-        //     </select>
-        // </div>
-        // <div>
-        //     <label class="dj-label">Apellidos y Nombres</label>
-        //     <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres||''}" placeholder="Apellidos y nombres completos">
-        // </div>
-        // <div>
-        //     <label class="dj-label">Fecha de Nacimiento</label>
-        //     <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
-        // </div>
-        // <div>
-        //     <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
-        // </div>`;
+    // row.innerHTML = `
+    // <div>
+    //     <label class="dj-label">Parentesco</label>
+    //     <select name="parentesco[]" class="dj-select">
+    //         <option value="">—</option>
+    //         ${['PADRE','MADRE','ESPOSO','ESPOSA','CONYUGE','HIJO','HIJA','HERMANO','HERMANA','ABUELO','ABUELA']
+    //             .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
+    //     </select>
+    // </div>
+    // <div>
+    //     <label class="dj-label">Apellidos y Nombres</label>
+    //     <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres||''}" placeholder="Apellidos y nombres completos">
+    // </div>
+    // <div>
+    //     <label class="dj-label">Fecha de Nacimiento</label>
+    //     <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
+    // </div>
+    // <div>
+    //     <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
+    // </div>`;
 
     container.appendChild(row);
     row.querySelector('.remove-family')?.addEventListener('click', () => row.remove());
@@ -1897,12 +1633,12 @@ function setValue(selector, value) {
 
 function formatDateForInput(dateValue) {
     if (!dateValue) return '';
-    
+
     // Si tiene T, extraer solo la parte YYYY-MM-DD directamente sin parsear
     if (typeof dateValue === 'string' && dateValue.includes('T')) {
         return dateValue.split('T')[0];
     }
-    
+
     if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue;
     if (typeof dateValue === 'string' && dateValue.includes(' ')) return dateValue.split(' ')[0];
     if (typeof dateValue === 'string' && /^\d{2}[-/]\d{2}[-/]\d{4}$/.test(dateValue)) {
@@ -1910,7 +1646,7 @@ function formatDateForInput(dateValue) {
         return `${anio}-${mes}-${dia}`;
     }
     if (dateValue instanceof Date) {
-        return `${dateValue.getFullYear()}-${String(dateValue.getMonth()+1).padStart(2,'0')}-${String(dateValue.getDate()).padStart(2,'0')}`;
+        return `${dateValue.getFullYear()}-${String(dateValue.getMonth() + 1).padStart(2, '0')}-${String(dateValue.getDate()).padStart(2, '0')}`;
     }
     return '';
 }
@@ -1918,7 +1654,7 @@ function formatDateForInput(dateValue) {
 function animarContador(el, desde, hasta, duracion = 400) {
     if (!el) return;
     const inicio = performance.now();
-    const diff   = hasta - desde;
+    const diff = hasta - desde;
     function tick(ahora) {
         const t = Math.min((ahora - inicio) / duracion, 1);
         el.textContent = Math.round(desde + diff * (1 - Math.pow(1 - t, 3))).toLocaleString();
@@ -1931,25 +1667,25 @@ function animarContador(el, desde, hasta, duracion = 400) {
 // SPLIT VIEW — Backup, diferencias, interactividad
 // ============================================================
 const CAMPO_MAP = {
-    'apellido_paterno':     'APEL_1',         'apellido_materno':    'APEL_2',
-    'nombre1':              'NOMB_1',          'nombre2':             'NOMB_2',
-    'dni':                  'NRO_DOCU_IDEN',   'caduca':              'PERS_FECHCADUCADNI',
-    'estado_civil':         'ESCI_DESCRIPCION','sexo':                'PERS_SEXO',
-    'fecha_nacimiento':     'FECH_NACI',       'sabe_nadar':          'PERS_SNADAR',
-    'celular':              'PERS_TELEFONO',   'correo':              'PERS_EMAIL',
-    'tipo_sangre':          'tipo_sangr',      'peso':                'peso_kilo',
-    'talla':                'tall_metr',       'sistema_previsional': 'DESC_SIST_PENS',
-    'essalud':              'ESSALUD',         'pensionista':         'PERS_PENSIONISTA',
-    'grado_instruccion':    'NIED_ABREVIADO',  'anio_egreso':         'EGRESO_EDUCATIVO',
-    'embargos':             'PERS_EMBARGO',    'consumo_sustancias':  'PERS_SMO',
-    'direccion_actual':     'DIRECCION',       'direccion_dni':       'PERS_DIREC_DNI',
-    'contacto_emergencia':  'PERS_NOMCONTACTO','celular_emergencia':  'PERS_NROEMERGENCIA',
-    'parentesco_emergencia':'PERS_EMERC_FAMILIAR',    'ocupacion_principal': 'PERS_PROFESION',
-    'curso_sucamec':        'PERS_CONDISCAMEC','licencia_arma':       'PERS_NROLICENCIA',
-    'tipo_arma':            'PERS_TIPOARMA',   'arma_propia':         'PERS_CONARMAS',
-    'brevete':              'PERS_BREVETE',    'clase_brevete':       'CLASE_BREVETE',
-    'empresa_anterior':     'PERS_CTRABANT',   'cargo_anterior':      'PERS_CARGOTRABANT',
-    'smo':                  'PERS_CONSMO',
+    'apellido_paterno': 'APEL_1', 'apellido_materno': 'APEL_2',
+    'nombre1': 'NOMB_1', 'nombre2': 'NOMB_2',
+    'dni': 'NRO_DOCU_IDEN', 'caduca': 'PERS_FECHCADUCADNI',
+    'estado_civil': 'ESCI_DESCRIPCION', 'sexo': 'PERS_SEXO',
+    'fecha_nacimiento': 'FECH_NACI', 'sabe_nadar': 'PERS_SNADAR',
+    'celular': 'PERS_TELEFONO', 'correo': 'PERS_EMAIL',
+    'tipo_sangre': 'tipo_sangr', 'peso': 'peso_kilo',
+    'talla': 'tall_metr', 'sistema_previsional': 'DESC_SIST_PENS',
+    'essalud': 'ESSALUD', 'pensionista': 'PERS_PENSIONISTA',
+    'grado_instruccion': 'NIED_ABREVIADO', 'anio_egreso': 'EGRESO_EDUCATIVO',
+    'embargos': 'PERS_EMBARGO', 'consumo_sustancias': 'PERS_SMO',
+    'direccion_actual': 'DIRECCION', 'direccion_dni': 'PERS_DIREC_DNI',
+    'contacto_emergencia': 'PERS_NOMCONTACTO', 'celular_emergencia': 'PERS_NROEMERGENCIA',
+    'parentesco_emergencia': 'PERS_EMERC_FAMILIAR', 'ocupacion_principal': 'PERS_PROFESION',
+    'curso_sucamec': 'PERS_CONDISCAMEC', 'licencia_arma': 'PERS_NROLICENCIA',
+    'tipo_arma': 'PERS_TIPOARMA', 'arma_propia': 'PERS_CONARMAS',
+    'brevete': 'PERS_BREVETE', 'clase_brevete': 'CLASE_BREVETE',
+    'empresa_anterior': 'PERS_CTRABANT', 'cargo_anterior': 'PERS_CARGOTRABANT',
+    'smo': 'PERS_CONSMO',
 };
 
 const FECHA_FIELDS_BK = ['FECH_NACI', 'PERS_FECHCADUCADNI', 'FECH_INGRE', 'FECH_CESE'];
@@ -1957,10 +1693,10 @@ const FECHA_FIELDS_BK = ['FECH_NACI', 'PERS_FECHCADUCADNI', 'FECH_INGRE', 'FECH_
 let _backupData = null;
 
 async function cargarDatosBackup(codiPers) {
-    const wrapper    = document.getElementById('djSplitWrapper');
-    const panelBk    = document.getElementById('panelBackup');
+    const wrapper = document.getElementById('djSplitWrapper');
+    const panelBk = document.getElementById('panelBackup');
     const badgeSplit = document.getElementById('splitModeBadge');
-    const contDiffs  = document.getElementById('contadorDiffs');
+    const contDiffs = document.getElementById('contadorDiffs');
     if (!wrapper) return;
 
     try {
@@ -1968,22 +1704,22 @@ async function cargarDatosBackup(codiPers) {
 
         if (!response.data.success) {
             wrapper.classList.add('no-backup');
-            if (panelBk)    panelBk.style.display    = 'none';
-            if (badgeSplit) badgeSplit.style.display  = 'none';
+            if (panelBk) panelBk.style.display = 'none';
+            if (badgeSplit) badgeSplit.style.display = 'none';
             _backupData = null;
             return;
         }
 
         _backupData = response.data.data;
         wrapper.classList.remove('no-backup');
-        if (panelBk)    panelBk.style.display    = 'block';
-        if (badgeSplit) badgeSplit.style.display  = 'flex';
+        if (panelBk) panelBk.style.display = 'block';
+        if (badgeSplit) badgeSplit.style.display = 'flex';
 
         // Badge fecha mod
         const badge = document.getElementById('bkFechaModBadge');
         if (badge && _backupData.USUA_FECHA_MOD) {
             const f = new Date(_backupData.USUA_FECHA_MOD);
-            if (!isNaN(f)) badge.textContent = `Últ. mod: ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
+            if (!isNaN(f)) badge.textContent = `Últ. mod: ${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()}`;
         }
 
         // Reset visibilidad secciones tipo (fuera del forEach)
@@ -2039,14 +1775,14 @@ async function cargarDatosBackup(codiPers) {
             const familiares = response.data.familiares ?? [];
             tbody.innerHTML = familiares.length === 0
                 ? `<tr><td colspan="3" style="padding:6px 8px;color:#9ca3af;font-style:italic;font-size:11px;">Sin familiares registrados</td></tr>`
-                : familiares.map(f => `<tr><td>${f.TIPO_RELA??'—'}</td><td>${f.Nombres?f.Nombres.toUpperCase().trim():'—'}</td><td>${f.FECH_NACI??'—'}</td></tr>`).join('');
+                : familiares.map(f => `<tr><td>${f.TIPO_RELA ?? '—'}</td><td>${f.Nombres ? f.Nombres.toUpperCase().trim() : '—'}</td><td>${f.FECH_NACI ?? '—'}</td></tr>`).join('');
         }
 
         // Diferencias (con delay para que el form esté lleno)
         setTimeout(() => {
             const diffs = marcarDiferencias();
             if (contDiffs) {
-                if (diffs > 0) { contDiffs.style.display = 'inline-block'; contDiffs.textContent = `${diffs} campo${diffs>1?'s':''} diferente${diffs>1?'s':''}`; }
+                if (diffs > 0) { contDiffs.style.display = 'inline-block'; contDiffs.textContent = `${diffs} campo${diffs > 1 ? 's' : ''} diferente${diffs > 1 ? 's' : ''}`; }
                 else contDiffs.style.display = 'none';
             }
         }, 300);
@@ -2056,7 +1792,7 @@ async function cargarDatosBackup(codiPers) {
     } catch (err) {
         console.warn('Sin backup DJ:', err);
         wrapper.classList.add('no-backup');
-        if (panelBk)    panelBk.style.display   = 'none';
+        if (panelBk) panelBk.style.display = 'none';
         if (badgeSplit) badgeSplit.style.display = 'none';
         _backupData = null;
     }
@@ -2074,14 +1810,14 @@ function marcarDiferencias() {
         if (!inputEl) return;
 
         let valForm = String(inputEl.value ?? '').trim();
-        let valBk   = String(_backupData[bkField] ?? '').trim();
+        let valBk = String(_backupData[bkField] ?? '').trim();
 
         if (FECHA_FIELDS_BK.includes(bkField) && valBk) {
             valBk = valBk.replace('T', ' ').split(' ')[0];
         }
 
         let normForm = valForm.toUpperCase();
-        let normBk   = valBk.toUpperCase();
+        let normBk = valBk.toUpperCase();
 
         console.log('a ', normForm);
         console.log('b ', normBk);
@@ -2159,7 +1895,7 @@ function activarInteractividad() {
     const panelForm = document.getElementById('panelForm');
     if (!panelForm) return;
 
-    if (panelForm._splitFocusIn)  panelForm.removeEventListener('focusin',  panelForm._splitFocusIn);
+    if (panelForm._splitFocusIn) panelForm.removeEventListener('focusin', panelForm._splitFocusIn);
     if (panelForm._splitFocusOut) panelForm.removeEventListener('focusout', panelForm._splitFocusOut);
 
     panelForm._splitFocusIn = e => {
@@ -2180,12 +1916,12 @@ function activarInteractividad() {
         }, 150);
     };
 
-    panelForm.addEventListener('focusin',  panelForm._splitFocusIn);
+    panelForm.addEventListener('focusin', panelForm._splitFocusIn);
     panelForm.addEventListener('focusout', panelForm._splitFocusOut);
 }
 
 function aplicarVisibilidadBackup(tipoCod) {
-    const esOperativo      = tipoCod == '03' || tipoCod == '01';
+    const esOperativo = tipoCod == '03' || tipoCod == '01';
     const esAdministrativo = tipoCod == '05' || tipoCod == '02';
 
     document.querySelectorAll('.bk-tipo-section[data-bk-tipo="operativo"]')
@@ -2196,9 +1932,9 @@ function aplicarVisibilidadBackup(tipoCod) {
 
 // ── La función original queda sin los querySelectorAll del backup ──
 function aplicarVisibilidadPorTipo(tipoCod) {
-    const esOperativo      = tipoCod == '03' || tipoCod == '01';
+    const esOperativo = tipoCod == '03' || tipoCod == '01';
     const esAdministrativo = tipoCod == '05' || tipoCod == '02';
-    const esEspecial       = tipoCod == '06';
+    const esEspecial = tipoCod == '06';
 
     // Solo afecta el panel del formulario (derecho)
     document.querySelectorAll('[data-tipo="operativo"]')
@@ -2215,22 +1951,22 @@ function aplicarVisibilidadPorTipo(tipoCod) {
         if (headerTitle) headerTitle.parentNode.insertBefore(badge, headerTitle.nextSibling);
     }
 
-    if (esOperativo)           { badge.textContent = 'Operativo — RH 01';    badge.style.background = '#dbeafe'; badge.style.color = '#1e40af'; }
+    if (esOperativo) { badge.textContent = 'Operativo — RH 01'; badge.style.background = '#dbeafe'; badge.style.color = '#1e40af'; }
     else if (esAdministrativo) { badge.textContent = 'Administrativo — RH 02'; badge.style.background = '#d1fae5'; badge.style.color = '#065f46'; }
-    else                       { badge.textContent = ''; }
+    else { badge.textContent = ''; }
 }
 
 function limpiarSplitView() {
     _backupData = null;
-    const wrapper    = document.getElementById('djSplitWrapper');
-    const panelBk    = document.getElementById('panelBackup');
+    const wrapper = document.getElementById('djSplitWrapper');
+    const panelBk = document.getElementById('panelBackup');
     const badgeSplit = document.getElementById('splitModeBadge');
-    const contDiffs  = document.getElementById('contadorDiffs');
+    const contDiffs = document.getElementById('contadorDiffs');
 
-    if (wrapper)    wrapper.classList.add('no-backup');
-    if (panelBk)    panelBk.style.display    = 'none';
-    if (badgeSplit) badgeSplit.style.display  = 'none';
-    if (contDiffs)  contDiffs.style.display   = 'none';
+    if (wrapper) wrapper.classList.add('no-backup');
+    if (panelBk) panelBk.style.display = 'none';
+    if (badgeSplit) badgeSplit.style.display = 'none';
+    if (contDiffs) contDiffs.style.display = 'none';
 
     document.querySelectorAll('.bk-val').forEach(el => el.textContent = '—');
     document.querySelectorAll('.bk-field').forEach(el => el.classList.remove('is-diff', 'is-active'));
@@ -2248,34 +1984,54 @@ function limpiarSplitView() {
 // BOTONES REPORTES
 // ============================================================
 document.getElementById('btnReporteFaltantes')?.addEventListener('click', async function () {
-    const sucursal   = document.getElementById('filtroSucursal')?.value ?? '00';
-    const tipoPer    = document.getElementById('filtroTipoPer')?.value  ?? '00';
-    const codTipoPer = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    const sucursal = document.getElementById('filtroSucursal')?.value ?? '00';
+    const tipoPer = document.getElementById('filtroTipoPer')?.value ?? '00';
+
+    // Nuevo mapeo para los tipos de personal V2
+    let codTipoPer = '00';
+    if (tipoPer === 'OPERATIVO 4°') codTipoPer = '01';
+    else if (tipoPer === 'OPERATIVO 5°') codTipoPer = '03';
+    else if (tipoPer === 'ADMINISTRATIVO 4°') codTipoPer = '02';
+    else if (tipoPer === 'ADMINISTRATIVO 5°') codTipoPer = '05';
+    else if (tipoPer === 'ESPECIAL') codTipoPer = '06';
+
     const codSucursal = sucursal || '00';
 
     Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
         const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, { params: { codSucursal, codTipoPer, tipo: 1 } });
-        if (!response.data.success || !response.data.data.length) { Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' }); return; }
+
+        if (!response.data.success || !response.data.data.length) {
+            Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' });
+            return;
+        }
+
         const todosLosDatos = response.data.data;
         const soloFaltantes = todosLosDatos.filter(d => d.SIP_CAMBIO === 'Falta');
         Swal.close();
-        if (!soloFaltantes.length) { Swal.fire({ icon: 'info', title: 'Sin faltantes', text: 'Todo el personal está actualizado.' }); return; }
+
+        if (!soloFaltantes.length) {
+            Swal.fire({ icon: 'info', title: 'Sin faltantes', text: 'Todo el personal está actualizado.' });
+            return;
+        }
+
         generarReporteFaltantesPDF(soloFaltantes, todosLosDatos);
-    } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos.' }); }
+    } catch {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos.' });
+    }
 });
 
 document.getElementById('btnReporteActualizacion')?.addEventListener('click', async function () {
-    const sucursal    = document.getElementById('filtroSucursal')?.value ?? '00';
-    const tipoPer     = document.getElementById('filtroTipoPer')?.value  ?? '00';
-    const codTipoPer  = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    const sucursal = document.getElementById('filtroSucursal')?.value ?? '00';
+    const tipoPer = document.getElementById('filtroTipoPer')?.value ?? '00';
+    const codTipoPer = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
     const codSucursal = sucursal || '00';
 
     Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
         const response = await axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, { params: { codSucursal, codTipoPer, tipo: null } });
         if (!response.data.success || !response.data.data.length) { Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' }); return; }
-        const todosLosDatos   = response.data.data;
+        const todosLosDatos = response.data.data;
         const soloActualizados = todosLosDatos.filter(d => d.SIP_CAMBIO === 'Ok');
         Swal.close();
         if (!soloActualizados.length) { Swal.fire({ icon: 'info', title: 'Sin actualizados', text: 'No hay personal actualizado aún.' }); return; }
@@ -2286,7 +2042,7 @@ document.getElementById('btnReporteActualizacion')?.addEventListener('click', as
 // Toggle colapsable DJ Anterior
 document.getElementById('headerDJAnterior')?.addEventListener('click', function () {
     const cuerpo = document.getElementById('cuerpoDJAnterior');
-    const icono  = document.getElementById('iconoDJAnterior');
+    const icono = document.getElementById('iconoDJAnterior');
     if (!cuerpo) return;
     const abierto = cuerpo.style.display !== 'none';
     cuerpo.style.display = abierto ? 'none' : 'block';
@@ -2329,7 +2085,7 @@ function marcarDJGenerado(codPersonal, fechaCambio) {
     const data = getDJGenerados();
     data[codPersonal] = {
         fechaMarcado: new Date().toISOString(),
-        fechaCambio:  fechaCambio || null,
+        fechaCambio: fechaCambio || null,
     };
     localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
 }
@@ -2342,12 +2098,12 @@ function desmarcarDJGenerado(codPersonal) {
 
 function estaGenerado(codPersonal, fechaCambioActual) {
     const data = getDJGenerados();
-    const reg  = data[codPersonal];
+    const reg = data[codPersonal];
     if (!reg) return false;
 
     // Si el registro tuvo cambios DESPUÉS de que se marcó → ya no vale
     if (fechaCambioActual && reg.fechaCambio) {
-        const cambio  = new Date(fechaCambioActual);
+        const cambio = new Date(fechaCambioActual);
         const marcado = new Date(reg.fechaMarcado);
         if (cambio > marcado) return false;
     }
@@ -2356,8 +2112,8 @@ function estaGenerado(codPersonal, fechaCambioActual) {
 
 function limpiarDJGenerados() {
     localStorage.removeItem(DJ_STORAGE_KEY);
-   /* tblPersonasMigrado.redraw(true);
-    Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });*/
+    /* tblPersonasMigrado.redraw(true);
+     Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });*/
 }
 
 
@@ -2395,14 +2151,14 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
 // ============================================================
 (function initExtractorFirmaHuella() {
 
-    let _pdfDoc      = null;
+    let _pdfDoc = null;
     let _lastPageCvs = null;
 
     const el = id => document.getElementById(id);
 
     // ── Conversión mm → px ────────────────────────────────────
     // A4 = 210mm × 297mm. El canvas renderizado tiene canvas.width = 210 * mmX
-    const mmX = cvs => cvs.width  / 210;   // px por mm horizontal
+    const mmX = cvs => cvs.width / 210;   // px por mm horizontal
     const mmY = cvs => cvs.height / 297;   // px por mm vertical
 
     // ── Detectar borde horizontal en el canvas por píxeles ───────
@@ -2411,13 +2167,13 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
     // Funciona con cualquier escala de renderizado.
     function findHorizontalBorder(cvs, fromMm, toMm) {
         const scY = cvs.height / 297;
-        const scX = cvs.width  / 210;
-        const yS  = Math.round(fromMm * scY);
-        const yE  = Math.round(toMm   * scY);
+        const scX = cvs.width / 210;
+        const yS = Math.round(fromMm * scY);
+        const yE = Math.round(toMm * scY);
         // Muestrear solo la franja interior del box (interior a los márgenes)
-        const xL  = Math.round(12  * scX);
-        const xR  = Math.round(198 * scX);
-        const sw  = xR - xL;
+        const xL = Math.round(12 * scX);
+        const xR = Math.round(198 * scX);
+        const sw = xR - xL;
 
         const { data } = cvs.getContext('2d').getImageData(xL, yS, sw, yE - yS);
         let last = -1, inBdr = false;
@@ -2429,7 +2185,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
                 if ((data[p] + data[p + 1] + data[p + 2]) / 3 < 80) dark++;
             }
             if (dark / sw > 0.14 && !inBdr) { last = yS + r; inBdr = true; }
-            else if (dark / sw <= 0.07)      { inBdr = false; }
+            else if (dark / sw <= 0.07) { inBdr = false; }
         }
         return last >= 0 ? last : null;
     }
@@ -2440,7 +2196,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
     function getCropRegion(cvs) {
         const scX = mmX(cvs);
         const scY = mmY(cvs);
-        const n   = _pdfDoc?.numPages ?? 1;
+        const n = _pdfDoc?.numPages ?? 1;
 
         let firmaTopPx;
         if (n >= 2) {
@@ -2453,19 +2209,19 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
 
         // Y de recorte: saltar el grosor del borde de la celda
         // La celda mide 45mm; excluir últimos 9mm de etiquetas → 36mm de contenido
-        const inYTop  = 2.0 * scY;   // clearance del borde (~0.3mm dibujado en PDF)
-        const inYBot  = 0.5 * scY;
-        const yTop    = firmaTopPx + inYTop;
+        const inYTop = 2.0 * scY;   // clearance del borde (~0.3mm dibujado en PDF)
+        const inYBot = 0.5 * scY;
+        const yTop = firmaTopPx + inYTop;
         const yBottom = firmaTopPx + (45 - 9) * scY - inYBot;
 
         // X fijos (marginLeft=10, firmaW=114mm, huellaW=76mm), inset 3mm c/lado
-        const firmaX  = Math.round((10  + 3) * scX);   // → 108mm de ancho neto
-        const firmaW  = Math.round((114 - 6) * scX);
+        const firmaX = Math.round((10 + 3) * scX);   // → 108mm de ancho neto
+        const firmaW = Math.round((114 - 6) * scX);
         const huellaX = Math.round((124 + 3) * scX);   // → 70mm de ancho neto
-        const huellaW = Math.round((76  - 6) * scX);
+        const huellaW = Math.round((76 - 6) * scX);
 
         return {
-            yTop:    Math.max(0,          Math.round(yTop)),
+            yTop: Math.max(0, Math.round(yTop)),
             yBottom: Math.min(cvs.height, Math.round(yBottom)),
             firmaX,
             firmaW,
@@ -2484,7 +2240,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         if (inp) inp.value = '';
         const cont = el('fhPagesContainer');
         if (cont) cont.innerHTML = '';
-        _pdfDoc      = null;
+        _pdfDoc = null;
         _lastPageCvs = null;
     }
 
@@ -2516,7 +2272,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             return;
         }
         try {
-            const buf    = await file.arrayBuffer();
+            const buf = await file.arrayBuffer();
             const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
 
             if (pdfDoc.numPages > 2) {
@@ -2528,7 +2284,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
 
             _pdfDoc = pdfDoc;
             const pages = Math.min(pdfDoc.numPages, 2);
-            el('fhFileName').textContent  = file.name;
+            el('fhFileName').textContent = file.name;
             el('fhPageCount').textContent = `${pages} página${pages > 1 ? 's' : ''}`;
             el('fhFileInfo')?.classList.remove('hidden');
         } catch (err) {
@@ -2555,10 +2311,10 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         container.innerHTML = '';
 
         const numPages = Math.min(_pdfDoc.numPages, 2);
-        const scale    = 1.4;
+        const scale = 1.4;
 
         for (let i = 1; i <= numPages; i++) {
-            const page     = await _pdfDoc.getPage(i);
+            const page = await _pdfDoc.getPage(i);
             const viewport = page.getViewport({ scale });
 
             const wrapper = document.createElement('div');
@@ -2566,14 +2322,14 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
 
             const label = document.createElement('div');
             label.style.cssText = 'font-size:11px;color:#9ca3af;margin-bottom:4px;';
-            label.textContent   = `Página ${i} de ${numPages}`;
+            label.textContent = `Página ${i} de ${numPages}`;
             wrapper.appendChild(label);
 
             const canvasBox = document.createElement('div');
             canvasBox.style.cssText = 'position:relative;display:inline-block;max-width:100%;';
 
             const canvas = document.createElement('canvas');
-            canvas.width  = viewport.width;
+            canvas.width = viewport.width;
             canvas.height = viewport.height;
             canvas.style.cssText = 'display:block;max-width:100%;border:1px solid #d1d5db;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08);';
 
@@ -2583,7 +2339,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             // Overlay solo en la última página
             if (i === numPages) {
                 _lastPageCvs = canvas;
-                const r  = getCropRegion(canvas);
+                const r = getCropRegion(canvas);
                 const cW = canvas.width;
                 const cH = canvas.height;
 
@@ -2609,7 +2365,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
                     return z;
                 };
 
-                canvasBox.appendChild(mkZone(r.firmaX,  r.firmaW,  '✏ Firma'));
+                canvasBox.appendChild(mkZone(r.firmaX, r.firmaW, '✏ Firma'));
                 canvasBox.appendChild(mkZone(r.huellaX, r.huellaW, '● Huella'));
             }
 
@@ -2626,18 +2382,18 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         }
 
         const src = _lastPageCvs;
-        const r   = getCropRegion(src);
-        const cH  = r.yBottom - r.yTop;
+        const r = getCropRegion(src);
+        const cH = r.yBottom - r.yTop;
 
         // Firma
-        const cvF  = el('fhCanvasFirma');
-        cvF.width  = r.firmaW;
+        const cvF = el('fhCanvasFirma');
+        cvF.width = r.firmaW;
         cvF.height = cH;
         cvF.getContext('2d').drawImage(src, r.firmaX, r.yTop, r.firmaW, cH, 0, 0, r.firmaW, cH);
 
         // Huella
-        const cvH  = el('fhCanvasHuella');
-        cvH.width  = r.huellaW;
+        const cvH = el('fhCanvasHuella');
+        cvH.width = r.huellaW;
         cvH.height = cH;
         cvH.getContext('2d').drawImage(src, r.huellaX, r.yTop, r.huellaW, cH, 0, 0, r.huellaW, cH);
 
@@ -2649,7 +2405,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
     function descargarCanvas(canvas, nombre) {
         if (!canvas || canvas.width === 0) return;
         const a = document.createElement('a');
-        a.href     = canvas.toDataURL('image/png');
+        a.href = canvas.toDataURL('image/png');
         a.download = nombre + '.png';
         document.body.appendChild(a);
         a.click();
@@ -2665,7 +2421,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         if (f) cargarPDF(f);
     });
 
-    dropZone?.addEventListener('dragover',  e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('fh-drag-over'); });
+    dropZone?.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('fh-drag-over'); });
     dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('fh-drag-over'));
     dropZone?.addEventListener('drop', e => {
         e.preventDefault();
@@ -2681,22 +2437,22 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         el('fhStep2')?.classList.add('hidden');
         el('fhStep3')?.classList.add('hidden');
         if (inputPdf) inputPdf.value = '';
-        _pdfDoc      = null;
+        _pdfDoc = null;
         _lastPageCvs = null;
     });
 
-    el('fhBtnPreview')?.addEventListener('click',    previsualizarPDF);
-    el('fhBtnExtract')?.addEventListener('click',    extraerImagenes);
+    el('fhBtnPreview')?.addEventListener('click', previsualizarPDF);
+    el('fhBtnExtract')?.addEventListener('click', extraerImagenes);
     el('fhBtnReintentar')?.addEventListener('click', () => {
         el('fhStep2')?.classList.remove('hidden');
         el('fhStep3')?.classList.add('hidden');
     });
 
-    el('fhBtnDownloadFirma')?.addEventListener('click',  () => descargarCanvas(el('fhCanvasFirma'),  'firma_registrada'));
+    el('fhBtnDownloadFirma')?.addEventListener('click', () => descargarCanvas(el('fhCanvasFirma'), 'firma_registrada'));
     el('fhBtnDownloadHuella')?.addEventListener('click', () => descargarCanvas(el('fhCanvasHuella'), 'huella_registrada'));
 
     el('btnExtFirmaHuella')?.addEventListener('click', abrirModal);
-    el('btnCerrarFHModal')?.addEventListener('click',  cerrarModal);
+    el('btnCerrarFHModal')?.addEventListener('click', cerrarModal);
     document.getElementById('modalExtFirmaHuella')?.addEventListener('click', function (e) {
         if (e.target === this) cerrarModal();
     });

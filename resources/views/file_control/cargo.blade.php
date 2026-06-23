@@ -2,7 +2,7 @@
 @section('css')
 @endsection
 @section('content')
-@include("layouts.shared/page-title", ["subtitle" => "File Control", "title" => "Cargos"])
+@include("layouts.shared/page-title", ["subtitle" => "File Control", "title" => "Gestión de Cargos"])
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -51,33 +51,40 @@
     </div>
 </div>
 
-<div class="grid lg:grid-cols-2 gap-6 mt-8">
-    <!-- Listado de cargos -->
-    <div class="card">
+  <div class="grid lg:grid-cols-5 gap-6 mt-8">
+      <!-- Listado de cargos -->
+      <div class="card lg:col-span-3">
         <div class="card-header">
             <h3 class="card-title">Listado de Cargos</h3>
         </div>
         <div class="w-full px-5 py-2 mt-3 ">
-            <div class="flex justify-center items-center gap-4 mb-4 mt-2">
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" 
-                    name="cargoFiltro" id="radioTodos" value="TODOS" checked>
-                    <label class="ms-1.5" for="radioTodos">TODOS</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" 
-                    name="cargoFiltro" id="radioOper" value="OPERATIVO">
-                    <label class="ms-1.5" for="radioOper">OPERATIVO</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" 
-                    name="cargoFiltro" id="radioAdmin" value="ADMINISTRATIVO">
-                    <label class="ms-1.5" for="radioAdmin">ADMINISTRATIVO</label>
-                </div>
-            </div>
-            <div class="flex justify-between">
-                <input type="text" id="buscarCargo" placeholder="Buscar..."
-                class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
+             <div class="flex flex-wrap justify-center items-center gap-4 mb-2 mt-2">
+                  <span class="text font-semibold">Tipo de personal: </span>
+                  <div class="form-check">
+                      <input type="radio" class="form-radio text-primary"
+                      name="cargoFiltro" id="radioTodos" value="TODOS" checked>
+                      <label class="ms-1.5" for="radioTodos">Todos</label>
+                  </div>
+                  <div class="form-check">
+                      <input type="radio" class="form-radio text-primary"
+                      name="cargoFiltro" id="radioOper" value="OPERATIVO">
+                      <label class="ms-1.5" for="radioOper">Operativos</label>
+                  </div>
+                  <div class="form-check">
+                      <input type="radio" class="form-radio text-primary"
+                      name="cargoFiltro" id="radioAdmin" value="ADMINISTRATIVO">
+                      <label class="ms-1.5" for="radioAdmin">Administrativos</label>
+                  </div>
+                  <div class="w-px h-5 bg-gray-300 hidden sm:block"></div>
+                  <span class="text font-semibold">Área: </span>
+                  <select id="filtroArea"
+                      class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white">
+                      <option value="">Todas</option>
+                  </select>
+              </div>
+             <div class="flex justify-between items-center">
+                  <input type="text" id="buscarCargo" placeholder="Buscar..."
+                  class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
                 <div x-data="{ soloActivos: true }" class="flex items-center">
                     <input class="form-switch" type="checkbox" role="switch" id="chkEliminados"
                         x-model="soloActivos">
@@ -114,7 +121,7 @@
     </div>
     
     <!-- Formulario de registro -->
-    <div class="card">
+     <div class="card lg:col-span-2">
         <div class="card-header">
             <h3 class="card-title">Gestión de Cargos&nbsp;&nbsp;&nbsp;<span 
             class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary/25 text-primary-800"
@@ -153,17 +160,21 @@
                         </select>
                     </div>
                     
-                    <div>
-                        <label for="nombre"
-                            class="text-default-800 text-sm font-medium inline-block mb-2">Nombre</label>
-                        <input type="text" id="nombre" class="form-input" x-model="nameCargo" placeholder="Nombre del cargo" autocomplete="off"
-                            @input="const pos = $event.target.selectionStart;
-                                    nameCargo = nameCargo.toUpperCase();
-                                    $nextTick(() => {
-                                        $event.target.setSelectionRange(pos, pos);
-                                    });"
-                            required>
-                    </div>
+                     <div>
+                          <label for="nombre"
+                              class="text-default-800 text-sm font-medium inline-block mb-2">Nombre</label>
+                          <input type="text" id="nombre" class="form-input" x-model="nameCargo" placeholder="Nombre del cargo" autocomplete="off"
+                              @input="const pos = $event.target.selectionStart;
+                                      nameCargo = nameCargo.toUpperCase();
+                                      $nextTick(() => {
+                                          $event.target.setSelectionRange(pos, pos);
+                                      });"
+                              required>
+                          <div id="avisoNombreRepetido" class="hidden mt-1 flex items-center gap-2 px-3 py-2 rounded-md bg-yellow-50 border border-yellow-300 text-yellow-800 text-xs">
+                              <i class="fa-solid fa-triangle-exclamation"></i>
+                              <span>Ya existe un cargo con este nombre.</span>
+                          </div>
+                      </div>
                     <div>
                         <label for="txtDescripcion" 
                         class="text-default-800 text-sm font-medium inline-block mb-2">Descripción (Función del cargo)</label>
@@ -236,7 +247,7 @@
             </form>
         </div>
     </div>
-</div>
+</>
 
 @endsection
 

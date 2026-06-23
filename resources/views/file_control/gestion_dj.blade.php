@@ -24,37 +24,18 @@
 
 @section('content')
 
-    @include("layouts.shared/page-title", ["subtitle" => "Recursos Humanos", "title" => "File Control"])
+    @include("layouts.shared/page-title", ["subtitle" => "DJ", "title" => "Gestion DJ"])
 
     <div id="divListado" class="grid lg:grid-cols-1 gap-6 mt-8">
         <div class="card overflow-hidden">
             <div class="card-header">
                 <h4 class="card-title">Registro de personal (DJ)</h4>
             </div>
+       
 
-            {{-- PESTAÑAS --}}
-            <div class="px-5 pt-4">
-                <div class="flex gap-1 border-b border-gray-200 items-end">
-                    <button id="tabBtnPendiente" type="button"
-                        class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
-                            bg-white text-primary border-gray-200"
-                        data-tab="pendiente">
-                        Listos
-                    </button>
-
-                    @if($tipoUsuario != 9 && $tipoUsuario != 8) 
-                        <button id="tabBtnMigrado" type="button"
-                            class="tab-btn relative px-5 py-2 text-sm font-medium rounded-t-lg border border-b-0 transition-colors
-                                bg-gray-50 text-gray-500 border-transparent hover:text-gray-700"
-                            data-tab="migrado">
-                            Migración (SIP)
-                        </button>
-                    @endif
-                </div>
-                {{-- Título dinámico --}}
-                <p id="tituloTabActiva" class="text text-gray-400 mt-2 ml-1 flex items-center content-center justify-center gap-1">
-                    <span class="font-medium text-primary">Listos</span>
-                </p>
+            {{-- TÍTULO ESTÁTICO (Sin pestañas) --}}
+            <div class="px-5 pt-4 border-b border-gray-200 pb-2">
+                <h5 class="text-lg font-medium text-primary">DJ Listos</h5>
             </div>
 
             {{-- CONTROLES COMUNES --}}
@@ -83,11 +64,17 @@
                     </button> -->
 
                      @if($tipoUsuario != 9 && $tipoUsuario != 8) 
-                        <button type="button" id="btnNuevaDJ"
+                     <div class="flex items-center justify-center gap-2">
+                            <button type="button" id="btnNuevaDJ"
                             class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white flex items-center gap-1 px-4 py-1">
                             <i class='bx bx-plus text-base'></i>
                             <span>Nueva DJ</span>
                         </button>
+                         <button type="button" id="btnAbrirReporte" class="btn rounded-full  bg-dark/25 text-dark hover:bg-dark hover:text-white flex items-center gap-1 px-4 py-1">
+                            <i class='bx bx-file-find'></i> Reporte General
+                        </button>
+                     </div>
+                        
                     @endif
                     
                     <button type="button" id="btnExtFirmaHuella" hidden disabled
@@ -105,23 +92,13 @@
                     <div class="flex gap-3 mb-3 flex-wrap items-center">
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Sucursal:</label>
-                            <!-- <select id="filtroSucursalPEN"
-                                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="">Todas</option>
-                            </select> -->
-                            <!-- <select id="filtroSucursalPEN" class="...">
-                                <option value="">Todas</option>
-                                @foreach ($sucursales as $sucursal)
-                                    @if (!$loop->first)
-                                        <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                                    @endif
-                                @endforeach
-                            </select> -->
+                            
                             @php
                                 $sucursalesFiltradas = array_slice($sucursales, 1);
                             @endphp
 
-                            <select id="filtroSucursalPEN" class="...">
+                            <select id="filtroSucursalPEN" 
+                            class=" px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
 
                                 @if(count($sucursalesFiltradas) > 1)
                                     <option value="">Todas</option>
@@ -137,24 +114,31 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm text-gray-600">Tipo:</label>
-                            <!-- <select id="filtroTipoPerPEN"
-                                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="">Todos</option>
-                                <option value="OPERATIVO">Operativo</option>
-                                <option value="ADMINISTRATIVO">Administrativo</option>
-                               <option value="ESPECIAL">Especial</option> 
-                            </select> -->
-                            <select id="filtroTipoPerPEN" class="...">
+                            <select id="filtroTipoPerPEN" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 @if($tipoPerLimitar == 0)
                                     <option value="">Todos</option>
-                                    <option value="OPERATIVO">Operativo</option>
-                                    <option value="ADMINISTRATIVO">Administrativo</option>
+                                    <option value="OPERATIVO 4°">Operativo 4°</option>
+                                    <option value="OPERATIVO 5°">Operativo 5°</option>
+                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                                    <option value="ESPECIAL">Especial</option>
                                 @elseif($tipoPerLimitar == 1)
-                                    <option value="ADMINISTRATIVO" selected>Administrativo</option>
+                                    <option value="">Todos</option>
+                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
                                 @elseif($tipoPerLimitar == 2)
-                                    <option value="OPERATIVO" selected>Operativo</option>
+                                    <option value="">Todos</option>
+                                    <option value="OPERATIVO 4°">Operativo 4°</option>
+                                    <option value="OPERATIVO 5°">Operativo 5°</option>
                                 @endif
                             </select>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-600">Cargo:</label>
+                            <select id="filtroCargoPEN" class="w-48 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                <option value="">Todos</option>
+                                </select>
                         </div>
                          {{-- <button type="button" id="btnDescargarDJs_PEN"
                                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
@@ -256,7 +240,7 @@
                     $sucursalesFiltradas = array_slice($sucursales, 1);
                 @endphp
 
-                <select id="filtroSucursal" class="...">
+                <select id="filtroSucursal" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     
                     @if(count($sucursalesFiltradas) > 1)
                         <option value="">Todas</option>
@@ -281,7 +265,7 @@
                     <option value="ADMINISTRATIVO">Administrativo</option>
                     <option value="ESPECIAL">Especial</option>
                 </select> -->
-                <select id="filtroTipoPer" class="...">
+                <select id="filtroTipoPer" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     @if($tipoPerLimitar == 0)
                         <option value="">Todos</option>
                         <option value="OPERATIVO">Operativo</option>
@@ -314,7 +298,7 @@
 
     <div class="flex items-center gap-2 mt-3">
         <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
-        <select id="page-size-migrado"
+        <select id="page-size-migrado" 
             class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
             <option value="5">5</option>
             <option value="10" selected>10</option>
@@ -326,7 +310,7 @@
     </div>
 
 </div>
- 
+
 
         </div>
     </div>
@@ -346,7 +330,9 @@
     <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
 
     @include('file_control.rrhh.partials_modal_dj')
+    @include('file_control.rrhh.partials_modal_nueva_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')
+    @include('file_control.rrhh.partials_modal_reporte')
 
 @endsection
 
@@ -358,6 +344,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -370,4 +357,10 @@
     </script>
 @endsection
 
-@vite(['resources/js/functions/gestion_dj.js'])
+ @vite([
+        'resources/js/functions/gestion_dj.js',
+       'resources/js/functions/nueva_dj.js', 
+       'resources/js/functions/modal_reporte.js'
+    ])
+
+

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Database\Connectors\SqlServerConnector;
+use PDO;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Interceptamos la creación del conector para SQL Server
+        $this->app->bind('db.connector.sqlsrv', function () {
+            $connector = new SqlServerConnector();
+            
+            // Obtenemos las opciones PDO por defecto de Laravel
+            $options = $connector->getDefaultOptions();
+            
+            // Quitamos el atributo que los drivers antiguos de SQL Server no soportan
+            unset($options[PDO::ATTR_STRINGIFY_FETCHES]);
+            
+            // Aplicamos las opciones "limpias" al conector
+            $connector->setDefaultOptions($options);
+            
+            return $connector;
+        });
     }
 
     /**

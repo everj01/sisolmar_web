@@ -12,8 +12,8 @@ import "preline";
 import "jquery";
 import "simplebar";
 import "boxicons/css/boxicons.min.css";
-import "./functions/capacitacion/reportes_capacitaciones";
-import "./functions/capacitacion/planes_capacitaciones";
+import "./functions/capacitacion/reportes_capacitaciones.js";
+import "./functions/capacitacion/planes_capacitaciones.js";
 import Waves from "node-waves";
 import Alpine from "alpinejs";
 import DataTable from "vanilla-datatables";
@@ -222,6 +222,7 @@ class App {
     }
 }
 
+// Esperar a que el DOM esté listo antes de inicializar
 document.addEventListener("DOMContentLoaded", function () {
     new App().init();
 });

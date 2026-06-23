@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web\\\\app\\\\Http\\\\Controllers\\\\CapacitacionController.php\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web-rodrigo\\\\resources\" | Where-Object { $_.Extension -eq \".php\" } | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web\\\\resources\\\\views\\\\capacitacion\" | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\ncervera\\\\Desktop\\\\Espacio\\\\Proyectos\\\\sisolmar_web\\\\resources\\\\views\\\\emails\" | ForEach-Object { $_.FullName })",
+      "Bash(php *)",
+      "Bash(grep -rn \"axios\\\\|fetch\\\\|$.ajax\\\\|$.get\\\\|$.post\" resources/js/functions/capacitacion/ resources/views/capacitacion/)",
+      "Bash(grep -E \"'/api/|/api/|\\\\`/api/\")",
+      "Bash(sed -n '378,382p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/consulta_matriculas.js\")",
+      "Bash(sed -n '406,412p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/consulta_matriculas.js\")",
+      "Bash(sed -n '614,618p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/consulta_matriculas.js\")",
+      "Bash(sed -n '785,789p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/consulta_matriculas.js\")",
+      "Bash(sed -n '1899,1903p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/reportes_capacitaciones.js\")",
+      "Bash(sed -n '2335,2339p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/reportes_capacitaciones.js\")",
+      "Bash(sed -n '2983,2987p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/reportes_capacitaciones.js\")",
+      "Bash(sed -n '3027,3031p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/reportes_capacitaciones.js\")",
+      "Bash(sed -n '3693,3697p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/js/functions/capacitacion/reportes_capacitaciones.js\")",
+      "Bash(sed -n '1981,1985p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/views/capacitacion/gestion_cursos.blade.php\")",
+      "Bash(sed -n '2042,2046p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/views/capacitacion/gestion_cursos.blade.php\")",
+      "Bash(sed -n '2437,2441p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/views/capacitacion/seguimiento_matriculas.blade.php\")",
+      "Bash(sed -n '2707,2711p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/views/capacitacion/seguimiento_matriculas.blade.php\")",
+      "Bash(sed -n '2760,2764p' \"C:/Users/ncervera/Desktop/Espacio/Proyectos/sisolmar_web/resources/views/capacitacion/seguimiento_matriculas.blade.php\")",
+      "Bash(grep *)"
+    ]
+  }
+}
