@@ -3,12 +3,8 @@ import axios from "axios";
 import DataTable from "vanilla-datatables";
 import imageCompression from 'browser-image-compression';
 
-console.log('ESTO ES UNA PREUBA PROVAOFR');
-
 window.cursosData = [];
 window.alertasCursosData = [];
-
-// window.alertasVencimientoCursos inyectado vía Blade para evitar race conditions con Vite
 
 const archivoInput = document.getElementById("archivoInput");
 const btnSeleccionar = document.getElementById("btnSeleccionar");
@@ -161,7 +157,6 @@ if (btnAnalizar) {
 
 }
 
-// Actualiza la lista en pantalla
 function actualizarLista() {
     listaArchivos.innerHTML = "";
 
@@ -193,17 +188,6 @@ function actualizarLista() {
         }
     }
 }
-
-// document.addEventListener('DOMContentLoaded', async () => {
-
-//     await listarTipoCurso("slcTipoCurso")
-//     await listarTipoCurso("slcFiltroTipoCurso", true)
-//     // await listarAreas("slcArea") // Removed: Replaced by Alpine component
-//     await listarAreas("slcFiltroArea", true)
-//     await listarCursos()
-
-//     // DataTable will be initialized inside renderTablaCursos
-// })
 
 document.addEventListener('DOMContentLoaded', async () => {
     await listarTipoCurso("slcTipoCurso")
@@ -357,6 +341,7 @@ window.renderTablaCursos = function (data) {
             <th>#</th>
             <th>CÓDIGO</th>
             <th>NOMBRE</th>
+            <th>PLAN</th>
             <th>ACCIONES</th>
         </tr>
     `;
@@ -383,6 +368,11 @@ window.renderTablaCursos = function (data) {
             </div>
         </td>
         <td>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                ${curso.tipo_curso || '—'}
+            </span>
+        </td>
+        <td>
             <div class="flex items-center gap-2">
                 <button type="button" onclick="window.gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
                 class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
@@ -397,11 +387,6 @@ window.renderTablaCursos = function (data) {
                         : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" 
                         onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}', dirigido_a: '${curso.dirigido_a || ''}', frecuencia: '${curso.frecuencia || ''}' } }))"`}>
                         <i class="bx bx-calendar-star text-base"></i>
-                    </button>
-                    
-                    <button type="button"  onclick="window.gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
-                        <i class="bx bx-trash text-base"></i>
                     </button>`
                     :
                     `<button type="button"  onclick="window.gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
@@ -425,6 +410,13 @@ window.renderTablaCursos = function (data) {
                     class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
                     <i class="bx bx-time-five text-base"></i>
                 </button>
+
+                ${curso.habilitado == '1' ?
+                    `<button type="button" onclick="window.gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
+                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
+                        <i class="bx bx-trash text-base"></i>
+                    </button>` : ''
+                }
             </div>
         </td>
         `;
@@ -433,7 +425,7 @@ window.renderTablaCursos = function (data) {
     } else {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-      <td colspan="4" class="text-center text-gray-500 py-4">
+      <td colspan="5" class="text-center text-gray-500 py-4">
         No hay datos disponibles
       </td>`;
         tbody.appendChild(tr);

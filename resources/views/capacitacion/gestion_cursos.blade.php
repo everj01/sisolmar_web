@@ -366,6 +366,7 @@
                                 <th class="text-primary font-semibold">#</th>
                                 <th class="text-primary font-semibold">CÓDIGO</th>
                                 <th class="text-primary font-semibold">NOMBRE</th>
+                                <th class="text-primary font-semibold">PLAN</th>
                                 <th class="text-primary font-semibold">ACCIONES</th>
                             </tr>
                         </thead>
@@ -1578,8 +1579,8 @@
                                 <div x-show="frecuencia !== 'PERSONALIZADO'" class="w-full max-w-sm mb-4">
                                     <label for="fecha_inicio_modal"
                                         class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
-                                        y hora de inicio de capacitación</label>
-                                    <input type="datetime-local" x-model="fechaInicio" id="fecha_inicio_modal"
+                                        de inicio de capacitación</label>
+                                    <input type="date" x-model="fechaInicio" id="fecha_inicio_modal"
                                         :min="fechaMinima"
                                         class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                 </div>
@@ -1589,16 +1590,16 @@
                                         <div>
                                             <label for="fecha_inicio_personalizada"
                                                 class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
-                                                y hora de inicio</label>
-                                            <input type="datetime-local" x-model="fechaInicio" id="fecha_inicio_personalizada"
+                                                de inicio</label>
+                                            <input type="date" x-model="fechaInicio" id="fecha_inicio_personalizada"
                                                 :min="fechaMinima"
                                                 class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                         </div>
                                         <div>
                                             <label for="fecha_fin_personalizada"
                                                 class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
-                                                y hora de fin</label>
-                                            <input type="datetime-local" x-model="fechaFin" id="fecha_fin_personalizada"
+                                                de fin</label>
+                                            <input type="date" x-model="fechaFin" id="fecha_fin_personalizada"
                                                 :min="fechaMinima"
                                                 class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                         </div>
@@ -1779,9 +1780,9 @@
 
                             <div>
                                 <label for="fechaNuevaFin" class="block text-sm font-semibold text-gray-900 mb-2">
-                                    Nueva fecha y hora de fin <span class="text-danger">*</span>
+                                    Nueva fecha de fin <span class="text-danger">*</span>
                                 </label>
-                                <input type="datetime-local" id="fechaNuevaFin" x-model="fechaNuevaFin"
+                                <input type="date" id="fechaNuevaFin" x-model="fechaNuevaFin"
                                     :min="fechaMinima"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
                                     @change="validarFecha()">
@@ -2451,9 +2452,7 @@
                     const yyyy = today.getFullYear();
                     const mm = String(today.getMonth() + 1).padStart(2, '0');
                     const dd = String(today.getDate()).padStart(2, '0');
-                    const hh = String(today.getHours()).padStart(2, '0');
-                    const min = String(today.getMinutes()).padStart(2, '0');
-                    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+                    return `${yyyy}-${mm}-${dd}`;
                 },
 
                 get selectedClienteNombre() {

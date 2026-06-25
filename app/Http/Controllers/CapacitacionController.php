@@ -934,6 +934,31 @@ class CapacitacionController extends Controller
         return "10001";
     }
 
+    public function generateCourseCodeByArea(int $area_responsable): string
+    {
+        $prefix = match ($area_responsable) {
+            1 => 'CAS',
+            2 => 'RRHH',
+            3 => 'CMRC',
+            4 => 'MEDO',
+            5 => 'OPDC',
+            6 => 'SIST',
+            7 => 'LEGL',
+            default => 'NO_PREFIX_',
+        };
+
+        $lastCourseCode = DB::table('sw_cursos')
+            ->where('area', $area_responsable)
+            ->orderByDesc('codigo_curso')
+            ->value('codigo_curso');
+
+        $nextCode = $lastCourseCode
+            ? str_pad(((int) substr($lastCourseCode, -3)) + 1, 3, '0', STR_PAD_LEFT)
+            : '001';
+
+        return $prefix . $nextCode;
+    }
+
     private function calculatePeriodicidad(
         ?string $frecuencia,
         int $esPeriodico,
@@ -3621,11 +3646,20 @@ class CapacitacionController extends Controller
 
             $bdLocal = collect(
                 DB::select("
-                SELECT codigo, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable
+                SELECT codigo, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable, cod_cliente
                 FROM sisolm_web.dbo.sw_cursos
                 WHERE habilitado = 1
             ")
             )->keyBy('codigo_moodle');
+
+            $clientes = collect(
+                DB::select("
+                SELECT abreviatura, cod_legacy
+                FROM sw_clientes
+                WHERE cod_legacy IS NOT NULL
+                ORDER BY cod_legacy;
+                ")
+            )->keyBy('cod_legacy');
 
             $sistemas = collect(
                 DB::select("
@@ -3643,9 +3677,12 @@ class CapacitacionController extends Controller
             )->keyBy('codigo');
 
             $cursos = collect($cursosRaw)
-                ->map(function ($c) use ($categories, $bdLocal, $sistemas, $tiposCurso) {
+                ->map(function ($c) use ($categories, $bdLocal, $sistemas, $clientes, $tiposCurso) {
                     $cursoLocal = $bdLocal->get($c->course_id);
                     $sistema    = $cursoLocal ? $sistemas->get($cursoLocal->area_conocimiento) : null;
+                    $cliente    = $cursoLocal
+                    ? $clientes->get($cursoLocal->cod_cliente)
+                    : null;
                     $area       = $categories->get($c->category_id);
                     $tipoCurso = $cursoLocal
                         ? $tiposCurso->get($cursoLocal->tipo_curso)
@@ -3660,6 +3697,7 @@ class CapacitacionController extends Controller
                         'Tipo'               => $tipoCurso?->descripcion         ?? 'Sin tipo',
                         'Area'               => $area->nombre                  ?? 'Sin área',
                         'Sistema'            => $sistema?->descripcion          ?? 'Sin sistema',
+                        'Cliente'            => $cliente?->abreviatura          ?? 'Sin cliente',
                         'Cod_Responsable'    => $cursoLocal?->cod_responsable   ?? null,
                         'Responsable'        => $c->responsable                 ?? 'Sin responsable',
                         'Descripcion'        => $c->course_summary                     ?? 'Sin descripción',
