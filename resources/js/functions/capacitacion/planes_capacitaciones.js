@@ -156,6 +156,7 @@ export default document.addEventListener("alpine:init", () => {
 
                 autoTable(doc, {
                     startY: 10,
+                    margin: { left: 5, right: 5 },
                     head: [
                         [
                             {
@@ -238,14 +239,11 @@ export default document.addEventListener("alpine:init", () => {
                     },
                     columnStyles: {
                         0: { cellWidth: 8, halign: "center" }, // ITEM
-                        1: { cellWidth: 55 }, // TEMA
-                        2: { cellWidth: 20, halign: "center" }, // DIRIGIDO A
-                        3: { cellWidth: 24, halign: "center" }, // ÁREA RESPONSABLE
                         4: { cellWidth: 12, halign: "center" }, // TIEMPO
                         ...Object.fromEntries(
                             Array.from({ length: 24 }, (_, i) => [
                                 i + 5,
-                                { cellWidth: 6, halign: "center" },
+                                { cellWidth: 5, halign: "center" },
                             ]),
                         ),
                     },

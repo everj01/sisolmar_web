@@ -3050,6 +3050,11 @@ class CapacitacionController extends Controller
         return view("capacitacion.gestion_cursos", compact("dirigidos"));
     }
 
+    public function vistaCursosSucamec(): View
+    {
+        return view("capacitacion.cursos_sucamec");
+    }
+
     public function vistaHistorialCapacitaciones(): View
     {
         return view("capacitacion.historial_capacitaciones");
@@ -5479,13 +5484,12 @@ class CapacitacionController extends Controller
 
                     foreach ($curso->programaciones as $prog) {
                         $fechaInicio = Carbon::parse($prog->fecha_inicio);
-                        $fechaFin = Carbon::parse($prog->fecha_final);
 
                         $programacionesData[] = [
                             'Mes'        => strtoupper($fechaInicio->translatedFormat('F')),
                             'Bloque'     => $fechaInicio->day <= 15 ? 1 : 2,
-                            'Ejecutado'  => $fechaFin->isPast(),
-                            'Programado' => $fechaFin->isFuture() || $fechaFin->isToday(),
+                            'Ejecutado'  => $fechaInicio->isPast(),
+                            'Programado' => $fechaInicio->isFuture(),
                         ];
                     }
 
