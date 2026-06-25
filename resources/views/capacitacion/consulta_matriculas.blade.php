@@ -491,37 +491,34 @@
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Tipo de curso</label>
                     <select id="filtroTipoCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todos los tipos</option>
+                        <option value="">Cargando tipos...</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Área</label>
                     <select id="filtroAreaCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todas las áreas</option>
+                        <option value="">Cargando áreas...</option>
                     </select>
                 </div>
-                <div class="flex flex-col gap-1.5">
+                <div id="filtroSistemaCursoContainer" class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Sistema de gestión</label>
                     <select id="filtroSistemaCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todos los sistemas</option>
+                        <option value="">Cargando sistemas...</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Jefatura</label>
                     <select id="filtroJefaturaCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todas las jefaturas</option>
+                        <option value="">Cargando jefaturas...</option>
                     </select>
                 </div>
-                <div class="flex flex-col gap-1.5 lg:col-span-2">
-                    <label class="text-xs font-medium text-default-700">Fecha de creación</label>
-                    <div class="flex items-center gap-2">
-                        <input id="filtroFechaDesde" type="date" placeholder="Desde"
-                            class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <span class="text-xs text-default-400 shrink-0">—</span>
-                        <input id="filtroFechaHasta" type="date" placeholder="Hasta"
-                            class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                    </div>
+                <div id="filtroClienteCursoContainer" class="flex flex-col gap-1.5" style="display: none;">
+                    <label class="text-xs font-medium text-default-700">Cliente</label>
+                    <select id="filtroClienteCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                        <option value="">Cargando clientes...</option>
+                    </select>
                 </div>
+
             </div>
 
             <div class="flex gap-2">

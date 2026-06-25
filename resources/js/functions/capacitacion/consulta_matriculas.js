@@ -80,12 +80,16 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    function fillSelect(id, values) {
+    function fillSelect(id, values, label) {
         const select = document.getElementById(id);
         if (!select) return;
-        const placeholder = select.options[0];
         select.innerHTML = "";
-        select.appendChild(placeholder);
+        if (label) {
+            const def = document.createElement("option");
+            def.value = "";
+            def.textContent = label;
+            select.appendChild(def);
+        }
         values.forEach((val) => {
             const opt = document.createElement("option");
             opt.value = val;
@@ -94,14 +98,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    let _cursosFullData = [];
+
     function populateFilters(data) {
+        _cursosFullData = data;
         const unique = (field) =>
             [...new Set(data.map((d) => d[field]).filter(Boolean))].sort();
 
         fillSelect("filtroTipoCurso", unique("Tipo"));
-        fillSelect("filtroAreaCurso", unique("Area"));
-        fillSelect("filtroSistemaCurso", unique("Sistema"));
-        fillSelect("filtroJefaturaCurso", unique("Responsable"));
+        fillSelect("filtroAreaCurso", unique("Area"), "Todas las áreas");
+        fillSelect("filtroSistemaCurso", unique("Sistema"), "Todos los sistemas");
+        fillSelect("filtroJefaturaCurso", unique("Responsable"), "Todas las jefaturas");
+        fillSelect("filtroClienteCurso", unique("Cliente"), "Todos los clientes");
+    }
+
+    function repopulateSecondaryFilters(tipo) {
+        const filtered = tipo
+            ? _cursosFullData.filter(d => d.Tipo === tipo)
+            : _cursosFullData;
+        const unique = (field) =>
+            [...new Set(filtered.map((d) => d[field]).filter(Boolean))].sort();
+
+        document.getElementById("filtroAreaCurso").value = "";
+        document.getElementById("filtroJefaturaCurso").value = "";
+        document.getElementById("filtroSistemaCurso").value = "";
+        document.getElementById("filtroClienteCurso").value = "";
+
+        fillSelect("filtroAreaCurso", unique("Area"), "Todas las áreas");
+        fillSelect("filtroSistemaCurso", unique("Sistema"), "Todos los sistemas");
+        fillSelect("filtroJefaturaCurso", unique("Responsable"), "Todas las jefaturas");
+        fillSelect("filtroClienteCurso", unique("Cliente"), "Todos los clientes");
     }
 
     function applyFilters(table) {
@@ -109,9 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const area = document.getElementById("filtroAreaCurso")?.value;
         const sistema = document.getElementById("filtroSistemaCurso")?.value;
         const jefatura = document.getElementById("filtroJefaturaCurso")?.value;
-        const desde = document.getElementById("filtroFechaDesde")?.value;
-        const hasta = document.getElementById("filtroFechaHasta")?.value;
-
+        const cliente = document.getElementById("filtroClienteCurso")?.value;
         const filters = [];
 
         if (tipo) filters.push({ field: "Tipo", type: "=", value: tipo });
@@ -120,22 +144,31 @@ document.addEventListener("DOMContentLoaded", () => {
             filters.push({ field: "Sistema", type: "=", value: sistema });
         if (jefatura)
             filters.push({ field: "Responsable", type: "=", value: jefatura });
-
-        if (desde)
-            filters.push({
-                field: "Fecha_Creacion",
-                type: ">=",
-                value: new Date(desde).getTime() / 1000,
-            });
-        if (hasta)
-            filters.push({
-                field: "Fecha_Creacion",
-                type: "<=",
-                value: new Date(hasta).getTime() / 1000 + 86399,
-            });
+        if (cliente)
+            filters.push({ field: "Cliente", type: "=", value: cliente });
 
         table.clearFilter();
         if (filters.length) table.setFilter(filters);
+    }
+
+    function toggleSecondaryFilters(tipo) {
+        const sistemaContainer = document.getElementById("filtroSistemaCursoContainer");
+        const clienteContainer = document.getElementById("filtroClienteCursoContainer");
+
+        if (!sistemaContainer || !clienteContainer) return;
+
+        if (tipo === "PCA") {
+            sistemaContainer.style.display = "none";
+            clienteContainer.style.display = "";
+            document.getElementById("filtroSistemaCurso").value = "";
+        } else if (tipo === "PCI") {
+            sistemaContainer.style.display = "";
+            clienteContainer.style.display = "";
+        } else {
+            sistemaContainer.style.display = "";
+            clienteContainer.style.display = "none";
+            document.getElementById("filtroClienteCurso").value = "";
+        }
     }
 
     function clearFilters(table) {
@@ -144,12 +177,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "filtroAreaCurso",
             "filtroSistemaCurso",
             "filtroJefaturaCurso",
-            "filtroFechaDesde",
-            "filtroFechaHasta",
+            "filtroClienteCurso",
         ].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.value = "";
         });
+        const tipoEl = document.getElementById("filtroTipoCurso");
+        if (tipoEl) {
+            tipoEl.value = "PCE";
+            toggleSecondaryFilters("PCE");
+            repopulateSecondaryFilters("PCE");
+        }
         table.clearFilter();
     }
 
@@ -287,20 +325,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
         table.on("dataLoaded", function (data) {
             populateFilters(data);
+            const tipoEl = document.getElementById("filtroTipoCurso");
+            if (tipoEl) {
+                tipoEl.value = "PCE";
+                toggleSecondaryFilters("PCE");
+                repopulateSecondaryFilters("PCE");
+                applyFilters(table);
+            }
         });
 
         [
-            "filtroTipoCurso",
             "filtroAreaCurso",
             "filtroSistemaCurso",
             "filtroJefaturaCurso",
-            "filtroFechaDesde",
-            "filtroFechaHasta",
+            "filtroClienteCurso",
         ].forEach((id) => {
             document
                 .getElementById(id)
                 ?.addEventListener("change", () => applyFilters(table));
         });
+
+        document.getElementById("filtroTipoCurso")
+            ?.addEventListener("change", function () {
+                toggleSecondaryFilters(this.value);
+                repopulateSecondaryFilters(this.value);
+                applyFilters(table);
+            });
 
         document
             .getElementById("btnLimpiarFiltrosCursos")
