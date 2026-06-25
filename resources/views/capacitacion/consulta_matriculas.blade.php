@@ -393,7 +393,7 @@
 
     .cnt-filter-btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
     }
 
     .cnt-filter-btn.active {
@@ -413,6 +413,9 @@
     }
 </style>
 @endsection
+
+@include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Gestión de matrículas'])
+
 @section('content')
 <div class="px-6 py-6">
     {{-- Header --}}
@@ -440,9 +443,7 @@
                     </h1>
 
                     <p class="mt-3 text-sm leading-7 text-default-600 max-w-3xl">
-                        Consulte y gestione las matrículas de los colaboradores en los cursos de capacitación.
-                        Seleccione un curso del panel izquierdo para ver sus participantes, o busque por personal
-                        para consultar su kardex de capacitaciones.
+                        Matrícula de participantes en los cursos de los planes de capacitación, gestionando matrículas grupales o individuales.
                     </p>
 
                     <div class="flex items-center gap-6 mt-5">

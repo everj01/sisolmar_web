@@ -71,6 +71,8 @@
 </style>
 @endsection
 
+@include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Reportes'])
+
 @section('content')
 <div x-data="reportesApp" class="px-6 py-6">
     {{-- Header --}}

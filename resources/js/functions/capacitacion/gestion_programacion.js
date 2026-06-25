@@ -80,7 +80,7 @@ async function listarAreas(selectId, esFiltro = false) {
             areasData.forEach(area => {
                 const option = document.createElement("option");
                 option.value = area.codigo;
-                option.textContent = area.descripcion;
+                option.textContent = area.abreviatura;
                 select.appendChild(option);
             });
         }

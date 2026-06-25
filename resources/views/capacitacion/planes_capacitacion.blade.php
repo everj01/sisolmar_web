@@ -40,6 +40,8 @@
 </style>
 @endsection
 
+@include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Planes de capacitación'])
+
 @section('content')
 <div x-data="planesCapacApp" class="px-6 py-6">
     {{-- Header --}}

@@ -272,9 +272,9 @@ async function listarAreas(selectId = null, esFiltro = false) {
         const areasData = Array.isArray(res.data) ? res.data : [];
 
         // Populate global array for Alpine.js
-        window.opcionesArea = areasData.map(area => ({
+        window.opcionesArea = areasData.map((area) => ({
             codigo: area.codigo,
-            descripcion: area.descripcion
+            descripcion: area.abreviatura,
         }));
 
         // Dispatch event for Alpine components
@@ -293,7 +293,7 @@ async function listarAreas(selectId = null, esFiltro = false) {
                     areasData.forEach(area => {
                         const option = document.createElement("option");
                         option.value = area.codigo;
-                        option.textContent = area.descripcion;
+                        option.textContent = area.abreviatura;
                         select.appendChild(option);
                     });
                 }

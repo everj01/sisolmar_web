@@ -385,6 +385,9 @@
     }
 </style>
 @endsection
+
+@include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Seguimiento AV'])
+
 @section('content')
 
 <div x-data="{ tabActivo: 'cursos' }">
@@ -415,13 +418,11 @@
 
                     <div>
                         <h1 class="text-3xl font-bold tracking-tight text-default-900 mt-4">
-                            Seguimiento de Matriculados
+                            Seguimiento AV
                         </h1>
 
                         <p class="mt-3 text-sm leading-7 text-default-600 max-w-3xl">
-                            Supervise el progreso de los participantes matriculados en los cursos de capacitación
-                            mediante indicadores informativos. Acceda rápidamente a usuarios que aún no inician,
-                            participantes en progreso, aprobados y desaprobados.
+                            Control de los participantes matriculados, aplicando medidas disciplinarias en los casos de incumplimiento de la programación.
                         </p>
                     </div>
 
