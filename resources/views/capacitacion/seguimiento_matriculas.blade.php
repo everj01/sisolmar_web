@@ -550,6 +550,10 @@
                             class="w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                             <option value="">Todos los responsables</option>
                         </select>
+                        <select id="filtroTipoCursos"
+                            class="w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                            <option value="">Todos los tipos</option>
+                        </select>
                     </div>
                 </div>
                 <div id="tblCursosSeguimiento" class="w-full"></div>
@@ -1606,6 +1610,13 @@
                         </button>
                     </div>
                     <div class="flex-1"></div>
+                    <select x-model="filtroTipoCurso"
+                        class="w-36 py-1.5 text-xs border border-default-200 rounded-lg !bg-white !text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                        <option value="">Todos los tipos</option>
+                        <template x-for="t in tiposCurso" :key="t">
+                            <option x-text="t" :value="t"></option>
+                        </template>
+                    </select>
                     <div class="relative">
                         <i
                             class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
@@ -1639,7 +1650,9 @@
                             <tr
                                 class="border-b border-default-200 text-[10px] font-semibold text-default-500 uppercase tracking-widest">
                                 <th class="text-left py-2.5 px-3 w-10">#</th>
+                                <th class="text-left py-2.5 px-3 w-20">Código</th>
                                 <th class="text-left py-2.5 px-3">Nombre del curso</th>
+                                <th class="text-center py-2.5 px-3">Tipo de curso</th>
                                 <th class="text-center py-2.5 px-3 w-32">Estado</th>
                                 <th class="text-center py-2.5 px-3 w-20">Nota final</th>
                                 <th class="text-center py-2.5 px-3 w-32">Último acceso</th>
@@ -1650,7 +1663,13 @@
                                 <tr class="hover:bg-default-50 transition-colors">
                                     <td class="py-2.5 px-3 text-default-400 text-xs font-mono" x-text="index + 1"></td>
                                     <td class="py-2.5 px-3">
+                                        <p class="font-medium text-default-800 text-xs" x-text="c.codigo || ''"></p>
+                                    </td>
+                                    <td class="py-2.5 px-3">
                                         <p class="font-medium text-default-800 text-xs" x-text="c.nombre_curso || c.curso_nombre || c.nombre || ''"></p>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-center">
+                                        <p class="font-medium text-default-800 text-xs" x-text="c.tipo_curso || ''"></p>
                                     </td>
                                     <td class="py-2.5 px-3 text-center">
                                         <span x-show="c.estado === 'En curso'"
@@ -2837,6 +2856,7 @@
             filtroMatriculaHasta: '',
             filtroAnioCreacion: '',
             busquedaCurso: '',
+            filtroTipoCurso: '',
             memoInfo: {
                 total: 0,
                 siguiente_num_memo: 1,
@@ -2883,6 +2903,7 @@
                     const q = this.busquedaCurso.toLowerCase().trim();
                     const nombre = c.nombre_curso || '';
                     if (q && !nombre.toLowerCase().includes(q)) return false;
+                    if (this.filtroTipoCurso && c.tipo_curso !== this.filtroTipoCurso) return false;
                     if (this.filtroUltimoAccesoDesde) {
                         const desde = new Date(this.filtroUltimoAccesoDesde);
                         const val = c.fecha_ultimo_acceso ? new Date(c.fecha_ultimo_acceso) : null;
@@ -2921,6 +2942,10 @@
                 return años;
             },
 
+            get tiposCurso() {
+                return [...new Set(this.cursos.map(c => c.tipo_curso).filter(Boolean))].sort();
+            },
+
             formatearFecha(val) {
                 if (!val || val === '0' || val === 0) return null;
                 const d = new Date(val);
@@ -2953,6 +2978,7 @@
                 this.filtroMatriculaHasta = '';
                 this.filtroAnioCreacion = '';
                 this.busquedaCurso = '';
+                this.filtroTipoCurso = '';
                 this.memoInfo = {
                     total: 0,
                     siguiente_num_memo: 1,

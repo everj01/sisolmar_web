@@ -423,6 +423,31 @@ document.addEventListener("DOMContentLoaded", () => {
         if (elS) elS.textContent = sinMatricular;
     }
 
+    function getRowsFiltradosVisibles() {
+        const table = window.tabulatorPersonalMatriculado;
+        if (!table) return [];
+
+        return table.getRows("active") || [];
+    }
+
+    function actualizarBotonSeleccionarFiltrados() {
+        const btn = document.getElementById('btnSeleccionarFiltrados');
+        if (!btn) return;
+
+        const rows = getRowsFiltradosVisibles();
+        const count = rows.length;
+        const pendientes = rows.filter(r => !r.getData()._matriculado && !r.getData()._seleccionado);
+        const todosSeleccionados = pendientes.length === 0 && count > 0;
+        if (todosSeleccionados) {
+            btn.innerHTML = `<i class="ti ti-checks text-sm"></i><span>Deseleccionar filtrados (${count})</span>`;
+            btn.dataset.mode = "deselect";
+        } else {
+            btn.innerHTML = `<i class="ti ti-checks text-sm"></i><span>Seleccionar filtrados (${count})</span>`;
+            btn.dataset.mode = "select";
+        }
+        btn.disabled = count === 0;
+    }
+
     window.cargarDatosModalMatriculados = async function(cursoId, alpineComponent) {
         if (!cursoId) return;
 
@@ -486,10 +511,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const unique = (field) => [...new Set(tableData.map(d => d[field]).filter(Boolean))].sort();
-            fillSelect("slcFiltroCliente", unique("cliente"));
-            fillSelect("slcFiltroSucursal", unique("sucursal"));
-            fillSelect("slcFiltroCargo", unique("cargo"));
-            fillSelect("slcFiltroTipoTrabajador", unique("tipo_trabajador"));
+            fillSelect("slcFiltroCliente", unique("cliente"), "Todos los clientes");
+            fillSelect("slcFiltroSucursal", unique("sucursal"), "Todas las sucursales");
+            fillSelect("slcFiltroCargo", unique("cargo"), "Todos los cargos");
+            fillSelect("slcFiltroTipoTrabajador", unique("tipo_trabajador"), "Todos los tipos");
 
             if (window.tabulatorPersonalMatriculado) {
                 window.tabulatorPersonalMatriculado.destroy();
@@ -514,7 +539,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             },
                             columns: [
                                 {
-                                    title: "<input type='checkbox' class='checkbox-select-all'>",
+                                    title: "<input type='checkbox' class='checkbox-select-all' title='Seleccionar todos' aria-label='Seleccionar todos'>",
                                     field: "_seleccionado",
                                     width: 50,
                                     hozAlign: "center",
@@ -596,6 +621,14 @@ document.addEventListener("DOMContentLoaded", () => {
                                 {
                                     title: "Sucursal",
                                     field: "sucursal",
+                                },
+                                {
+                                    title: "Correo",
+                                    field: "email",
+                                },
+                                {
+                                    title: "Num. Telf.",
+                                    field: "num_tel",
                                 },
                                 { title: "Cargo", field: "cargo" },
                                 {
@@ -742,6 +775,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                     return nombre.includes(term) || codigo.includes(term) || dni.includes(term);
                                 });
                             }
+
+                            actualizarBotonSeleccionarFiltrados();
                         }
 
                         const txtBuscar = document.getElementById('txtBuscarPersonal');
@@ -805,6 +840,31 @@ document.addEventListener("DOMContentLoaded", () => {
                         // Sincronizar filas por si el usuario cambió dropdown antes de que la tabla estuviera lista
                         if (slcProg.value) slcProg.onchange();
 
+                        const btnSeleccionarFiltrados = document.getElementById('btnSeleccionarFiltrados');
+                        if (btnSeleccionarFiltrados) {
+                            btnSeleccionarFiltrados.onclick = function() {
+                                const rows = getRowsFiltradosVisibles();
+
+                                if (!rows.length) {
+                                    Swal.fire({ icon: 'warning', title: 'Sin resultados', text: 'No hay personal filtrado para seleccionar', confirmButtonColor: '#6366f1' });
+                                    return;
+                                }
+
+                                const seleccionar = btnSeleccionarFiltrados.dataset.mode !== "deselect";
+
+                                rows.forEach((row) => {
+                                    const d = row.getData();
+                                    if (!d._matriculado) {
+                                        row.update({ _seleccionado: seleccionar });
+                                    }
+                                });
+
+                                updateMatricularButton();
+                                actualizarContadores();
+                                actualizarBotonSeleccionarFiltrados();
+                            };
+                        }
+
                         // Botón guardar matrícula
                         const btnGuardar = document.getElementById('btnGuardarMatriculas');
                         if (btnGuardar) {
@@ -857,6 +917,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         updateMatricularButton();
                         actualizarContadores();
+                        actualizarBotonSeleccionarFiltrados();
                         if (alpineComponent) alpineComponent.isLoading = false;
                     });
 

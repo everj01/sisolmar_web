@@ -1,6 +1,7 @@
 import Swal from "sweetalert2";
 import axios from "axios";
-import DataTable from "vanilla-datatables";
+import { TabulatorFull as Tabulator } from "tabulator-tables";
+import "tabulator-tables/dist/css/tabulator_simple.min.css";
 import imageCompression from 'browser-image-compression';
 
 window.cursosData = [];
@@ -197,18 +198,55 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
+window.cursosDataAll = [];
+
 window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '') {
     try {
-        const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/${habilitado}`, {
-            params: { filtro_area: area, filtro_tipo: tipoCurso }
-        });
-
-        window.cursosData = res.data;
-        window.renderTablaCursos(window.cursosData);
+        if (window.cursosDataAll.length === 0) {
+            const [res1, res0] = await Promise.all([
+                axios.get(`${VITE_URL_APP}/api/get-cursos/1`),
+                axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
+            ]);
+            window.cursosDataAll = [...(res1.data || []), ...(res0.data || [])];
+        }
+        aplicarFiltros(habilitado, area, tipoCurso);
     } catch (err) {
         console.error("Error al obtener cursos", err);
         Swal.fire("Error", "No se pudieron cargar los cursos", "error");
     }
+}
+
+window.recargarCursos = async function (habilitado = 1, area = '', tipoCurso = '') {
+    window.cursosDataAll = [];
+    await window.listarCursos(habilitado, area, tipoCurso);
+}
+
+function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '') {
+    const data = window.cursosDataAll || [];
+
+    if (!window.tablaCursos) {
+        window.initTablaCursos(data);
+    }
+
+    window.tablaCursos.setData(data);
+
+    const filters = [];
+
+    filters.push({ field: "habilitado", type: "=", value: habilitado === 1 ? "1" : "0" });
+
+    if (area) {
+        filters.push({ field: "area_conocimiento", type: "=", value: String(area) });
+    }
+
+    if (tipoCurso) {
+        const tipo = (window.opcionesTipoCurso || []).find(t => String(t.codigo) === String(tipoCurso));
+        const desc = tipo ? tipo.descripcion : null;
+        if (desc) {
+            filters.push({ field: "tipo_curso", type: "=", value: desc });
+        }
+    }
+
+    window.tablaCursos.setFilter(filters);
 }
 
 
@@ -312,141 +350,173 @@ async function obtenerCursoXId(id) {
     }
 }
 
-// Global variable to store DataTable instance
-window.cursoTable = null;
+window.tablaCursos = null;
 
-window.renderTablaCursos = function (data) {
-    // Destroy existing DataTable instance
-    if (window.cursoTable) {
-        window.cursoTable.destroy();
-        window.cursoTable = null;
-    }
+function formatFechaCreacion(fecha) {
+    if (!fecha) return '—';
+    const d = new Date(fecha);
+    if (isNaN(d.getTime())) return '—';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = String(hours % 12 || 12).padStart(2, '0');
+    return `${day}/${month}/${year} ${h12}:${minutes} ${ampm}`;
+}
 
-    const tblCursos = document.getElementById('tblCursos');
-    if (!tblCursos) return;
+function safeStr(val) {
+    return (val || '').replace(/'/g, "\\'");
+}
 
-    // Get the container and completely remove the old table
-    const container = tblCursos.parentElement;
-    tblCursos.remove();
+function generarBotonesAccion(curso) {
+    const cod = curso.codigo;
+    const nom = safeStr(curso.nombre);
+    const alerta = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso));
+    const hab = curso.habilitado == '1';
+    const tieneVig = curso.tiene_vigente;
+    const esDem = curso.es_demanda == '1';
 
-    // Create a completely fresh table element
-    const newTable = document.createElement('table');
-    newTable.id = 'tblCursos';
-    newTable.className = 'table table-bordered table-hover';
+    let html = '<div class="flex items-center gap-1.5">';
 
-    // Create thead
-    const thead = document.createElement('thead');
-    thead.innerHTML = `
-        <tr>
-            <th>#</th>
-            <th>CÓDIGO</th>
-            <th>NOMBRE</th>
-            <th>PLAN</th>
-            <th>ACCIONES</th>
-        </tr>
-    `;
-    newTable.appendChild(thead);
+    html += `<button type="button" onclick="window.gestionCurso('EDIT', '${cod}', '${nom}')"
+        class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
+        <i class="bx bxs-edit text-base"></i></button>`;
 
-    // Create tbody with data
-    const tbody = document.createElement('tbody');
-
-    if (data.length > 0) {
-        data.forEach((curso, index) => {
-            const tr = document.createElement("tr");
-            tr.style.backgroundColor = curso.habilitado == '1' ? "" : '#fff1f1';
-
-            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso))
-                ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
-                : '';
-
-            tr.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${curso.codigoCurso}</td>
-        <td class="text-primary font-medium">
-            <div class="flex items-center">
-                ${curso.nombre}${alertIcon}
-            </div>
-        </td>
-        <td>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                ${curso.tipo_curso || '—'}
-            </span>
-        </td>
-        <td>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="window.gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
-                    <i class="bx bxs-edit text-base"></i>
-                </button>
-
-
-                ${curso.habilitado == '1' ?
-                    `<button type="button" 
-                        ${curso.tiene_vigente
-                        ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
-                        : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" 
-                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}', dirigido_a: '${curso.dirigido_a || ''}', frecuencia: '${curso.frecuencia || ''}' } }))"`}>
-                        <i class="bx bx-calendar-star text-base"></i>
-                    </button>`
-                    :
-                    `<button type="button"  onclick="window.gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
-                        <i class='bx bx-check text-base'></i>
-                    </button>
-                    <button type="button"  onclick="window.gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
-                        <i class="bx bx-trash text-base"></i>
-                    </button>`
-                }
-
-                ${curso.es_demanda == '1' ?
-                    `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' } }))"
-                    class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
-                        <i class="bx bxs-file-import text-base"></i>
-                    </button>` : ''
-                }
-
-                <button type="button" onclick="window.abrirModalAplazarCurso('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
-                    <i class="bx bx-time-five text-base"></i>
-                </button>
-
-                ${curso.habilitado == '1' ?
-                    `<button type="button" onclick="window.gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
-                        <i class="bx bx-trash text-base"></i>
-                    </button>` : ''
-                }
-            </div>
-        </td>
-        `;
-            tbody.appendChild(tr);
-        });
-    } else {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-      <td colspan="5" class="text-center text-gray-500 py-4">
-        No hay datos disponibles
-      </td>`;
-        tbody.appendChild(tr);
-    }
-
-    newTable.appendChild(tbody);
-    container.appendChild(newTable);
-
-    // Initialize DataTables on the completely fresh table
-    window.cursoTable = new DataTable(newTable, {
-        perPage: 10,
-        perPageSelect: [10, 15, 20, 25],
-        searchable: true,
-        sortable: true,
-        fixedHeight: false,
-        labels: {
-            placeholder: "Buscar...",
-            perPage: "{select} por página",
-            noRows: "No hay registros",
-            info: "Mostrando {start} a {end} de {rows}"
+    if (hab) {
+        if (tieneVig) {
+            html += `<button type="button" disabled
+                class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo">
+                <i class="bx bx-calendar-star text-base"></i></button>`;
+        } else {
+            html += `<button type="button"
+                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual"
+                onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${cod}', nombre: '${nom}', tipo_curso: '${safeStr(curso.tipo_curso)}', dirigido_a: '${safeStr(curso.dirigido_a)}', frecuencia: '${safeStr(curso.frecuencia)}' } }))">
+                <i class="bx bx-calendar-star text-base"></i></button>`;
         }
+    } else {
+        html += `<button type="button" onclick="window.gestionCurso('ACT', '${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
+            <i class='bx bx-check text-base'></i></button>
+        <button type="button" onclick="window.gestionCurso('PERMA_DEL', '${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
+            <i class="bx bx-trash text-base"></i></button>`;
+    }
+
+    if (esDem) {
+        html += `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${cod}', nombre: '${nom}' } }))"
+            class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
+            <i class="bx bxs-file-import text-base"></i></button>`;
+    }
+
+    html += `<button type="button" onclick="window.abrirModalAplazarCurso('${cod}', '${nom}')"
+        class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
+        <i class="bx bx-time-five text-base"></i></button>`;
+
+    if (hab) {
+        html += `<button type="button" onclick="window.gestionCurso('DEL', '${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
+            <i class="bx bx-trash text-base"></i></button>`;
+    }
+
+    html += '</div>';
+    return html;
+}
+
+window.initTablaCursos = function (data) {
+    if (!document.getElementById('tblCursos')) return;
+
+    if (window.tablaCursos) {
+        window.tablaCursos.destroy();
+        window.tablaCursos = null;
+    }
+
+    window.tablaCursos = new Tabulator("#tblCursos", {
+        data: data,
+        layout: "fitColumns",
+        pagination: "local",
+        paginationSize: 5,
+        paginationSizeSelector: [10, 15, 20, 25],
+        movableColumns: false,
+        resizableColumns: false,
+        locale: true,
+        langs: {
+            "default": {
+                "pagination": {
+                    "page_size": "Mostrar",
+                    "first": "Primero",
+                    "last": "Último",
+                    "prev": "Anterior",
+                    "next": "Siguiente",
+                    "all": "Todos",
+                    "counter": "Mostrando {from} a {to} de {rows} resultados"
+                },
+                "headerFilters": {
+                    "default": "Filtrar..."
+                }
+            }
+        },
+        rowFormatter: function (row) {
+            const data = row.getData();
+            if (data.habilitado != '1') {
+                row.getElement().style.backgroundColor = '#fff1f1';
+            }
+        },
+        columns: [
+            {
+                title: "#",
+                formatter: "rownum",
+                hozAlign: "center",
+                width: 50,
+                headerSort: false
+            },
+            {
+                title: "CÓDIGO",
+                field: "codigoCurso",
+                width: 90,
+                headerSort: true
+            },
+            {
+                title: "NOMBRE",
+                field: "nombre",
+                headerSort: true,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(String(data.codigoCurso))
+                        ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
+                        : '';
+                    return `<div class="flex items-center text-primary font-medium">${cell.getValue()}${alertIcon}</div>`;
+                }
+            },
+            {
+                title: "PLAN",
+                field: "tipo_curso",
+                width: 120,
+                headerSort: true,
+                formatter: function (cell) {
+                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">${cell.getValue() || '—'}</span>`;
+                }
+            },
+            {
+                title: "FECHA CREACIÓN",
+                field: "fecha_creacion",
+                width: 170,
+                headerSort: true,
+                formatter: function (cell) {
+                    return `<span class="text-sm text-gray-600 whitespace-nowrap">${formatFechaCreacion(cell.getValue())}</span>`;
+                }
+            },
+            {
+                title: "ACCIONES",
+                field: "codigo",
+                width: 400,
+                headerSort: false,
+                formatter: function (cell) {
+                    return generarBotonesAccion(cell.getData());
+                }
+            }
+        ]
     });
 }
 
@@ -633,9 +703,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                                 // Mantener el estado de la vista previa validando el switch local "Solo eliminados"
                                 const toggleEliminados = document.getElementById('chkEliminados');
                                 if (toggleEliminados && toggleEliminados.checked) {
-                                    await window.gestionListarCursos(0); // Forzar recarga de los deshabilitados
+                                    await window.recargarCursos(0);
                                 } else {
-                                    await listarCursos();
+                                    await window.recargarCursos();
                                 }
                             } else {
                                 Swal.fire('Error', res.data.message || 'No se pudo eliminar el curso permanentemente', 'error')
@@ -650,7 +720,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                         .then(async (res) => {
                             if (res.status === 200 && res.data.success) {
                                 Swal.fire('Éxito', res.data.message || (op === 'DEL' ? 'Curso Eliminado' : 'Curso Habilitado'), 'success')
-                                await listarCursos()
+                                await window.recargarCursos()
                             } else {
                                 Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
                             }
@@ -676,9 +746,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
 window.gestionListarCursos = (op) => {
     if (op === 1) {
-        listarCursos(1);
+        window.recargarCursos(1);
     } else {
-        listarCursos(0);
+        window.recargarCursos(0);
     }
 }
 
@@ -797,7 +867,7 @@ window.editarFormGestionCurso = async (e) => {
 
                 Swal.fire('Éxito', res.data.message || 'Curso actualizado correctamente', 'success')
 
-                await listarCursos();
+                await window.recargarCursos();
 
                 restaurarFormCurso(false);
             } else {
@@ -1540,7 +1610,7 @@ window.formCursoGestion = function () {
                         Object.assign(this, valoresPorDefecto);
                         this.limpiarCampos();
 
-                        await listarCursos();
+                        await window.recargarCursos();
                         restaurarFormCurso(false);
 
                     } else {

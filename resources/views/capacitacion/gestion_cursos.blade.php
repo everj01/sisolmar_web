@@ -4,6 +4,288 @@
     [x-cloak] {
         display: none !important;
     }
+
+    /* ─────────────────────────────────────────────────────────────
+   TABULATOR
+───────────────────────────────────────────────────────────── */
+
+    .tabulator {
+        border: 1px solid rgba(226, 232, 240, .8) !important;
+        border-radius: 18px !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+
+        box-shadow:
+            0 1px 2px rgba(15, 23, 42, .03),
+            0 10px 30px rgba(15, 23, 42, .04) !important;
+
+        font-size: 13px !important;
+    }
+
+    /* ───────────────── Header ───────────────── */
+
+    .tabulator-header {
+        background:
+            linear-gradient(to bottom,
+                #fcfcfd 0%,
+                #f8fafc 100%) !important;
+
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: 1px solid #eef2f7 !important;
+
+        padding: 6px 0 4px 0 !important;
+    }
+
+    .tabulator-header .tabulator-col {
+        background: transparent !important;
+        border-right: none !important;
+        min-height: 48px !important;
+    }
+
+    .tabulator-header .tabulator-col-content {
+        padding: 12px 14px !important;
+    }
+
+    .tabulator-header .tabulator-col-title {
+        width: 100% !important;
+
+        text-align: left !important;
+
+        font-size: 10px !important;
+        font-weight: 800 !important;
+
+        letter-spacing: .12em !important;
+        text-transform: uppercase !important;
+
+        color: #64748b !important;
+    }
+
+    /* Flechas sort */
+
+    .tabulator-col-sorter {
+        color: #94a3b8 !important;
+    }
+
+    /* ───────────────── Tabla ───────────────── */
+
+    .tabulator-tableholder {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, .35) transparent;
+    }
+
+    .tabulator-tableholder::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .tabulator-tableholder::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .tabulator-tableholder::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, .35);
+        border-radius: 999px;
+    }
+
+    /* ───────────────── Rows ───────────────── */
+
+    .tabulator-row {
+        background: #ffffff !important;
+
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: 1px solid #f8fafc !important;
+
+        transition:
+            background .18s ease,
+            transform .18s ease,
+            box-shadow .18s ease !important;
+    }
+
+    .tabulator-row:last-child {
+        border-bottom: none !important;
+    }
+
+    .tabulator-row:hover {
+        background:
+            linear-gradient(to right,
+                rgba(59, 130, 246, .04),
+                rgba(59, 130, 246, .01)) !important;
+
+        box-shadow:
+            inset 3px 0 0 #2563eb !important;
+    }
+
+    /* ───────────────── Cells ───────────────── */
+
+    .tabulator-row .tabulator-cell {
+        border-right: none !important;
+
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+
+        vertical-align: middle !important;
+
+        color: #1e293b !important;
+    }
+
+    /* ───────────────── Footer ───────────────── */
+
+    .tabulator-footer {
+        background: #ffffff !important;
+
+        border-top: 1px solid #eef2f7 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+
+        padding: 14px 18px !important;
+    }
+
+    /* Contenido footer */
+
+    .tabulator-footer-contents {
+        display: flex !important;
+
+        align-items: center !important;
+        justify-content: space-between !important;
+
+        flex-wrap: wrap !important;
+
+        gap: 12px !important;
+    }
+
+    /* Counter */
+
+    .tabulator-footer .tabulator-page-counter {
+        color: #475569 !important;
+
+        font-size: 12px !important;
+        font-weight: 700 !important;
+    }
+
+    /* Paginador */
+
+    .tabulator-footer .tabulator-paginator {
+        display: flex !important;
+
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    /* Select */
+
+    .tabulator-footer select.tabulator-page-size {
+        height: 38px !important;
+
+        padding: 0 36px 0 14px !important;
+
+        border-radius: 12px !important;
+        border: 1px solid #e2e8f0 !important;
+
+        background-color: #ffffff !important;
+
+        font-size: 12px !important;
+        font-weight: 700 !important;
+
+        color: #334155 !important;
+
+        appearance: none !important;
+
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.7' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+
+        background-position: right .7rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 1.1em 1.1em !important;
+
+        transition:
+            border-color .18s ease,
+            box-shadow .18s ease !important;
+    }
+
+    .tabulator-footer select.tabulator-page-size:hover {
+        border-color: #93c5fd !important;
+    }
+
+    .tabulator-footer select.tabulator-page-size:focus {
+        outline: none !important;
+
+        border-color: #3b82f6 !important;
+
+        box-shadow:
+            0 0 0 3px rgba(59, 130, 246, .12) !important;
+    }
+
+    /* Botones páginas */
+
+    .tabulator-footer .tabulator-page {
+        min-width: 36px !important;
+        height: 36px !important;
+
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        border-radius: 11px !important;
+
+        border: 1px solid #e2e8f0 !important;
+
+        background: #ffffff !important;
+
+        color: #475569 !important;
+
+        font-size: 12px !important;
+        font-weight: 700 !important;
+
+        transition:
+            all .18s ease !important;
+    }
+
+    .tabulator-footer .tabulator-page:hover:not(.active) {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+
+        transform: translateY(-1px);
+    }
+
+    .tabulator-footer .tabulator-page.active {
+        background:
+            linear-gradient(135deg,
+                #2563eb 0%,
+                #1d4ed8 100%) !important;
+
+        border-color: #1d4ed8 !important;
+
+        color: #ffffff !important;
+
+        box-shadow:
+            0 6px 16px rgba(37, 99, 235, .25) !important;
+    }
+
+    /* ───────────────── Placeholder ───────────────── */
+
+    .tabulator-placeholder {
+        min-height: 110px !important;
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        background: #ffffff !important;
+    }
+
+    .tabulator-placeholder span {
+        color: #94a3b8 !important;
+
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
 </style>
 @endsection
 
@@ -354,24 +636,14 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
                     {{-- <div x-effect="listarCursos( soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso )"></div> --}}
                 </div>
 
                 <div class="mt-5 overflow-x-auto w-full">
-                    <table id="tblCursos" class="datatable responsive-table w-full">
-                        <thead>
-                            <tr>
-                                <th class="text-primary font-semibold">#</th>
-                                <th class="text-primary font-semibold">CÓDIGO</th>
-                                <th class="text-primary font-semibold">NOMBRE</th>
-                                <th class="text-primary font-semibold">PLAN</th>
-                                <th class="text-primary font-semibold">ACCIONES</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <div id="tblCursos"></div>
                 </div>
             </div>
         </div>
@@ -2412,8 +2684,8 @@
                             if (data && data.success) {
                                 this.alertas = data.alertas;
                                 window.alertasCursosData = this.alertas.map(a => String(a.codigo_curso));
-                                if (window.cursoTable && typeof window.renderTablaCursos === 'function') {
-                                    window.renderTablaCursos(window.cursosData || []);
+                                if (window.tablaCursos) {
+                                    window.tablaCursos.redraw(true);
                                 }
                             }
                         })

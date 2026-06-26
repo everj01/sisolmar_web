@@ -656,6 +656,10 @@
                     <i class="ti ti-user-off text-amber-600 text-sm"></i>
                     <span class="text-xs font-semibold text-amber-700">Sin matricular: <span id="cntSinMatricular">0</span></span>
                 </button>
+                <button type="button" id="btnSeleccionarFiltrados" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 text-primary text-xs font-semibold shadow-sm hover:bg-primary/10 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ti ti-checks text-sm"></i>
+                    <span>Seleccionar filtrados (0)</span>
+                </button>
             </div>
 
             <!-- Tabla -->
