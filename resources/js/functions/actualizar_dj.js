@@ -327,16 +327,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // EXPORTAR EXCEL PERSONALIZADO (Con ExcelJS - Incluyendo contadores)
     document.getElementById("btnExportExcelE1")?.addEventListener("click", async () => {
-        const data = tblEtapa1.getData("active");
+        let data = tblEtapa1.getData("active");
         if (!data.length) return Swal.fire('Sin datos', 'No hay datos para exportar', 'warning');
 
-        // 🔥 DATA GLOBAL PARA QUE LOS CONTADORES DEL EXCEL SEAN EXACTOS
-        const dataTotal = tblEtapa1.getData();
+        // 🔥 FILTRO DE SEGURIDAD: Garantizamos que no pase ningún "ESPECIAL" al Excel
+        data = data.filter(d => {
+            const tipoPersonal = d.TIPO_PER ? d.TIPO_PER.toUpperCase() : '';
+            return !tipoPersonal.includes('ESPECIAL');
+        });
 
-        // --- Calcular totales reales en memoria ---
-        const totalRegistros = dataTotal.length;
-        const totalActualizados = dataTotal.filter(d => d.SIP_CAMBIO === 'Ok').length;
-        const totalSinActualizar = dataTotal.filter(d => d.SIP_CAMBIO === 'Falta').length;
+        // --- Calcular totales exactos basados estrictamente en la data a imprimir ---
+        const totalRegistros = data.length;
+        const totalActualizados = data.filter(d => d.SIP_CAMBIO === 'Ok').length;
+        const totalSinActualizar = totalRegistros - totalActualizados;
 
         const filtros = getFiltrosTexto();
         const f = new Date();
@@ -457,16 +460,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // EXPORTAR PDF PERSONALIZADO (Con jsPDF y autotable manual)
     document.getElementById("btnExportPdfE1")?.addEventListener("click", async () => {
-        const data = tblEtapa1.getData("active");
+        let data = tblEtapa1.getData("active");
         if (!data.length) return Swal.fire('Sin datos', 'No hay datos para exportar', 'warning');
 
-        // 🔥 DATA GLOBAL PARA QUE LAS CARDS DEL PDF SEAN EXACTAS
-        const dataTotal = tblEtapa1.getData();
+        // 🔥 FILTRO DE SEGURIDAD: Garantizamos que no pase ningún "ESPECIAL" al PDF
+        data = data.filter(d => {
+            const tipoPersonal = d.TIPO_PER ? d.TIPO_PER.toUpperCase() : '';
+            return !tipoPersonal.includes('ESPECIAL');
+        });
 
-        // --- 1. Calcular totales para las cards ---
-        const totalRegistros = dataTotal.length;
-        const totalActualizados = dataTotal.filter(d => d.SIP_CAMBIO === 'Ok').length;
-        const totalSinActualizar = dataTotal.filter(d => d.SIP_CAMBIO === 'Falta').length;
+        // --- 1. Calcular totales para las cards del PDF ---
+        const totalRegistros = data.length;
+        const totalActualizados = data.filter(d => d.SIP_CAMBIO === 'Ok').length;
+        const totalSinActualizar = totalRegistros - totalActualizados;
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape'); // Horizontal para que quepa bien
@@ -598,7 +604,28 @@ document.addEventListener('DOMContentLoaded', function () {
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
-            { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
+            { 
+                title: "N°", 
+                hozAlign: "center", 
+                width: 60,
+                headerSort: false,
+                formatter: function(cell) {
+                    const span = document.createElement("span");
+                    
+                    const actualizarNumero = () => {
+                        const filasActivas = cell.getTable().getRows("active");
+                        span.innerText = filasActivas.indexOf(cell.getRow()) + 1;
+                    };
+                    
+                    // 1. Ejecución inicial
+                    actualizarNumero();
+                    
+                    // 2. Escucha movimientos de fila (ordenamiento, filtrado)
+                    cell.getRow().watchPosition(actualizarNumero);
+                    
+                    return span;
+                }
+            },
             {
                 title: "Verificado", field: "migrado", hozAlign: "center", widthGrow: 1.5,
                 formatter: cell => {
