@@ -18,31 +18,33 @@
     <div class="mt-6 mb-6 overflow-x-auto">
         <nav class="flex items-center justify-center space-x-3 border-b border-gray-200 pb-3 min-w-max" aria-label="Tabs" id="dj-timeline-tabs">
             <button data-target="etapa1" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn active bg-blue-900 text-white shadow-lg rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap">
+                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'active bg-blue-900 text-white shadow-lg' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap">
                 1° ETAPA: Actualización por SIP
             </button>
             <button data-target="etapa2" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn bg-white text-gray-500 border border-gray-200 rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
                 2° ETAPA: Verificación
             </button>
             <button data-target="etapa3" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn bg-white text-gray-500 border border-gray-200 rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
                 3° ETAPA: Generación DJ en PDF
             </button>
-            <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn bg-white text-gray-500 border border-gray-200 rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                4° ETAPA: Escaneo DJ
+
+            <button data-target="etapa_carga" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
+                class="tab-btn {{ $esRrhhMigracion ? 'active bg-blue-900 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                4° ETAPA: Carga de DJ
             </button>
-            {{-- <button data-target="etapa5" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn bg-white text-gray-500 border border-gray-200 rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap">
-                5° ETAPA: Vista Actual (Legacy)
-            </button> --}}
+
+            <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
+                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                5° ETAPA: Escaneo DJ
+            </button>
         </nav>
     </div>
 
     <div id="tabs-container">
 
-        <div id="etapa1" class="tab-content active">
+        <div id="etapa1" class="tab-content {{ $esRrhhMigracion ? 'hidden' : 'active' }}">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
                     <div class="w-full px-5 py-4">
@@ -332,6 +334,12 @@
                                 <button type="button" id="btnDJUnificadoE3" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                     <i class='bx bx-file text-lg'></i> DJ Masivo
                                 </button>
+                                <button type="button" id="btnGenerarSeleccionadosE3" disabled class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
+                                    <i class='bx bx-check-square text-lg'></i> Generar Seleccionados
+                                </button>
+                                <button type="button" id="btnQuitarMarcaE3" disabled class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-orange-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
+                                    <i class='bx bx-x-circle text-lg'></i> Quitar marca
+                                </button>
                                 <button type="button" id="btnResetearDJsE3" class="hidden flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                                     <i class='bx bx-reset text-lg'></i> Resetear marcas
                                 </button>
@@ -357,6 +365,159 @@
                 </div>
             </div>
         </div>
+        {{-- ============================================================ --}}
+        {{-- NUEVA 4° ETAPA: CARGA DE DJ                                  --}}
+        {{-- ============================================================ --}}
+        <div id="etapa_carga" class="tab-content {{ $esRrhhMigracion ? 'active' : 'hidden' }}">
+            <div class="grid lg:grid-cols-1 gap-6">
+                <div class="card overflow-hidden border border-gray-100 shadow-sm">
+                    <div class="w-full px-5 py-4">
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                            <div>
+                                <h4 class="text-lg font-bold text-primary uppercase">Carga de DJ</h4>
+                                <p class="text-sm text-gray-500">Listado de Personal y Subida de PDFs</p>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                                    <span id="countTotalE4C" class="text-lg font-bold text-blue-700">0</span>
+                                </div>
+                                <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-green-600 font-bold uppercase">Escaneados</span>
+                                    <span id="countEscaneadosE4C" class="text-lg font-bold text-green-700">0</span>
+                                </div>
+                                <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Pendientes</span>
+                                    <span id="countPendientesE4C" class="text-lg font-bold text-yellow-700">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="flex flex-wrap items-center gap-4 w-full">
+                                <input type="text" id="buscarPersonal_E4C" placeholder="Buscar por nombre o DNI..." autocomplete="off"
+                                    class="w-48 px-4 py-1.5 text-sm uppercase border border-gray-300 rounded-full focus:outline-none focus:border-primary transition-colors" style="min-width: 220px;" />
+
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                                    <select id="sucursal_E4C" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg">
+                                        <option disabled selected>— Seleccionar —</option>
+                                        @foreach ($sucursales as $suc)
+                                            <option value="{{ $suc->codigo }}">{{ $suc->abreviatura }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                                    <select id="tipo_per_E4C" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg">
+                                        @if ($tipoPerLimitar == 0)
+                                            <option value="TODOS" selected>Todos</option><option value="ADMIN_4">Administrativo 4°</option><option value="ADMIN_5">Administrativo 5°</option><option value="OPER_4">Operativo 4°</option><option value="OPER_5">Operativo 5°</option><option value="ESPECIAL">Especiales</option>
+                                        @elseif ($tipoPerLimitar == 1)
+                                            <option value="TODOS" selected>Todos</option><option value="ADMIN_4">Administrativo 4°</option><option value="ADMIN_5">Administrativo 5°</option>
+                                        @elseif ($tipoPerLimitar == 2)
+                                            <option value="TODOS" selected>Todos</option><option value="OPER_4">Operativo 4°</option><option value="OPER_5">Operativo 5°</option>
+                                        @endif
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">DJ:</label>
+                                    <select id="filtroDJ_E4C" class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg">
+                                        <option value="TODOS">Todos</option>
+                                        <option value="SI">Subida</option>
+                                        <option value="NO">Pendiente</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-4 border-l-2 border-gray-200 pl-4">
+                                    <span class="text-sm font-medium text-gray-700">Vigencia:</span>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="vigencia_E4C" value="" class="w-4 h-4 text-primary focus:ring-primary">
+                                        <span class="text-sm text-gray-700">Todos</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="vigencia_E4C" value="SI" checked class="w-4 h-4 text-primary focus:ring-primary">
+                                        <span class="text-sm text-gray-700">Sí</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="vigencia_E4C" value="NO" class="w-4 h-4 text-primary focus:ring-primary">
+                                        <span class="text-sm text-gray-700">No</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full">
+                            <div id="tblPersonas_E4C" class="w-full"></div>
+                            <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+                                <div class="flex items-center gap-2">
+                                    <label for="page-size-personas_E4C" class="text-sm font-medium text-gray-700">Mostrar</label>
+                                    <select id="page-size-personas_E4C" class="form-select text-sm w-20 px-3 py-1 border border-gray-300 rounded-lg">
+                                        <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option>
+                                    </select>
+                                    <span class="text-sm text-gray-600">registros</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- MODAL DE CARGA DE DJ (Asociado a Etapa 4) --}}
+        <button type="button" class="hidden" id="btn-modal-dj_E4C" data-hs-overlay="#modal-carga-dj_E4C"></button>
+        <div id="modal-carga-dj_E4C" class="hs-overlay hidden fixed inset-0 z-[80] overflow-y-auto transition-all duration-500 pointer-events-none">
+            <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 translate-y-10 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto border border-gray-200">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Subir Declaración Jurada</h3>
+                        <p class="text-sm text-gray-500 font-medium nombre-personal_E4C mt-0.5"></p>
+                    </div>
+                    <button type="button" id="btn-modal-dj-close_E4C" class="text-gray-500 hover:text-gray-700 transition-colors" data-hs-overlay="#modal-carga-dj_E4C">
+                        <i class="bx bx-x text-2xl"></i>
+                    </button>
+                </div>
+                <form id="formSubirDJ_E4C">
+                    @csrf
+                    <input type="hidden" id="codPersonalDJ_E4C" value="">
+                    <div class="px-5 py-5 space-y-5">
+                        <p class="text-sm text-center text-gray-500 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                            Solo se acepta archivo <strong>PDF</strong> con un peso máximo de <strong>1 MB</strong>.
+                        </p>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Fecha de Emisión</label>
+                            <input type="date" id="fecha_emision_dj_E4C" required class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Archivo PDF</label>
+                            <div id="zonaDropDJ_E4C" role="button" class="cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:border-primary hover:bg-blue-50 transition-colors">
+                                <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white shadow-sm border border-gray-200 text-gray-600">
+                                    <i class="bx bxs-file-pdf text-3xl"></i>
+                                </span>
+                                <div class="text-center text-sm text-gray-600">
+                                    <span class="font-medium">Haz click aquí para </span>
+                                    <span class="font-bold text-blue-600 hover:underline">SELECCIONAR</span>
+                                </div>
+                                <p class="text-xs text-gray-400">Máximo 1 MB</p>
+                                <input type="file" id="archivoDJ_E4C" accept=".pdf" class="hidden">
+                            </div>
+                            <ul id="listaArchivosDJ_E4C" class="mt-3 space-y-2"></ul>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-slate-50 rounded-b-lg">
+                        <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1" id="btn-guardar-dj_E4C">
+                            <i class="bx bx-upload text-lg"></i> Subir DJ
+                        </button>
+                        <button type="button" class="btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium" data-hs-overlay="#modal-carga-dj_E4C">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div id="etapa4" class="tab-content hidden">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">

@@ -57,9 +57,10 @@ class FileController extends Controller
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
+        $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
+        $esAdmin = in_array($tipoUsuario, [5, 11]);
 
-        // Retorna a una nueva vista que crearemos en el siguiente paso
-        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
+        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin'));
     }
 
 

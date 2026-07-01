@@ -14,6 +14,61 @@ import { generarDeclaracionJuradaPDF, generarReporteFaltantesPDF } from './dj_pd
 
 const API_URL = `${VITE_URL_APP}/api`;
 let registroSeleccionado = null;
+let generadosCache = {};
+let generadosCacheLoaded = false;
+
+async function cargarGeneradosCache(codPeriodo = '2026') {
+    try {
+        const res = await axios.get(`${API_URL}/dj/get-check-pdf`, { params: { codPeriodo } });
+        if (res.data.success) {
+            generadosCache = res.data.data || {};
+            generadosCacheLoaded = true;
+        }
+    } catch (e) {
+        console.warn('Error cargando generadosCache:', e);
+        generadosCache = {};
+        generadosCacheLoaded = true;
+    }
+}
+
+function estaGenerado(codPersonal, fechaCambioActual) {
+    if (!generadosCacheLoaded) return false;
+    const reg = generadosCache[codPersonal];
+    if (!reg) return false;
+    return true;
+}
+
+function getGeneradosSet() {
+    return new Set(Object.keys(generadosCache));
+}
+
+async function marcarGeneradosAPI(items, codPeriodo = '2026') {
+    const codigos = items.map(i => String(i.codPersonal || i.CODI_PERS || i.id));
+    if (!codigos.length) return;
+    try {
+        const res = await axios.post(`${API_URL}/dj/update-check-pdf`, { codigos, codPeriodo });
+        if (res.data.success) {
+            codigos.forEach(c => { generadosCache[c] = { generado: true }; });
+        }
+    } catch (e) {
+        console.error('Error marcando generados:', e);
+    }
+}
+
+async function resetearGeneradosAPI(codigos = null, codPeriodo = '2026') {
+    try {
+        const res = await axios.post(`${API_URL}/dj/reset-check-pdf`, { codigos, codPeriodo });
+        if (res.data.success) {
+            if (codigos && codigos.length) {
+                codigos.forEach(c => delete generadosCache[c]);
+            } else {
+                generadosCache = {};
+            }
+        }
+    } catch (e) {
+        console.error('Error reseteando generados:', e);
+    }
+}
 
 const categoriasSe = {
     'A': [
@@ -93,22 +148,15 @@ function actualizarCategorias() {
 
 
 function marcarDJGeneradosBatch(items) {
-    const data = getDJGenerados();
-
-    items.forEach(({ codPersonal, fechaCambio }) => {
-        data[codPersonal] = {
-            fechaMarcado: new Date().toISOString(),
-            fechaCambio: fechaCambio || null,
-        };
-    });
-
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
+    marcarGeneradosAPI(items);
 }
 
 // ============================================================
 // DOCUMENT READY
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
+
+    cargarGeneradosCache();
 
     document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
 
@@ -2112,56 +2160,19 @@ document.getElementById('institucion')?.addEventListener('change', function () {
 
 
 // ============================================================
-// DJ GENERADOS — localStorage helpers
+// DJ GENERADOS — API helpers
 // ============================================================
-const DJ_STORAGE_KEY = 'dj_generados';
-
-function getDJGenerados() {
-    try {
-        return JSON.parse(localStorage.getItem(DJ_STORAGE_KEY) || '{}');
-    } catch { return {}; }
-}
-
-function marcarDJGenerado(codPersonal, fechaCambio) {
-    const data = getDJGenerados();
-    data[codPersonal] = {
-        fechaMarcado: new Date().toISOString(),
-        fechaCambio: fechaCambio || null,
-    };
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
-}
-
-function desmarcarDJGenerado(codPersonal) {
-    const data = getDJGenerados();
-    delete data[codPersonal];
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
-}
-
-function estaGenerado(codPersonal, fechaCambioActual) {
-    const data = getDJGenerados();
-    const reg = data[codPersonal];
-    if (!reg) return false;
-
-    // Si el registro tuvo cambios DESPUÉS de que se marcó → ya no vale
-    if (fechaCambioActual && reg.fechaCambio) {
-        const cambio = new Date(fechaCambioActual);
-        const marcado = new Date(reg.fechaMarcado);
-        if (cambio > marcado) return false;
-    }
-    return true;
-}
 
 function limpiarDJGenerados() {
-    localStorage.removeItem(DJ_STORAGE_KEY);
-    /* tblPersonasMigrado.redraw(true);
-     Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });*/
+    generadosCache = {};
 }
 
+async function desmarcarDJGenerado(codPersonal) {
+    await resetearGeneradosAPI([codPersonal]);
+}
 
 document.getElementById('btnResetearDJs')?.addEventListener('click', async function () {
-
-    const generados = getDJGenerados();
-    const totalMarcados = Object.keys(generados).length;
+    const totalMarcados = Object.keys(generadosCache).length;
 
     if (totalMarcados === 0) {
         Swal.fire({ icon: 'info', title: 'Sin marcas', text: 'No hay registros marcados como generados.' });
@@ -2181,7 +2192,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
 
     if (!isConfirmed) return;
 
-    limpiarDJGenerados();
+    await resetearGeneradosAPI();
     tblPersonasMigrado.redraw(true);
 
     Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });

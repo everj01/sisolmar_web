@@ -18,6 +18,61 @@ import { obtenerDatos } from './chargefile/reporteAvances.js';
 
 const API_URL = `${VITE_URL_APP}/api`;
 let registroSeleccionado = null;
+let generadosCache = {};
+let generadosCacheLoaded = false;
+
+async function cargarGeneradosCache(codPeriodo = '2026') {
+    try {
+        const res = await axios.get(`${API_URL}/dj/get-check-pdf`, { params: { codPeriodo } });
+        if (res.data.success) {
+            generadosCache = res.data.data || {};
+            generadosCacheLoaded = true;
+        }
+    } catch (e) {
+        console.warn('Error cargando generadosCache:', e);
+        generadosCache = {};
+        generadosCacheLoaded = true;
+    }
+}
+
+function estaGenerado(codPersonal, fechaCambioActual) {
+    if (!generadosCacheLoaded) return false;
+    const reg = generadosCache[codPersonal];
+    if (!reg) return false;
+    return true;
+}
+
+function getGeneradosSet() {
+    return new Set(Object.keys(generadosCache));
+}
+
+async function marcarGeneradosAPI(items, codPeriodo = '2026') {
+    const codigos = items.map(i => String(i.codPersonal || i.CODI_PERS || i.id));
+    if (!codigos.length) return;
+    try {
+        const res = await axios.post(`${API_URL}/dj/update-check-pdf`, { codigos, codPeriodo });
+        if (res.data.success) {
+            codigos.forEach(c => { generadosCache[c] = { generado: true }; });
+        }
+    } catch (e) {
+        console.error('Error marcando generados:', e);
+    }
+}
+
+async function resetearGeneradosAPI(codigos = null, codPeriodo = '2026') {
+    try {
+        const res = await axios.post(`${API_URL}/dj/reset-check-pdf`, { codigos, codPeriodo });
+        if (res.data.success) {
+            if (codigos && codigos.length) {
+                codigos.forEach(c => delete generadosCache[c]);
+            } else {
+                generadosCache = {};
+            }
+        }
+    } catch (e) {
+        console.error('Error reseteando generados:', e);
+    }
+}
 
 const categoriasSe = {
     'A': [
@@ -97,16 +152,7 @@ function actualizarCategorias() {
 
 
 function marcarDJGeneradosBatch(items) {
-    const data = getDJGenerados();
-
-    items.forEach(({ codPersonal, fechaCambio }) => {
-        data[codPersonal] = {
-            fechaMarcado: new Date().toISOString(),
-            fechaCambio: fechaCambio || null,
-        };
-    });
-
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
+    marcarGeneradosAPI(items);
 }
 
 // ============================================================
@@ -114,6 +160,8 @@ function marcarDJGeneradosBatch(items) {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
+
+    cargarGeneradosCache();
 
     // ============================================================
     // TIMELINE TABS (NUEVO)
@@ -145,8 +193,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (targetId === 'etapa1' && typeof tblEtapa1 !== 'undefined') tblEtapa1.redraw();
             if (targetId === 'etapa2' && typeof tblPersonasVerificado !== 'undefined') tblPersonasVerificado.redraw();
             if (targetId === 'etapa3' && typeof tblPersonasEtapa3 !== 'undefined') tblPersonasEtapa3.redraw();
+            if (targetId === 'etapa_carga' && typeof tblPersonas_E4C !== 'undefined') tblPersonas_E4C.redraw();
             if (targetId === 'etapa4' && typeof tblEtapa4 !== 'undefined') tblEtapa4.redraw();
-            if (targetId === 'etapa5' && typeof tblPersonasMigrado !== 'undefined') tblPersonasMigrado.redraw();
         });
     });
 
@@ -155,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
         layout: "fitColumns",
         responsiveLayout: "collapse",
         pagination: true,
-        paginationSize: 20, 
+        paginationSize: 20,
         locale: "es",
         // --- AQUÍ TRADUCIMOS EL PAGINADOR ---
         langs: {
@@ -1024,13 +1072,22 @@ document.addEventListener('DOMContentLoaded', function () {
         responsiveLayout: "collapse",
         pagination: true,
         paginationSize: 10,
+        selectable: true,
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
             {
+                title: "",
+                formatter: "rowSelection",
+                titleFormatter: "rowSelection",
+                hozAlign: "center",
+                headerSort: false,
+                width: 50,
+            },
+            {
                 title: "N°",
                 hozAlign: "center",
-                width: 60,
+                width: 50,
                 headerSort: false,
                 formatter: function (cell) {
                     const span = document.createElement("span");
@@ -1061,23 +1118,34 @@ document.addEventListener('DOMContentLoaded', function () {
             //         return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[10px] font-bold tracking-wider whitespace-nowrap">${texto}</span>`;
             //     }
             // },
-            // 🔥 COLUMNA DE VERIFICACIÓN PDF (Marca de impreso)
+            // 🔥 COLUMNA DE VERIFICACIÓN PDF
             {
-                title: "PDF", field: "pdf_generado", hozAlign: "center", widthGrow: 1,
+                title: "PDF", field: "generado", hozAlign: "center", widthGrow: 1.5,
                 headerSort: false,
                 formatter: cell => {
                     const d = cell.getData();
                     const cod = d.codPersonal || d.id;
-                    const gen = estaGenerado(cod, d.cambio);
-                    const titulo = gen ? 'Generado — click para resetear' : 'Pendiente';
-                    const color = gen ? 'color:#16a34a;font-size:18px;cursor:pointer;' : 'color:#d1d5db;font-size:18px;cursor:default;';
-                    return `<span title="${titulo}" style="${color}" data-pdf-cod-e3="${cod}" data-pdf-cambio-e3="${d.cambio || ''}">${gen ? '✅' : '○'}</span>`;
+                    const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
+                    const genPor = d.generadoPor || '';
+
+                    if (gen) {
+                        const nombre = genPor ? ` · ${genPor}` : '';
+                        return `<span title="Generado por ${genPor || '—'}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:#16a34a;font-size:13px;" data-pdf-cod-e3="${cod}">
+                            <i class='bx bxs-check-circle' style="font-size:16px;"></i>
+                            <span style="font-size:11px;color:#374151;">${nombre}</span>
+                        </span>`;
+                    }
+                    return `<span style="display:inline-flex;align-items:center;gap:4px;color:#d1d5db;font-size:13px;">
+                        <i class='bx bx-time' style="font-size:16px;"></i>
+                        <span style="font-size:11px;color:#9ca3af;">Pendiente</span>
+                    </span>`;
                 },
                 cellClick: (e, cell) => {
                     const span = e.target.closest('[data-pdf-cod-e3]');
                     if (!span) return;
-                    const cod = span.getAttribute('data-pdf-cod-e3');
-                    if (!estaGenerado(cod, span.getAttribute('data-pdf-cambio-e3'))) return;
+                    const d = cell.getData();
+                    const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
+                    if (!gen) return;
 
                     Swal.fire({
                         icon: 'question',
@@ -1086,10 +1154,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         showCancelButton: true,
                         confirmButtonText: 'Sí, resetear',
                         cancelButtonText: 'Cancelar',
-                    }).then(r => {
+                    }).then(async r => {
                         if (!r.isConfirmed) return;
-                        desmarcarDJGenerado(cod);
-                        cell.getRow().reformat();
+                        await desmarcarDJGenerado(cod);
+                        cargarDatosEtapa3();
                     });
                 }
             },
@@ -1137,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // 🔥 Disparamos la generación individual usando tu función global masiva
                     const resultadoGen = await _generarUnificado([rowData], `DJ_${dni}`, 'migracion');
 
-                    // Si todo salió bien, guardamos la marca de "impreso" y repintamos la fila
+                    // Si todo salió bien, guardamos la marca de "impreso" y recargamos la tabla
                     if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
                         marcarDJGeneradosBatch(
                             resultadoGen.generadosOk.map(f => ({
@@ -1145,12 +1213,29 @@ document.addEventListener('DOMContentLoaded', function () {
                                 fechaCambio: f.cambio
                             }))
                         );
-                        // Forzamos el render para que aparezca el check ✅ al instante
-                        cell.getRow().reformat();
+                        cargarDatosEtapa3();
                     }
                 }
             }
         ],
+    });
+
+    tblPersonasEtapa3.on("rowSelectionChanged", function () {
+        const sel = this.getSelectedRows().length;
+        const btnGen = document.getElementById('btnGenerarSeleccionadosE3');
+        const btnQuitar = document.getElementById('btnQuitarMarcaE3');
+        if (btnGen) {
+            btnGen.disabled = !sel;
+            btnGen.className = sel
+                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors'
+                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+        }
+        if (btnQuitar) {
+            btnQuitar.disabled = !sel;
+            btnQuitar.className = sel
+                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors'
+                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-orange-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+        }
     });
 
     function cargarDatosEtapa3() {
@@ -1317,13 +1402,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }))
             );
         }
-        tblPersonasEtapa3.redraw(true);
+        cargarDatosEtapa3();
     });
 
     // 🔥 ACCIÓN: RESETEAR MARCAS PARA ETAPA 3
     document.getElementById('btnResetearDJsE3')?.addEventListener('click', async function () {
-        const generados = getDJGenerados();
-        const totalMarcados = Object.keys(generados).length;
+        const totalMarcados = Object.keys(generadosCache).length;
         if (totalMarcados === 0) {
             Swal.fire({ icon: 'info', title: 'Sin marcas', text: 'No hay registros marcados como generados.' });
             return;
@@ -1336,8 +1420,68 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (!isConfirmed) return;
-        limpiarDJGenerados();
-        tblPersonasEtapa3.redraw(true);
+        await resetearGeneradosAPI();
+        cargarDatosEtapa3();
+    });
+
+    // 🔥 ACCIÓN: GENERAR SELECCIONADOS
+    document.getElementById('btnGenerarSeleccionadosE3')?.addEventListener('click', async function () {
+        const seleccionadas = tblPersonasEtapa3.getSelectedRows();
+        if (!seleccionadas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin selección', text: 'Selecciona al menos una persona con el checkbox.' });
+            return;
+        }
+
+        const filas = seleccionadas.map(r => r.getData());
+
+        const { isConfirmed } = await Swal.fire({
+            icon: 'question', title: 'Generar DJ seleccionados',
+            html: `Se generará <b>1 PDF</b> con <b>${filas.length}</b> declaración(es).<br>¿Desea continuar?`,
+            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+        });
+        if (!isConfirmed) return;
+
+        const resultadoGen = await _generarUnificado(filas, 'DJ_Seleccionados_E3', 'migracion');
+        if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
+            marcarDJGeneradosBatch(
+                resultadoGen.generadosOk.map(f => ({
+                    codPersonal: f.codPersonal || f.id,
+                    fechaCambio: f.cambio
+                }))
+            );
+        }
+        tblPersonasEtapa3.deselectRow();
+        cargarDatosEtapa3();
+    });
+
+    // 🔥 ACCIÓN: QUITAR MARCA DE SELECCIONADOS
+    document.getElementById('btnQuitarMarcaE3')?.addEventListener('click', async function () {
+        const seleccionadas = tblPersonasEtapa3.getSelectedRows();
+        if (!seleccionadas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin selección', text: 'Selecciona al menos una persona con el checkbox.' });
+            return;
+        }
+
+        const filas = seleccionadas.map(r => r.getData());
+        const conMarca = filas.filter(f => estaGenerado(f.codPersonal || f.id, f.cambio));
+
+        if (!conMarca.length) {
+            Swal.fire({ icon: 'info', title: 'Sin marcas', text: 'Ninguno de los seleccionados tiene marca de generado.' });
+            return;
+        }
+
+        const { isConfirmed } = await Swal.fire({
+            icon: 'warning', title: '¿Quitar marca?',
+            html: `Se quitará la marca ✅ de <b>${conMarca.length}</b> seleccionado(s).`,
+            showCancelButton: true, confirmButtonText: 'Sí, quitar marca', cancelButtonText: 'Cancelar', confirmButtonColor: '#ef4444',
+        });
+
+        if (!isConfirmed) return;
+
+        const codigos = conMarca.map(f => f.codPersonal || f.id);
+        await resetearGeneradosAPI(codigos);
+        tblPersonasEtapa3.deselectRow();
+        cargarDatosEtapa3();
     });
 
     // 🔥 ACCIÓN: REPORTE DE AVANCES PARA ETAPA 3
@@ -1456,6 +1600,293 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     cargarDatosEtapa3();
+
+
+    // ============================================================
+    // NUEVA 4° ETAPA: CARGA DE DJ
+    // ============================================================
+    let pageSizePersonas_E4C = 10;
+
+    const archivoDJ_E4C    = document.getElementById('archivoDJ_E4C');
+    const zonaDropDJ_E4C   = document.getElementById('zonaDropDJ_E4C');
+    const listaArchivosDJ_E4C = document.getElementById('listaArchivosDJ_E4C');
+
+    zonaDropDJ_E4C?.addEventListener('click', () => archivoDJ_E4C.click());
+
+    // Cargar datos SOLO la primera vez que se hace clic en la pestaña
+    let etapaCargaCargada = false;
+    document.querySelector('button[data-target="etapa_carga"]')?.addEventListener('click', () => {
+        if (!etapaCargaCargada) {
+            seleccionarPrimeraSucursalValida_E4C();
+            setTimeout(() => {
+                reloadTabla_E4C();
+                cargarIndicadores_E4C();
+            }, 100);
+            etapaCargaCargada = true;
+        }
+    });
+
+    // Si la pestaña ya está activa al cargar (ej. RRHH), disparar carga inicial
+    const etapaCargaBtn = document.querySelector('button[data-target="etapa_carga"]');
+    if (etapaCargaBtn && etapaCargaBtn.classList.contains('active')) {
+        etapaCargaBtn.click();
+    }
+
+    const tblPersonas_E4C = new Tabulator('#tblPersonas_E4C', {
+        height: '550px',
+        layout: 'fitColumns',
+        responsiveLayout: 'collapse',
+        pagination: true,
+        paginationSize: pageSizePersonas_E4C,
+        locale: 'es',
+        langs: { es: { pagination: { first: 'Primero', prev: 'Anterior', next: 'Siguiente', last: 'Último' } } },
+
+        rowFormatter: function (row) {
+            if (row.getData().PERS_VIGENCIA !== 'SI') {
+                row.getElement().style.backgroundColor = '#ffe5e5';
+                row.getElement().style.color = '#7a1f1f';
+            }
+        },
+
+        columns: [
+            {
+                title: "N°",
+                hozAlign: "center",
+                width: 60,
+                headerSort: false,
+                formatter: function (cell) {
+                    const span = document.createElement("span");
+                    const actualizarNumero = () => {
+                        const table = cell.getTable();
+                        const page = table.getPage() || 1;
+                        const size = table.getPageSize() || 10;
+                        const posicionFila = cell.getRow().getPosition(true);
+                        if (posicionFila > 0) {
+                            span.innerText = ((page - 1) * size) + posicionFila;
+                        }
+                    };
+                    actualizarNumero();
+                    cell.getRow().watchPosition(actualizarNumero);
+                    return span;
+                }
+            },
+            {
+                title: 'Escaneo DJ', field: 'tiene_folio_25', hozAlign: 'center', minWidth: 90, widthGrow: 0.6, responsive: false, headerSort: true,
+                formatter: function (cell) {
+                    return cell.getValue() == 1
+                        ? `<i class="bx bxs-check-circle text-green-600 cursor-pointer" style="font-size:1.2rem;" title="DJ subida — clic para reemplazar"></i>`
+                        : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 cursor-pointer hover:bg-yellow-200 transition-colors" title="Clic para subir DJ">
+                                <i class="bx bx-time"></i> Pendiente
+                           </span>`;
+                },
+                cellClick: function (e, cell) {
+                    const data = cell.getRow().getData();
+                    abrirModalSubirDJ_E4C(data.CODI_PERS, data.personal);
+                }
+            },
+            { title: 'Cód.',     field: 'CODI_PERS', hozAlign: 'center', minWidth: 60,  widthGrow: 0.5, responsive: false },
+            { title: 'Apellidos', field: 'apellidos', hozAlign: 'left',   minWidth: 120, widthGrow: 2,   responsive: false },
+            { title: 'Nombres',  field: 'nombres',   hozAlign: 'left',   minWidth: 120, widthGrow: 2,   responsive: false },
+            { title: 'Nro Doc.', field: 'nroDoc',    hozAlign: 'center', minWidth: 90,  widthGrow: 0.8, responsive: false },
+            { title: 'Sucursal', field: 'sucursal',  hozAlign: 'center', minWidth: 80,  widthGrow: 0.8, responsive: 0 },
+            {
+                title: 'Tipo', field: 'TIPOTRAB2', hozAlign: 'center', minWidth: 120, widthGrow: 1.2, responsive: false,
+                formatter: function (cell) {
+                    const val = cell.getValue() || '';
+                    return val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                }
+            },
+            {
+                title: 'Acciones', field: 'acciones', minWidth: 200, widthGrow: 0,
+                hozAlign: 'left', headerSort: false, responsive: false,
+                formatter: function (cell) {
+                    const tieneDJ = cell.getRow().getData().tiene_folio_25 == 1;
+                    let html = `<div class="flex items-center gap-1.5 flex-nowrap">
+                        <button type="button" class="btn rounded-full bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white text-xs px-3 py-1 flex items-center justify-center gap-1 subir-dj-btn-e4c whitespace-nowrap">
+                            <i class="bx bx-upload text-base subir-dj-btn-e4c"></i> Subir DJ
+                        </button>`;
+                    if (tieneDJ) {
+                        html += `<button type="button" class="btn rounded-full bg-cyan-100 text-cyan-600 hover:bg-cyan-600 hover:text-white text-xs px-2 py-1 flex items-center justify-center gap-1 ver-dj-btn-e4c whitespace-nowrap" title="Ver DJ">
+                                    <i class="bx bx-show text-base ver-dj-btn-e4c"></i> Ver
+                                </button>`;
+                    }
+                    html += `</div>`;
+                    return html;
+                },
+                cellClick: function (e, cell) {
+                    const data   = cell.getRow().getData();
+                    const codigo = data.CODI_PERS;
+                    const nombre = data.personal;
+
+                    if (e.target.closest('.subir-dj-btn-e4c')) {
+                        abrirModalSubirDJ_E4C(codigo, nombre);
+                    }
+
+                    if (e.target.closest('.ver-dj-btn-e4c')) {
+                        window.open(`${VITE_URL_APP}/ver-dj/${codigo}`, '_blank');
+                    }
+                }
+            },
+        ],
+    });
+
+    function mostrarInfoTabla_E4C() {
+    }
+
+    tblPersonas_E4C.on('dataLoaded', mostrarInfoTabla_E4C);
+    tblPersonas_E4C.on('pageLoaded', mostrarInfoTabla_E4C);
+
+    function abrirModalSubirDJ_E4C(codigo, nombre) {
+        document.getElementById('codPersonalDJ_E4C').value = codigo;
+        document.querySelector('.nombre-personal_E4C').textContent = nombre ?? '';
+        limpiarModal_E4C();
+        document.getElementById('btn-modal-dj_E4C').click();
+    }
+
+    function limpiarModal_E4C() {
+        document.getElementById('fecha_emision_dj_E4C').value = '';
+        if(archivoDJ_E4C) archivoDJ_E4C.value = '';
+        if(listaArchivosDJ_E4C) listaArchivosDJ_E4C.innerHTML = '';
+    }
+
+    archivoDJ_E4C?.addEventListener('change', function () {
+        const archivos = Array.from(this.files);
+        if (!archivos.length) return;
+        const maxSize = 1.2 * 1024 * 1024;
+
+        for (const archivo of archivos) {
+            if (archivo.type !== 'application/pdf') {
+                Swal.fire({ title: 'Solo se permite PDF para el DJ', icon: 'warning' });
+                this.value = ''; listaArchivosDJ_E4C.innerHTML = ''; return;
+            }
+            if (archivo.size > maxSize) {
+                Swal.fire({ title: 'Archivo demasiado grande', text: `"${archivo.name}" pesa ${(archivo.size / 1024 / 1024).toFixed(2)} MB. Límite: 1 MB.`, icon: 'warning' });
+                this.value = ''; listaArchivosDJ_E4C.innerHTML = ''; return;
+            }
+        }
+
+        listaArchivosDJ_E4C.innerHTML = archivos.map(a => `
+            <li class="flex items-center gap-2 text-sm text-gray-700">
+                <i class="bx bxs-file-pdf text-red-500 text-lg"></i>
+                <span>${a.name}</span>
+                <span class="text-gray-400">(${(a.size / 1024).toFixed(1)} KB)</span>
+            </li>
+        `).join('');
+    });
+
+    document.getElementById('formSubirDJ_E4C')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const fechaEmision = document.getElementById('fecha_emision_dj_E4C').value;
+        const codPersonal  = document.getElementById('codPersonalDJ_E4C').value;
+        const archivo      = archivoDJ_E4C?.files?.[0];
+        const maxSize      = 1.2 * 1024 * 1024;
+
+        if (!fechaEmision) { Swal.fire({ title: 'Ingrese la fecha de emisión', icon: 'warning' }); return; }
+        if (!archivo)      { Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' });   return; }
+        if (archivo.type !== 'application/pdf') { Swal.fire({ title: 'Solo se permite PDF', icon: 'warning' }); return; }
+        if (archivo.size > maxSize) { Swal.fire({ title: 'El archivo supera 1 MB', icon: 'warning' }); return; }
+
+        const btnGuardar = document.getElementById('btn-guardar-dj_E4C');
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = 'Guardando...';
+
+        const formData = new FormData();
+        formData.append('fecha_emision', fechaEmision);
+        formData.append('codPersonal',   codPersonal);
+        formData.append('pdf',           archivo);
+
+        axios.post(`${VITE_URL_APP}/save-dj-folio-2`, formData, { headers: { 'Accept': 'application/json' } })
+            .then(() => {
+                document.getElementById('btn-modal-dj-close_E4C').click();
+                limpiarModal_E4C();
+                reloadTabla_E4C();
+                Swal.fire({ title: 'DJ subida correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
+            })
+            .catch(error => {
+                const msg = error.response?.data?.error || error.response?.data?.message || 'Error al guardar el DJ';
+                Swal.fire({ title: msg, icon: 'error' });
+            })
+            .finally(() => {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = '<i class="bx bx-upload text-lg me-1"></i> Subir DJ';
+            });
+    });
+
+    document.getElementById('page-size-personas_E4C')?.addEventListener('change', function () {
+        pageSizePersonas_E4C = parseInt(this.value);
+        tblPersonas_E4C.setPageSize(pageSizePersonas_E4C);
+        tblPersonas_E4C.setPage(1);
+    });
+
+    function recargarTodo_E4C() {
+        reloadTabla_E4C();
+        cargarIndicadores_E4C();
+    }
+
+    document.getElementById('buscarPersonal_E4C')?.addEventListener('keyup', reloadTabla_E4C);
+    document.getElementById('sucursal_E4C')?.addEventListener('change', recargarTodo_E4C);
+    document.getElementById('tipo_per_E4C')?.addEventListener('change', recargarTodo_E4C);
+    document.getElementById('filtroDJ_E4C')?.addEventListener('change', reloadTabla_E4C);
+    document.querySelectorAll('input[name="vigencia_E4C"]').forEach(r => r.addEventListener('change', recargarTodo_E4C));
+
+    function reloadTabla_E4C() {
+        let codSucursal = document.getElementById('sucursal_E4C').value;
+        if (!codSucursal || codSucursal === '— Seleccionar —' || codSucursal === '00') codSucursal = '0';
+
+        const params = {
+            codSucursal,
+            search: document.getElementById('buscarPersonal_E4C').value.trim(),
+            tipo_per: document.getElementById('tipo_per_E4C')?.value || 'TODOS',
+            vigencia: document.querySelector('input[name="vigencia_E4C"]:checked')?.value || '',
+            size: 99999,
+            page: 1,
+        };
+
+        const filtroDJ = document.getElementById('filtroDJ_E4C')?.value || 'TODOS';
+        if (filtroDJ === 'SI') params.tiene_folio_25 = '1';
+        else if (filtroDJ === 'NO') params.tiene_folio_25 = '0';
+
+        axios.get(`${VITE_URL_APP}/get-personal-total`, { params })
+            .then(response => {
+                const data = response.data.data || [];
+                tblPersonas_E4C.setData(data);
+                tblPersonas_E4C.setPage(1);
+            });
+    }
+
+    function cargarIndicadores_E4C() {
+        let codSucursal = document.getElementById('sucursal_E4C').value;
+        if (!codSucursal || codSucursal === '— Seleccionar —' || codSucursal === '00') codSucursal = '0';
+
+        const params = {
+            codSucursal,
+            tipo_per: document.getElementById('tipo_per_E4C')?.value || 'TODOS',
+            vigencia: document.querySelector('input[name="vigencia_E4C"]:checked')?.value || '',
+            size: 99999,
+            page: 1,
+        };
+
+        axios.get(`${VITE_URL_APP}/get-personal-total`, { params })
+            .then(response => {
+                const data = response.data.data || [];
+                const total = data.length;
+                const escaneados = data.filter(d => d.tiene_folio_25 == 1).length;
+                const pendientes = total - escaneados;
+
+                document.getElementById('countTotalE4C').textContent = total;
+                document.getElementById('countEscaneadosE4C').textContent = escaneados;
+                document.getElementById('countPendientesE4C').textContent = pendientes;
+            });
+    }
+
+    function seleccionarPrimeraSucursalValida_E4C() {
+        const select = document.getElementById('sucursal_E4C');
+        if (!select) return;
+        const opciones = [...select.options].filter(opt => opt.value && opt.value !== '— Seleccionar —' && !opt.disabled);
+        if (opciones.length > 0) select.value = opciones[0].value;
+    }
+
 
     // ============================================================
     // 4° ETAPA: ESCANEO DJ (Paginación Local - Estilo Etapa 1, 2 y 3)
@@ -3989,56 +4420,19 @@ document.getElementById('institucion')?.addEventListener('change', function () {
 
 
 // ============================================================
-// DJ GENERADOS — localStorage helpers
+// DJ GENERADOS — API helpers
 // ============================================================
-const DJ_STORAGE_KEY = 'dj_generados';
-
-function getDJGenerados() {
-    try {
-        return JSON.parse(localStorage.getItem(DJ_STORAGE_KEY) || '{}');
-    } catch { return {}; }
-}
-
-function marcarDJGenerado(codPersonal, fechaCambio) {
-    const data = getDJGenerados();
-    data[codPersonal] = {
-        fechaMarcado: new Date().toISOString(),
-        fechaCambio: fechaCambio || null,
-    };
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
-}
-
-function desmarcarDJGenerado(codPersonal) {
-    const data = getDJGenerados();
-    delete data[codPersonal];
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
-}
-
-function estaGenerado(codPersonal, fechaCambioActual) {
-    const data = getDJGenerados();
-    const reg = data[codPersonal];
-    if (!reg) return false;
-
-    // Si el registro tuvo cambios DESPUÉS de que se marcó → ya no vale
-    if (fechaCambioActual && reg.fechaCambio) {
-        const cambio = new Date(fechaCambioActual);
-        const marcado = new Date(reg.fechaMarcado);
-        if (cambio > marcado) return false;
-    }
-    return true;
-}
 
 function limpiarDJGenerados() {
-    localStorage.removeItem(DJ_STORAGE_KEY);
-    /* tblPersonasMigrado.redraw(true);
-     Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });*/
+    generadosCache = {};
 }
 
+async function desmarcarDJGenerado(codPersonal) {
+    await resetearGeneradosAPI([codPersonal]);
+}
 
 document.getElementById('btnResetearDJs')?.addEventListener('click', async function () {
-
-    const generados = getDJGenerados();
-    const totalMarcados = Object.keys(generados).length;
+    const totalMarcados = Object.keys(generadosCache).length;
 
     if (totalMarcados === 0) {
         Swal.fire({ icon: 'info', title: 'Sin marcas', text: 'No hay registros marcados como generados.' });
@@ -4053,15 +4447,12 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         showCancelButton: true,
         confirmButtonText: 'Sí, resetear todo',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef4444',
     });
 
-    if (!isConfirmed) return;
-
-    limpiarDJGenerados();
-    tblPersonasMigrado.redraw(true);
-
-    Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });
+    if (isConfirmed) {
+        await resetearGeneradosAPI();
+        if (typeof tblPersonasMigrado !== 'undefined') tblPersonasMigrado.redraw(true);
+    }
 });
 
 // ============================================================

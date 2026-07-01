@@ -2862,21 +2862,45 @@ private function migrarFamiliares_solo_nuevo($codiPers)
     public function updateCheckPdf(Request $request)
     {
         try {
-            $codigos = $request->input('codigos'); // array de CODI_PERS
-            $usuario = session('usuario') ?? 'SISTEMA';
+            $codigos = $request->input('codigos');
+            $codPeriodo = $request->input('codPeriodo', '2026');
+            $usuario = session('usuario') ?? 'SOPORTE';
 
             if (empty($codigos) || !is_array($codigos)) {
                 return response()->json(['success' => false, 'message' => 'Códigos requeridos'], 400);
             }
 
-            $placeholders = implode(',', array_fill(0, count($codigos), '?'));
+            $now = now();
 
-            DB::update(
-                "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL
-             SET CHECK_PDF = 1, CHECK_PDF_FECHA = GETDATE(), CHECK_PDF_USER = ?
-             WHERE CODI_PERS IN ({$placeholders})",
-                array_merge([$usuario], $codigos)
-            );
+            foreach ($codigos as $codPersonal) {
+                $codPersonal = str_pad(trim($codPersonal), 5, '0', STR_PAD_LEFT);
+
+                $existing = DB::table('sisolm_web.dbo.sw_dj_generada_x_periodo')
+                    ->where('codPeriodo', $codPeriodo)
+                    ->where('codPersonal', $codPersonal)
+                    ->where('habilitado', 1)
+                    ->first();
+
+                if ($existing) {
+                    DB::table('sisolm_web.dbo.sw_dj_generada_x_periodo')
+                        ->where('codigo', $existing->codigo)
+                        ->update([
+                            'generado' => 1,
+                            'modificadoPor' => $usuario,
+                            'fechaModificacion' => $now,
+                        ]);
+                } else {
+                    DB::table('sisolm_web.dbo.sw_dj_generada_x_periodo')
+                        ->insert([
+                            'codPeriodo' => $codPeriodo,
+                            'codPersonal' => $codPersonal,
+                            'generado' => 1,
+                            'creadoPor' => $usuario,
+                            'fechaCreacion' => $now,
+                            'habilitado' => 1,
+                        ]);
+                }
+            }
 
             return response()->json(['success' => true]);
 
@@ -2886,32 +2910,30 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         }
     }
 
-    /**
-     * Resetear todos los CHECK_PDF (o solo los visibles)
-     */
     public function resetCheckPdf(Request $request)
     {
         try {
-            $codigos = $request->input('codigos'); // opcional: si viene, resetea solo esos
-            $usuario = session('usuario') ?? 'SISTEMA';
+            $codigos = $request->input('codigos');
+            $codPeriodo = $request->input('codPeriodo', '2026');
+            $usuario = session('usuario') ?? 'SOPORTE';
+            $now = now();
+
+            $query = DB::table('sisolm_web.dbo.sw_dj_generada_x_periodo')
+                ->where('codPeriodo', $codPeriodo)
+                ->where('habilitado', 1);
 
             if (!empty($codigos) && is_array($codigos)) {
-                $placeholders = implode(',', array_fill(0, count($codigos), '?'));
-                DB::update(
-                    "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL
-                 SET CHECK_PDF = 0, CHECK_PDF_FECHA = NULL, CHECK_PDF_USER = NULL
-                 WHERE CODI_PERS IN ({$placeholders})",
-                    $codigos
-                );
-            } else {
-                DB::update(
-                    "UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL
-                 SET CHECK_PDF = 0, CHECK_PDF_FECHA = NULL, CHECK_PDF_USER = NULL
-                 WHERE SIP_migrado = 1"
-                );
+                $codigos = array_map(fn($c) => str_pad(trim($c), 5, '0', STR_PAD_LEFT), $codigos);
+                $query->whereIn('codPersonal', $codigos);
             }
 
-            return response()->json(['success' => true]);
+            $updated = $query->update([
+                'habilitado' => 0,
+                'modificadoPor' => $usuario,
+                'fechaModificacion' => $now,
+            ]);
+
+            return response()->json(['success' => true, 'updated' => $updated]);
 
         } catch (\Exception $e) {
             Log::error('Error en resetCheckPdf: ' . $e->getMessage());
@@ -3220,14 +3242,18 @@ private function migrarFamiliares_solo_nuevo($codiPers)
     /**
      * Obtener estado CHECK_PDF de todos los migrados
      */
-    public function getCheckPdf()
+    public function getCheckPdf(Request $request)
     {
         try {
-            $data = DB::select(
-                "SELECT CODI_PERS, CHECK_PDF, CHECK_PDF_FECHA, CHECK_PDF_USER
-                FROM sisolm_web.dbo.sw_MIGRA_PERSONAL
-                WHERE SIP_migrado = 1"
-            );
+            $codPeriodo = $request->input('codPeriodo', '2026');
+
+            $data = DB::table('sisolm_web.dbo.sw_dj_generada_x_periodo')
+                ->where('codPeriodo', $codPeriodo)
+                ->where('habilitado', 1)
+                ->where('generado', 1)
+                ->select('codPersonal', 'generado', 'fechaCreacion', 'fechaModificacion', 'creadoPor', 'modificadoPor')
+                ->get()
+                ->keyBy('codPersonal');
 
             return response()->json(['success' => true, 'data' => $data]);
 
