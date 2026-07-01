@@ -137,55 +137,87 @@
         <div id="etapa2" class="tab-content hidden">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
-                    <div class="card-header border-b border-gray-200 pb-2">
-                        <h4 class="card-title text-lg font-medium text-primary uppercase">Tabla de Comparación</h4>
-                    </div>
-
                     <div class="w-full px-5 py-4">
-                        {{-- FILTROS + BOTONES --}}
-                        <div class="flex justify-between items-start gap-4 mb-4">
-                            <div class="flex flex-col items-start gap-2">
-                                <div>
-                                    <div class="flex items-baseline gap-1 px-3 py-1 bg-gray-100 rounded-lg border border-gray-200">
-                                        <span id="contadorFiltradoE2" class="text-base font-medium text-gray-800">0</span>
-                                        <span class="text-sm text-gray-400">/</span>
-                                        <span id="contadorTotalE2" class="text-sm text-gray-500">0</span>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button type="button" id="btnReporteVerificados" class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors"><i class='bx bx-download text-base'></i> Reporte (Total y Verificados)</button>
-                                </div>
-                                <div class="hidden items-center gap-2">
-    <button type="button" id="btnDJUnificadoVerificado" class="btn border-primary text-primary hover:bg-primary hover:text-white px-3 py-1 text-sm rounded-lg"><i class='bx bx-file text-base'></i> DJ Unificado</button>
-    <button type="button" id="btnResetearDJsE2" class="btn bg-danger text-white px-3 py-1 text-sm rounded-lg"><i class='bx bx-reset text-base'></i> Resetear marcas</button>
-</div>
+
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                            <div>
+                                <h4 class="text-lg font-bold text-primary uppercase">Tabla de Comparación</h4>
+                                <p class="text-sm text-gray-500">Verificación de datos</p>
                             </div>
 
-                            <div class="flex flex-col items-end gap-3">
-                                <div class="flex items-center gap-2">
-                                    <input type="text" id="buscarPersonalE2" placeholder="Buscar por nombre o DNI..." class="w-48 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm uppercase" style="min-width: 250px;" autocomplete="off" />
+                            <div class="flex gap-2">
+                                <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                                    <span id="contadorTotalE2" class="text-lg font-bold text-blue-700">0</span>
                                 </div>
-                                <div class="flex items-center gap-3 flex-wrap">
-                                    <div class="flex items-center gap-2">
-                                        <label class="text-sm text-gray-600">Sucursal:</label>
-                                        @php $sucursalesFiltradasE2 = array_slice($sucursales, 1); @endphp
-                                        <select id="filtroSucursalE2" class="w-24 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                            @if(count($sucursalesFiltradasE2) > 1) <option value="00">Todas</option> @endif
-                                            @foreach ($sucursalesFiltradasE2 as $sucursal) <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option> @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <label class="text-sm text-gray-600">Tipo:</label>
-                                        <select id="filtroTipoPerE2" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                            @if($tipoPerLimitar == 0)
-                                                <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option><option value="06">Especial</option>
-                                            @elseif($tipoPerLimitar == 1)
-                                                <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                            @elseif($tipoPerLimitar == 2)
-                                                <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
-                                            @endif
-                                        </select>
-                                    </div>
+                                <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-green-600 font-bold uppercase">Verificados</span>
+                                    <span id="contadorFiltradoE2" class="text-lg font-bold text-green-700">0</span>
+                                </div>
+                                <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Sin Verificar</span>
+                                    <span id="contadorSinVerificarE2" class="text-lg font-bold text-yellow-700">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="flex flex-wrap items-center gap-5">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" id="buscarPersonalE2" placeholder="Buscar por nombre o DNI..." class="w-48 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm uppercase" style="min-width: 250px;" autocomplete="off" />
+                                </div>
+
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                                    @php $sucursalesFiltradasE2 = array_slice($sucursales, 1); @endphp
+                                    <select id="filtroSucursalE2" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        @if(count($sucursalesFiltradasE2) > 1) <option value="00">Todas</option> @endif
+                                        @foreach ($sucursalesFiltradasE2 as $sucursal) <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option> @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                                    <select id="filtroTipoPerE2" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        @if($tipoPerLimitar == 0)
+                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
+                                        @elseif($tipoPerLimitar == 1)
+                                            <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
+                                        @elseif($tipoPerLimitar == 2)
+                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
+                                        @endif
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE2" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
+                                        <span class="text-sm font-medium text-gray-700">Todos</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE2" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                        <span class="text-sm font-medium text-gray-700">Verificados</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE2" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
+                                        <span class="text-sm font-medium text-gray-700">Sin Verificar</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button type="button" id="btnReporteVerificados" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                    <i class='bx bxs-file-pdf text-lg'></i> Reporte PDF
+                                </button>
+                                
+                                {{-- NUEVO BOTÓN EXCEL (Generación nativa) --}}
+                                <button type="button" id="btnExportExcelE2" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class='bx bx-spreadsheet text-lg'></i> Excel
+                                </button>
+                                
+                                <div class="hidden items-center gap-2">
+                                    <button type="button" id="btnDJUnificadoVerificado" class="btn border-primary text-primary hover:bg-primary hover:text-white px-3 py-1 text-sm rounded-lg"><i class='bx bx-file text-base'></i> DJ Unificado</button>
+                                    <button type="button" id="btnResetearDJsE2" class="btn bg-danger text-white px-3 py-1 text-sm rounded-lg"><i class='bx bx-reset text-base'></i> Resetear marcas</button>
                                 </div>
                             </div>
                         </div>
@@ -212,60 +244,84 @@
         <div id="etapa3" class="tab-content hidden">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
-                    <div class="card-header border-b border-gray-200 pb-2">
-                        <h4 class="card-title text-lg font-medium text-primary uppercase">Generación de DJ Masivo</h4>
-                    </div>
-
                     <div class="w-full px-5 py-4">
-                        {{-- FILTROS + BOTONES ACTIVOS --}}
-                        <div class="flex justify-between items-start gap-4 mb-4">
-                            <div class="flex flex-col items-start gap-2">
-                                <div>
-                                    <div class="flex items-baseline gap-1 px-3 py-1 bg-gray-100 rounded-lg border border-gray-200">
-                                        <span id="contadorFiltradoE3" class="text-base font-medium text-gray-800">0</span>
-                                        <span class="text-sm text-gray-400">/</span>
-                                        <span id="contadorTotalE3" class="text-sm text-gray-500">0</span>
-                                    </div>
+
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                            <div>
+                                <h4 class="text-lg font-bold text-primary uppercase">Generación de DJ Masivo</h4>
+                                <p class="text-sm text-gray-500">Control de impresiones PDF</p>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                                    <span id="contadorTotalE3" class="text-lg font-bold text-blue-700">0</span>
                                 </div>
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <button type="button" id="btnReporteAvanceE3" class="hidden btn border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm rounded-lg items-center gap-1.5 font-medium transition-colors">
-                                        <i class='bx bx-bar-chart-alt-2 text-base'></i> Rep. Avances
-                                    </button>
-                                    <button type="button" id="btnDJUnificadoE3" class="btn border-primary text-primary hover:bg-primary hover:text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-1.5 font-medium transition-colors">
-                                        <i class='bx bx-file text-base'></i> DJ Unificado
-                                    </button>
-                                    <button type="button" id="btnResetearDJsE3" class="btn bg-danger text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-1.5 font-medium transition-colors">
-                                        <i class='bx bx-reset text-base'></i> Resetear marcas
-                                    </button>
+                                <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-green-600 font-bold uppercase">Generados</span>
+                                    <span id="contadorGeneradosE3" class="text-lg font-bold text-green-700">0</span>
+                                </div>
+                                <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Pendientes</span>
+                                    <span id="contadorPendientesE3" class="text-lg font-bold text-yellow-700">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="flex flex-wrap items-center gap-5">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" id="buscarPersonalE3" placeholder="Buscar por nombre o DNI..." class="w-48 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm uppercase" style="min-width: 250px;" autocomplete="off" />
+                                </div>
+
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                                    @php $sucursalesFiltradasE3 = array_slice($sucursales, 1); @endphp
+                                    <select id="filtroSucursalE3" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        @if(count($sucursalesFiltradasE3) > 1) <option value="00">Todas</option> @endif
+                                        @foreach ($sucursalesFiltradasE3 as $sucursal) <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option> @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                                    <select id="filtroTipoPerE3" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        @if($tipoPerLimitar == 0)
+                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
+                                        @elseif($tipoPerLimitar == 1)
+                                            <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
+                                        @elseif($tipoPerLimitar == 2)
+                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
+                                        @endif
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE3" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
+                                        <span class="text-sm font-medium text-gray-700">Todos</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE3" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                        <span class="text-sm font-medium text-gray-700">Generados</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE3" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
+                                        <span class="text-sm font-medium text-gray-700">Pendientes</span>
+                                    </label>
                                 </div>
                             </div>
 
-                            <div class="flex flex-col items-end gap-3">
-                                <div class="flex items-center gap-2">
-                                    <input type="text" id="buscarPersonalE3" placeholder="Buscar por nombre o DNI..." class="w-48 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm uppercase" style="min-width: 250px;" autocomplete="off" />
-                                </div>
-                                <div class="flex items-center gap-3 flex-wrap">
-                                    <div class="flex items-center gap-2">
-                                        <label class="text-sm text-gray-600">Sucursal:</label>
-                                        @php $sucursalesFiltradasE3 = array_slice($sucursales, 1); @endphp
-                                        <select id="filtroSucursalE3" class="w-24 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                            @if(count($sucursalesFiltradasE3) > 1) <option value="00">Todas</option> @endif
-                                            @foreach ($sucursalesFiltradasE3 as $sucursal) <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option> @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <label class="text-sm text-gray-600">Tipo:</label>
-                                        <select id="filtroTipoPerE3" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                            @if($tipoPerLimitar == 0)
-                                                <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option><option value="06">Especial</option>
-                                            @elseif($tipoPerLimitar == 1)
-                                                <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                            @elseif($tipoPerLimitar == 2)
-                                                <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
-                                            @endif
-                                        </select>
-                                    </div>
-                                </div>
+                            <div class="flex gap-2">
+                                <button type="button" id="btnReporteAvanceE3" class="hidden btn border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm rounded-lg items-center gap-1.5 font-medium transition-colors">
+                                    <i class='bx bx-bar-chart-alt-2 text-base'></i> Rep. Avances
+                                </button>
+                                <button type="button" id="btnDJUnificadoE3" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    <i class='bx bx-file text-lg'></i> DJ Masivo
+                                </button>
+                                <button type="button" id="btnResetearDJsE3" class="hidden flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                    <i class='bx bx-reset text-lg'></i> Resetear marcas
+                                </button>
                             </div>
                         </div>
 
@@ -289,56 +345,99 @@
             </div>
         </div>
         <div id="etapa4" class="tab-content hidden">
-            <div class="card overflow-hidden border border-gray-100 shadow-sm mt-4">
-                <div class="card-header border-b border-gray-200 pb-2">
-                    <h4 class="card-title text-lg font-medium text-primary uppercase">4° ETAPA: Control de Escaneo (Archivos)</h4>
-                </div>
-                <div class="w-full px-5 py-4">
-                    <div class="flex justify-between items-end gap-4 mb-4">
-    <div class="flex items-center gap-2">
-        <input type="text" id="buscarPersonalE4" placeholder="Buscar por nombre o DNI..." class="w-64 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary transition-all text-sm uppercase" autocomplete="off" />
-    </div>
-    <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-600">Sucursal:</label>
-            @php $sucursalesFiltradasE4 = array_slice($sucursales, 1); @endphp
-            <select id="filtroSucursalE4" class="w-32 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                <option value="00">Todas</option>
-                @foreach ($sucursalesFiltradasE4 as $sucursal) <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option> @endforeach
-            </select>
-        </div>
-        <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-600">Tipo:</label>
-            <select id="filtroTipoPerE4" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                @if($tipoPerLimitar == 0)
-                    <option value="00">Todos</option>
-                    <option value="01">Operativo 4°</option>
-                    <option value="03">Operativo 5°</option>
-                    <option value="02">Administrativo 4°</option>
-                    <option value="05">Administrativo 5°</option>
-                    <option value="06">Especial</option>
-                @elseif($tipoPerLimitar == 1)
-                    <option value="00">Todos</option>
-                    <option value="02">Administrativo 4°</option>
-                    <option value="05">Administrativo 5°</option>
-                @elseif($tipoPerLimitar == 2)
-                    <option value="00">Todos</option>
-                    <option value="01">Operativo 4°</option>
-                    <option value="03">Operativo 5°</option>
-                @endif
-            </select>
-        </div>
+            <div class="grid lg:grid-cols-1 gap-6">
+                <div class="card overflow-hidden border border-gray-100 shadow-sm">
+                    <div class="w-full px-5 py-4">
 
-        {{-- BOTÓN REPORTE DE AVANCES (Visible para todos) --}}
-        <div class="flex gap-2 ml-2 border-l-2 pl-4 border-gray-200">
-            <button type="button" class="btn bg-info text-white font-medium hover:bg-blue-600 transition-colors" data-hs-overlay="#modal-reporte-avances">
-                Reporte de avances
-            </button>
-        </div>
-        
-    </div>
-</div>
-                    <div id="tblPersonasEtapa4" class="w-full"></div>
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                            <div>
+                                <h4 class="text-lg font-bold text-primary uppercase">Escaneo de DJ (Biométrico)</h4>
+                                <p class="text-sm text-gray-500">Validación de Huella y Firma</p>
+                            </div>
+
+                            {{-- NUEVOS INDICADORES ETAPA 4 --}}
+                            <div class="flex gap-2">
+                                <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                                    <span id="contadorTotalE4" class="text-lg font-bold text-blue-700">0</span>
+                                </div>
+                                <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-green-600 font-bold uppercase">Escaneados</span>
+                                    <span id="contadorEscaneadosE4" class="text-lg font-bold text-green-700">0</span>
+                                </div>
+                                <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Pendientes</span>
+                                    <span id="contadorPendientesE4" class="text-lg font-bold text-yellow-700">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- CAJA GRIS DE FILTROS ESTANDARIZADA --}}
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="flex flex-wrap items-center gap-5">
+                                
+                                {{-- BUSCADOR --}}
+                                <div class="flex items-center gap-2">
+                                    <input type="text" id="buscarPersonalE4" placeholder="Buscar por nombre o DNI..." class="w-48 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm uppercase" style="min-width: 250px;" autocomplete="off" />
+                                </div>
+
+                                {{-- SELECT SUCURSAL --}}
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                                    @php $sucursalesFiltradasE4 = array_slice($sucursales, 1); @endphp
+                                    <select id="filtroSucursalE4" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        @if(count($sucursalesFiltradasE4) > 1) <option value="00">Todas</option> @endif
+                                        @foreach ($sucursalesFiltradasE4 as $sucursal) <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option> @endforeach
+                                    </select>
+                                </div>
+
+                                {{-- SELECT TIPO --}}
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                                    <select id="filtroTipoPerE4" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        @if($tipoPerLimitar == 0)
+                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
+                                        @elseif($tipoPerLimitar == 1)
+                                            <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
+                                        @elseif($tipoPerLimitar == 2)
+                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
+                                        @endif
+                                    </select>
+                                </div>
+
+                                {{-- NUEVO: RADIO BUTTONS ESTADO --}}
+                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE4" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
+                                        <span class="text-sm font-medium text-gray-700">Todos</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE4" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                        <span class="text-sm font-medium text-gray-700">Escaneados</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="filtroEstadoE4" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
+                                        <span class="text-sm font-medium text-gray-700">Pendientes</span>
+                                    </label>
+                                </div>
+
+                            </div>
+
+                            {{-- BOTÓN REPORTE AVANCES --}}
+                            <div class="flex gap-2">
+                                <button type="button" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm" data-hs-overlay="#modal-reporte-avances">
+                                    <i class='bx bx-bar-chart-alt-2 text-lg'></i> Reporte Avances
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 mb-4 mt-6">
+                            <div class="flex-1 border-t border-gray-200"></div>
+                            <span class="text-xs text-gray-400 font-medium uppercase tracking-wider px-2"><i class='bx bx-table mr-1'></i>Lista Control Biométrico</span>
+                            <div class="flex-1 border-t border-gray-200"></div>
+                        </div>
+
+                        <div id="tblPersonasEtapa4" class="w-full"></div>
                 </div>
             </div>
         </div>

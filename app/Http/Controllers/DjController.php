@@ -2274,7 +2274,7 @@ class DjController extends Controller
             // );
 
             DB::insert(
-                'INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+                'INSERT INTO si_solm.dbo.DERECHO_HABIENTE 
             (CODI_PERS, TIPO_RELA, APEL_1, APEL_2, NOMB_1, NOMB_2, FECH_NACI) 
             VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [$codiPers, $parentesco, $apel1, $apel2, $nomb1, $nomb2, $fechaNaci]
@@ -2282,96 +2282,254 @@ class DjController extends Controller
         }
     }
 
-private function migrarFamiliares($codiPers)
-{
-    // Función SQL reutilizable como expresión CASE para convertir cualquier formato
-    // Orden: YYYY-MM-DD (120) → DD/MM/YYYY (103) → MM/DD/YYYY (101) → si nada funciona → NULL
+    // private function migrarFamiliares($codiPers)
+    // {
+    //     // Eliminar todos los familiares existentes del trabajador en DJ2026_DERECHO_HABIENTE
+    //     DB::delete(
+    //         'DELETE FROM si_solm.dbo.DERECHO_HABIENTE
+    //      WHERE CODI_PERS = ?',
+    //         [$codiPers]
+    //     );
 
-    $convertFecha = "
-        CASE
-            WHEN NULLIF({col}, '') IS NULL THEN NULL
-            WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 120) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 120)
-            WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 103) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 103)
-            WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 101) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 101)
-            WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 104) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 104)
-            ELSE NULL
-        END
-    ";
+    //     // Insertar familiares en DJ2026_DERECHO_HABIENTE excluyendo la columna identity CODI_DERE_HABI
+    //     DB::statement(
+    //         'INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+    //     (
+        
+    //         CODI_PERS,
+    //         TIPO_RELA,
+    //         NOMB_1,
+    //         NOMB_2,
+    //         APEL_1,
+    //         APEL_2,
+    //         CODI_TIPO_DOCU,
+    //         NRO_DOCU_IDEN,
+    //         FECH_NACI,
+    //         FALLECIDO,
+    //         DEHA_OCUPACION,
+    //         DEHA_EDAD,
+    //         USUA_CODIGO_REG,
+    //         USUA_FECHA_REG,
+    //         USUA_CODIGO_MOD,
+    //         USUA_FECHA_MOD,
+    //         DEHA_SEXO,
+            
+    
+    //         DEHA_MES_CONCEPCION,
+    //         DEHA_FECHA_ALTA,
+    //         DEHA_TIPO_BAJA,
+    //         DEHA_FECHA_BAJA,
+    //         DEHA_INCAPACIDAD,
+    //         DEHA_RESOL_INCAPACIDAD,
+    //         DEHA_VIGENCIA,
+    //         DEHA_telefono,
+    //         domicilio,
+    //         DEHA_DEREHABI,
+    //         TIDV_CODIGO
+    //     )
+    //     SELECT
+       
+    //         CODI_PERS,
+    //         TIPO_RELA,
+    //         NOMB_1,
+    //         NOMB_2,
+    //         APEL_1,
+    //         APEL_2,
+    //         CODI_TIPO_DOCU,
+    //         NRO_DOCU_IDEN,
+    //         FECH_NACI,
+    //         FALLECIDO,
+    //         DEHA_OCUPACION,
+    //         DEHA_EDAD,
+    //         USUA_CODIGO_REG,
+    //         GETDATE(),
+    //         USUA_CODIGO_MOD,
+    //         GETDATE(),
+    //         DEHA_SEXO,
+           
+       
+    //         DEHA_MES_CONCEPCION,
+    //         DEHA_FECHA_ALTA,
+    //         DEHA_TIPO_BAJA,
+    //         DEHA_FECHA_BAJA,
+    //         DEHA_INCAPACIDAD,
+    //         DEHA_RESOL_INCAPACIDAD,
+    //         DEHA_VIGENCIA,
+    //         DEHA_telefono,
+    //         domicilio,
+    //         DEHA_DEREHABI,
+    //         TIDV_CODIGO
+    //     FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
+    //     WHERE CODI_PERS = ?',
+    //         [$codiPers]
+    //     );
 
-    $toDate = function($col) use ($convertFecha) {
-        return str_replace('{col}', $col, $convertFecha);
-    };
+    //     // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTE
+    //     DB::delete(
+    //         'DELETE FROM si_solm.dbo.DERECHO_HABIENTE
+    //      WHERE CODI_PERS = ?',
+    //         [$codiPers]
+    //     );
 
-    // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTExd
-    DB::delete(
-        'DELETE FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?',
-        [$codiPers]
-    );
+    //     // Insertar familiares en DERECHO_HABIENTE excluyendo la columna identity CODI_DERE_HABI
+    //     DB::statement("
+    //     INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+    //     (
+    //         CODI_PERS,
+    //         TIPO_RELA,
+    //         NOMB_1,
+    //         NOMB_2,
+    //         APEL_1,
+    //         APEL_2,
+    //         CODI_TIPO_DOCU,
+    //         NRO_DOCU_IDEN,
+    //         FECH_NACI,
+    //         FALLECIDO,
+    //         DEHA_OCUPACION,
+    //         DEHA_EDAD,
+    //         USUA_CODIGO_REG,
+    //         USUA_FECHA_REG,
+    //         USUA_CODIGO_MOD,
+    //         USUA_FECHA_MOD,
+    //         DEHA_SEXO,
+    //         DEHA_MES_CONCEPCION,
+    //         DEHA_FECHA_ALTA,
+    //         DEHA_TIPO_BAJA,
+    //         DEHA_FECHA_BAJA,
+    //         DEHA_INCAPACIDAD,
+    //         DEHA_RESOL_INCAPACIDAD,
+    //         DEHA_VIGENCIA,
+    //         DEHA_telefono,
+    //         domicilio,
+    //         DEHA_DEREHABI,
+    //         TIDV_CODIGO
+    //     )
+    //     SELECT
+    //         CODI_PERS,
+    //         TIPO_RELA,
+    //         NOMB_1,
+    //         NOMB_2,
+    //         APEL_1,
+    //         APEL_2,
+    //         CODI_TIPO_DOCU,
+    //         NRO_DOCU_IDEN,
+    //         TRY_CONVERT(datetime, NULLIF(FECH_NACI, ''), 103),
+    //         FALLECIDO,
+    //         DEHA_OCUPACION,
+    //         DEHA_EDAD,
+    //         USUA_CODIGO_REG,
+    //         GETDATE(),
+    //         USUA_CODIGO_MOD,
+    //         GETDATE(),
+    //         DEHA_SEXO,
+    //         DEHA_MES_CONCEPCION,
+    //         TRY_CONVERT(datetime, NULLIF(DEHA_FECHA_ALTA, ''), 103),
+    //         DEHA_TIPO_BAJA,
+    //         TRY_CONVERT(datetime, NULLIF(DEHA_FECHA_BAJA, ''), 103),
+    //         DEHA_INCAPACIDAD,
+    //         DEHA_RESOL_INCAPACIDAD,
+    //         TRY_CONVERT(datetime, NULLIF(DEHA_VIGENCIA, ''), 103),
+    //         DEHA_telefono,
+    //         domicilio,
+    //         DEHA_DEREHABI,
+    //         TIDV_CODIGO
+    //     FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
+    //     WHERE CODI_PERS = ?
+    // ", [$codiPers]);
+    // }
 
-    // Insertar familiares en DERECHO_HABIENTExd
-    DB::statement("
-        INSERT INTO si_solm.dbo.DERECHO_HABIENTE
-        (
-            CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
-            CODI_TIPO_DOCU, NRO_DOCU_IDEN, FECH_NACI, FALLECIDO,
-            DEHA_OCUPACION, DEHA_EDAD, USUA_CODIGO_REG, USUA_FECHA_REG,
-            USUA_CODIGO_MOD, USUA_FECHA_MOD, DEHA_SEXO, DEHA_MES_CONCEPCION,
-            DEHA_FECHA_ALTA, DEHA_TIPO_BAJA, DEHA_FECHA_BAJA, DEHA_INCAPACIDAD,
-            DEHA_RESOL_INCAPACIDAD, DEHA_VIGENCIA, DEHA_telefono, domicilio,
-            DEHA_DEREHABI, TIDV_CODIGO
-        )
-        SELECT
-            CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
-            CODI_TIPO_DOCU, NRO_DOCU_IDEN,
-            {$toDate('FECH_NACI')},
-            FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
-            USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
-            DEHA_SEXO, DEHA_MES_CONCEPCION,
-            {$toDate('DEHA_FECHA_ALTA')},
-            DEHA_TIPO_BAJA,
-            {$toDate('DEHA_FECHA_BAJA')},
-            DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
-            {$toDate('DEHA_VIGENCIA')},
-            DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
-        FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
-        WHERE CODI_PERS = ?
-    ", [$codiPers]);
 
-    // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTE
-    DB::delete(
-        'DELETE FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?',
-        [$codiPers]
-    );
+    private function migrarFamiliares($codiPers)
+    {
+        // Función SQL reutilizable como expresión CASE para convertir cualquier formato
+        // Orden: YYYY-MM-DD (120) → DD/MM/YYYY (103) → MM/DD/YYYY (101) → si nada funciona → NULL
 
-    // Insertar familiares en DERECHO_HABIENTE
-    DB::statement("
-        INSERT INTO si_solm.dbo.DERECHO_HABIENTE
-        (
-            CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
-            CODI_TIPO_DOCU, NRO_DOCU_IDEN, FECH_NACI, FALLECIDO,
-            DEHA_OCUPACION, DEHA_EDAD, USUA_CODIGO_REG, USUA_FECHA_REG,
-            USUA_CODIGO_MOD, USUA_FECHA_MOD, DEHA_SEXO, DEHA_MES_CONCEPCION,
-            DEHA_FECHA_ALTA, DEHA_TIPO_BAJA, DEHA_FECHA_BAJA, DEHA_INCAPACIDAD,
-            DEHA_RESOL_INCAPACIDAD, DEHA_VIGENCIA, DEHA_telefono, domicilio,
-            DEHA_DEREHABI, TIDV_CODIGO
-        )
-        SELECT
-            CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
-            CODI_TIPO_DOCU, NRO_DOCU_IDEN,
-            {$toDate('FECH_NACI')},
-            FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
-            USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
-            DEHA_SEXO, DEHA_MES_CONCEPCION,
-            {$toDate('DEHA_FECHA_ALTA')},
-            DEHA_TIPO_BAJA,
-            {$toDate('DEHA_FECHA_BAJA')},
-            DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
-            {$toDate('DEHA_VIGENCIA')},
-            DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
-        FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
-        WHERE CODI_PERS = ?
-    ", [$codiPers]);
-}
+        // $convertFecha = "
+        //     CASE
+        //         WHEN NULLIF({col}, '') IS NULL THEN NULL
+        //         WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 120) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 120)
+        //         WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 103) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 103)
+        //         WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 101) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 101)
+        //         WHEN TRY_CONVERT(datetime, NULLIF({col}, ''), 104) IS NOT NULL THEN TRY_CONVERT(datetime, NULLIF({col}, ''), 104)
+        //         ELSE NULL
+        //     END
+        // ";
+
+        $toDate = function($col) {
+            return "TRY_CONVERT(datetime, NULLIF(TRIM({$col}), ''), 120)";
+        };
+
+        // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTExd
+        DB::delete(
+            'DELETE FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?',
+            [$codiPers]
+        );
+
+        // Insertar familiares en DERECHO_HABIENTExd
+        DB::statement("
+            INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+            (
+                CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
+                CODI_TIPO_DOCU, NRO_DOCU_IDEN, FECH_NACI, FALLECIDO,
+                DEHA_OCUPACION, DEHA_EDAD, USUA_CODIGO_REG, USUA_FECHA_REG,
+                USUA_CODIGO_MOD, USUA_FECHA_MOD, DEHA_SEXO, DEHA_MES_CONCEPCION,
+                DEHA_FECHA_ALTA, DEHA_TIPO_BAJA, DEHA_FECHA_BAJA, DEHA_INCAPACIDAD,
+                DEHA_RESOL_INCAPACIDAD, DEHA_VIGENCIA, DEHA_telefono, domicilio,
+                DEHA_DEREHABI, TIDV_CODIGO
+            )
+            SELECT
+                CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
+                CODI_TIPO_DOCU, NRO_DOCU_IDEN,
+                {$toDate('FECH_NACI')},
+                FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
+                USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
+                DEHA_SEXO, DEHA_MES_CONCEPCION,
+                {$toDate('DEHA_FECHA_ALTA')},
+                DEHA_TIPO_BAJA,
+                {$toDate('DEHA_FECHA_BAJA')},
+                DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
+                {$toDate('DEHA_VIGENCIA')},
+                DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
+            FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
+            WHERE CODI_PERS = ?
+        ", [$codiPers]);
+
+        // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTE
+        DB::delete(
+            'DELETE FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?',
+            [$codiPers]
+        );
+
+        // Insertar familiares en DERECHO_HABIENTE
+        DB::statement("
+            INSERT INTO si_solm.dbo.DERECHO_HABIENTE
+            (
+                CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
+                CODI_TIPO_DOCU, NRO_DOCU_IDEN, FECH_NACI, FALLECIDO,
+                DEHA_OCUPACION, DEHA_EDAD, USUA_CODIGO_REG, USUA_FECHA_REG,
+                USUA_CODIGO_MOD, USUA_FECHA_MOD, DEHA_SEXO, DEHA_MES_CONCEPCION,
+                DEHA_FECHA_ALTA, DEHA_TIPO_BAJA, DEHA_FECHA_BAJA, DEHA_INCAPACIDAD,
+                DEHA_RESOL_INCAPACIDAD, DEHA_VIGENCIA, DEHA_telefono, domicilio,
+                DEHA_DEREHABI, TIDV_CODIGO
+            )
+            SELECT
+                CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
+                CODI_TIPO_DOCU, NRO_DOCU_IDEN,
+                {$toDate('FECH_NACI')},
+                FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
+                USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
+                DEHA_SEXO, DEHA_MES_CONCEPCION,
+                {$toDate('DEHA_FECHA_ALTA')},
+                DEHA_TIPO_BAJA,
+                {$toDate('DEHA_FECHA_BAJA')},
+                DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
+                {$toDate('DEHA_VIGENCIA')},
+                DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
+            FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
+            WHERE CODI_PERS = ?
+        ", [$codiPers]);
+    }
+
 
 
 
@@ -3243,4 +3401,50 @@ public function reporteAvancesDj(Request $request)
         }
     }
 
+    public function reporteEtapa4Dj(Request $request)
+    {
+        try {
+            // Le metemos size enorme para traer todo y que Tabulator pagine en el Frontend
+            $page = 1;
+            $size = 100000; 
+            $sucursal = $request->get('sucursal', '00');
+            $sucursal = ($sucursal == '00') ? '' : $sucursal; 
+            $search = ''; // El buscador ahora lo hará el frontend
+            $usuario = session('usuario') ?? 'EMONTERO'; 
+
+            $sql = "
+                SET NOCOUNT ON;
+                SET ARITHABORT ON;
+                EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_V3 
+                    @codSucursal = ?, 
+                    @page = ?, 
+                    @size = ?, 
+                    @search = ?, 
+                    @tipo_per = ?, 
+                    @vigencia = ?, 
+                    @usuario = ?
+            ";
+
+            $data = \DB::select($sql, [
+                $sucursal, 
+                $page, 
+                $size, 
+                $search, 
+                'TODOS', 
+                'SI', 
+                $usuario
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en reporteEtapa4Dj: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 }
+
+

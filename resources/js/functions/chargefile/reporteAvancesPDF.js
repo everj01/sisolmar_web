@@ -27,9 +27,6 @@ const COLOR = {
     subtitulo : [75,  85,  99],   // Gris medio (gray-600)
 };
 
-/** Nombre del archivo descargado */
-const NOMBRE_ARCHIVO = 'Reporte_Avances_RRHH.pdf';
-
 // ---------------------------------------------------------------------------
 // COLUMNAS DE LA TABLA
 // ---------------------------------------------------------------------------
@@ -76,7 +73,13 @@ async function generarPDF(datos, meta) {
     agregarTabla(doc, datos, startY);
     agregarPieDePagina(doc);
  
-    doc.save(NOMBRE_ARCHIVO);
+    // Nombre dinámico con la sucursal limpia y fecha
+    const f = new Date();
+    const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+    const sucursalLimpia = meta.sucursal.trim().replace(/\s+/g, '_');
+    const nombreArchivoDin = `Reporte_Avances_RRHH_${sucursalLimpia}_${fStr}.pdf`;
+ 
+    doc.save(nombreArchivoDin);
 }
 
 

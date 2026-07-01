@@ -12,6 +12,9 @@ import '@yaireo/tagify/dist/tagify.css';
 import ExcelJS from 'exceljs'
 
 import { generarDeclaracionJuradaPDF, generarReporteFaltantesPDF } from './dj_pdf.js';
+import { generarPDF } from './chargefile/reporteAvancesPDF.js';
+import { generarExcel } from './chargefile/reporteAvancesExcel.js';
+import { obtenerDatos } from './chargefile/reporteAvances.js';
 
 const API_URL = `${VITE_URL_APP}/api`;
 let registroSeleccionado = null;
@@ -248,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const radioVal = document.querySelector('input[name="filtroEstadoE1"]:checked')?.value || 'null';
 
         let filtros = [];
-        
+
         if (texto) {
             // Buscamos en Nombre Completo o en DNI
             filtros.push([
@@ -276,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function () {
         axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, { params: { codSucursal, codTipoPer, tipo: null } })
             .then(response => {
                 if (!response.data.success) return;
-                
+
                 const datosLimpios = response.data.data.filter(d => {
                     const tipoPersonal = d.TIPO_PER ? d.TIPO_PER.toUpperCase() : '';
                     return !tipoPersonal.includes('ESPECIAL');
@@ -289,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // 2. Mandamos la data a la tabla
                 tblEtapa1.setData(datosLimpios);
-                
+
                 // 3. Aplicamos filtros locales por si hay un radio button o texto ya seleccionado
                 aplicarFiltrosLocalesE1();
             });
@@ -428,9 +431,9 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             // 5. DATOS
-            data.forEach((d) => {
+            data.forEach((d, index) => { // 🔥 Agregamos 'index' aquí
                 const row = worksheet.addRow([
-                    d.NRO,
+                    index + 1, // 🔥 Reemplazamos d.NRO por index + 1
                     d.SIP_CAMBIO === 'Ok' ? 'ACTUALIZADO' : 'SIN ACTUALIZAR',
                     d.NOMBRE, d.NRO_DOCU_IDEN, d.SUCURSAL, d.TIPO_PER,
                     d.FECH_INGRE !== 'sin cambios' ? d.FECH_INGRE.split(' ')[0] : '—',
@@ -449,7 +452,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Reporte_Actualizacion_${filtros.sucursal.replace(/ /g, '_')}.xlsx`;
+            const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+            link.download = `Reporte_Actualizacion_${filtros.sucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
             Swal.close();
         } catch (error) {
@@ -507,8 +511,8 @@ document.addEventListener('DOMContentLoaded', function () {
             // 3. Agregamos "N°" a la cabecera
             head: [["N°", "Estado", "Nombres", "DNI", "Sucursal", "Tipo", "Fecha Ingreso", "Fecha Actualización"]],
             // 4. Mapeamos el index para enumerar
-            body: data.map((d) => [
-                d.NRO,
+            body: data.map((d, index) => [ // 🔥 Agregamos 'index' aquí
+                index + 1, // 🔥 Reemplazamos d.NRO por index + 1
                 d.SIP_CAMBIO === 'Ok' ? 'ACTUALIZADO' : 'SIN ACTUALIZAR',
                 d.NOMBRE,
                 d.NRO_DOCU_IDEN,
@@ -583,7 +587,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        doc.save(`Reporte_Actualizacion_${filtros.sucursal.replace(/ /g, '_')}.pdf`);
+        const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+        doc.save(`Reporte_Actualizacion_${filtros.sucursal.replace(/ /g, '_')}_${fStr}.pdf`);
     });
 
     cargarDatosEtapa1();
@@ -604,43 +609,56 @@ document.addEventListener('DOMContentLoaded', function () {
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
-            { 
-                title: "N°", 
-                hozAlign: "center", 
+            {
+                title: "N°",
+                hozAlign: "center",
                 width: 60,
                 headerSort: false,
-                formatter: function(cell) {
+                formatter: function (cell) {
                     const span = document.createElement("span");
-                    
+
                     const actualizarNumero = () => {
-                        const filasActivas = cell.getTable().getRows("active");
-                        span.innerText = filasActivas.indexOf(cell.getRow()) + 1;
+                        const table = cell.getTable();
+                        const page = table.getPage() || 1;
+                        const size = table.getPageSize() || 10;
+
+                        const posicionFila = cell.getRow().getPosition(true);
+
+                        if (posicionFila > 0) {
+                            // Sumamos el desfase de la página anterior a la posición actual
+                            span.innerText = ((page - 1) * size) + posicionFila;
+                        }
                     };
-                    
-                    // 1. Ejecución inicial
+
                     actualizarNumero();
-                    
-                    // 2. Escucha movimientos de fila (ordenamiento, filtrado)
                     cell.getRow().watchPosition(actualizarNumero);
-                    
+
                     return span;
                 }
             },
             {
-                title: "Verificado", field: "migrado", hozAlign: "center", widthGrow: 1.5,
+                title: "Verificado", field: "migrado", hozAlign: "center", widthGrow: 1.2,
                 formatter: cell => {
-                    const esVerificado = cell.getValue() === 'SI';
-                    const texto = esVerificado ? 'VERIFICADO' : 'SIN VERIFICAR';
+                    const valor = (cell.getValue() ?? '').toUpperCase().trim();
+                    const esVerificado = valor === 'SI';
+
+                    // Si viene otra cosa que no sea SI o NO, lo mostramos tal cual, sino usamos SI/NO
+                    const texto = (valor === 'SI' || valor === 'NO') ? valor : (valor || '—');
+
                     const color = esVerificado
                         ? 'border-success bg-success text-white'
                         : 'border-yellow-300 bg-yellow-50 text-yellow-800';
 
-                    return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[10px] font-bold tracking-wider whitespace-nowrap">${texto}</span>`;
+                    return `<span class="inline-flex items-center rounded-full border ${color} px-4 py-0.5 text-[11px] font-bold tracking-wider whitespace-nowrap">${texto}</span>`;
                 }
             },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 3,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? ''} ${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim(); }
+                title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.apellido1 ?? d.APEL_1 ?? ''} ${d.apellido2 ?? d.APEL_2 ?? ''}`.trim(); }
+            },
+            {
+                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 1.5,
+                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim(); }
             },
             { title: "DNI", field: "dni", hozAlign: "center", width: 110 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1 },
@@ -692,12 +710,213 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
 
+    // ============================================================
+    // EXPORTAR EXCEL PERSONALIZADO ETAPA 2 (Diseño Mejorado)
+    // ============================================================
+    document.getElementById("btnExportExcelE2")?.addEventListener("click", async () => {
+        let data = tblPersonasVerificado.getData("active");
+        if (!data.length) return Swal.fire('Sin datos', 'No hay datos para exportar', 'warning');
+
+        // Calcular estadísticas con la corrección del 'SI'
+        const totalRegistros = data.length;
+        const totalVerificados = data.filter(d => {
+            const estado = d.VERIFICADO_CAMBIO ? d.VERIFICADO_CAMBIO.toUpperCase().trim() : (d.migrado || '');
+            return estado === 'SI' || estado === 'VERIFICADO';
+        }).length;
+        const totalSinVerificar = totalRegistros - totalVerificados;
+
+        // Textos para filtros
+        const selSucursal = document.getElementById('filtroSucursalE2');
+        const txtSucursal = selSucursal.options[selSucursal.selectedIndex]?.text?.toUpperCase() || 'TODAS LAS SUCURSALES';
+        const f = new Date();
+        const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+
+        Swal.fire({ title: 'Generando Excel...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            // 🔥 DISEÑO: Ocultar líneas de cuadrícula para un look más limpio
+            const worksheet = workbook.addWorksheet("Etapa 2 - Verificados", {
+                views: [{ showGridLines: false }]
+            });
+
+            // 1. INCORPORAR LOGO
+            if (window.logoUrl) {
+                try {
+                    const response = await fetch(window.logoUrl);
+                    const blob = await response.blob();
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                    const imageId = workbook.addImage({ base64: base64, extension: 'png' });
+                    worksheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 170, height: 50 } });
+                } catch (e) { console.warn("No se pudo cargar logo", e); }
+            }
+
+            // 2. TÍTULOS (Aplicando fuentes Arial del nuevo diseño)
+            worksheet.mergeCells('A1:G1');
+            const title1 = worksheet.getCell('A1');
+            title1.value = "SOL SECURITY";
+            title1.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF990000' } };
+            title1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.mergeCells('A2:G2');
+            const title2 = worksheet.getCell('A2');
+            title2.value = "SISTEMA INTEGRADO SOLMAR - SISOL WEB";
+            title2.font = { name: 'Arial', size: 12, bold: true };
+            title2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.mergeCells('A3:G3');
+            const title3 = worksheet.getCell('A3');
+            title3.value = `REPORTE DE PERSONAL - ETAPA 2 (VERIFICADOS) | Sucursal: ${txtSucursal}`;
+            title3.font = { name: 'Arial', size: 11, bold: true };
+            title3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // 3. ESTADÍSTICAS HORIZONTALES (Mantenemos tu formato de cards, pero con Arial)
+            const statsHeaders = ['A6', 'B6', 'C6', 'D6'];
+            const statsValues = ['A7', 'B7', 'C7', 'D7'];
+
+            worksheet.getCell('A6').value = "Generado";
+            worksheet.getCell('B6').value = "Total";
+            worksheet.getCell('C6').value = "Sin Verificar";
+            worksheet.getCell('D6').value = "Verificados";
+
+            worksheet.getCell('A7').value = fechaStr;
+            worksheet.getCell('B7').value = totalRegistros;
+            worksheet.getCell('C7').value = totalSinVerificar;
+            worksheet.getCell('D7').value = totalVerificados;
+
+            statsHeaders.forEach(cell => {
+                const c = worksheet.getCell(cell);
+                c.font = { name: 'Arial', bold: true, color: { argb: 'FF000000' } };
+                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } };
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            statsValues.forEach(cell => {
+                const c = worksheet.getCell(cell);
+                c.font = { name: 'Arial', bold: true };
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            // 4. CABECERAS TABLA (Fila 10) - 🔥 DISEÑO AZUL OSCURO
+            const headers = ["N°", "Verificado", "Nombres", "DNI", "Sucursal", "Tipo", "Fecha Verificado"];
+            const headerRow = worksheet.getRow(10);
+            headerRow.values = headers;
+            headerRow.height = 25; // Altura de la cabecera
+
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; // Azul oscuro
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, name: 'Arial', size: 10 };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            // 5. DATOS DE LA TABLA - 🔥 BORDES GRISES SUTILES Y COLORES CONDICIONALES
+            data.forEach((d, index) => {
+                const estado = d.VERIFICADO_CAMBIO ? d.VERIFICADO_CAMBIO.toUpperCase().trim() : (d.migrado || '');
+                const verificadoTxt = (estado === 'SI' || estado === 'VERIFICADO') ? 'SI' : 'NO';
+                const nombreCompleto = d.NOMBRE || d.PERSONAL || `${d.nombres ?? d.NOMB_1 ?? ''} ${d.apellido1 ?? d.APEL_1 ?? ''} ${d.apellido2 ?? d.APEL_2 ?? ''}`.trim();
+
+                let fechaVerif = '—';
+                if (d.VERIFICADO_FECHA && d.VERIFICADO_FECHA !== 'sin cambios') {
+                    fechaVerif = d.VERIFICADO_FECHA.replace('T', ' ').substring(0, 16);
+                } else if (d.cambio && d.cambio !== 'sin cambios') {
+                    fechaVerif = d.cambio.replace('T', ' ').substring(0, 16);
+                }
+
+                const row = worksheet.addRow([
+                    d.NRO || index + 1,
+                    verificadoTxt,
+                    nombreCompleto,
+                    d.dni ?? d.NRO_DOCU_IDEN ?? '',
+                    d.sucursal ?? d.SUCURSAL ?? '',
+                    d.tipoPer ?? d.TIPO_PER ?? '',
+                    fechaVerif
+                ]);
+
+                row.eachCell((cell, colNumber) => {
+                    cell.font = { name: 'Arial', size: 9 };
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, // Bordes grises sutiles
+                        left: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+                        bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+                        right: { style: 'thin', color: { argb: 'FFBFBFBF' } }
+                    };
+
+                    // Alineación
+                    if (colNumber === 3) {
+                        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    } else {
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    }
+
+                    // Condicional de color para "Verificado"
+                    if (colNumber === 2) {
+                        if (verificadoTxt === 'NO') {
+                            cell.font = { color: { argb: 'FFFF0000' }, bold: true, size: 9, name: 'Arial' }; // Rojo
+                        } else {
+                            cell.font = { color: { argb: 'FF00B050' }, bold: true, size: 9, name: 'Arial' }; // Verde
+                        }
+                    }
+                });
+            });
+
+            // 6. ANCHOS DE COLUMNA EXACTOS DEL DISEÑO
+            worksheet.columns = [
+                { width: 5 },  // N°
+                { width: 12 }, // Verificado
+                { width: 45 }, // Nombres
+                { width: 15 }, // DNI
+                { width: 15 }, // Sucursal
+                { width: 20 }, // Tipo
+                { width: 20 }  // Fecha Verificado
+            ];
+
+            // 7. DESCARGAR ARCHIVO NATIVAMENTE
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+            link.download = `Reporte_Etapa2_${txtSucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            Swal.close();
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Problema al generar el Excel.', 'error');
+        }
+    });
+
     function cargarDatosEtapa2() {
         axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`)
             .then(response => {
                 if (!response.data.success) return;
-                const datos = response.data.data;
-                tblPersonasVerificado.setData(datos);
+
+                // 🔥 FILTRO DE SEGURIDAD: Excluimos al personal "ESPECIAL" de la data base
+                const datosLimpios = response.data.data.filter(d => {
+                    const tipoPersonal = d.tipoPer ? d.tipoPer.toUpperCase() : (d.TIPO_PER ? d.TIPO_PER.toUpperCase() : '');
+                    return !tipoPersonal.includes('ESPECIAL');
+                });
+
+                // 1. Calculamos y fijamos las cards con LA DATA TOTAL LIMPIA
+                const total = datosLimpios.length;
+                const verificados = datosLimpios.filter(d => d.migrado === 'SI').length;
+                const sinVerificar = total - verificados;
+
+                document.getElementById('contadorTotalE2').textContent = total;
+                document.getElementById('contadorFiltradoE2').textContent = verificados;
+                document.getElementById('contadorSinVerificarE2').textContent = sinVerificar;
+
+                // 2. Mandamos la data limpia a la tabla
+                tblPersonasVerificado.setData(datosLimpios);
                 aplicarFiltrosE2();
             });
     }
@@ -706,18 +925,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const codSucursal = document.getElementById('filtroSucursalE2')?.value || '00';
         const codTipoPer = document.getElementById('filtroTipoPerE2')?.value || '00';
         const texto = document.getElementById('buscarPersonalE2')?.value.toLowerCase().trim() || '';
+        const radioVal = document.querySelector('input[name="filtroEstadoE2"]:checked')?.value || 'null';
 
         let filtros = [];
+        let tipoTxt = ''; // 🔥 Lo sacamos afuera para poder usarlo en el cálculo de abajo
 
         if (codSucursal !== '00') filtros.push({ field: "codSucursal", type: "=", value: codSucursal });
 
         if (codTipoPer !== '00') {
-            let tipoTxt = '';
             if (codTipoPer === '01') tipoTxt = 'OPERATIVO 4°';
             if (codTipoPer === '03') tipoTxt = 'OPERATIVO 5°';
             if (codTipoPer === '02') tipoTxt = 'ADMINISTRATIVO 4°';
             if (codTipoPer === '05') tipoTxt = 'ADMINISTRATIVO 5°';
-            if (codTipoPer === '06') tipoTxt = 'ESPECIAL';
+            // (Ya no incluimos el 06 de ESPECIAL por la regla que pusimos antes)
+
             if (tipoTxt) filtros.push({ field: "tipoPer", type: "=", value: tipoTxt });
         }
 
@@ -730,18 +951,49 @@ document.addEventListener('DOMContentLoaded', function () {
             ]);
         }
 
+        // Filtramos localmente por el Radio Button para la tabla visual
+        if (radioVal === '0') {
+            filtros.push({ field: "migrado", type: "=", value: "SI" });
+        } else if (radioVal === '1') {
+            filtros.push({ field: "migrado", type: "!=", value: "SI" });
+        }
+
+        // Aplicamos el filtro visual a Tabulator
         tblPersonasVerificado.setFilter(filtros);
 
-        setTimeout(() => {
-            const filasVisibles = tblPersonasVerificado.getData("active");
-            document.getElementById('contadorTotalE2').textContent = filasVisibles.length;
-            document.getElementById('contadorFiltradoE2').textContent = filasVisibles.filter(d => d.migrado === 'SI').length;
-        }, 50);
+        // =========================================================================
+        // 🔥 LÓGICA DE INDICADORES: Calculamos SOLO en base a Sucursal y Tipo
+        // =========================================================================
+
+        // .getData() nos trae TODA la data base original, ignorando si hay texto o radio buttons aplicados
+        const todaLaData = tblPersonasVerificado.getData();
+
+        const dataParaTarjetas = todaLaData.filter(d => {
+            const cumpleSucursal = (codSucursal === '00') || (d.codSucursal === codSucursal);
+            const cumpleTipo = (codTipoPer === '00') || (d.tipoPer === tipoTxt);
+
+            return cumpleSucursal && cumpleTipo;
+        });
+
+        // Calculamos la matemática
+        const total = dataParaTarjetas.length;
+        const verificados = dataParaTarjetas.filter(d => d.migrado === 'SI').length;
+        const sinVerificar = total - verificados;
+
+        // Mandamos los números a las tarjetas
+        document.getElementById('contadorTotalE2').textContent = total;
+        document.getElementById('contadorFiltradoE2').textContent = verificados;
+
+        // Asegúrate de tener este ID en tu HTML para la tercera tarjeta (Sin Verificar)
+        const elSinVerificar = document.getElementById('contadorSinVerificarE2');
+        if (elSinVerificar) elSinVerificar.textContent = sinVerificar;
     }
 
     document.getElementById('filtroSucursalE2')?.addEventListener('change', aplicarFiltrosE2);
     document.getElementById('filtroTipoPerE2')?.addEventListener('change', aplicarFiltrosE2);
     document.getElementById('buscarPersonalE2')?.addEventListener('keyup', aplicarFiltrosE2);
+    // Escuchando los radio buttons
+    document.querySelectorAll('input[name="filtroEstadoE2"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE2));
 
     document.getElementById('page-size-verificado')?.addEventListener('change', function () {
         tblPersonasVerificado.setPageSize(parseInt(this.value));
@@ -772,8 +1024,12 @@ document.addEventListener('DOMContentLoaded', function () {
             //     }
             // },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 3,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? ''} ${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim(); }
+                title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.apellido1 ?? d.APEL_1 ?? ''} ${d.apellido2 ?? d.APEL_2 ?? ''}`.trim(); }
+            },
+            {
+                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 1.5,
+                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim(); }
             },
             { title: "DNI", field: "dni", hozAlign: "center", width: 110 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1 },
@@ -860,13 +1116,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function cargarDatosEtapa3() {
-        // Usa el mismo SP y endpoint de la Etapa 2
         axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`)
             .then(response => {
                 if (!response.data.success) return;
 
-                // 🔥 Filtramos en duro: SOLO permitimos los que están verificados (migrado === 'SI')
-                const datosVerificados = response.data.data.filter(d => d.migrado === 'SI');
+                // 🔥 Filtramos en duro: Verificados (migrado='SI') y Ocultamos 'ESPECIAL'
+                const datosVerificados = response.data.data.filter(d => {
+                    const tipoPersonal = d.tipoPer ? d.tipoPer.toUpperCase() : (d.TIPO_PER ? d.TIPO_PER.toUpperCase() : '');
+                    return d.migrado === 'SI' && !tipoPersonal.includes('ESPECIAL');
+                });
 
                 tblPersonasEtapa3.setData(datosVerificados);
                 aplicarFiltrosE3();
@@ -877,41 +1135,86 @@ document.addEventListener('DOMContentLoaded', function () {
         const codSucursal = document.getElementById('filtroSucursalE3')?.value || '00';
         const codTipoPer = document.getElementById('filtroTipoPerE3')?.value || '00';
         const texto = document.getElementById('buscarPersonalE3')?.value.toLowerCase().trim() || '';
+        const radioVal = document.querySelector('input[name="filtroEstadoE3"]:checked')?.value || 'null';
 
-        let filtros = [];
-        if (codSucursal !== '00') filtros.push({ field: "codSucursal", type: "=", value: codSucursal });
-
+        let tipoTxt = '';
         if (codTipoPer !== '00') {
-            let tipoTxt = '';
             if (codTipoPer === '01') tipoTxt = 'OPERATIVO 4°';
             if (codTipoPer === '03') tipoTxt = 'OPERATIVO 5°';
             if (codTipoPer === '02') tipoTxt = 'ADMINISTRATIVO 4°';
             if (codTipoPer === '05') tipoTxt = 'ADMINISTRATIVO 5°';
-            if (codTipoPer === '06') tipoTxt = 'ESPECIAL';
-            if (tipoTxt) filtros.push({ field: "tipoPer", type: "=", value: tipoTxt });
         }
 
-        if (texto) {
-            filtros.push([
-                { field: "nombres", type: "like", value: texto },
-                { field: "apellido1", type: "like", value: texto },
-                { field: "apellido2", type: "like", value: texto },
-                { field: "dni", type: "like", value: texto }
-            ]);
-        }
+        // Limpiamos filtros anteriores
+        tblPersonasEtapa3.clearFilter();
 
-        tblPersonasEtapa3.setFilter(filtros);
+        // Aplicamos un filtro personalizado que evalúa todas las condiciones a la vez
+        tblPersonasEtapa3.setFilter(function (data) {
+            let matchSucursal = true;
+            let matchTipo = true;
+            let matchTexto = true;
+            let matchRadio = true;
 
-        setTimeout(() => {
-            const filasVisibles = tblPersonasEtapa3.getData("active");
-            document.getElementById('contadorTotalE3').textContent = filasVisibles.length;
-            document.getElementById('contadorFiltradoE3').textContent = filasVisibles.filter(d => d.migrado === 'SI').length;
-        }, 50);
+            if (codSucursal !== '00') matchSucursal = data.codSucursal === codSucursal;
+            if (codTipoPer !== '00') matchTipo = data.tipoPer === tipoTxt;
+
+            if (texto) {
+                const nombre = (data.nombres || '').toLowerCase();
+                const ape1 = (data.apellido1 || '').toLowerCase();
+                const ape2 = (data.apellido2 || '').toLowerCase();
+                const dni = (data.dni || '').toLowerCase();
+                matchTexto = nombre.includes(texto) || ape1.includes(texto) || ape2.includes(texto) || dni.includes(texto);
+            }
+
+            // Lógica para saber si está generado o pendiente leyendo de tu localStorage (estaGenerado)
+            if (radioVal !== 'null') {
+                const cod = data.codPersonal || data.id;
+                const gen = estaGenerado(cod, data.cambio);
+                if (radioVal === '0') matchRadio = gen === true;  // Generados
+                if (radioVal === '1') matchRadio = gen === false; // Pendientes
+            }
+
+            return matchSucursal && matchTipo && matchTexto && matchRadio;
+        });
+
+        // =========================================================================
+        // 🔥 LÓGICA DE INDICADORES: Calculamos SOLO en base a Sucursal y Tipo
+        // =========================================================================
+        const todaLaData = tblPersonasEtapa3.getData();
+
+        const dataParaTarjetas = todaLaData.filter(d => {
+            const cumpleSucursal = (codSucursal === '00') || (d.codSucursal === codSucursal);
+            const cumpleTipo = (codTipoPer === '00') || (d.tipoPer === tipoTxt);
+            return cumpleSucursal && cumpleTipo;
+        });
+
+        const total = dataParaTarjetas.length;
+        let generados = 0;
+
+        // Contamos cuántos están generados
+        dataParaTarjetas.forEach(d => {
+            const cod = d.codPersonal || d.id;
+            if (estaGenerado(cod, d.cambio)) generados++;
+        });
+
+        const pendientes = total - generados;
+
+        // Pintamos los números en las Cards
+        document.getElementById('contadorTotalE3').textContent = total;
+
+        const elGenerados = document.getElementById('contadorGeneradosE3');
+        if (elGenerados) elGenerados.textContent = generados;
+
+        const elPendientes = document.getElementById('contadorPendientesE3');
+        if (elPendientes) elPendientes.textContent = pendientes;
     }
 
+    // Event Listeners
     document.getElementById('filtroSucursalE3')?.addEventListener('change', aplicarFiltrosE3);
     document.getElementById('filtroTipoPerE3')?.addEventListener('change', aplicarFiltrosE3);
     document.getElementById('buscarPersonalE3')?.addEventListener('keyup', aplicarFiltrosE3);
+    document.querySelectorAll('input[name="filtroEstadoE3"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE3));
+
     document.getElementById('page-size-etapa3')?.addEventListener('change', function () {
         tblPersonasEtapa3.setPageSize(parseInt(this.value));
     });
@@ -928,7 +1231,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const yaGenerados = todasEtapa3.filter(f => estaGenerado(f.codPersonal || f.id, f.cambio));
 
         const { value: opcion, isConfirmed } = await Swal.fire({
-            title: 'DJ Unificado — Etapa 3',
+            title: 'DJ Masivo — Etapa 3',
             html: `
             <div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:13px;padding:4px 0;">
                 <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;" id="lbl-pend-e3">
@@ -966,7 +1269,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         if (!confirmacion.isConfirmed) return;
 
-        const resultadoGen = await _generarUnificado(filasFinales, 'DJ_Unificado_Etapa3', 'migracion');
+        // 🔥 Ahora el archivo se llamará DJ_Masivo_Etapa3
+        const resultadoGen = await _generarUnificado(filasFinales, 'DJ_Masivo_Etapa3', 'migracion');
         if (resultadoGen?.ok && resultadoGen.generadosOk.length) {
             marcarDJGeneradosBatch(
                 resultadoGen.generadosOk.map(f => ({
@@ -1103,7 +1407,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
 
-            doc.save(`Reporte_Avances_${txtSucursal.replace(/ /g, '_')}.pdf`);
+            const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+            doc.save(`Reporte_Avances_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
             Swal.close();
 
         } catch (error) {
@@ -1128,7 +1433,26 @@ document.addEventListener('DOMContentLoaded', function () {
         columns: [
             { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
             { title: "Nro Doc", field: "nroDoc", hozAlign: "center", width: 110, formatter: (cell) => cell.getValue() || cell.getData().NRODOC },
-            { title: "Personal", field: "personal", hozAlign: "left", widthGrow: 3, formatter: (cell) => cell.getValue() || cell.getData().PERSONAL },
+            {
+                title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => {
+                    const d = cell.getData();
+                    if (d.APEL_1 || d.apellido1) return `${d.apellido1 ?? d.APEL_1 ?? ''} ${d.apellido2 ?? d.APEL_2 ?? ''}`.trim();
+                    // Fallback si el SP solo trae el nombre concatenado
+                    const partes = (d.PERSONAL || d.personal || '').split(' ');
+                    return partes.length >= 3 ? `${partes[0]} ${partes[1]}` : (partes[0] || '');
+                }
+            },
+            {
+                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 1.5,
+                formatter: cell => {
+                    const d = cell.getData();
+                    if (d.NOMB_1 || d.nombres) return `${d.nombres ?? d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim();
+                    // Fallback si el SP solo trae el nombre concatenado
+                    const partes = (d.PERSONAL || d.personal || '').split(' ');
+                    return partes.length >= 3 ? partes.slice(2).join(' ') : (partes.slice(1).join(' ') || '');
+                }
+            },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1, formatter: (cell) => cell.getValue() || cell.getData().SUCURSAL },
             {
                 title: "Tipo Trabajador",
@@ -1214,7 +1538,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.close();
                 if (!response.data.success) return;
                 const datos = response.data.data;
-                tblEtapa4.setData(datos); // Inyectamos la data (Paginación local instantánea)
+
+                // 🔥 NUEVO: Filtramos para EXCLUIR a los "ESPECIALES" antes de pintar la tabla
+                const dataSinEspeciales = datos.filter(d => {
+                    const tipo = (d.TIPOTRAB2 || d.tipotrab2 || '').toUpperCase();
+                    return !tipo.includes('ESPECIAL');
+                });
+
+                tblEtapa4.setData(dataSinEspeciales); // Inyectamos la data limpia (Paginación local instantánea)
                 aplicarFiltrosE4();
             })
             .catch(error => {
@@ -1228,6 +1559,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function aplicarFiltrosE4() {
         const texto = document.getElementById('buscarPersonalE4')?.value.toLowerCase().trim() || '';
         const codTipoPer = document.getElementById('filtroTipoPerE4')?.value || '00';
+        const radioVal = document.querySelector('input[name="filtroEstadoE4"]:checked')?.value || 'null';
 
         let tipoTxt = '';
         if (codTipoPer === '01') tipoTxt = 'OPER 4°';
@@ -1236,12 +1568,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (codTipoPer === '05') tipoTxt = 'ADMIN 5°';
         if (codTipoPer === '06') tipoTxt = 'ESPECIAL';
 
-        // Le pasamos una ÚNICA función global a Tabulator para que no colapse
+        // Filtro visual en Tabulator
         tblEtapa4.setFilter(function (data) {
             let matchTipo = true;
             let matchTexto = true;
+            let matchRadio = true;
 
-            // 1. Evaluamos el select
+            // 1. Evaluamos el select de Tipo
             if (tipoTxt) {
                 const valTipo = data.TIPOTRAB2 || data.tipotrab2 || '';
                 matchTipo = (valTipo === tipoTxt);
@@ -1254,22 +1587,54 @@ document.addEventListener('DOMContentLoaded', function () {
                 matchTexto = valPersonal.includes(texto) || valDoc.includes(texto);
             }
 
-            // Solo mostramos la fila si cumple ambas condiciones
-            return matchTipo && matchTexto;
+            // 3. Evaluamos los Radio Buttons
+            if (radioVal !== 'null') {
+                const dj = data.djSubido || data.djsubido || data.DJSUBIDO;
+                const esEscaneado = (dj === 'SI');
+                if (radioVal === '0') matchRadio = esEscaneado;
+                if (radioVal === '1') matchRadio = !esEscaneado;
+            }
+
+            // Mostrar solo si cumple las condiciones
+            return matchTipo && matchTexto && matchRadio;
         });
+
+        // =========================================================================
+        // 🔥 LÓGICA DE INDICADORES: Se calcula en base a la Sucursal (API) y Tipo
+        // =========================================================================
+        const todaLaData = tblEtapa4.getData();
+
+        const dataParaTarjetas = todaLaData.filter(d => {
+            const valTipo = d.TIPOTRAB2 || d.tipotrab2 || '';
+            const cumpleTipo = (codTipoPer === '00') || (valTipo === tipoTxt);
+            return cumpleTipo;
+        });
+
+        // Matemáticas para los indicadores
+        const total = dataParaTarjetas.length;
+        const escaneados = dataParaTarjetas.filter(d => {
+            const dj = d.djSubido || d.djsubido || d.DJSUBIDO;
+            return dj === 'SI';
+        }).length;
+        const pendientes = total - escaneados;
+
+        // Mandar los números a la vista
+        if (document.getElementById('contadorTotalE4')) document.getElementById('contadorTotalE4').textContent = total;
+        if (document.getElementById('contadorEscaneadosE4')) document.getElementById('contadorEscaneadosE4').textContent = escaneados;
+        if (document.getElementById('contadorPendientesE4')) document.getElementById('contadorPendientesE4').textContent = pendientes;
     }
 
     // Eventos
     document.getElementById('filtroSucursalE4')?.addEventListener('change', cargarDatosEtapa4);
-
-    // Escuchador del nuevo Select Tipo de Trabajador
     document.getElementById('filtroTipoPerE4')?.addEventListener('change', aplicarFiltrosE4);
+
+    // Escuchando los radio buttons de estado para E4
+    document.querySelectorAll('input[name="filtroEstadoE4"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE4));
 
     document.getElementById('buscarPersonalE4')?.addEventListener('keyup', function () {
         const valor = this.value.toLowerCase().trim();
         tblEtapa4._ultimoFiltro = valor;
         aplicarFiltrosE4();
-        // Reusamos tu función global resaltarTexto
         setTimeout(() => resaltarTexto(tblEtapa4, valor), 10);
     });
 
@@ -1285,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ============================================================
-    // MODAL REPORTE DE AVANCES (ETAPA 4)
+    // MODAL REPORTE DE AVANCES (ETAPA 4) — USANDO LA API DEL COMPAÑERO
     // ============================================================
     document.getElementById('btnModalPdfE4')?.addEventListener('click', async () => generarReporteModalE4('pdf'));
     document.getElementById('btnModalExcelE4')?.addEventListener('click', async () => generarReporteModalE4('excel'));
@@ -1294,91 +1659,51 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectSucursal = document.getElementById('modalSucursalE4');
         const codSucursal = selectSucursal.value;
         const txtSucursal = selectSucursal.options[selectSucursal.selectedIndex].text;
+
+        // Asumiendo que el value de los radio buttons es 'OPER', 'ADMIN' o '00'
         const tipoMapped = document.querySelector('input[name="modalTipoPerE4"]:checked').value;
 
         Swal.fire({ title: `Generando ${formato.toUpperCase()}...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         try {
-            const response = await axios.get(`${VITE_URL_APP}/api/reporte-avances-dj`, {
-                params: { sucursal: codSucursal, tipo: tipoMapped }
-            });
+            // 1. Obtenemos la data original con todas las columnas (huella, firma, etc)
+            let datos = await obtenerDatos(codSucursal, tipoMapped);
 
-            if (!response.data.success || !response.data.data.length) {
+            if (!datos || datos.length === 0) {
                 Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' });
                 return;
             }
 
-            const datos = response.data.data;
-            const f = new Date();
-            const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()}`;
+            // 2. Filtramos para matar a los "Especiales" y que cuadre a 396
+            datos = datos.filter(d => {
+                const tipoTrabajador = (d.tipo || d.TIPO || d.tipoPer || d.TIPO_PER || d.tipotrab2 || '').toUpperCase();
+                return !tipoTrabajador.includes('ESPECIAL');
+            });
 
+            // 3. Metadatos
+            const tipoTexto = tipoMapped === 'OPER' ? 'Operativo' : (tipoMapped === 'ADMIN' ? 'Administrativo' : 'Todos');
+            const meta = {
+                sucursal: txtSucursal.toUpperCase() === 'TODAS' ? 'Todas' : txtSucursal,
+                tipo: tipoTexto,
+                fecha: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            };
+
+            // 4. 🔥 LA CLAVE: AMBOS DEBEN RECIBIR LA VARIABLE "datos"
             if (formato === 'pdf') {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('landscape');
-
-                doc.autoTable({
-                    startY: 40, theme: 'grid',
-                    head: [["N°", "Nombres", "DNI", "Sucursal", "Tipo", "DJ Subido", "Firma Act.", "Huella Act.", "Estado", "Última Act."]],
-                    body: datos.map((d, index) => [
-                        index + 1, d.nombreCompleto || '', d.doc || '', d.sucursal || '', d.tipo || '',
-                        d.djSubido || 'NO', (d.estFirma ? 'SI' : 'NO'), (d.estHuella ? 'SI' : 'NO'), d.estado || '',
-                        d.fechaAct ? d.fechaAct.replace('T', ' ').substring(0, 16) : '—'
-                    ])
-                });
-                doc.save(`Reporte_Avances_${txtSucursal.replace(/ /g, '_')}.pdf`);
-
+                await generarPDF(datos, meta);
             } else if (formato === 'excel') {
-                // AQUÍ USAMOS EXCELJS DIRECTO, NO TABULATOR
-                const workbook = new ExcelJS.Workbook();
-                const worksheet = workbook.addWorksheet("Avances DJ");
-
-                worksheet.columns = [
-                    { header: 'N°', key: 'nro', width: 5 },
-                    { header: 'Nombres', key: 'nombre', width: 35 },
-                    { header: 'DNI', key: 'dni', width: 12 },
-                    { header: 'Sucursal', key: 'suc', width: 12 },
-                    { header: 'Tipo', key: 'tipo', width: 12 },
-                    { header: 'DJ Subido', key: 'dj', width: 10 },
-                    { header: 'Firma Act.', key: 'firma', width: 12 },
-                    { header: 'Huella Act.', key: 'huella', width: 12 },
-                    { header: 'Estado', key: 'est', width: 15 },
-                    { header: 'Última Act.', key: 'fecha', width: 18 }
-                ];
-
-                datos.forEach((d, index) => {
-                    worksheet.addRow({
-                        nro: index + 1,
-                        nombre: d.nombreCompleto,
-                        dni: d.doc,
-                        suc: d.sucursal,
-                        tipo: d.tipo,
-                        dj: d.djSubido || 'NO',
-                        firma: d.estFirma ? 'SI' : 'NO',
-                        huella: d.estHuella ? 'SI' : 'NO',
-                        est: d.estado,
-                        fecha: d.fechaAct ? d.fechaAct.replace('T', ' ').substring(0, 16) : '—'
-                    });
-                });
-
-                const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `Reporte_Avances_${txtSucursal.replace(/ /g, '_')}.xlsx`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                await generarExcel(datos, meta);
             }
 
             Swal.close();
             if (window.HSOverlay) HSOverlay.close(document.getElementById('modal-reporte-avances'));
 
         } catch (error) {
-            console.error(error);
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al generar el reporte.' });
+            console.error('[Error de Reporte]', error);
+            Swal.close();
+            Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error al generar el reporte.' });
         }
     }
-
     // ============================================================
     // FIN 1°, 2°, 3° Y 4° ETAPA / LÓGICA LEGACY (5° ETAPA) A CONTINUACIÓN
     // ============================================================
@@ -4009,9 +4334,11 @@ document.getElementById("btnReporteVerificados")?.addEventListener("click", asyn
 
         // 4. Cálculos para las Cards (Total, Verificados, Sin verificar)
         const totalRegistros = datos.length;
-        const totalVerificados = datos.filter(d => d.VERIFICADO_CAMBIO === 'Verificado').length;
+        const totalVerificados = datos.filter(d => {
+            const estado = d.VERIFICADO_CAMBIO ? d.VERIFICADO_CAMBIO.toUpperCase().trim() : '';
+            return estado === 'SI' || estado === 'VERIFICADO';
+        }).length;
         const totalSinVerificar = totalRegistros - totalVerificados;
-
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
         const totalWidth = doc.internal.pageSize.getWidth();
@@ -4115,7 +4442,8 @@ document.getElementById("btnReporteVerificados")?.addEventListener("click", asyn
             }
         });
 
-        doc.save(`Reporte_Etapa2_${txtSucursal.replace(/ /g, '_')}.pdf`);
+        const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+        doc.save(`Reporte_Etapa2_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
         Swal.close();
 
     } catch (error) {
