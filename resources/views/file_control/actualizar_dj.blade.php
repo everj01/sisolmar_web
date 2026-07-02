@@ -525,7 +525,7 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase">Escaneo de DJ (Biométrico)</h4>
+                                <h4 class="text-lg font-bold text-primary uppercase">Escaneo de DJ</h4>
                                 <p class="text-sm text-gray-500">Validación de Huella y Firma</p>
                             </div>
 

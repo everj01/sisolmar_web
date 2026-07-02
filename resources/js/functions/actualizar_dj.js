@@ -338,10 +338,13 @@ document.addEventListener('DOMContentLoaded', function () {
         let filtros = [];
 
         if (texto) {
-            // Buscamos en Nombre Completo o en DNI
             filtros.push([
-                { field: "NOMBRE", type: "like", value: texto },
-                { field: "NRO_DOCU_IDEN", type: "like", value: texto }
+                { field: "APEL_1", type: "like", value: texto },
+                { field: "APEL_2", type: "like", value: texto },
+                { field: "NOMB_1", type: "like", value: texto },
+                { field: "NOMB_2", type: "like", value: texto },
+                { field: "NRO_DOCU_IDEN", type: "like", value: texto },
+                { field: "NOMBRE", type: "like", value: texto }
             ]);
         }
 
@@ -1672,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', function () {
         rowFormatter: function (row) {
             const d = row.getData();
             if (d.tiene_folio_25 != 1) {
-                row.getElement().style.backgroundColor = '#fffef0';
+                row.getElement().style.backgroundColor = '#fff5f5';
             } else if (d.PERS_VIGENCIA !== 'SI') {
                 row.getElement().style.backgroundColor = '#ffe5e5';
                 row.getElement().style.color = '#7a1f1f';
@@ -1823,6 +1826,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btnGuardar.innerHTML = 'Guardando...';
 
         const formData = new FormData();
+        formData.append('_token',        document.querySelector('meta[name="csrf-token"]')?.content || '');
         formData.append('fecha_emision', fechaEmision);
         formData.append('codPersonal',   codPersonal);
         formData.append('pdf',           archivo);
@@ -1932,7 +1936,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const d = row.getData();
             const dj = d.djSubido || d.djsubido || d.DJSUBIDO;
             if (dj !== 'SI') {
-                row.getElement().style.backgroundColor = '#fffef0';
+                row.getElement().style.backgroundColor = '#fff5f5';
             }
         },
         locale: "es",
@@ -2104,7 +2108,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (texto) {
                 const valPersonal = String(data.personal || data.PERSONAL || '').toLowerCase();
                 const valDoc = String(data.nroDoc || data.NRODOC || data.NRO_DOCU_IDEN || '').toLowerCase();
-                matchTexto = valPersonal.includes(texto) || valDoc.includes(texto);
+                const valApe1 = String(data.apellido1 || data.APEL_1 || '').toLowerCase();
+                const valApe2 = String(data.apellido2 || data.APEL_2 || '').toLowerCase();
+                const valNom1 = String(data.nombres || data.NOMB_1 || '').toLowerCase();
+                const valNom2 = String(data.NOMB_2 || '').toLowerCase();
+                matchTexto = valPersonal.includes(texto) || valDoc.includes(texto)
+                    || valApe1.includes(texto) || valApe2.includes(texto)
+                    || valNom1.includes(texto) || valNom2.includes(texto);
             }
 
             // 3. Evaluamos los Radio Buttons
