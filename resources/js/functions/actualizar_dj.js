@@ -215,6 +215,12 @@ document.addEventListener('DOMContentLoaded', function () {
         responsiveLayout: "collapse",
         pagination: true,
         paginationSize: 20,
+        rowFormatter: function (row) {
+            const d = row.getData();
+            if (d.SIP_CAMBIO !== 'Ok') {
+                row.getElement().style.backgroundColor = '#fff5f5';
+            }
+        },
         locale: "es",
         // --- AQUÍ TRADUCIMOS EL PAGINADOR ---
         langs: {
@@ -244,11 +250,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             {
-                title: "Estado", field: "SIP_CAMBIO", hozAlign: "center", width: 140,
+                title: "Actualizado", field: "SIP_CAMBIO", hozAlign: "center", width: 140,
                 formatter: cell => {
                     const val = cell.getValue();
                     const color = val === 'Ok' ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300';
-                    return `<span class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wider ${color}">${val === 'Ok' ? 'ACTUALIZADO' : 'SIN ACTUALIZAR'}</span>`;
+                    return `<span class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wider ${color}">${val === 'Ok' ? 'SI' : 'NO'}</span>`;
                 }
             },
             {
@@ -311,6 +317,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>`;
                     }
                     return '—';
+                }
+            },
+            {
+                title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
+                formatter: cell => {
+                    const d = cell.getData();
+                    return d.generadoPor || d.actualizadoPor || '—';
                 }
             }
         ],
@@ -683,6 +696,12 @@ document.addEventListener('DOMContentLoaded', function () {
         responsiveLayout: "collapse",
         pagination: true,
         paginationSize: 10,
+        rowFormatter: function (row) {
+            const d = row.getData();
+            if ((d.migrado || '').toUpperCase().trim() !== 'SI') {
+                row.getElement().style.backgroundColor = '#fff5f5';
+            }
+        },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
@@ -742,6 +761,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>`;
                     }
                     return '—';
+                }
+            },
+            {
+                title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
+                formatter: cell => {
+                    const d = cell.getData();
+                    return d.generadoPor || d.verificadoPor || '—';
                 }
             },
             {
@@ -1077,6 +1103,13 @@ document.addEventListener('DOMContentLoaded', function () {
         pagination: true,
         paginationSize: 10,
         selectable: true,
+        rowFormatter: function (row) {
+            const d = row.getData();
+            const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
+            if (!gen) {
+                row.getElement().style.backgroundColor = '#fff5f5';
+            }
+        },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
@@ -1111,35 +1144,20 @@ document.addEventListener('DOMContentLoaded', function () {
             //         return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[10px] font-bold tracking-wider whitespace-nowrap">${texto}</span>`;
             //     }
             // },
-            // 🔥 COLUMNA DE VERIFICACIÓN PDF
             {
-                title: "PDF", field: "generado", hozAlign: "center", widthGrow: 1.5,
+                title: "Generado", field: "generado", hozAlign: "center", width: 90,
                 headerSort: false,
                 formatter: cell => {
                     const d = cell.getData();
-                    const cod = d.codPersonal || d.id;
                     const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
-                    const genPor = d.generadoPor || '';
-
-                    if (gen) {
-                        const nombre = genPor ? ` · ${genPor}` : '';
-                        return `<span title="Generado por ${genPor || '—'}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:#16a34a;font-size:13px;" data-pdf-cod-e3="${cod}">
-                            <i class='bx bxs-check-circle' style="font-size:16px;"></i>
-                            <span style="font-size:11px;color:#374151;">${nombre}</span>
-                        </span>`;
-                    }
-                    return `<span style="display:inline-flex;align-items:center;gap:4px;color:#d1d5db;font-size:13px;">
-                        <i class='bx bx-time' style="font-size:16px;"></i>
-                        <span style="font-size:11px;color:#9ca3af;">Pendiente</span>
-                    </span>`;
+                    const color = gen ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-600 bg-red-50 border-red-200';
+                    return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-0.5 text-xs font-semibold">${gen ? 'SI' : 'NO'}</span>`;
                 },
                 cellClick: (e, cell) => {
-                    const span = e.target.closest('[data-pdf-cod-e3]');
-                    if (!span) return;
                     const d = cell.getData();
                     const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
                     if (!gen) return;
-
+                    const cod = d.codPersonal || d.id;
                     Swal.fire({
                         icon: 'question',
                         title: '¿Resetear marca en Etapa 3?',
@@ -1180,6 +1198,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>`;
                     }
                     return '—';
+                }
+            },
+            {
+                title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
+                formatter: cell => {
+                    const d = cell.getData();
+                    return d.generadoPor || '—';
                 }
             },
             {
@@ -1611,7 +1636,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Cargar datos SOLO la primera vez que se hace clic en la pestaña
     let etapaCargaCargada = false;
     document.querySelector('button[data-target="etapa_carga"]')?.addEventListener('click', () => {
-        if ([5, 11].includes(window.tipoUsuario)) {
+        if ([5, 11].includes(window.tipoUsuario) && false) {
             Swal.fire({
                 title: 'Información',
                 text: 'Este módulo está destinado solo para usuarios de cada sucursal.',
@@ -1645,7 +1670,10 @@ document.addEventListener('DOMContentLoaded', function () {
         langs: { es: { pagination: { first: 'Primero', prev: 'Anterior', next: 'Siguiente', last: 'Último' } } },
 
         rowFormatter: function (row) {
-            if (row.getData().PERS_VIGENCIA !== 'SI') {
+            const d = row.getData();
+            if (d.tiene_folio_25 != 1) {
+                row.getElement().style.backgroundColor = '#fffef0';
+            } else if (d.PERS_VIGENCIA !== 'SI') {
                 row.getElement().style.backgroundColor = '#ffe5e5';
                 row.getElement().style.color = '#7a1f1f';
             }
@@ -1667,13 +1695,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             {
-                title: 'Escaneo DJ', field: 'tiene_folio_25', hozAlign: 'center', minWidth: 90, widthGrow: 0.6, responsive: false, headerSort: true,
+                title: 'Escaneo', field: 'tiene_folio_25', hozAlign: 'center', minWidth: 100, widthGrow: 1.2, responsive: false, headerSort: true,
                 formatter: function (cell) {
-                    return cell.getValue() == 1
-                        ? `<i class="bx bxs-check-circle text-green-600 cursor-pointer" style="font-size:1.2rem;" title="DJ subida — clic para reemplazar"></i>`
-                        : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 cursor-pointer hover:bg-yellow-200 transition-colors" title="Clic para subir DJ">
-                                <i class="bx bx-time"></i> Pendiente
-                           </span>`;
+                    const esSi = cell.getValue() == 1;
+                    const color = esSi ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-600 bg-red-50 border-red-200';
+                    const icono = esSi ? 'bxs-check-circle' : 'bx-time';
+                    return `<span class="inline-flex items-center gap-1.5 rounded-full border ${color} px-3 py-0.5 text-xs font-semibold cursor-pointer"><i class="bx ${icono}"></i> ${esSi ? 'SI' : 'NO'}</span>`;
                 },
                 cellClick: function (e, cell) {
                     const data = cell.getRow().getData();
@@ -1741,7 +1768,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function limpiarModal_E4C() {
-        document.getElementById('fecha_emision_dj_E4C').value = '';
+        const f = new Date();
+        const hoy = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-${String(f.getDate()).padStart(2,'0')}`;
+        const el = document.getElementById('fecha_emision_dj_E4C');
+        if (el) {
+            el.value = hoy;
+            el.readOnly = true;
+            el.classList.add('bg-gray-100', 'cursor-not-allowed');
+        }
         if(archivoDJ_E4C) archivoDJ_E4C.value = '';
         if(listaArchivosDJ_E4C) listaArchivosDJ_E4C.innerHTML = '';
     }
@@ -1889,11 +1923,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // 4° ETAPA: ESCANEO DJ (Paginación Local - Estilo Etapa 1, 2 y 3)
     // ============================================================
     const tblEtapa4 = new Tabulator("#tblPersonasEtapa4", {
-        height: "550px", // Mismo alto que las otras tablas para mantener diseño
+        height: "550px",
         layout: "fitColumns",
         responsiveLayout: "collapse",
         pagination: true,
-        paginationSize: 10, // Paginación local súper rápida
+        paginationSize: 10,
+        rowFormatter: function (row) {
+            const d = row.getData();
+            const dj = d.djSubido || d.djsubido || d.DJSUBIDO;
+            if (dj !== 'SI') {
+                row.getElement().style.backgroundColor = '#fffef0';
+            }
+        },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
@@ -1915,15 +1956,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Escaneo DJ",
                 field: "djSubido",
                 hozAlign: "center",
-                widthGrow: 1,
+                widthGrow: 2,
                 headerSort: false,
                 formatter: cell => {
                     const valor = cell.getValue() || cell.getData().djsubido || cell.getData().DJSUBIDO;
-                    if (valor === 'SI') {
-                        return `<span title="Escaneo Completado" class="text-xl cursor-default">✅</span>`;
-                    } else {
-                        return ``;
-                    }
+                    const esSi = valor === 'SI';
+                    const color = esSi ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-600 bg-red-50 border-red-200';
+                    const icono = esSi ? 'bxs-check-circle' : 'bx-time';
+                    return `<span class="inline-flex items-center gap-1.5 rounded-full border ${color} px-3 py-0.5 text-xs font-semibold"><i class="bx ${icono}"></i> ${esSi ? 'SI' : 'NO'}</span>`;
                 }
             },
             {

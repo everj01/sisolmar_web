@@ -119,7 +119,7 @@
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="radio" name="filtroEstadoE1" value="1" class="w-4 h-4 text-red-600 focus:ring-red-500">
-                                        <span class="text-sm font-medium text-gray-700">Faltan</span>
+                                        <span class="text-sm font-medium text-gray-700">Sin Actualizar</span>
                                     </label>
                                 </div>
                             </div>
@@ -277,7 +277,7 @@
                                     <span id="contadorGeneradosE3" class="text-lg font-bold text-green-700">0</span>
                                 </div>
                                 <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
-                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Pendientes</span>
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Sin Generar</span>
                                     <span id="contadorPendientesE3" class="text-lg font-bold text-yellow-700">0</span>
                                 </div>
                             </div>
@@ -322,23 +322,23 @@
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="radio" name="filtroEstadoE3" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
-                                        <span class="text-sm font-medium text-gray-700">Pendientes</span>
+                                        <span class="text-sm font-medium text-gray-700">Sin generar</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="flex gap-2">
+                            <div class="flex gap-2 flex-col">
                                 <button type="button" id="btnReporteAvanceE3" class="hidden btn border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm rounded-lg items-center gap-1.5 font-medium transition-colors">
                                     <i class='bx bx-bar-chart-alt-2 text-base'></i> Rep. Avances
                                 </button>
-                                <button type="button" id="btnDJUnificadoE3" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                <button type="button" id="btnDJUnificadoE3" class="flex hidden items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                     <i class='bx bx-file text-lg'></i> DJ Masivo
                                 </button>
                                 <button type="button" id="btnGenerarSeleccionadosE3" disabled class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
-                                    <i class='bx bx-check-square text-lg'></i> Generar Seleccionados
+                                    <i class='bx bx-check-square text-lg'></i> Generar Reporte
                                 </button>
                                 <button type="button" id="btnQuitarMarcaE3" disabled class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-orange-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
-                                    <i class='bx bx-x-circle text-lg'></i> Quitar marca
+                                    <i class='bx bx-x-circle text-lg'></i> Quitar selección
                                 </button>
                                 <button type="button" id="btnResetearDJsE3" class="hidden flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                                     <i class='bx bx-reset text-lg'></i> Resetear marcas
@@ -388,7 +388,7 @@
                                     <span id="countEscaneadosE4C" class="text-lg font-bold text-green-700">0</span>
                                 </div>
                                 <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
-                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Pendientes</span>
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Sin escanear</span>
                                     <span id="countPendientesE4C" class="text-lg font-bold text-yellow-700">0</span>
                                 </div>
                             </div>
@@ -426,8 +426,8 @@
                                     <label class="text-sm font-medium text-gray-700">DJ:</label>
                                     <select id="filtroDJ_E4C" class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg">
                                         <option value="TODOS">Todos</option>
-                                        <option value="SI">Subida</option>
-                                        <option value="NO">Pendiente</option>
+                                        <option value="SI">Escaneado</option>
+                                        <option value="NO">Sin escanear</option>
                                     </select>
                                 </div>
 
@@ -540,7 +540,7 @@
                                     <span id="contadorEscaneadosE4" class="text-lg font-bold text-green-700">0</span>
                                 </div>
                                 <div class="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200 text-center min-w-[90px]">
-                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Pendientes</span>
+                                    <span class="block text-[9px] text-yellow-600 font-bold uppercase">Sin escanear</span>
                                     <span id="contadorPendientesE4" class="text-lg font-bold text-yellow-700">0</span>
                                 </div>
                             </div>
@@ -591,7 +591,7 @@
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="radio" name="filtroEstadoE4" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
-                                        <span class="text-sm font-medium text-gray-700">Pendientes</span>
+                                        <span class="text-sm font-medium text-gray-700">Sin escanear</span>
                                     </label>
                                 </div>
 
