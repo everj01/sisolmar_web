@@ -515,6 +515,27 @@ document.addEventListener("DOMContentLoaded", () => {
                     hozAlign: "center",
                     headerSort: false,
                     formatter(cell) {
+                        const vigente = cell.getData().vigente;
+                        if (!vigente) {
+                            return `
+                            <button class="btn-detalle-curso" disabled title="Este curso aún no se ha aperturado, no se puede realizar un seguimiento" style="
+                                background: #e5e7eb;
+                                color: #9ca3af;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 6px 12px;
+                                font-size: 12px;
+                                font-weight: 500;
+                                cursor: not-allowed;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            ">
+                                <i class="ti ti-eye-off" style="font-size: 14px;"></i>
+                                Ver detalle
+                            </button>
+                        `;
+                        }
                         return `
                         <button class="btn-detalle-curso" data-row-id="${cell.getRow().getIndex()}" style="
                             background: #4f46e5;
@@ -536,6 +557,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     `;
                     },
                     cellClick: function (e, cell) {
+                        const vigente = cell.getData().vigente;
+                        if (!vigente) return;
                         e.stopPropagation();
                         const row = cell.getRow();
                         const data = row.getData();

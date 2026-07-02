@@ -216,6 +216,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             columns: [
                 {
+                    title: "Código",
+                    field: "Codigo",
+                    width: 100,
+                },
+                {
                     title: "Nombre de curso",
                     field: "Nombre",
                     width: 375,
@@ -452,9 +457,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!cursoId) return;
 
         try {
-            const resProgramaciones = await axios.get(`${VITE_URL_APP}/api/obtener-programaciones/${cursoId}`);
-            const programaciones = resProgramaciones.data.programaciones || resProgramaciones.data.Programaciones || resProgramaciones.data || [];
-            
+            const res = await axios.get(`${VITE_URL_APP}/api/obtener-datos-matricula/${cursoId}`);
+
+            const programaciones = res.data.programaciones || res.data.Programaciones || [];
+            const personalData = res.data.personal || [];
+            const matriculadosData = res.data.matriculados || res.data.Matriculados || [];
+
             const slcProg = document.getElementById('slcProgramacion');
             if (slcProg) {
                 slcProg.innerHTML = '<option value="">Seleccione una programación...</option>';
@@ -478,14 +486,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     slcProg.value = firstVigente;
                 }
             }
-
-            const [resPersonal, resMatriculados] = await Promise.all([
-                axios.get(`${VITE_URL_APP}/api/obtener-personal`),
-                axios.get(`${VITE_URL_APP}/api/obtener-matriculados/${cursoId}`)
-            ]);
-
-            const personalData = resPersonal.data.personal || resPersonal.data || [];
-            const matriculadosData = resMatriculados.data.matriculados || resMatriculados.data.Matriculados || resMatriculados.data || [];
             window._matriculadosData = matriculadosData;
 
             const selectedCodProg = slcProg?.value || '';
