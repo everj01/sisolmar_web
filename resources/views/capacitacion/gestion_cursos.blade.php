@@ -418,10 +418,12 @@
                     soloEliminados: false,
                     filtroArea: '',
                     filtroTipoCurso: '',
+                    filtroFechaDesde: '',
+                    filtroFechaHasta: '',
                     tipos: []
-                }" x-init="$nextTick(() => listarCursos(1, '', ''))" @tipo-curso-loaded.window="tipos = $event.detail"
-                    @update-filtro-area="filtroArea = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso)"
-                    @update-filtro-tipo-curso="filtroTipoCurso = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso)"
+                }" x-init="$nextTick(() => listarCursos(1, '', '', '', ''))" @tipo-curso-loaded.window="tipos = $event.detail"
+                    @update-filtro-area="filtroArea = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
+                    @update-filtro-tipo-curso="filtroTipoCurso = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
                     class="flex flex-wrap items-center justify-between gap-6">
                     <div class="flex items-center">
                         {{-- <input 
@@ -432,7 +434,7 @@
                     x-model="soloEliminados"
                 > --}}
                         <input class="form-switch" type="checkbox" role="switch" id="chkEliminados" x-model="soloEliminados"
-                            @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso)">
+                            @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)">
                         <label class="ms-1.5 font-medium text-sm text-gray-700" for="chkEliminados">
                             Solo eliminados
                         </label>
@@ -637,12 +639,35 @@
                             </div>
                         </div>
 
+                        <div class="flex flex-col">
+                            <label class="text-sm font-medium text-gray-700 mb-1">Fecha creación</label>
+                            <div class="flex items-center gap-2">
+                                <input type="date" x-model="filtroFechaDesde"
+                                    @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
+                                    class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Desde">
+                                <span class="text-gray-400 text-xs font-semibold">—</span>
+                                <input type="date" x-model="filtroFechaHasta"
+                                    @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
+                                    class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Hasta">
+                            </div>
+                        </div>
                     </div>
 
                     {{-- <div x-effect="listarCursos( soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso )"></div> --}}
                 </div>
 
-                <div class="mt-5 overflow-x-auto w-full">
+                <div class="mt-5 overflow-x-auto w-full relative" id="tblCursosContainer">
+                    <div id="tblCursosLoader"
+                        class="hidden absolute inset-0 flex items-center justify-center bg-white/90 z-10 rounded-xl transition-opacity duration-300">
+                        <div class="flex flex-col items-center gap-3">
+                            <div
+                                class="w-10 h-10 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin">
+                            </div>
+                            <span class="text-sm font-semibold text-gray-500">Cargando cursos...</span>
+                        </div>
+                    </div>
                     <div id="tblCursos"></div>
                 </div>
             </div>
@@ -2868,11 +2893,6 @@
                     this.cargando = true;
 
 
-                    const formatDatetime = (dt) => {
-                        if (!dt) return '';
-                        return dt.replace('T', ' ') + ':00';
-                    };
-
                     try {
                         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
                             'content');
@@ -2883,7 +2903,7 @@
 
                         const payload = {
                             cod_curso: this.codigoCurso,
-                            fecha_inicio: formatDatetime(this.fechaInicio),
+                            fecha_inicio: this.fechaInicio,
                             incluir_automatico: this.incluirAutomatico,
                             sucursal_codigo: this.selectedSucursal,
                             cliente_id: this.selectedCliente,
@@ -2891,7 +2911,7 @@
                         };
 
                         if (this.frecuencia === 'PERSONALIZADO') {
-                            payload.fecha_final = formatDatetime(this.fechaFin);
+                            payload.fecha_final = this.fechaFin;
                         }
 
                         if (dnisLimpios.length > 0) {

@@ -191,16 +191,30 @@ function actualizarLista() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await listarTipoCurso("slcTipoCurso")
-    await listarTipoCurso("slcFiltroTipoCurso", true)
-    await listarAreas()
     await listarCursos()
+    await Promise.all([
+        listarTipoCurso("slcTipoCurso"),
+        listarTipoCurso("slcFiltroTipoCurso", true),
+        listarAreas()
+    ])
 });
 
 
 window.cursosDataAll = [];
 
-window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '') {
+function mostrarLoader() {
+    const loader = document.getElementById('tblCursosLoader');
+    if (loader) loader.classList.remove('hidden');
+}
+
+function ocultarLoader() {
+    const loader = document.getElementById('tblCursosLoader');
+    if (loader) loader.classList.add('hidden');
+}
+
+window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '', fechaDesde = '', fechaHasta = '') {
+    mostrarLoader();
+
     try {
         if (window.cursosDataAll.length === 0) {
             const [res1, res0] = await Promise.all([
@@ -209,26 +223,30 @@ window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '')
             ]);
             window.cursosDataAll = [...(res1.data || []), ...(res0.data || [])];
         }
-        aplicarFiltros(habilitado, area, tipoCurso);
+        await aplicarFiltros(habilitado, area, tipoCurso, fechaDesde, fechaHasta);
     } catch (err) {
         console.error("Error al obtener cursos", err);
         Swal.fire("Error", "No se pudieron cargar los cursos", "error");
     }
 }
 
-window.recargarCursos = async function (habilitado = 1, area = '', tipoCurso = '') {
+window.recargarCursos = async function (habilitado = 1, area = '', tipoCurso = '', fechaDesde = '', fechaHasta = '') {
     window.cursosDataAll = [];
-    await window.listarCursos(habilitado, area, tipoCurso);
+    await window.listarCursos(habilitado, area, tipoCurso, fechaDesde, fechaHasta);
 }
 
-function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '') {
+async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', fechaDesde = '', fechaHasta = '') {
     const data = window.cursosDataAll || [];
 
     if (!window.tablaCursos) {
         window.initTablaCursos(data);
+        return;
     }
 
-    window.tablaCursos.setData(data);
+    mostrarLoader();
+
+    await window.tablaCursos.setData(data);
+    ocultarLoader();
 
     const filters = [];
 
@@ -244,6 +262,19 @@ function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '') {
         if (desc) {
             filters.push({ field: "tipo_curso", type: "=", value: desc });
         }
+    }
+
+    if (fechaDesde || fechaHasta) {
+        filters.push({ field: "fecha_creacion", type: function (value, filterParams) {
+            const cellDate = new Date(value);
+            if (isNaN(cellDate.getTime())) return true;
+            if (filterParams.desde && cellDate < filterParams.desde) return false;
+            if (filterParams.hasta && cellDate > filterParams.hasta) return false;
+            return true;
+        }, filterParams: {
+            desde: fechaDesde ? new Date(fechaDesde + 'T00:00:00') : null,
+            hasta: fechaHasta ? new Date(fechaHasta + 'T23:59:59') : null
+        }});
     }
 
     window.tablaCursos.setFilter(filters);
@@ -427,6 +458,9 @@ function generarBotonesAccion(curso) {
 window.initTablaCursos = function (data) {
     if (!document.getElementById('tblCursos')) return;
 
+    const loader = document.getElementById('tblCursosLoader');
+    if (loader) loader.classList.remove('hidden');
+
     if (window.tablaCursos) {
         window.tablaCursos.destroy();
         window.tablaCursos = null;
@@ -463,6 +497,9 @@ window.initTablaCursos = function (data) {
                 row.getElement().style.backgroundColor = '#fff1f1';
             }
         },
+        dataLoaded: function () {
+            ocultarLoader();
+        },
         columns: [
             {
                 title: "#",
@@ -474,7 +511,7 @@ window.initTablaCursos = function (data) {
             {
                 title: "CÓDIGO",
                 field: "codigoCurso",
-                width: 90,
+                width: 105,
                 headerSort: true
             },
             {
@@ -2209,14 +2246,9 @@ window.modalAplazarCurso = function() {
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
 
-                const formatDatetime = (dt) => {
-                    if (!dt) return '';
-                    return dt.replace('T', ' ') + ':00';
-                };
-
                 const res = await axios.post(`${VITE_URL_APP}/api/cursos/aplazar-curso`, {
                     cod_curso: this.cursoCodigo,
-                    nueva_fecha_final: formatDatetime(this.fechaNuevaFin)
+                    nueva_fecha_final: this.fechaNuevaFin
                 }, { headers });
 
                 if (res.data.success) {
