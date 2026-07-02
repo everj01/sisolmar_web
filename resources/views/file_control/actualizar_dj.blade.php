@@ -8,6 +8,18 @@
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .tab-circle {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 9999px;
+            border: 1.5px solid currentColor;
+            font-size: 10px; font-weight: 700; margin-right: 6px; flex-shrink: 0;
+        }
+        .stage-circle {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 9999px;
+            background: #0ea5e9; color: white;
+            font-size: 13px; font-weight: 700; margin-right: 10px; flex-shrink: 0;
+        }
     </style>
 @endsection
 
@@ -19,25 +31,25 @@
         <nav class="flex items-center justify-center space-x-3 border-b border-gray-200 pb-3 min-w-max" aria-label="Tabs" id="dj-timeline-tabs">
             <button data-target="etapa1" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'active bg-blue-900 text-white shadow-lg' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap">
-                1° ETAPA: Actualización por SIP
+                <span class="tab-circle">1</span> ETAPA: Actualización por SIP
             </button>
             <button data-target="etapa2" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                2° ETAPA: Verificación
+                <span class="tab-circle">2</span> ETAPA: Verificación
             </button>
             <button data-target="etapa3" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                3° ETAPA: Generación DJ en PDF
+                <span class="tab-circle">3</span> ETAPA: Generación DJ en PDF
             </button>
 
             <button data-target="etapa_carga" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'active bg-blue-900 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                4° ETAPA: Carga de DJ
+                <span class="tab-circle">4</span> ETAPA: Carga de DJ
             </button>
 
             <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                5° ETAPA: Escaneo DJ
+                <span class="tab-circle">5</span> ETAPA: Escaneo DJ
             </button>
         </nav>
     </div>
@@ -51,8 +63,8 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase">Actualización por SIP</h4>
-                                <p class="text-sm text-gray-500">Generador de reporte</p>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">1</span> Actualización por SIP</h4>
+                                {{-- <p class="text-sm text-gray-500">Generador de reporte</p> --}}
                             </div>
 
                             <div class="flex gap-2">
@@ -156,8 +168,8 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase">Tabla de Comparación</h4>
-                                <p class="text-sm text-gray-500">Verificación de datos</p>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">2</span> VERIFICACIÓN DE DATOS</h4>
+                                {{-- <p class="text-sm text-gray-500">Verificación de datos</p> --}}
                             </div>
 
                             <div class="flex gap-2">
@@ -248,7 +260,7 @@
                         <div class="flex items-center gap-2 mt-3">
                             <label for="page-size-verificado" class="text-sm text-gray-600">Mostrar</label>
                             <select id="page-size-verificado" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+                                <option value="5">5</option><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option>
                             </select>
                             <span class="text-sm text-gray-600">registros</span>
                         </div>
@@ -263,8 +275,8 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase">Generación de DJ Masivo</h4>
-                                <p class="text-sm text-gray-500">Control de impresiones PDF</p>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">3</span> Generación de DJ Masivo</h4>
+                                {{-- <p class="text-sm text-gray-500">Control de impresiones PDF</p> --}}
                             </div>
 
                             <div class="flex gap-2">
@@ -355,9 +367,9 @@
                         <div id="tblPersonasEtapa3" class="w-full"></div>
 
                         <div class="flex items-center gap-2 mt-3">
-                            <label for="page-size-etapa3" class="text-sm text-gray-600">Mostrar</label>
-                            <select id="page-size-etapa3" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+                                    <label for="page-size-etapa3" class="text-sm text-gray-600">Mostrar</label>
+                                    <select id="page-size-etapa3" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                        <option value="5">5</option><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option>
                             </select>
                             <span class="text-sm text-gray-600">registros</span>
                         </div>
@@ -374,8 +386,8 @@
                     <div class="w-full px-5 py-4">
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase">Carga de DJ</h4>
-                                <p class="text-sm text-gray-500">Listado de Personal y Subida de PDFs</p>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">4</span> Subida de DJ</h4>
+                                {{-- <p class="text-sm text-gray-500">Listado de Personal y Subida de PDFs</p> --}}
                             </div>
 
                             <div class="flex gap-2">
@@ -431,7 +443,7 @@
                                     </select>
                                 </div>
 
-                                <div class="flex items-center gap-4 border-l-2 border-gray-200 pl-4">
+                                <div class="flex items-center gap-4 border-l-2 border-gray-200 pl-4 hidden">
                                     <span class="text-sm font-medium text-gray-700">Vigencia:</span>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="radio" name="vigencia_E4C" value="" class="w-4 h-4 text-primary focus:ring-primary">
@@ -455,7 +467,7 @@
                                 <div class="flex items-center gap-2">
                                     <label for="page-size-personas_E4C" class="text-sm font-medium text-gray-700">Mostrar</label>
                                     <select id="page-size-personas_E4C" class="form-select text-sm w-20 px-3 py-1 border border-gray-300 rounded-lg">
-                                        <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option>
+                                        <option value="5">5</option><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option>
                                     </select>
                                     <span class="text-sm text-gray-600">registros</span>
                                 </div>
@@ -525,8 +537,8 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase">Escaneo de DJ</h4>
-                                <p class="text-sm text-gray-500">Validación de Huella y Firma</p>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">5</span>Revision de escaneo de DJ</h4>
+                                {{-- <p class="text-sm text-gray-500">Validación de Huella y Firma</p> --}}
                             </div>
 
                             {{-- NUEVOS INDICADORES ETAPA 4 --}}
@@ -614,9 +626,9 @@
                         <div id="tblPersonasEtapa4" class="w-full"></div>
 
                         <div class="flex items-center gap-2 mt-3">
-                            <label for="page-size-etapa4" class="text-sm text-gray-600">Mostrar</label>
-                            <select id="page-size-etapa4" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+                                    <label for="page-size-etapa4" class="text-sm text-gray-600">Mostrar</label>
+                                    <select id="page-size-etapa4" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                        <option value="5">5</option><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option>
                             </select>
                             <span class="text-sm text-gray-600">registros</span>
                         </div>
@@ -690,9 +702,9 @@
                         <div id="tblPersonasMigrado" class="w-full"></div>
 
                         <div class="flex items-center gap-2 mt-3">
-                            <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
-                            <select id="page-size-migrado" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+                                    <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
+                                    <select id="page-size-migrado" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                        <option value="5">5</option><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option>
                             </select>
                             <span class="text-sm text-gray-600">registros</span>
                         </div>

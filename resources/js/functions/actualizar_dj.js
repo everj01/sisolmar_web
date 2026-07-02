@@ -190,11 +190,14 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById(targetId).classList.remove('hidden');
             document.getElementById(targetId).classList.add('active');
 
-            if (targetId === 'etapa1' && typeof tblEtapa1 !== 'undefined') tblEtapa1.redraw();
-            if (targetId === 'etapa2' && typeof tblPersonasVerificado !== 'undefined') tblPersonasVerificado.redraw();
-            if (targetId === 'etapa3' && typeof tblPersonasEtapa3 !== 'undefined') tblPersonasEtapa3.redraw();
-            if (targetId === 'etapa_carga' && typeof tblPersonas_E4C !== 'undefined') tblPersonas_E4C.redraw();
-            if (targetId === 'etapa4' && typeof tblEtapa4 !== 'undefined') tblEtapa4.redraw();
+            if (targetId === 'etapa1' && typeof tblEtapa1 !== 'undefined') cargarDatosEtapa1();
+            if (targetId === 'etapa2' && typeof tblPersonasVerificado !== 'undefined') cargarDatosEtapa2();
+            if (targetId === 'etapa3' && typeof tblPersonasEtapa3 !== 'undefined') cargarDatosEtapa3();
+            if (targetId === 'etapa_carga' && typeof tblPersonas_E4C !== 'undefined') {
+                seleccionarPrimeraSucursalValida_E4C();
+                recargarTodo_E4C();
+            }
+            if (targetId === 'etapa4' && typeof tblEtapa4 !== 'undefined') cargarDatosEtapa4();
         });
     });
 
@@ -698,7 +701,7 @@ document.addEventListener('DOMContentLoaded', function () {
         layout: "fitColumns",
         responsiveLayout: "collapse",
         pagination: true,
-        paginationSize: 10,
+        paginationSize: 20,
         rowFormatter: function (row) {
             const d = row.getData();
             if ((d.migrado || '').toUpperCase().trim() !== 'SI') {
@@ -803,6 +806,10 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
     reformatNums(tblPersonasVerificado);
+
+    tblPersonasVerificado.on("renderComplete", () => {
+        if (tblPersonasVerificado._ultimoFiltro) resaltarTexto(tblPersonasVerificado, tblPersonasVerificado._ultimoFiltro);
+    });
 
     // ============================================================
     // EXPORTAR EXCEL PERSONALIZADO ETAPA 2 (Diseño Mejorado)
@@ -1086,7 +1093,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('filtroSucursalE2')?.addEventListener('change', aplicarFiltrosE2);
     document.getElementById('filtroTipoPerE2')?.addEventListener('change', aplicarFiltrosE2);
-    document.getElementById('buscarPersonalE2')?.addEventListener('keyup', aplicarFiltrosE2);
+    document.getElementById('buscarPersonalE2')?.addEventListener('keyup', function () {
+        const valor = this.value.toLowerCase().trim();
+        tblPersonasVerificado._ultimoFiltro = valor;
+        aplicarFiltrosE2();
+        setTimeout(() => resaltarTexto(tblPersonasVerificado, valor), 10);
+    });
     // Escuchando los radio buttons
     document.querySelectorAll('input[name="filtroEstadoE2"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE2));
 
@@ -1104,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function () {
         layout: "fitColumns",
         responsiveLayout: "collapse",
         pagination: true,
-        paginationSize: 10,
+        paginationSize: 20,
         selectable: true,
         rowFormatter: function (row) {
             const d = row.getData();
@@ -1152,15 +1164,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 headerSort: false,
                 formatter: cell => {
                     const d = cell.getData();
-                    const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
+                    const gen = estaGenerado(d.codPersonal || d.id, d.cambio);
                     const color = gen ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-600 bg-red-50 border-red-200';
                     return `<span class="inline-flex items-center rounded-full border ${color} px-3 py-0.5 text-xs font-semibold">${gen ? 'SI' : 'NO'}</span>`;
                 },
                 cellClick: (e, cell) => {
                     const d = cell.getData();
-                    const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
-                    if (!gen) return;
                     const cod = d.codPersonal || d.id;
+                    if (!estaGenerado(cod, d.cambio)) return;
                     Swal.fire({
                         icon: 'question',
                         title: '¿Resetear marca en Etapa 3?',
@@ -1187,8 +1198,8 @@ document.addEventListener('DOMContentLoaded', function () {
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1 },
             { title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2 },
             {
-                title: "Fecha Verificado",
-                field: "cambio",
+                title: "Fecha Generado",
+                field: "fechaGenerado",
                 hozAlign: "center",
                 widthGrow: 2,
                 formatter: cell => {
@@ -1241,6 +1252,10 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
     reformatNums(tblPersonasEtapa3);
+
+    tblPersonasEtapa3.on("renderComplete", () => {
+        if (tblPersonasEtapa3._ultimoFiltro) resaltarTexto(tblPersonasEtapa3, tblPersonasEtapa3._ultimoFiltro);
+    });
 
     tblPersonasEtapa3.on("rowSelectionChanged", function () {
         const sel = this.getSelectedRows().length;
@@ -1358,7 +1373,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Event Listeners
     document.getElementById('filtroSucursalE3')?.addEventListener('change', aplicarFiltrosE3);
     document.getElementById('filtroTipoPerE3')?.addEventListener('change', aplicarFiltrosE3);
-    document.getElementById('buscarPersonalE3')?.addEventListener('keyup', aplicarFiltrosE3);
+    document.getElementById('buscarPersonalE3')?.addEventListener('keyup', function () {
+        const valor = this.value.toLowerCase().trim();
+        tblPersonasEtapa3._ultimoFiltro = valor;
+        aplicarFiltrosE3();
+        setTimeout(() => resaltarTexto(tblPersonasEtapa3, valor), 10);
+    });
     document.querySelectorAll('input[name="filtroEstadoE3"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE3));
 
     document.getElementById('page-size-etapa3')?.addEventListener('change', function () {
@@ -1628,7 +1648,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // NUEVA 4° ETAPA: CARGA DE DJ
     // ============================================================
-    let pageSizePersonas_E4C = 10;
+    let pageSizePersonas_E4C = 20;
 
     const archivoDJ_E4C    = document.getElementById('archivoDJ_E4C');
     const zonaDropDJ_E4C   = document.getElementById('zonaDropDJ_E4C');
@@ -1636,26 +1656,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     zonaDropDJ_E4C?.addEventListener('click', () => archivoDJ_E4C.click());
 
-    // Cargar datos SOLO la primera vez que se hace clic en la pestaña
-    let etapaCargaCargada = false;
-    document.querySelector('button[data-target="etapa_carga"]')?.addEventListener('click', () => {
-        if ([5, 11].includes(window.tipoUsuario) && false) {
-            Swal.fire({
-                title: 'Información',
-                text: 'Este módulo está destinado solo para usuarios de cada sucursal.',
-                icon: 'info',
-                confirmButtonText: 'Entendido'
-            });
-        }
-        if (!etapaCargaCargada) {
-            seleccionarPrimeraSucursalValida_E4C();
-            setTimeout(() => {
-                reloadTabla_E4C();
-                cargarIndicadores_E4C();
-            }, 100);
-            etapaCargaCargada = true;
-        }
-    });
+    // Cargar datos la primera vez que se hace clic en la pestaña (lo gestiona el tab handler)
 
     // Si la pestaña ya está activa al cargar (ej. RRHH), disparar carga inicial
     const etapaCargaBtn = document.querySelector('button[data-target="etapa_carga"]');
@@ -1756,6 +1757,12 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
     reformatNums(tblPersonas_E4C);
+
+    tblPersonas_E4C.on("renderComplete", () => {
+        if (tblPersonas_E4C._ultimoFiltro) {
+            resaltarTexto(tblPersonas_E4C, tblPersonas_E4C._ultimoFiltro);
+        }
+    });
 
     function mostrarInfoTabla_E4C() {
     }
@@ -1859,7 +1866,11 @@ document.addEventListener('DOMContentLoaded', function () {
         cargarIndicadores_E4C();
     }
 
-    document.getElementById('buscarPersonal_E4C')?.addEventListener('keyup', reloadTabla_E4C);
+    document.getElementById('buscarPersonal_E4C')?.addEventListener('keyup', function () {
+        const valor = this.value.toLowerCase().trim();
+        tblPersonas_E4C._ultimoFiltro = valor;
+        reloadTabla_E4C();
+    });
     document.getElementById('sucursal_E4C')?.addEventListener('change', recargarTodo_E4C);
     document.getElementById('tipo_per_E4C')?.addEventListener('change', recargarTodo_E4C);
     document.getElementById('filtroDJ_E4C')?.addEventListener('change', reloadTabla_E4C);
@@ -1918,6 +1929,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function seleccionarPrimeraSucursalValida_E4C() {
         const select = document.getElementById('sucursal_E4C');
         if (!select) return;
+        const val = select.value;
+        if (val && val !== '— Seleccionar —' && val !== '00') return;
         const opciones = [...select.options].filter(opt => opt.value && opt.value !== '— Seleccionar —' && !opt.disabled);
         if (opciones.length > 0) select.value = opciones[0].value;
     }
@@ -1931,7 +1944,7 @@ document.addEventListener('DOMContentLoaded', function () {
         layout: "fitColumns",
         responsiveLayout: "collapse",
         pagination: true,
-        paginationSize: 10,
+        paginationSize: 20,
         rowFormatter: function (row) {
             const d = row.getData();
             const dj = d.djSubido || d.djsubido || d.DJSUBIDO;
@@ -2173,16 +2186,7 @@ document.addEventListener('DOMContentLoaded', function () {
         tblEtapa4.setPageSize(parseInt(this.value));
     });
 
-    // Cargar datos SOLO la primera vez que se hace clic en la pestaña 4
-    let etapa4Cargada = false;
-    document.querySelector('button[data-target="etapa4"]')?.addEventListener('click', () => {
-        if (!etapa4Cargada) {
-            cargarDatosEtapa4();
-            etapa4Cargada = true;
-        }
-        // Redibujar siempre que se cambia de pestaña para ajustar anchos
-        setTimeout(() => tblEtapa4.redraw(), 100);
-    });
+    // Cargar datos cada vez que se hace clic en la pestaña 4 (lo gestiona el tab handler)
 
     // ============================================================
     // MODAL REPORTE DE AVANCES (ETAPA 4) — USANDO LA API DEL COMPAÑERO
@@ -2613,14 +2617,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function resaltarTexto(tabla, valor) {
+        if (!valor) return;
         tabla.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 const field = cell.getAttribute('tabulator-field');
                 if (i === cells.length - 1 || field === 'migrado' || field === 'estado' || field === 'tipoPer' || field === 'cambio') return;
                 const text = cell.textContent || '';
-                if (valor && text.toLowerCase().includes(valor)) {
+                if (text.toLowerCase().includes(valor)) {
                     const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    cell.innerHTML = text.replace(new RegExp(`(${escaped})`, "gi"), "<span class='bg-warning/25'>$1</span>");
+                    cell.innerHTML = text.replace(new RegExp(`(${escaped})`, "gi"), "<span style='background-color: #fef08a;'>$1</span>");
                 }
             });
         });
