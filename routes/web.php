@@ -180,12 +180,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cursos/obtener-prog-actual/{courseId}', [CapacitacionController::class, 'obtenerProgActual']);
         Route::get('/obtener-programaciones/{courseId}', [CapacitacionController::class, 'obtenerProgramaciones']);
         Route::get('/obtener-matriculados/{courseId}', [CapacitacionController::class, 'obtenerMatriculados']);
+        Route::get('/obtener-datos-matricula/{cursoId}', [CapacitacionController::class, 'obtenerDatosMatricula']);
         Route::get('/reporte-cursos', [CapacitacionController::class, 'obtenerCursosParaReportes']);
         Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
         Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
         Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
         Route::get('/obtener-plan-pce', [CapacitacionController::class, 'obtenerPlanPCE']);
+        Route::get('/obtener-plan-pca/{codCliente}', [CapacitacionController::class, 'obtenerPlanPCA']);
+        Route::get('/obtener-cursos-por-plan/{tipo_curso}', [CapacitacionController::class, 'obtenerCursosPorPlan']);
+        Route::get('/obtener-tipos-curso', [CapacitacionController::class, 'obtenerTiposDeCurso']);
         Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
         Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
         Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
