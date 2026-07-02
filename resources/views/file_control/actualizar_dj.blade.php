@@ -612,6 +612,14 @@
                         </div>
 
                         <div id="tblPersonasEtapa4" class="w-full"></div>
+
+                        <div class="flex items-center gap-2 mt-3">
+                            <label for="page-size-etapa4" class="text-sm text-gray-600">Mostrar</label>
+                            <select id="page-size-etapa4" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+                            </select>
+                            <span class="text-sm text-gray-600">registros</span>
+                        </div>
                 </div>
             </div>
         </div>
@@ -770,6 +778,7 @@
                 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
         window.logoUrl = "{{ asset('images/logo_sol.png') }}";
+        window.tipoUsuario = {{ $tipoUsuario ?? 'null' }};
     </script>
 @endsection
 

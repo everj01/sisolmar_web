@@ -198,6 +198,17 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    function reformatNums(table) {
+        function rf() { table.getRows("active").forEach(r => r.reformat()); }
+        table.on("dataLoaded", rf);
+        table.on("pageLoaded", rf);
+        table.on("dataSorted", rf);
+        table.on("dataFiltered", () => {
+            table.setPage(1);
+            rf();
+        });
+    }
+
     const tblEtapa1 = new Tabulator("#tblEtapa1", {
         height: "550px",
         layout: "fitColumns",
@@ -224,23 +235,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 width: 60,
                 headerSort: false,
                 formatter: function (cell) {
-                    const span = document.createElement("span");
-
-                    const actualizarNumero = () => {
-                        const table = cell.getTable();
-                        const page = table.getPage() || 1;
-                        const size = table.getPageSize() || 20;
-                        const posicionFila = cell.getRow().getPosition(true);
-
-                        if (posicionFila > 0) {
-                            span.innerText = ((page - 1) * size) + posicionFila;
-                        }
-                    };
-
-                    actualizarNumero();
-                    cell.getRow().watchPosition(actualizarNumero);
-
-                    return span;
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
                 }
             },
             {
@@ -251,7 +251,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `<span class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wider ${color}">${val === 'Ok' ? 'ACTUALIZADO' : 'SIN ACTUALIZAR'}</span>`;
                 }
             },
-            { title: "Nombres", field: "NOMBRE", hozAlign: "left", widthGrow: 3 },
+            {
+                title: "Apellidos", hozAlign: "left", widthGrow: 2,
+                formatter: cell => {
+                    const d = cell.getData();
+                    return `${d.APEL_1 ?? d.apellido1 ?? ''} ${d.APEL_2 ?? d.apellido2 ?? ''}`.trim() || '—';
+                }
+            },
+            {
+                title: "Nombres", hozAlign: "left", widthGrow: 1.5,
+                formatter: cell => {
+                    const d = cell.getData();
+                    return `${d.NOMB_1 ?? d.nombres ?? ''} ${d.NOMB_2 ?? ''}`.trim() || '—';
+                }
+            },
             { title: "DNI", field: "NRO_DOCU_IDEN", hozAlign: "center", width: 110 },
             { title: "Sucursal", field: "SUCURSAL", hozAlign: "center", widthGrow: 1 },
             {
@@ -302,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
+    reformatNums(tblEtapa1);
 
     //  NUEVA FUNCIÓN DE FILTRADO LOCAL
     function aplicarFiltrosLocalesE1() {
@@ -326,6 +340,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         tblEtapa1.setFilter(filtros);
+        tblEtapa1.setPage(1);
         // Las cards ya no se actualizan aquí para que queden estáticas al filtrar
     }
 
@@ -677,25 +692,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 width: 60,
                 headerSort: false,
                 formatter: function (cell) {
-                    const span = document.createElement("span");
-
-                    const actualizarNumero = () => {
-                        const table = cell.getTable();
-                        const page = table.getPage() || 1;
-                        const size = table.getPageSize() || 10;
-
-                        const posicionFila = cell.getRow().getPosition(true);
-
-                        if (posicionFila > 0) {
-                            // Sumamos el desfase de la página anterior a la posición actual
-                            span.innerText = ((page - 1) * size) + posicionFila;
-                        }
-                    };
-
-                    actualizarNumero();
-                    cell.getRow().watchPosition(actualizarNumero);
-
-                    return span;
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
                 }
             },
             {
@@ -771,6 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
+    reformatNums(tblPersonasVerificado);
 
     // ============================================================
     // EXPORTAR EXCEL PERSONALIZADO ETAPA 2 (Diseño Mejorado)
@@ -1022,6 +1025,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Aplicamos el filtro visual a Tabulator
         tblPersonasVerificado.setFilter(filtros);
+        tblPersonasVerificado.setPage(1);
 
         // =========================================================================
         // 🔥 LÓGICA DE INDICADORES: Calculamos SOLO en base a Sucursal y Tipo
@@ -1090,23 +1094,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 width: 50,
                 headerSort: false,
                 formatter: function (cell) {
-                    const span = document.createElement("span");
-
-                    const actualizarNumero = () => {
-                        const table = cell.getTable();
-                        const page = table.getPage() || 1;
-                        const size = table.getPageSize() || 10;
-                        const posicionFila = cell.getRow().getPosition(true);
-
-                        if (posicionFila > 0) {
-                            span.innerText = ((page - 1) * size) + posicionFila;
-                        }
-                    };
-
-                    actualizarNumero();
-                    cell.getRow().watchPosition(actualizarNumero);
-
-                    return span;
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
                 }
             },
             // {
@@ -1219,6 +1212,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
+    reformatNums(tblPersonasEtapa3);
 
     tblPersonasEtapa3.on("rowSelectionChanged", function () {
         const sel = this.getSelectedRows().length;
@@ -1299,6 +1293,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             return matchSucursal && matchTipo && matchTexto && matchRadio;
         });
+        tblPersonasEtapa3.setPage(1);
 
         // =========================================================================
         // 🔥 LÓGICA DE INDICADORES: Calculamos SOLO en base a Sucursal y Tipo
@@ -1616,6 +1611,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // Cargar datos SOLO la primera vez que se hace clic en la pestaña
     let etapaCargaCargada = false;
     document.querySelector('button[data-target="etapa_carga"]')?.addEventListener('click', () => {
+        if ([5, 11].includes(window.tipoUsuario)) {
+            Swal.fire({
+                title: 'Información',
+                text: 'Este módulo está destinado solo para usuarios de cada sucursal.',
+                icon: 'info',
+                confirmButtonText: 'Entendido'
+            });
+        }
         if (!etapaCargaCargada) {
             seleccionarPrimeraSucursalValida_E4C();
             setTimeout(() => {
@@ -1655,19 +1658,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 width: 60,
                 headerSort: false,
                 formatter: function (cell) {
-                    const span = document.createElement("span");
-                    const actualizarNumero = () => {
-                        const table = cell.getTable();
-                        const page = table.getPage() || 1;
-                        const size = table.getPageSize() || 10;
-                        const posicionFila = cell.getRow().getPosition(true);
-                        if (posicionFila > 0) {
-                            span.innerText = ((page - 1) * size) + posicionFila;
-                        }
-                    };
-                    actualizarNumero();
-                    cell.getRow().watchPosition(actualizarNumero);
-                    return span;
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
                 }
             },
             {
@@ -1729,6 +1725,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         ],
     });
+    reformatNums(tblPersonas_E4C);
 
     function mostrarInfoTabla_E4C() {
     }
@@ -1906,23 +1903,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 width: 60,
                 headerSort: false,
                 formatter: function (cell) {
-                    const span = document.createElement("span");
-
-                    const actualizarNumero = () => {
-                        const table = cell.getTable();
-                        const page = table.getPage() || 1;
-                        const size = table.getPageSize() || 10;
-                        const posicionFila = cell.getRow().getPosition(true);
-
-                        if (posicionFila > 0) {
-                            span.innerText = ((page - 1) * size) + posicionFila;
-                        }
-                    };
-
-                    actualizarNumero();
-                    cell.getRow().watchPosition(actualizarNumero);
-
-                    return span;
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
                 }
             },
             {
@@ -2019,6 +2005,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
+    reformatNums(tblEtapa4);
 
     // Función para traer datos una sola vez con Axios
     function cargarDatosEtapa4() {
@@ -2091,6 +2078,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Mostrar solo si cumple las condiciones
             return matchTipo && matchTexto && matchRadio;
         });
+        tblEtapa4.setPage(1);
 
         // =========================================================================
         // 🔥 LÓGICA DE INDICADORES: Se calcula en base a la Sucursal (API) y Tipo
@@ -2129,6 +2117,10 @@ document.addEventListener('DOMContentLoaded', function () {
         tblEtapa4._ultimoFiltro = valor;
         aplicarFiltrosE4();
         setTimeout(() => resaltarTexto(tblEtapa4, valor), 10);
+    });
+
+    document.getElementById('page-size-etapa4')?.addEventListener('change', function () {
+        tblEtapa4.setPageSize(parseInt(this.value));
     });
 
     // Cargar datos SOLO la primera vez que se hace clic en la pestaña 4
@@ -2286,23 +2278,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 width: 60,
                 headerSort: false,
                 formatter: function (cell) {
-                    const span = document.createElement("span");
-
-                    const actualizarNumero = () => {
-                        const table = cell.getTable();
-                        const page = table.getPage() || 1;
-                        const size = table.getPageSize() || 20;
-                        const posicionFila = cell.getRow().getPosition(true);
-
-                        if (posicionFila > 0) {
-                            span.innerText = ((page - 1) * size) + posicionFila;
-                        }
-                    };
-
-                    actualizarNumero();
-                    cell.getRow().watchPosition(actualizarNumero);
-
-                    return span;
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
                 }
             },
             {
@@ -2448,6 +2429,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         ],
     });
+    reformatNums(tblPersonasMigrado);
 
     // ── Tabla coincidencias ──────────────────────────────────
     const tblPersonasCN = new Tabulator("#tblPersonasCN", {
@@ -2745,6 +2727,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         tblPersonasMigrado.setFilter(filtros);
+        tblPersonasMigrado.setPage(1);
         actualizarCardDesdeSP(sucursal, tipoPer);
     }
 
