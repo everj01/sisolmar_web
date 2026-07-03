@@ -814,7 +814,9 @@ window.editarFormGestionCurso = async (e) => {
     }
 
     // Validación de campos obligatorios antes de actualizar
-    const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
+    const camposObligatorios = alpineData.tipoCurso == '6'
+        ? ['nombre', 'tipoCurso']
+        : ['nombre', 'tipoCurso', 'areaConocimiento'];
     const vacio = camposObligatorios.some(campo => !alpineData[campo]);
 
     if (vacio) {
