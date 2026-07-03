@@ -529,18 +529,25 @@ class CapacitacionController extends Controller
                 );
             }
 
+            if ($request->has('es_periodico')) {
+                $updateData['es_periodico'] = (int) $request->input('es_periodico');
+            }
+
             if ($frecuencia) {
                 $updateData['frecuencia'] = $frecuencia;
-                $updateData['periodicidad'] = match ($frecuencia) {
-                    'MENSUAL' => 1,
-                    'BIMESTRAL' => 2,
-                    'TRIMESTRAL' => 3,
-                    'CUATRIMESTRAL' => 4,
-                    'SEMESTRAL' => 6,
-                    'ANUAL' => 12,
-                    default => 0,
-                };
             }
+
+            $esPeriodico = (int) $request->input('es_periodico', $curso->es_periodico ?? 0);
+            $frecuenciaVal = $frecuencia ?? $curso->frecuencia;
+            $updateData['periodicidad'] = $esPeriodico ? match ($frecuenciaVal) {
+                'MENSUAL' => 1,
+                'BIMESTRAL' => 2,
+                'TRIMESTRAL' => 3,
+                'CUATRIMESTRAL' => 4,
+                'SEMESTRAL' => 6,
+                'ANUAL' => 12,
+                default => 0,
+            } : 0;
 
             if ($tipoCurso) {
                 $oldTipoCurso = $curso->tipo_curso;
