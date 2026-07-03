@@ -743,18 +743,16 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-3">Tipo de Personal</label>
                         <div class="flex items-center gap-6">
-                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                <input type="radio" name="modalTipoPerE4" value="00" checked class="form-radio text-blue-500 focus:ring-blue-500 border-gray-300">
-                                <span class="font-medium">Todos</span>
-                            </label>
-                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                <input type="radio" name="modalTipoPerE4" value="OPER" class="form-radio text-blue-500 focus:ring-blue-500 border-gray-300">
-                                <span>Operativo</span>
-                            </label>
-                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                                <input type="radio" name="modalTipoPerE4" value="ADMIN" class="form-radio text-blue-500 focus:ring-blue-500 border-gray-300">
-                                <span>Administrativo</span>
-                            </label>
+                            <select id="modalTipoPerE4" class="py-2.5 px-4 block w-full border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none">
+                                <option value="00">TODOS</option>
+                            
+                                <option value="01">OPERATIVO 4º</option>
+                                <option value="02">ADMINISTRATIVO 4º</option>
+                                <option value="03">OPERATIVO 5º</option>
+                                <option value="05">ADMINISTRATIVO 5º</option>
+                               
+                            </select>
+                         
                         </div>
                     </div>
                 </div>

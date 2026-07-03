@@ -1984,6 +1984,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             {
+                title: "Fecha Subida",
+                field: "ultima_actualizacion",
+                hozAlign: "center",
+                widthGrow: 2,
+                headerSort: false,
+                formatter: cell => {
+                    const d = cell.getData();
+                    const fecha = d.ultima_actualizacion || d.fechaAct || d.FECHA_ACT || d.fechaSubida || null;
+                    if (fecha) {
+                        const f = formatearFechaHora(fecha);
+                        return `<div class="flex items-center justify-center gap-2 text-sm text-gray-700">
+                            <span class="flex items-center gap-1"><i class='bx bx-calendar'></i> <span>${f.fecha}</span></span>
+                            <span class="flex items-center gap-1"><i class='bx bx-time-five'></i> <span>${f.hora}</span></span>
+                        </div>`.trim();
+                    }
+                    return '—';
+                }
+            },
+            {
                 title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
                 formatter: cell => {
                     const d = cell.getData();
@@ -2199,14 +2218,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const codSucursal = selectSucursal.value;
         const txtSucursal = selectSucursal.options[selectSucursal.selectedIndex].text;
 
-        // Asumiendo que el value de los radio buttons es 'OPER', 'ADMIN' o '00'
-        const tipoMapped = document.querySelector('input[name="modalTipoPerE4"]:checked').value;
+        const tipoFiltro = document.querySelector('#modalTipoPerE4').value;
 
         Swal.fire({ title: `Generando ${formato.toUpperCase()}...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         try {
             // 1. Obtenemos la data original con todas las columnas (huella, firma, etc)
-            let datos = await obtenerDatos(codSucursal, tipoMapped);
+            let datos = await obtenerDatos(codSucursal, tipoFiltro);
 
             if (!datos || datos.length === 0) {
                 Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' });
@@ -2220,7 +2238,15 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             // 3. Metadatos
-            const tipoTexto = tipoMapped === 'OPER' ? 'Operativo' : (tipoMapped === 'ADMIN' ? 'Administrativo' : 'Todos');
+            const tipos = {
+                '01': 'OPERATIVO 4º',
+                '02': 'ADMINISTRATIVO 4º',
+                '03': 'OPERATIVO 5º',
+                '05': 'ADMINISTRATIVO 5º',
+                '06': 'ESPECIAL'
+                };
+
+                const tipoTexto = tipos[tipoFiltro] || 'Todos';
             const meta = {
                 sucursal: txtSucursal.toUpperCase() === 'TODAS' ? 'Todas' : txtSucursal,
                 tipo: tipoTexto,

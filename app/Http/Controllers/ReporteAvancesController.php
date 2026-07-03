@@ -35,9 +35,9 @@ class ReporteAvancesController extends Controller
     /**
      * Valores válidos para @tipoPersonal en el SP.
      * El SP filtra internamente por PERS_TIPOTRAB según estos valores.
-     * '00' → todos | 'OPER' → operativos | 'ADMIN' → administrativos
+     * '00' → todos | '01'/'03' → operativos | '02'/'05' → administrativos
      */
-    private const TIPOS_VALIDOS = ['OPER', 'ADMIN'];
+    private const TIPOS_VALIDOS = ['01', '02', '03', '04', '05'];
 
     // -------------------------------------------------------------------------
     // MÉTODO PRINCIPAL
@@ -111,7 +111,7 @@ class ReporteAvancesController extends Controller
 
     /**
      * Devuelve el tipo de personal para el SP.
-     * El SP ya acepta 'OPER' y 'ADMIN' directamente en @tipoPersonal.
+     * El SP acepta códigos numéricos directamente en @tipoPersonal.
      * Si llega vacío, '00', o un valor no reconocido → '00' (todos).
      *
      * @param  string|null  $tipo
@@ -122,7 +122,7 @@ class ReporteAvancesController extends Controller
         $valor = strtoupper(trim((string) $tipo));
 
         if (in_array($valor, self::TIPOS_VALIDOS, true)) {
-            return $valor; // 'OPER' o 'ADMIN' directo al SP
+            return $valor; // código numérico directo al SP
         }
 
         return self::FILTRO_TODOS; // '00' → sin filtro
@@ -202,11 +202,17 @@ class ReporteAvancesController extends Controller
      */
     private function normalizarTipo(string $tipo): string
     {
-        return match (strtoupper(trim($tipo))) {
-            'OPERATIVO'      => 'OPER',
-            'ADMINISTRATIVO' => 'ADMIN',
-            default          => 'ESPECIAL',
-        };
+        $upper = strtoupper(trim($tipo));
+
+        if (str_starts_with($upper, 'OPERATIVO')) {
+            return 'OPER';
+        }
+
+        if (str_starts_with($upper, 'ADMINISTRATIVO')) {
+            return 'ADMIN';
+        }
+
+        return 'ESPECIAL';
     }
 
     /**
