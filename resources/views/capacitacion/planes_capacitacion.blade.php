@@ -285,8 +285,7 @@
             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
             x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-            x-transition:leave-end="opacity-0 scale-95 translate-y-4"
-            @click.outside="cerrarSeleccionCliente()">
+            x-transition:leave-end="opacity-0 scale-95 translate-y-4">
 
             <div class="flex justify-between items-center py-4 px-6 border-b border-default-100">
                 <div class="flex items-center gap-3">
@@ -323,7 +322,7 @@
                             class="w-full h-10 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                             <option value="">Seleccione un cliente</option>
                             <template x-for="c in clientesPCA" :key="c.codigo">
-                                <option :value="c.codigo" x-text="c.descripcion"></option>
+                                <option :value="c.cod_legacy" x-text="c.descripcion"></option>
                             </template>
                         </select>
                     </div>
@@ -495,6 +494,7 @@
                                         <thead class="bg-default-50 border-b border-default-200 sticky top-0 z-10">
                                             <tr>
                                                 <th class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider w-12">#</th>
+                                                <th class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Código</th>
                                                 <th class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Curso</th>
                                                 <th x-show="selectedAbreviatura === 'PCA'" class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Cliente</th>
                                                 <th x-show="selectedAbreviatura !== 'PCA'" class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Sistema</th>
@@ -511,6 +511,7 @@
                                                 <tr class="border-b border-default-100 transition-colors"
                                                     :class="i % 2 === 1 ? 'bg-default-50/30' : ''">
                                                     <td class="px-4 py-2.5 text-center text-default-400 text-xs font-mono" x-text="i + 1"></td>
+                                                    <td class="px-4 py-2.5 text-default-800 font-medium text-sm" x-text="curso.Codigo"></td>
                                                     <td class="px-4 py-2.5 text-default-800 font-medium text-sm" x-text="curso.Nombre"></td>
                                                     <td x-show="selectedAbreviatura === 'PCA'" class="px-4 py-2.5 text-default-600 text-sm font-semibold" x-text="curso.Cliente"></td>
                                                     <td x-show="selectedAbreviatura !== 'PCA'" class="px-4 py-2.5 text-default-600 text-sm" x-text="curso.Sistema"></td>
@@ -569,9 +570,7 @@
                         <i class="ti ti-file-text text-base"></i>
                     </div>
                     <div>
-                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
-                            Plan de Capacitación Estándar (PCE)
-                        </h3>
+                        <h3 class="text-[15px] font-semibold text-default-900 leading-tight" x-text="pdfTitulo"></h3>
                         <p class="text-xs text-default-500">Previsualización del documento</p>
                     </div>
                 </div>
@@ -581,7 +580,7 @@
                         <i class="ti ti-external-link text-sm"></i>
                         Abrir en ventana
                     </button>
-                    <a :href="pdfUrl" :download="'Plan_Capacitacion_Estandar_PCE_' + new Date().getFullYear() + '.pdf'"
+                    <a :href="pdfUrl" :download="pdfDownloadNombre"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition-colors">
                         <i class="ti ti-download text-sm"></i>
                         Descargar
@@ -595,7 +594,7 @@
 
             <div class="flex-1 bg-default-50 flex items-center justify-center">
                 <template x-if="pdfUrl">
-                    <iframe :src="pdfUrl" class="w-full h-full border-0" title="Plan de Capacitación Estándar (PCE)"></iframe>
+                    <iframe :src="pdfUrl" class="w-full h-full border-0" :title="pdfTitulo"></iframe>
                 </template>
                 <template x-if="!pdfUrl">
                     <div class="text-default-500 text-sm">Generando PDF...</div>

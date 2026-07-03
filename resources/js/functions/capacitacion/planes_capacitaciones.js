@@ -23,8 +23,13 @@ export default document.addEventListener("alpine:init", () => {
         clientesPCA: [],
         loadingClientesPCA: false,
         selectedClientePCA: "",
+        pdfTitulo: "Plan de Capacitación Estándar (PCE)",
+        pdfDownloadNombre: "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf",
 
         async abrirPDF() {
+            this.pdfTitulo = "Plan de Capacitación Estándar (PCE)";
+            this.pdfDownloadNombre = "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf";
+
             Swal.fire({
                 title: "Generando PDF...",
                 allowOutsideClick: false,
@@ -397,7 +402,7 @@ export default document.addEventListener("alpine:init", () => {
             if (this.clientesPCA.length === 0) {
                 this.loadingClientesPCA = true;
                 try {
-                    const { data } = await axios.get("/get-clientes-pac");
+                    const { data } = await axios.get("/api/get-clientes-pac");
                     this.clientesPCA = Array.isArray(data) ? data : [];
                 } catch (e) {
                     console.error(e);
@@ -413,8 +418,125 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedClientePCA = "";
         },
 
-        obtenerPDF_PCA() {
-            // TODO: Implementar generación de PDF para PCA
+        async obtenerPDF_PCA() {
+            const codLegacy = this.selectedClientePCA;
+            if (!codLegacy) return;
+
+            Swal.fire({
+                title: "Generando PDF...",
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            try {
+                const { data } = await axios.get(`/api/obtener-cursos-cliente/${codLegacy}`);
+                const cursos = data.Cursos || [];
+                const cliente = this.clientesPCA.find(c => c.cod_legacy === codLegacy);
+                const nombreCliente = cliente ? cliente.descripcion : "";
+
+                if (data.Total === 0 || cursos.length === 0) {
+                    Swal.close();
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Sin cursos",
+                        text: "No hay cursos registrados para el cliente seleccionado.",
+                    });
+                    return;
+                }
+
+                this.pdfTitulo = "Plan de Capacitación Aliado (PCA)" + (nombreCliente ? " - " + nombreCliente : "");
+                this.pdfDownloadNombre = "Plan_Capacitacion_Aliado_PCA_" + new Date().getFullYear() + ".pdf";
+
+                const doc = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                });
+
+                const pageWidth = doc.internal.pageSize.getWidth();
+
+                doc.setFontSize(14);
+                doc.setFont(undefined, "bold");
+                doc.text("PLAN DE CAPACITACIÓN ALIADO (PCA)", pageWidth / 2, 15, { align: "center" });
+
+                if (nombreCliente) {
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, "normal");
+                    doc.text("Cliente: " + nombreCliente, pageWidth / 2, 22, { align: "center" });
+                }
+
+                const mesesMap = {
+                    "01": "ENERO", "02": "FEBRERO", "03": "MARZO", "04": "ABRIL",
+                    "05": "MAYO", "06": "JUNIO", "07": "JULIO", "08": "AGOSTO",
+                    "09": "SETIEMBRE", "10": "OCTUBRE", "11": "NOVIEMBRE", "12": "DICIEMBRE",
+                };
+
+                function obtenerMes(fecha) {
+                    if (!fecha) return "";
+                    const partes = fecha.split("/");
+                    if (partes.length < 3) return "";
+                    return mesesMap[partes[1]] || "";
+                }
+
+                const rows = cursos.map((curso, i) => [
+                    String(i + 1),
+                    curso.Nombre,
+                    curso.Dirigido,
+                    obtenerMes(curso.Fecha_Inicio),
+                    curso.Fecha_Creacion || "",
+                ]);
+
+                autoTable(doc, {
+                    startY: nombreCliente ? 28 : 22,
+                    margin: { left: 8, right: 8 },
+                    head: [
+                        [
+                            { content: "#", styles: { halign: "center" } },
+                            { content: "NOMBRE DE CURSO", styles: { halign: "center" } },
+                            { content: "DIRIGIDO", styles: { halign: "center" } },
+                            { content: "PROGRAMACIÓN", styles: { halign: "center" } },
+                            { content: "CREACIÓN", styles: { halign: "center" } },
+                        ],
+                    ],
+                    body: rows,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+                        valign: "middle",
+                        lineColor: [0, 0, 0],
+                        lineWidth: 0.1,
+                    },
+                    headStyles: {
+                        fillColor: [184, 204, 228],
+                        textColor: [0, 0, 0],
+                        fontSize: 8,
+                        fontStyle: "bold",
+                        halign: "center",
+                        valign: "middle",
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 10, halign: "center" },
+                        3: { cellWidth: 28, halign: "center" },
+                        4: { cellWidth: 35, halign: "center" },
+                    },
+                });
+
+                const blob = doc.output("blob");
+                if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+                this.pdfUrl = URL.createObjectURL(blob);
+
+                Swal.close();
+                this.openSeleccionCliente = false;
+                this.open = true;
+            } catch (e) {
+                Swal.close();
+                console.error(e);
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "No se pudo generar el PDF.",
+                });
+            }
         },
 
         async cargarPlanes() {
