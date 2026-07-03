@@ -24,16 +24,6 @@ class Kernel extends ConsoleKernel
                      \Log::error('Error al ejecutar el comando de envío de alertas de caducidad.');
                  });
 
-        $schedule->command('capacitacion:clonar-vencidos')
-                 ->dailyAt('00:00')
-                 ->withoutOverlapping()
-                 ->onSuccess(function () {
-                     \Log::info('Comando de clonación de cursos ejecutado exitosamente.');
-                 })
-                 ->onFailure(function () {
-                     \Log::error('Error al ejecutar el comando de clonación de cursos.');
-                 });
-
          $schedule->command('capacitacion:enviar-recordatorios-curso')
                    ->weeklyOn(1, '08:45')
                    ->withoutOverlapping()
@@ -45,7 +35,7 @@ class Kernel extends ConsoleKernel
                        \Log::error('Error al ejecutar el comando de recordatorios de curso.');
                    });
 
-          $schedule->command('capacitacion:procesar-cursos-periodicos')
+          $schedule->command('capacitacion:procesar-cursos')
                    ->dailyAt('09:30')
                    ->withoutOverlapping()
                    ->onSuccess(function () {
