@@ -842,8 +842,21 @@
                                                 </div>
                                             </div>
 
+                                            <!-- Curso Periódico -->
+                                            <div x-show="!tieneVigente" class="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-100 rounded-lg cursor-pointer select-none"
+                                                @click="esPeriodico = !esPeriodico">
+                                                <div class="flex flex-col pointer-events-none">
+                                                    <span class="text-sm font-bold text-blue-900">Curso Periódico</span>
+                                                    <span class="text-[11px] text-blue-600/80 font-medium mt-0.5">El curso se repetirá automáticamente según la frecuencia</span>
+                                                </div>
+                                                <div class="relative" @click.stop>
+                                                    <input class="form-switch cursor-pointer scale-110" type="checkbox"
+                                                        role="switch" id="chkEsPeriodico" x-model="esPeriodico">
+                                                </div>
+                                            </div>
+
                                             <!-- Frecuencia del curso -->
-                                            <div x-show="!esDemanda" x-transition>
+                                            <div x-show="!esDemanda && esPeriodico" x-transition>
                                                 <label for="slcFrecuencia"
                                                     class="text-gray-800 text-sm font-medium inline-block mb-1">Frecuencia
                                                     del curso</label>
@@ -1873,7 +1886,7 @@
                                     <i class="bx bx-calendar-event text-primary text-2xl"></i>
                                 </div>
 
-                                <div x-show="frecuencia !== 'PERSONALIZADO'" class="w-full max-w-sm mb-4">
+                                <div x-show="esPeriodico" class="w-full max-w-sm mb-4">
                                     <label for="fecha_inicio_modal"
                                         class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
                                         de inicio de capacitación</label>
@@ -1882,21 +1895,21 @@
                                         class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                 </div>
 
-                                <div x-show="frecuencia === 'PERSONALIZADO'" class="w-full max-w-sm mb-4">
+                                <div x-show="!esPeriodico" class="w-full max-w-sm mb-4">
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label for="fecha_inicio_personalizada"
+                                            <label for="fecha_inicio_no_periodico"
                                                 class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
                                                 de inicio</label>
-                                            <input type="date" x-model="fechaInicio" id="fecha_inicio_personalizada"
+                                            <input type="date" x-model="fechaInicio" id="fecha_inicio_no_periodico"
                                                 :min="fechaMinima"
                                                 class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                         </div>
                                         <div>
-                                            <label for="fecha_fin_personalizada"
+                                            <label for="fecha_fin_no_periodico"
                                                 class="block text-sm font-semibold leading-6 text-gray-900 text-center mb-2">Fecha
                                                 de fin</label>
-                                            <input type="date" x-model="fechaFin" id="fecha_fin_personalizada"
+                                            <input type="date" x-model="fechaFin" id="fecha_fin_no_periodico"
                                                 :min="fechaMinima"
                                                 class="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary text-center text-base sm:leading-6">
                                         </div>
@@ -2735,6 +2748,7 @@
                 areasAsignadas: [],
                 listaDNIPaste: '',
                 incluirAutomatico: true,
+                esPeriodico: true,
                 selectedSucursal: '',
                 selectedCliente: '',
                 selectedArea: '',
@@ -2793,6 +2807,7 @@
                     this.tipoCursoId = data.tipo_curso || '';
                     this.dirigidoA = data.dirigido_a || '';
                     this.frecuencia = data.frecuencia || '';
+                    this.esPeriodico = data.es_periodico != '0';
 
                     // Reset filtros
                     this.selectedSucursal = '';
@@ -2824,13 +2839,14 @@
                     this.tipoCursoId = '';
                     this.dirigidoA = '';
                     this.fechaInicio = '';
+                    this.fechaFin = '';
                     this.selectedSucursal = '';
                     this.selectedCliente = '';
                     this.selectedArea = '';
                 },
 
                 async guardarApertura() {
-                    if (this.frecuencia === 'PERSONALIZADO') {
+                    if (!this.esPeriodico) {
                         if (!this.fechaInicio || !this.fechaFin) {
                             window.dispatchEvent(new CustomEvent('mostrar-alerta', {
                                 detail: {
@@ -2910,7 +2926,7 @@
                             area_codigo: this.selectedArea
                         };
 
-                        if (this.frecuencia === 'PERSONALIZADO') {
+                        if (!this.esPeriodico) {
                             payload.fecha_final = this.fechaFin;
                         }
 

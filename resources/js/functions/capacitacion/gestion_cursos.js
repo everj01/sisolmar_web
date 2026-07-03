@@ -423,7 +423,7 @@ function generarBotonesAccion(curso) {
         } else {
             html += `<button type="button"
                 class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual"
-                onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${cod}', nombre: '${nom}', tipo_curso: '${safeStr(curso.tipo_curso)}', dirigido_a: '${safeStr(curso.dirigido_a)}', frecuencia: '${safeStr(curso.frecuencia)}' } }))">
+                onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${cod}', nombre: '${nom}', tipo_curso: '${safeStr(curso.tipo_curso)}', dirigido_a: '${safeStr(curso.dirigido_a)}', frecuencia: '${safeStr(curso.frecuencia)}', es_periodico: '${curso.es_periodico ?? 1}' } }))">
                 <i class="bx bx-calendar-star text-base"></i></button>`;
         }
     } else {
@@ -657,6 +657,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.obligatorioAlta = true; // Siempre true por regla de negocio
                 alpineData.esDemanda = false;      // Retirado por regla de negocio
 
+                alpineData.esPeriodico = curso.es_periodico == 1;
                 alpineData.targetGroup = curso.target_group || 'TODOS';
 
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
@@ -680,6 +681,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                     dirigido: alpineData.dirigido,
                     sucursal: alpineData.sucursal,
                     clienteSeleccionado: alpineData.clienteSeleccionado,
+                    esPeriodico: alpineData.esPeriodico,
                 };
             } else {
                 console.warn("No se encontró el elemento Alpine formCursoGestion o Alpine no está disponible");
@@ -846,6 +848,7 @@ window.editarFormGestionCurso = async (e) => {
     if (isChanged('tipoCurso')) formData.append('tipo_curso', alpineData.tipoCurso);
     if (isChanged('areaConocimiento')) formData.append('area_conocimiento', alpineData.areaConocimiento);
     if (isChanged('frecuencia')) formData.append('frecuencia', alpineData.frecuencia);
+    formData.append('es_periodico', alpineData.esPeriodico ? 1 : 0);
     if (isChanged('codResponsable')) formData.append('cod_responsable', alpineData.codResponsable);
     if (isChanged('areaResponsable')) formData.append('area_responsable', alpineData.areaResponsable);
     if (isChanged('codMoodleArea')) formData.append('cod_moodle_area', alpineData.codMoodleArea);
@@ -1061,6 +1064,7 @@ window.formCursoGestion = function () {
         aplicaEvaluacion: false,
         obligatorioAlta: true, // Siempre true por regla de negocio
         esDemanda: false,      // Retirado
+        esPeriodico: false,
 
 
         // Procesamiento Word 2026
@@ -1477,6 +1481,7 @@ window.formCursoGestion = function () {
             this.aplicaEvaluacion = true;
             this.obligatorioAlta = true; // Forzado a true por requerimiento
             this.esDemanda = false;
+            this.esPeriodico = false;
 
             this.targetGroup = 'TODOS';
 
@@ -1564,7 +1569,7 @@ window.formCursoGestion = function () {
             formData.append('area_conocimiento', this.areaConocimiento);
             formData.append('area', this.area);
             formData.append('frecuencia', this.frecuencia);
-            formData.append('es_periodico', this.frecuencia ? 1 : 0);
+            formData.append('es_periodico', this.esPeriodico ? 1 : 0);
 
             formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
             formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
