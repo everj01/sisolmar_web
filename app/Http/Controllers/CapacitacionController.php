@@ -3806,6 +3806,14 @@ class CapacitacionController extends Controller
             ")
             )->keyBy('codigo');
 
+            $dirigidos = collect(
+                DB::select("
+                SELECT * FROM
+                sw_cursos_dirigido
+                WHERE habilitado = 1;
+            ")
+            )->keyBy('codigo');
+
             $clientes = collect(
                 DB::select("
                 SELECT codigo, abreviatura, cod_legacy
@@ -3825,10 +3833,11 @@ class CapacitacionController extends Controller
             $cursos = Cursos::where('tipo_curso', $tipoCurso)
                 ->where('habilitado', 1)
                 ->get()
-                ->map(function ($curso) use ($sistemas, $areas, $clientes) {
+                ->map(function ($curso) use ($sistemas, $areas, $clientes, $dirigidos) {
                     $cliente = $clientes->get($curso->cod_cliente) ?? null;
                     $sistema = $sistemas->get($curso->area_conocimiento) ?? null;
                     $area = $areas->get($curso->area) ?? null;
+                    $dirigido = $dirigidos->get($curso->dirigido_a) ?? null;
 
                     $progVigente = DB::table('sw_cursos_programacion')
                         ->where('cod_curso', $curso->codigo)
@@ -3839,11 +3848,12 @@ class CapacitacionController extends Controller
                     $fechaCierre = $progVigente ? Carbon::parse($progVigente->fecha_final)->format('d/m/Y') : null;
 
                     return [
+                        'Codigo' => $curso->codigo_curso,
                         'Nombre' => mb_strtoupper($curso->nombre),
                         'Cliente' => mb_strtoupper($cliente->abreviatura ?? 'Sin cliente'),
                         'Area' => mb_strtoupper($area->nombre ?? 'Sin área'),
                         'Sistema' => mb_strtoupper($sistema?->abreviatura ?? 'Sin sistema'),
-                        'Dirigido' => mb_strtoupper($curso->dirigido ?? 'Otros'),
+                        'Dirigido' => mb_strtoupper($dirigido->opcion ?? 'Otros'),
                         'Fecha_Inicio'   => $fechaInicio,
                         'Fecha_Cierre'   => $fechaCierre,
                         'Fecha_Creacion' => $curso->fecha_creacion ? Carbon::parse($curso->fecha_creacion)->format('d/m/Y H:i:s') : null,
@@ -3873,15 +3883,80 @@ class CapacitacionController extends Controller
         }
     }
 
-    public function obtenerTiposDeCurso(): JsonResponse{
-        try
-        {
+    public function obtenerCursosPorCliente(Request $request): JsonResponse
+    {
+        try {
+            $cod_legacy = $request->cod_legacy;
+
+            $areas = collect(
+                DB::select("
+                SELECT codigo, nombre
+                FROM sisolm_web.dbo.sw_curso_areas
+                WHERE habilitado = 1
+            ")
+            )->keyBy('codigo');
+
+            $dirigidos = collect(
+                DB::select("
+                SELECT * FROM
+                sw_cursos_dirigido
+                WHERE habilitado = 1;
+            ")
+            )->keyBy('codigo');
+
+            $cursos = Cursos::where('cod_cliente', $cod_legacy)
+                ->where('habilitado', 1)
+                ->get()
+                ->map(function ($curso) use ($areas, $dirigidos) {
+                    $area = $areas->get($curso->area) ?? null;
+                    $dirigido = $dirigidos->get($curso->dirigido_a) ?? null;
+
+                    $progVigente = DB::table('sw_cursos_programacion')
+                        ->where('cod_curso', $curso->codigo)
+                        ->where('estado_periodo', 'VIGENTE')
+                        ->first();
+
+                    $fechaInicio = $progVigente ? Carbon::parse($progVigente->fecha_inicio)->format('d/m/Y') : null;
+
+                    return [
+                        'Codigo' => $curso->codigo_curso,
+                        'Nombre' => mb_strtoupper($curso->nombre),
+                        'Area' => mb_strtoupper($area->nombre ?? 'Sin área'),
+                        'Dirigido' => mb_strtoupper($dirigido->opcion ?? 'Otros'),
+                        'Fecha_Inicio'   => $fechaInicio,
+                        'Fecha_Creacion' => $curso->fecha_creacion ? Carbon::parse($curso->fecha_creacion)->format('d/m/Y H:i:s') : null,
+                    ];
+                })->values();;
+
+            return response()->json([
+                'success' => true,
+                'Total'   => $cursos->count(),
+                'Cursos'  => $cursos,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerCursosPorCliente', [
+                'error' => $e->getMessage(),
+                'line'  => $e->getLine(),
+                'file'  => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener los tipos de cursos.',
+            ], 500);
+        }
+    }
+
+    public function obtenerTiposDeCurso(): JsonResponse
+    {
+        try {
             $tiposCurso = collect(
                 DB::select("
                 SELECT codigo, nombre, descripcion
                 FROM sisolm_web.dbo.sw_capacitacion_tipo_curso
                 WHERE habilitado = 1
-            "))->map(function ($tipo) {
+            ")
+            )->map(function ($tipo) {
                 return [
                     "Codigo" => $tipo->codigo,
                     "Nombre" => $tipo->nombre ?? "Sin nombre",

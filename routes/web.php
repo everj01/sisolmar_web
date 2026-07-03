@@ -183,6 +183,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-datos-matricula/{cursoId}', [CapacitacionController::class, 'obtenerDatosMatricula']);
         Route::get('/reporte-cursos', [CapacitacionController::class, 'obtenerCursosParaReportes']);
         Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
+        Route::get('/obtener-cursos-cliente/{cod_legacy}', [CapacitacionController::class, 'obtenerCursosPorCliente']);
         Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
         Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
