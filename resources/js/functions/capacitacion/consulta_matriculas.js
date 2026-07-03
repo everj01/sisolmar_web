@@ -386,8 +386,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (d._seleccionado && !d._matriculado) count++;
         });
         btn.innerHTML = `<i class="ti ti-user-plus"></i> Matricular personal (${count})`;
-        const slcVal = document.getElementById('slcProgramacion')?.value;
-        btn.disabled = count === 0 || !slcVal;
+        const slcProg = document.getElementById('slcProgramacion');
+        const slcVal = slcProg?.value;
+        const esVigente = window._selectedProgramacionEstado === 'VIGENTE';
+        btn.disabled = count === 0 || !slcVal || !esVigente;
     }
 
     window.limpiarModalMatriculados = function() {
@@ -475,9 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const fFinal = formatDate(p.fecha_final);
                     const estado = p.estado_periodo || p.estado || '';
                     opt.textContent = `Programación ${codProg} | ${fInicio} - ${fFinal} (${estado})`;
-                    if (estado !== 'VIGENTE') {
-                        opt.disabled = true;
-                    } else if (!firstVigente) {
+                    opt.dataset.estado = estado;
+                    if (estado === 'VIGENTE' && !firstVigente) {
                         firstVigente = codProg;
                     }
                     slcProg.appendChild(opt);
@@ -679,6 +680,10 @@ document.addEventListener("DOMContentLoaded", () => {
                                     cellClick(e, cell) {
                                         const rowData = cell.getRow().getData();
                                         if (!rowData._matriculado) return;
+                                        if (rowData._estado === 'FINALIZADO') {
+                                            Swal.fire({ icon: 'info', title: 'Matrícula finalizada', text: 'No se puede desmatricular un curso que ya ha finalizado.', confirmButtonText: 'Entendido' });
+                                            return;
+                                        }
                                         e.stopPropagation();
                                         const nombre = rowData.nombre_completo || 'este usuario';
                                         Swal.fire({
@@ -819,6 +824,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         // Programación change → re-seleccionar filas
                         slcProg.onchange = function() {
                             const codProg = this.value;
+                            const selectedOpt = this.options[this.selectedIndex];
+                            window._selectedProgramacionEstado = selectedOpt ? selectedOpt.dataset.estado : '';
                             const filtered = codProg
                                 ? (window._matriculadosData || []).filter(m => String(m.cod_programacion || m.Cod_Programacion || '').toString().trim() === codProg)
                                 : [];
@@ -831,7 +838,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                 row.update({
                                     _matriculado: yaMatriculado,
                                     _seleccionado: yaMatriculado,
-                                    _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null
+                                    _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null,
+                                    _estado: match ? (match.estado || match.Estado || 'MATRICULADO') : null
                                 });
                             });
                             updateMatricularButton();
