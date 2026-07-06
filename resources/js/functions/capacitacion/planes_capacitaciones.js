@@ -429,9 +429,13 @@ export default document.addEventListener("alpine:init", () => {
             });
 
             try {
-                const { data } = await axios.get(`/api/obtener-cursos-cliente/${codLegacy}`);
+                const { data } = await axios.get(
+                    `/api/obtener-cursos-cliente/${codLegacy}`,
+                );
                 const cursos = data.Cursos || [];
-                const cliente = this.clientesPCA.find(c => c.cod_legacy === codLegacy);
+                const cliente = this.clientesPCA.find(
+                    (c) => c.cod_legacy === codLegacy,
+                );
                 const nombreCliente = cliente ? cliente.descripcion : "";
 
                 if (data.Total === 0 || cursos.length === 0) {
@@ -444,8 +448,13 @@ export default document.addEventListener("alpine:init", () => {
                     return;
                 }
 
-                this.pdfTitulo = "Plan de Capacitación Aliado (PCA)" + (nombreCliente ? " - " + nombreCliente : "");
-                this.pdfDownloadNombre = "Plan_Capacitacion_Aliado_PCA_" + new Date().getFullYear() + ".pdf";
+                this.pdfTitulo =
+                    "Plan de Capacitación Aliado - PCA" +
+                    (nombreCliente ? " - " + nombreCliente : "");
+                this.pdfDownloadNombre =
+                    "Plan_Capacitacion_Aliado_PCA_" +
+                    new Date().getFullYear() +
+                    ".pdf";
 
                 const doc = new jsPDF({
                     orientation: "portrait",
@@ -457,18 +466,29 @@ export default document.addEventListener("alpine:init", () => {
 
                 doc.setFontSize(14);
                 doc.setFont(undefined, "bold");
-                doc.text("PLAN DE CAPACITACIÓN ALIADO (PCA)", pageWidth / 2, 15, { align: "center" });
-
-                if (nombreCliente) {
-                    doc.setFontSize(11);
-                    doc.setFont(undefined, "normal");
-                    doc.text("Cliente: " + nombreCliente, pageWidth / 2, 22, { align: "center" });
-                }
+                doc.text(
+                    "PLAN DE CAPACITACIÓN ALIADO - PCA" +
+                        (nombreCliente
+                            ? " " + nombreCliente.toUpperCase()
+                            : ""),
+                    pageWidth / 2,
+                    15,
+                    { align: "center" },
+                );
 
                 const mesesMap = {
-                    "01": "ENERO", "02": "FEBRERO", "03": "MARZO", "04": "ABRIL",
-                    "05": "MAYO", "06": "JUNIO", "07": "JULIO", "08": "AGOSTO",
-                    "09": "SETIEMBRE", "10": "OCTUBRE", "11": "NOVIEMBRE", "12": "DICIEMBRE",
+                    "01": "ENERO",
+                    "02": "FEBRERO",
+                    "03": "MARZO",
+                    "04": "ABRIL",
+                    "05": "MAYO",
+                    "06": "JUNIO",
+                    "07": "JULIO",
+                    "08": "AGOSTO",
+                    "09": "SETIEMBRE",
+                    10: "OCTUBRE",
+                    11: "NOVIEMBRE",
+                    12: "DICIEMBRE",
                 };
 
                 function obtenerMes(fecha) {
@@ -480,10 +500,10 @@ export default document.addEventListener("alpine:init", () => {
 
                 const rows = cursos.map((curso, i) => [
                     String(i + 1),
+                    curso.Completado ? "X" : "",
                     curso.Nombre,
                     curso.Dirigido,
                     obtenerMes(curso.Fecha_Inicio),
-                    curso.Fecha_Creacion || "",
                 ]);
 
                 autoTable(doc, {
@@ -492,10 +512,16 @@ export default document.addEventListener("alpine:init", () => {
                     head: [
                         [
                             { content: "#", styles: { halign: "center" } },
-                            { content: "NOMBRE DE CURSO", styles: { halign: "center" } },
-                            { content: "DIRIGIDO", styles: { halign: "center" } },
-                            { content: "PROGRAMACIÓN", styles: { halign: "center" } },
-                            { content: "CREACIÓN", styles: { halign: "center" } },
+                            { content: "100%", styles: { halign: "center" } },
+                            { content: "TEMA", styles: { halign: "center" } },
+                            {
+                                content: "DIRIGIDO",
+                                styles: { halign: "center" },
+                            },
+                            {
+                                content: "PROGRAMACIÓN",
+                                styles: { halign: "center" },
+                            },
                         ],
                     ],
                     body: rows,
@@ -507,17 +533,33 @@ export default document.addEventListener("alpine:init", () => {
                         lineWidth: 0.1,
                     },
                     headStyles: {
-                        fillColor: [184, 204, 228],
+                        fillColor: [250, 209, 90], // Amarillo similar al de la imagen
                         textColor: [0, 0, 0],
-                        fontSize: 8,
+                        fontSize: 9,
                         fontStyle: "bold",
                         halign: "center",
                         valign: "middle",
                     },
                     columnStyles: {
-                        0: { cellWidth: 10, halign: "center" },
-                        3: { cellWidth: 28, halign: "center" },
-                        4: { cellWidth: 35, halign: "center" },
+                        0: { cellWidth: 10, halign: "center" }, // #
+                        1: { cellWidth: 14, halign: "center" }, // 100%
+                        2: { cellWidth: "auto" }, // TEMA
+                        3: { cellWidth: 45, halign: "center" }, // DIRIGIDO
+                        4: { cellWidth: 35, halign: "center" }, // PROGRAMACIÓN
+                    },
+                    // Resalta en rojo con texto blanco en negrita las filas marcadas con "X"
+                    didParseCell: function (data) {
+                        const curso = cursos[data.row.index];
+                        if (
+                            curso &&
+                            curso.Completado &&
+                            data.section === "body" &&
+                            data.column.index === 2
+                        ) {
+                            data.cell.styles.fillColor = [255, 0, 0];
+                            data.cell.styles.textColor = [255, 255, 255];
+                            data.cell.styles.fontStyle = "bold";
+                        }
                     },
                 });
 

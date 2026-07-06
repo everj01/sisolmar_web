@@ -3917,13 +3917,20 @@ class CapacitacionController extends Controller
                         ->first();
 
                     $fechaInicio = $progVigente ? Carbon::parse($progVigente->fecha_inicio)->format('d/m/Y') : null;
+                    $fechaFin = $progVigente ? Carbon::parse($progVigente->fecha_final)->format('d/m/Y') : null;
+
+                    $completado = $fechaFin
+                        ? Carbon::parse($progVigente->fecha_final)->lessThanOrEqualTo(Carbon::today())
+                        : false;
 
                     return [
                         'Codigo' => $curso->codigo_curso,
                         'Nombre' => mb_strtoupper($curso->nombre),
                         'Area' => mb_strtoupper($area->nombre ?? 'Sin área'),
                         'Dirigido' => mb_strtoupper($dirigido->opcion ?? 'Otros'),
+                        'Completado' => $completado,
                         'Fecha_Inicio'   => $fechaInicio,
+                        'Fecha_Fin'      => $fechaFin,
                         'Fecha_Creacion' => $curso->fecha_creacion ? Carbon::parse($curso->fecha_creacion)->format('d/m/Y H:i:s') : null,
                     ];
                 })->values();;
