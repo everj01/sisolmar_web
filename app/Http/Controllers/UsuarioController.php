@@ -207,4 +207,117 @@ class UsuarioController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Permisos de sucursales actualizados.']);
     }
+
+// ========================================================================
+    // MENÚS Y SUBMENÚS
+    // ========================================================================
+
+    public function getMenusUsuario($codUsuario)
+    {
+        $menusPadres = DB::table('sw_menus')->where('habilitado', 1)->select('codigo', 'descripcion')->orderBy('orden')->get();
+        $submenus = DB::table('sw_submenus')->where('habilitado', 1)->select('codigo', 'codMenu', 'descripcion')->orderBy('orden')->get();
+
+        // AQUÍ EL CAMBIO 1: Agregamos 'nro' al select
+        $opcionesSub = DB::table('sw_submenus_opciones')->where('habilitado', 1)->select('codigo', 'codSubmenu', 'nombre', 'nro')->orderBy('nro')->get();
+
+        $permisosActivos = DB::table('sw_usuarios_permisos')->where('codUsuario', $codUsuario)->where('habilitado', 1)->get();
+        $menusAsignados = $permisosActivos->pluck('codMenu')->toArray();
+        $submenusAsignados = $permisosActivos->pluck('codSubmenu')->toArray();
+
+        $opcionesAsignadas = DB::table('sw_permisos_usuario_submenu_opcion')
+            ->where('codUsuario', $codUsuario)
+            ->where('habilitado', 1)
+            ->pluck('codOpcione') 
+            ->toArray();
+
+        $resultado = $menusPadres->map(function ($padre) use ($submenus, $opcionesSub, $menusAsignados, $submenusAsignados, $opcionesAsignadas) {
+            $hijos = $submenus->where('codMenu', $padre->codigo)->map(function ($hijo) use ($opcionesSub, $submenusAsignados, $opcionesAsignadas) {
+                
+                $opciones = $opcionesSub->where('codSubmenu', $hijo->codigo)->map(function ($opc) use ($opcionesAsignadas) {
+                    return [
+                        'codigo'   => $opc->codigo,
+                        'nombre'   => $opc->nombre,
+                        'nro'      => $opc->nro, // AQUÍ EL CAMBIO 2: Pasamos el 'nro' al JS
+                        'asignado' => in_array($opc->codigo, $opcionesAsignadas)
+                    ];
+                })->values();
+
+                return [
+                    'codigo'   => $hijo->codigo,
+                    'nombre'   => $hijo->descripcion, 
+                    'asignado' => in_array($hijo->codigo, $submenusAsignados),
+                    'opciones' => $opciones 
+                ];
+            })->values();
+
+            return [
+                'codigo'   => $padre->codigo,
+                'nombre'   => $padre->descripcion, 
+                'asignado' => in_array($padre->codigo, $menusAsignados),
+                'submenus' => $hijos
+            ];
+        });
+
+        return response()->json($resultado);
+    }
+
+    public function saveMenusUsuario(Request $request)
+    {
+        $request->validate([
+            'codUsuario'   => 'required|integer',
+            'menus_padres' => 'array',
+            'submenus'     => 'array',
+            'opciones'     => 'array', // Recibimos el tercer nivel del JS
+        ]);
+
+        $codUsuario = $request->codUsuario;
+        $usuario = Auth::user()->usuario;
+        $ahora = DB::raw('GETDATE()');
+
+        DB::beginTransaction();
+        try {
+            // 1. Limpiar e insertar nivel 1 y 2 en sw_usuarios_permisos
+            DB::table('sw_usuarios_permisos')->where('codUsuario', $codUsuario)->update([
+                'habilitado' => 0, 'modificado_por' => $usuario, 'fecha_modificacion' => $ahora
+            ]);
+
+            $relacionSubmenus = DB::table('sw_submenus')->pluck('codMenu', 'codigo')->toArray();
+            $combinaciones = [];
+            foreach (($request->submenus ?? []) as $codSub) {
+                $combinaciones[] = ['codMenu' => $relacionSubmenus[$codSub] ?? 0, 'codSubmenu' => $codSub];
+            }
+            foreach (($request->menus_padres ?? []) as $codPadre) {
+                $combinaciones[] = ['codMenu' => $codPadre, 'codSubmenu' => 0];
+            }
+
+            foreach ($combinaciones as $item) {
+                $existe = DB::table('sw_usuarios_permisos')->where('codUsuario', $codUsuario)->where('codMenu', $item['codMenu'])->where('codSubmenu', $item['codSubmenu'])->first();
+                if ($existe) {
+                    DB::table('sw_usuarios_permisos')->where('codigo', $existe->codigo)->update(['habilitado' => 1, 'modificado_por' => $usuario, 'fecha_modificacion' => $ahora]);
+                } else {
+                    DB::table('sw_usuarios_permisos')->insert(['codUsuario' => $codUsuario, 'codMenu' => $item['codMenu'], 'codSubmenu' => $item['codSubmenu'], 'habilitado' => 1, 'creado_por' => $usuario, 'fecha_creacion' => $ahora]);
+                }
+            }
+
+            // 2. Limpiar e insertar Nivel 3 (sw_permisos_usuario_submenu_opcion)
+            DB::table('sw_permisos_usuario_submenu_opcion')->where('codUsuario', $codUsuario)->update([
+                'habilitado' => 0, 'modificado_por' => $usuario, 'fecha_modificacion' => $ahora
+            ]);
+
+            foreach (($request->opciones ?? []) as $codOpc) {
+                $existeOpc = DB::table('sw_permisos_usuario_submenu_opcion')->where('codUsuario', $codUsuario)->where('codOpcione', $codOpc)->first();
+                if ($existeOpc) {
+                    DB::table('sw_permisos_usuario_submenu_opcion')->where('codigo', $existeOpc->codigo)->update(['habilitado' => 1, 'modificado_por' => $usuario, 'fecha_modificacion' => $ahora]);
+                } else {
+                    DB::table('sw_permisos_usuario_submenu_opcion')->insert(['codUsuario' => $codUsuario, 'codOpcione' => $codOpc, 'habilitado' => 1, 'creado_por' => $usuario, 'fecha_creacion' => $ahora]);
+                }
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Permisos guardados.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
 }

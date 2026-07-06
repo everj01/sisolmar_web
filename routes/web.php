@@ -73,6 +73,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/toggle-usuario', [UsuarioController::class, 'toggleHabilitado']);
         Route::get('/get-sucursales-usuario/{codUsuario}', [UsuarioController::class, 'getSucursalesUsuario']);
         Route::post('/save-sucursales-usuario', [UsuarioController::class, 'saveSucursalesUsuario']);
+        Route::get('/get-menus-usuario/{codUsuario}', [UsuarioController::class, 'getMenusUsuario']);
+        Route::post('/save-menus-usuario', [UsuarioController::class, 'saveMenusUsuario']);
 
         // Personal
         Route::get('/get-personal', [FileController::class, 'getPersonal']);
