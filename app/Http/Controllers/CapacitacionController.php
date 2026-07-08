@@ -793,8 +793,24 @@ class CapacitacionController extends Controller
 
             $this->saveClientesCurso($curso->codigo, $request);
 
+            $codigoExamen = null;
+
             if ($request->input("aplica_evaluacion", 0) == 1) {
                 $examen = $this->createExamen($curso, $request);
+
+                if (!$examen) {
+                    DB::rollBack();
+                    return response()->json(
+                        [
+                            "success" => false,
+                            "message" => "Error al registrar el examen en la base de datos.",
+                        ],
+                        500,
+                    );
+                }
+
+                $codigoExamen = $examen->codigo;
+                
                 if (!$examen) {
                     DB::rollBack();
                     return response()->json(
@@ -805,6 +821,41 @@ class CapacitacionController extends Controller
                         ],
                         500,
                     );
+                }
+
+                if ($request->hasFile("archivo")) {
+                    $archivo = $request->file("archivo");
+                    $codigoCurso = $curso->codigo_curso;
+
+                    $anio = date("Y");
+                    $mes = ucfirst(Carbon::now()->translatedFormat("F"));
+                    $tipoArchivo = $archivo->getClientMimeType();
+                    $extensionArchivo = $archivo->getClientOriginalExtension();
+                    $nombreArchivoOriginal = $archivo->getClientOriginalName();
+                    $baseNombre = "EXA_" . $codigoCurso . "_" . date("Ymd");
+                    $carpeta = "examenes/{$anio}/{$mes}";
+
+                    if (!Storage::disk("public")->exists($carpeta)) {
+                        Storage::disk("public")->makeDirectory($carpeta);
+                    }
+
+                    $contador = 1;
+                    do {
+                        $nombreArchivoFinal = "{$baseNombre}_{$contador}." . $extensionArchivo;
+                        $rutaCompleta = storage_path("app/public/{$carpeta}/{$nombreArchivoFinal}");
+                        $contador++;
+                    } while (file_exists($rutaCompleta));
+
+                    $rutaArchivo = $archivo->storeAs($carpeta, $nombreArchivoFinal, "public");
+
+                    $examen->update([
+                        "file_tiene" => 1,
+                        "file_nombre" => $nombreArchivoFinal,
+                        "file_ruta" => $rutaArchivo,
+                        "file_extension" => $extensionArchivo,
+                        "file_tipo" => $tipoArchivo,
+                        "file_nombre_original" => $nombreArchivoOriginal,
+                    ]);
                 }
             }
 
@@ -892,6 +943,11 @@ class CapacitacionController extends Controller
 
                     $this->uploadPortadaToMoodle($courseId, $request);
                     $this->uploadAficheToMoodle($courseId, $request);
+
+                    if ($codigoExamen !== null) {
+                        $this->guardarPreguntasLocal($codigoExamen, $request->input("preguntas_word"));
+                    }
+                    
                     $this->syncPreguntasWord(
                         $courseId,
                         $request->input("aplica_evaluacion", 0),
@@ -1583,6 +1639,23 @@ class CapacitacionController extends Controller
                 'resultado' => $resultado->resultado ?? null,
             ]);
         }
+    }
+
+    private function guardarPreguntasLocal(int $codigoExamen, ?string $preguntasWordStr): void
+    {
+        if (!$preguntasWordStr) {
+            return;
+        }
+
+        DB::table('sw_cursos_examen')
+            ->where('codigo', $codigoExamen)
+            ->update([
+                'preguntas_json' => $preguntasWordStr,
+            ]);
+
+        Log::info('Preguntas guardadas localmente en sw_cursos_examen', [
+            'codigo' => $codigoExamen,
+        ]);
     }
 
     private function transformarPreguntas(array $preguntas): array
