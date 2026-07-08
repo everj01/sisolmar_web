@@ -403,7 +403,6 @@
                                             x-text="plan.Abreviatura"></div>
                                         <div>
                                             <p class="text-sm font-medium text-default-900" x-text="plan.Nombre"></p>
-                                            <p class="text-[10px] text-default-400" x-text="'Código: ' + plan.Codigo"></p>
                                         </div>
                                     </div>
                                 </button>
@@ -440,7 +439,7 @@
                                     </template>
                                 </select>
                                 <select x-model="filtroArea" :disabled="loadingCursos"
-                                    class="min-w-[180px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
+                                    class="min-w-[230px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
                                     <option value="" x-text="loadingCursos ? 'Cargando áreas...' : 'Todas las áreas'"></option>
                                     <template x-for="a in areasUnicas" :key="a">
                                         <option :value="a" x-text="a"></option>
