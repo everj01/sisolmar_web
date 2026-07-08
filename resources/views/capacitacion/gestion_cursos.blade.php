@@ -354,43 +354,6 @@
         </div>
     </div>
 
-    <div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" x-cloak
-        class="mb-6 bg-orange-50 ...">
-        {{-- <div x-data="alertasVencimientoCursos()" x-init="initAlertas()" x-show="alertas.length > 0" style="display: none;" class="mb-6 bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm"> --}}
-        <div class="flex items-start">
-            <div class="flex-shrink-0 mt-0.5">
-                <i class="bx bxs-error-circle text-orange-500 text-xl"></i>
-            </div>
-            <div class="ml-3 w-full">
-                <h3 class="text-sm font-bold text-orange-800">
-                    Atención: Renovación y Clonación de Cursos
-                </h3>
-                <div class="mt-2 text-sm text-orange-700">
-                    <p>Ocurrirá una clonación y matriculación automática pronto para los siguientes cursos periódicos.
-                        Verifique el material docente si es necesario:</p>
-                    <ul class="list-disc pl-5 mt-1 space-y-1">
-                        <template x-for="alerta in alertas" :key="alerta.codigo_curso">
-                            <li>
-                                <strong x-text="alerta.nombre"></strong> (Próxima ejecución en <span
-                                    x-text="alerta.dias_restantes"></span> días el <span
-                                    x-text="alerta.fecha_proxima_clonacion"></span>)
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-            </div>
-            <div class="ml-auto pl-3">
-                <div class="-mx-1.5 -my-1.5">
-                    <button type="button" @click="alertas = []"
-                        class="inline-flex rounded-md bg-orange-50 p-1.5 text-orange-500 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-600 focus:ring-offset-2 focus:ring-offset-orange-50">
-                        <span class="sr-only">Cerrar</span>
-                        <i class="bx bx-x text-lg"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="flex flex-col gap-6 w-full items-start">
         <div class="card w-full">
             <div class="card-header flex flex-wrap items-center justify-between gap-4">
@@ -1461,11 +1424,16 @@
                                                         const clSel = this.clienteSeleccionado;
 
                                                         if (tc == '5') {
-                                                            const base = this._fullOptions.filter(opt =>
-                                                                opt.texto === 'Todos' || opt.texto === 'Personal Operativo' || opt.texto === 'Personal Administrativo'
-                                                            );
-                                                            base.push({ codigo: 'OTROS', texto: 'Otros' });
-                                                            return base;
+                                                            return [
+                                                                { codigo: '1', texto: 'Todos' },
+                                                                { codigo: '7', texto: 'Personal Administrativo (Todos)' },
+                                                                { codigo: '8', texto: 'Personal Administrativo (4°)' },
+                                                                { codigo: '9', texto: 'Personal Administrativo (5°)' },
+                                                                { codigo: '10', texto: 'Personal Operativo (Todos)' },
+                                                                { codigo: '11', texto: 'Personal Operativo (4°)' },
+                                                                { codigo: '12', texto: 'Personal Operativo (5°)' },
+                                                                { codigo: 'OTROS', texto: 'Otros' },
+                                                            ];
                                                         }
 
                                                         if (tc == '6') {
