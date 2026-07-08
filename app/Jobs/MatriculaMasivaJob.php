@@ -215,8 +215,13 @@ class MatriculaMasivaJob implements ShouldQueue
 
         $dirigidoToTipos = [
             '1' => [null],          // todos -> llama al SP sin filtrar
-            '2' => ['02', '05'],    // administrativo
-            '3' => ['01', '03'],    // operativo
+            '7' => ['02', '05'],    // Personal Administrativo (Todos)
+            '8' => ['02'],          // Personal Administrativo (4°)
+            '9' => ['05'],          // Personal Administrativo (5°)
+            '10' => ['01', '03'],   // Personal Operativo (Todos)
+            '11' => ['01'],         // Personal Operativo (4°)
+            '12' => ['03'],         // Personal Operativo (5°)
+            '0' => [],              // Otros -> matrícula manual (sin auto-matricular)
         ];
 
         $tipos = $dirigidoToTipos[$dirigido] ?? null;
