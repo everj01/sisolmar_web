@@ -567,7 +567,7 @@
                 <div class="flex flex-col gap-3 mb-4">
                     <div class="flex items-center justify-between">
                         <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
-                        <div id="selectedPersonalInfo" class="hidden flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 px-2.5 py-1 rounded-full">
+                        <div id="selectedPersonalInfo" class="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 px-2.5 py-1 rounded-full">
                             <i class="ti ti-checks text-sm"></i>
                             <span><span id="selectedPersonalCount">0</span> seleccionados</span>
                         </div>
@@ -601,8 +601,6 @@
                                    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
                                         :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
                                         <option value="">Todos los tipos</option>
-                                        <option value="Administrativo">Administrativo</option>
-                                        <option value="Operativo">Operativo</option>
                                     </select>
                                     <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
                                 </div>
@@ -850,6 +848,18 @@
                        hover:border-default-300
                        focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                                     <option value="">Todos los clientes</option>
+                                </select>
+                            </div>
+
+                            <div class="w-full md:w-64">
+                                <select
+                                    id="filtroTipoTrabMemos"
+                                    class="w-full h-10 px-3 text-sm text-default-700
+                       bg-white border border-default-200 rounded-lg shadow-sm
+                       outline-none transition
+                       hover:border-default-300
+                       focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                                    <option value="">Todos los tipos</option>
                                 </select>
                             </div>
 

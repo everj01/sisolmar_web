@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
         searchPersonal: document.getElementById("buscarPersonalSeguimiento"),
         searchMemos: document.getElementById("buscarMemosEnviados"),
         filtroClienteMemos: document.getElementById("filtroClienteMemos"),
+        filtroTipoTrabMemos: document.getElementById("filtroTipoTrabMemos"),
         filtroSucursalMemos: document.getElementById("filtroSucursalMemos"),
         btnBuscarMemos: document.getElementById("btnBuscarMemosEnviados"),
         btnLimpiarMemos: document.getElementById("btnLimpiarFiltroMemos"),
@@ -271,6 +272,22 @@ document.addEventListener("DOMContentLoaded", () => {
         select.value = actual;
     }
 
+    function cargarTiposTrabMemos(lista = []) {
+        const select = elements.filtroTipoTrabMemos;
+        if (!select) return;
+
+        const actual = select.value;
+        const tiposTrab = [
+            ...new Set(lista.map((m) => m.TIPO_TRABAJADOR).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todos los tipos</option>` +
+            tiposTrab.map((t) => `<option value="${t}">${t}</option>`).join("");
+
+        select.value = actual;
+    }
+
     function cargarSucursalesMemos(lista = []) {
         const select = elements.filtroSucursalMemos;
         if (!select) return;
@@ -336,6 +353,22 @@ document.addEventListener("DOMContentLoaded", () => {
             `<option value="">Todos los clientes</option>` +
             `<option value="Sin cliente">Sin cliente</option>` +
             clientes.map((c) => `<option value="${c}">${c}</option>`).join("");
+
+        select.value = actual;
+    }
+
+    function cargarTiposPersonal(lista = []) {
+        const select = elements.filtroTipoPersonal;
+        if (!select) return;
+
+        const actual = select.value;
+        const tipos = [
+            ...new Set(lista.map((p) => p.tipo_trabajador).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todos los tipos</option>` +
+            tipos.map((t) => `<option value="${t}">${t}</option>`).join("");
 
         select.value = actual;
     }
@@ -696,6 +729,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     alpineEl._x_dataStack[0].actualizar(data);
                 }
 
+                cargarTiposTrabMemos(data);
                 cargarClientesMemos(data);
                 cargarSucursalesMemos(data);
                 return data;
@@ -1199,6 +1233,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     cargarSucursalesPersonal(personal);
                     cargarCargosPersonal(personal);
                     cargarClientesPersonal(personal);
+                    cargarTiposPersonal(personal);
                     aplicarFiltrosPersonal();
                 }
             })
