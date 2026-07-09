@@ -158,6 +158,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     cargarGeneradosCache();
 
+    // Cache stale-while-revalidate para las dos vistas de personal
+    const _personalCache = { SI: null, NO: null, _tsSI: 0, _tsNO: 0 };
+    const _CACHE_TTL = 90_000; // 90 segundos
+
     document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
 
     // ── Referencias DOM ──────────────────────────────────────
@@ -513,11 +517,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (badgeLimp) badgeLimp.textContent = '';
     }
 
+    const RESALTAR_SKIP_FIELDS = new Set(['migrado', 'estado', 'tipoPer', 'cambio', 'codPersonal']);
     function resaltarTexto(tabla, valor) {
         tabla.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 const field = cell.getAttribute('tabulator-field');
-                if (i === cells.length - 1 || field === 'migrado' || field === 'estado' || field === 'tipoPer' || field === 'cambio') return;
+                // Saltar: sin field (checkbox, N°), última columna (acciones) y columnas con HTML propio
+                if (!field || i === cells.length - 1 || RESALTAR_SKIP_FIELDS.has(field)) return;
                 const text = cell.textContent || '';
                 if (valor && text.toLowerCase().includes(valor)) {
                     const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -584,30 +590,43 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // CARGA DE DATOS (API)
     // ============================================================
-    function getPersonal() {
+    function _aplicarDatosTabla(datosTabla) {
+        tblPersonas.setData(datosTabla);
+        const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+        const filtroCargo = document.getElementById('filtroCargoPEN');
+        if (filtroCargo) {
+            filtroCargo.innerHTML = '<option value="">Todos</option>';
+            cargosUnicos.forEach(cargo => filtroCargo.add(new Option(cargo, cargo)));
+        }
+        aplicarFiltrosPEN();
+    }
+
+    async function _fetchPersonal(vigencia) {
+        const res = await axios.get(`${VITE_URL_APP}/get-personal-dj-2026`, { params: { vigencia } });
+        const datos = res.data;
+        _personalCache[vigencia] = datos;
+        _personalCache[`_ts${vigencia}`] = Date.now();
+        return datos;
+    }
+
+    function getPersonal(silent = false) {
         const toggleActivos = document.getElementById('filtroVigenciaPEN');
         const vigenciaVal = (toggleActivos && toggleActivos.checked) ? 'SI' : 'NO';
+        const ahora = Date.now();
+        const cacheValido = _personalCache[vigenciaVal] && (ahora - _personalCache[`_ts${vigenciaVal}`]) < _CACHE_TTL;
 
-        tblPersonas.alert("Buscando datos...", "msg");
-
-        axios.get(`${VITE_URL_APP}/get-personal-dj-2026`, { params: { vigencia: vigenciaVal } })
-            .then(response => {
-                const datosTabla = response.data;
-                tblPersonas.setData(datosTabla);
-
-                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
-                const filtroCargo = document.getElementById('filtroCargoPEN');
-                if (filtroCargo) {
-                    filtroCargo.innerHTML = '<option value="">Todos</option>';
-                    cargosUnicos.forEach(cargo => {
-                        filtroCargo.add(new Option(cargo, cargo));
-                    });
-                }
-
-                aplicarFiltrosPEN();
-            })
-            .catch(error => console.error("Hubo un error:", error))
-            .finally(() => tblPersonas.clearAlert());
+        if (cacheValido) {
+            // Servir al instante desde cache
+            _aplicarDatosTabla(_personalCache[vigenciaVal]);
+            // Refrescar en background sin mostrar loading
+            _fetchPersonal(vigenciaVal).then(datos => _aplicarDatosTabla(datos)).catch(console.error);
+        } else {
+            if (!silent) tblPersonas.alert("Buscando datos...", "msg");
+            _fetchPersonal(vigenciaVal)
+                .then(datos => _aplicarDatosTabla(datos))
+                .catch(error => console.error("Hubo un error:", error))
+                .finally(() => tblPersonas.clearAlert());
+        }
     }
 
 
@@ -695,7 +714,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('filtroCargoPEN')?.addEventListener('change', aplicarFiltrosPEN);
     document.getElementById('filtroVigenciaPEN')?.addEventListener('change', getPersonal);
 
+    // Precarga ambas vistas en paralelo para que el toggle sea instantáneo
     getPersonal();
+    _fetchPersonal('NO').catch(() => {});
 
     document.getElementById('btnGenerarSeleccionadosPEN')?.addEventListener('click', async function () {
         const seleccionadas = tblPersonas.getSelectedRows();
@@ -722,20 +743,25 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // BÚSQUEDA Y RESALTADO
     // ============================================================
-    buscarPersonalInput?.addEventListener("keyup", function () {
+    let _buscarTimer = null;
+    buscarPersonalInput?.addEventListener("input", function () {
         const valor = this.value.toLowerCase().trim();
+        clearTimeout(_buscarTimer);
         if (tabActiva === 'pendiente') {
-            tblPersonas._ultimoFiltro = valor;
             aplicarFiltrosPEN();
-            setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
+            _buscarTimer = setTimeout(() => resaltarTexto(tblPersonas, valor), 200);
+            tblPersonas._ultimoFiltro = valor;
         } else {
-            tblPersonasMigrado._ultimoFiltro = valor;
             aplicarFiltrosMigracion();
-            setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
+            _buscarTimer = setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 200);
+            tblPersonasMigrado._ultimoFiltro = valor;
         }
     });
 
-    tblPersonas.on("renderComplete", () => { if (tblPersonas._ultimoFiltro) resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro); });
+    // renderComplete solo re-resalta si hay filtro activo (sin debounce extra porque ya filtramos arriba)
+    tblPersonas.on("renderComplete", () => {
+        if (tblPersonas._ultimoFiltro) setTimeout(() => resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro), 0);
+    });
 
     // ============================================================
     // BOTONES MODAL
@@ -888,6 +914,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.body.style.overflow = '';
                     }
 
+                    // Invalidar cache para que la recarga traiga datos frescos
+                    _personalCache.SI = null; _personalCache.NO = null;
                     getPersonal();
                 }
             } catch (error) {
