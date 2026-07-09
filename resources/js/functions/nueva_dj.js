@@ -62,6 +62,9 @@ import Swal from 'sweetalert2';
     // ============================================================
     // MODO RECONTRATACIÓN
     // ============================================================
+    const NDJ_READONLY_IDS = ['ndj_sel_tipo_personal', 'ndj_tipo_documento', 'ndj_nro_documento'];
+    const NDJ_ALERT_IDS    = [];
+
     function activarModoRecontratacion(codiPers) {
         modoRecontratacion     = true;
         codiPersRecontratacion = codiPers;
@@ -76,6 +79,32 @@ import Swal from 'sweetalert2';
             badge.style.background = '#fef3c7';
             badge.style.color      = '#92400e';
         }
+
+        NDJ_READONLY_IDS.forEach(id => {
+            const el = $(id);
+            if (!el) return;
+            el.disabled = true;
+            el.style.opacity = '0.5';
+            el.style.cursor  = 'not-allowed';
+        });
+
+        NDJ_ALERT_IDS.forEach(id => {
+            const el = $(id);
+            if (!el) return;
+            el.style.borderColor = '#f59e0b';
+            el.style.boxShadow   = '0 0 0 2px rgba(245,158,11,0.2)';
+        });
+
+        const grid = $('ndj_filtroSucursal')?.closest('.dj-grid-4');
+        if (grid && !document.getElementById('ndj_vigencia_field')) {
+            const div = document.createElement('div');
+            div.id = 'ndj_vigencia_field';
+            div.innerHTML = `
+                <label class="dj-label">Vigencia</label>
+                <div style="padding:6px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;color:#15803d;font-weight:600;font-size:13px;line-height:1.6;">SI</div>
+            `;
+            grid.appendChild(div);
+        }
     }
 
     function desactivarModoRecontratacion() {
@@ -85,6 +114,24 @@ import Swal from 'sweetalert2';
             btnGuardar.textContent  = 'Guardar';
             btnGuardar.style.background = 'var(--color-primary,#6366f1)';
         }
+
+        NDJ_READONLY_IDS.forEach(id => {
+            const el = $(id);
+            if (!el) return;
+            el.disabled = false;
+            el.style.opacity = '';
+            el.style.cursor  = '';
+        });
+
+        NDJ_ALERT_IDS.forEach(id => {
+            const el = $(id);
+            if (!el) return;
+            el.style.borderColor = '';
+            el.style.boxShadow   = '';
+        });
+
+        document.getElementById('ndj_cese_info')?.remove();
+        document.getElementById('ndj_vigencia_field')?.remove();
     }
 
     // ============================================================
@@ -114,6 +161,7 @@ import Swal from 'sweetalert2';
             const familiares = json.familiares || {};
 
             ndj_setVal('ndj_cod_postulante',       data.CODI_PERS            || '');
+            ndj_setVal('ndj_tipo_documento',        data.CODI_TIPO_DOCU?.trim() || '0034');
             ndj_setVal('ndj_nro_documento',         data.NRO_DOCU_IDEN?.trim() || '');
             ndj_setVal('ndj_nombre1',               data.NOMB_1?.trim()        || '');
             ndj_setVal('ndj_nombre2',               data.NOMB_2?.trim()        || '');
@@ -211,6 +259,7 @@ import Swal from 'sweetalert2';
             }
 
             Swal.close();
+            ndj_mostrarCeseInfo(data.OBS_CESE, data.FECH_CESE);
             activarModoRecontratacion(codiPers);
             dniValido              = true;
             coincidenciasValidadas = true;
@@ -268,6 +317,44 @@ import Swal from 'sweetalert2';
             return `${y}-${m}-${d}`;
         }
         return '';
+    }
+
+    // ============================================================
+    // BANNER INFO CESE
+    // ============================================================
+    function ndj_mostrarCeseInfo(obsCese, fechCese) {
+        document.getElementById('ndj_cese_info')?.remove();
+        const ancla = $('ndj_alert_tipo_personal');
+        if (!ancla) return;
+        const fechaRaw = fechCese ? ndj_fmtDate(String(fechCese)) : null;
+        const fecha = fechaRaw ? fechaRaw.split('-').reverse().join('/') : 'Sin registro';
+        const obs   = obsCese  ? String(obsCese).trim()               : 'Sin registro';
+        const div = document.createElement('div');
+        div.id = 'ndj_cese_info';
+        div.style.cssText = 'background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:#7c2d12;display:block;';
+        div.innerHTML =
+            '<span style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;">📋 Información de cese</span>' +
+            '<div style="display:flex;gap:24px;margin-top:6px;flex-wrap:wrap;">' +
+                '<span><strong>Fecha de cese:</strong> ' + fecha + '</span>' +
+                '<span><strong>Motivo:</strong> ' + obs + '</span>' +
+            '</div>';
+        ancla.parentElement.insertBefore(div, ancla);
+    }
+
+    // ============================================================
+    // ABRIR EN MODO RECONTRATACIÓN (desde fila inactiva)
+    // ============================================================
+    async function ndj_abrirRecontratacion(codiPers) {
+        if (!codiPers) return;
+        const modal = $('modalNuevaDJ');
+        if (!modal) return;
+
+        ndj_reset();
+
+        if (window.HSOverlay) HSOverlay.open(modal);
+        else modal.classList.remove('hidden');
+
+        await autocompletarDesdePersonal(codiPers);
     }
 
     // ============================================================
@@ -1061,7 +1148,7 @@ import Swal from 'sweetalert2';
         $('ndj_btnGuardar')?.addEventListener('click', ndj_guardar);
 
         // API pública
-        window.NuevaDJ = { abrir: ndj_abrir, cerrar: ndj_cerrar };
+        window.NuevaDJ = { abrir: ndj_abrir, cerrar: ndj_cerrar, abrirRecontratacion: ndj_abrirRecontratacion };
     });
 
 })();

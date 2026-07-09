@@ -29,6 +29,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
     Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
     Route::get('/get-personal-dj', [FileController::class, 'getListaDJXusuario']);
+    Route::get('/get-personal-dj-2026', [FileController::class, 'getListaDJ2026']);
     Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
     Route::get('/get-personal', [FileController::class, 'getPersonal']);
     Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
@@ -227,6 +228,7 @@ Route::middleware(['auth'])->group(function () {
         // Postulantes / DJ
         Route::get('/get-postulantes', [FileController::class, 'getPostulantes']);
         Route::get('/get-personal-dj', [FileController::class, 'getListaDJ']);
+        Route::get('/get-personal-dj-2026', [FileController::class, 'getListaDJ2026']);
         Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigracion']);
         Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
         Route::get('/reporte-personal-sin-migracion', [DjController::class, 'reportePersonalSinMigracion']);

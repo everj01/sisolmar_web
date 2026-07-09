@@ -49,7 +49,7 @@
 
             <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                <span class="tab-circle">5</span> ETAPA: Escaneo DJ
+                <span class="tab-circle">5</span> ETAPA: Validación de Imágenes
             </button>
         </nav>
     </div>
@@ -101,38 +101,27 @@
                                 <div class="flex items-center gap-2">
     <label class="text-sm font-medium text-gray-700">Tipo:</label>
     <select id="filtroTipoE1" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
-        @if($tipoPerLimitar == 0)
-            <option value="00">Todos</option>
-            <option value="01">Operativo 4°</option>
-            <option value="03">Operativo 5°</option>
-            <option value="02">Administrativo 4°</option>
-            <option value="05">Administrativo 5°</option>
-            {{-- <option value="06">Especial</option> --}}
-        @elseif($tipoPerLimitar == 1)
-                                            <option value="00">Todos</option>
-                                            <option value="02">Administrativo 4°</option>
-                                            <option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 2)
-                                            <option value="00">Todos</option>
-                                            <option value="01">Operativo 4°</option>
-                                            <option value="03">Operativo 5°</option>
-                                        @endif
-                                    </select>
+    @if($tipoPerLimitar == 0)
+        <option value="00">Todos</option>
+        <option value="03">Operativo 5°</option>
+        <option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 1)
+        <option value="00">Todos</option>
+        <option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 2)
+        <option value="00">Todos</option>
+        <option value="03">Operativo 5°</option>
+    @endif
+</select>
                                 </div>
 
-                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE1" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
-                                        <span class="text-sm font-medium text-gray-700">Todos</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE1" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
-                                        <span class="text-sm font-medium text-gray-700">Actualizados</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE1" value="1" class="w-4 h-4 text-red-600 focus:ring-red-500">
-                                        <span class="text-sm font-medium text-gray-700">Sin Actualizar</span>
-                                    </label>
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Estado:</label>
+                                    <select id="filtroEstadoE1" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        <option value="null" selected>Todos</option>
+                                        <option value="0">Actualizados</option>
+                                        <option value="1">Sin Actualizar</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -206,40 +195,35 @@
                                 <div class="flex items-center gap-2">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
                                     <select id="filtroTipoPerE2" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
-                                        @if($tipoPerLimitar == 0)
-                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 1)
-                                            <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 2)
-                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
-                                        @endif
-                                    </select>
+    @if($tipoPerLimitar == 0)
+        <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 1)
+        <option value="00">Todos</option><option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 2)
+        <option value="00">Todos</option><option value="03">Operativo 5°</option>
+    @endif
+</select>
                                 </div>
 
-                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE2" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
-                                        <span class="text-sm font-medium text-gray-700">Todos</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE2" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
-                                        <span class="text-sm font-medium text-gray-700">Verificados</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE2" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
-                                        <span class="text-sm font-medium text-gray-700">Sin Verificar</span>
-                                    </label>
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Estado:</label>
+                                    <select id="filtroEstadoE2" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        <option value="null" selected>Todos</option>
+                                        <option value="0">Verificados</option>
+                                        <option value="1">Sin Verificar</option>
+                                    </select>
                                 </div>
                             </div>
 
                             <div class="flex gap-2">
-                                <button type="button" id="btnReporteVerificados" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                                    <i class='bx bxs-file-pdf text-lg'></i> Reporte PDF
-                                </button>
-                                
-                                {{-- NUEVO BOTÓN EXCEL (Generación nativa) --}}
+                                {{-- BOTÓN EXCEL PRIMERO --}}
                                 <button type="button" id="btnExportExcelE2" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                                     <i class='bx bx-spreadsheet text-lg'></i> Excel
+                                </button>
+
+                                {{-- BOTÓN PDF SEGUNDO --}}
+                                <button type="button" id="btnReporteVerificados" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                    <i class='bx bxs-file-pdf text-lg'></i> PDF
                                 </button>
                                 
                                 <div class="hidden items-center gap-2">
@@ -313,44 +297,46 @@
                                 <div class="flex items-center gap-2">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
                                     <select id="filtroTipoPerE3" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
-                                        @if($tipoPerLimitar == 0)
-                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 1)
-                                            <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 2)
-                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
-                                        @endif
-                                    </select>
+    @if($tipoPerLimitar == 0)
+        <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 1)
+        <option value="00">Todos</option><option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 2)
+        <option value="00">Todos</option><option value="03">Operativo 5°</option>
+    @endif
+</select>
                                 </div>
 
-                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE3" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
-                                        <span class="text-sm font-medium text-gray-700">Todos</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE3" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
-                                        <span class="text-sm font-medium text-gray-700">Generados</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE3" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
-                                        <span class="text-sm font-medium text-gray-700">Sin generar</span>
-                                    </label>
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Estado:</label>
+                                    <select id="filtroEstadoE3" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        <option value="null" selected>Todos</option>
+                                        <option value="0">Generados</option>
+                                        <option value="1">Sin generar</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div class="flex gap-2 flex-col">
-                                <button type="button" id="btnReporteAvanceE3" class="hidden btn border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm rounded-lg items-center gap-1.5 font-medium transition-colors">
-                                    <i class='bx bx-bar-chart-alt-2 text-base'></i> Rep. Avances
+                            <div class="flex gap-2">
+                                {{-- BOTONES EXCEL Y PDF (NUEVOS) --}}
+                                <button type="button" id="btnExportExcelE3" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                    <i class='bx bx-spreadsheet text-lg'></i> Excel
                                 </button>
-                                <button type="button" id="btnDJUnificadoE3" class="flex hidden items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                    <i class='bx bx-file text-lg'></i> DJ Masivo
+                                <button type="button" id="btnExportPdfE3" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                                    <i class='bx bxs-file-pdf text-lg'></i> PDF
                                 </button>
+                                
+                                {{-- BOTÓN ORIGINAL (Se mantiene) --}}
                                 <button type="button" id="btnGenerarSeleccionadosE3" disabled class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
                                     <i class='bx bx-check-square text-lg'></i> Generar Reporte
                                 </button>
-                                <button type="button" id="btnQuitarMarcaE3" disabled class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-orange-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
-                                    <i class='bx bx-x-circle text-lg'></i> Quitar selección
+
+                                {{-- BOTONES SECUNDARIOS / OCULTOS --}}
+                                <button type="button" id="btnReporteAvanceE3" class="hidden btn border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 text-sm rounded-lg items-center gap-1.5 font-medium transition-colors">
+                                    <i class='bx bx-bar-chart-alt-2 text-base'></i> Rep. Avances
+                                </button>
+                                <button type="button" id="btnDJUnificadoE3" class="hidden flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    <i class='bx bx-file text-lg'></i> DJ Masivo
                                 </button>
                                 <button type="button" id="btnResetearDJsE3" class="hidden flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                                     <i class='bx bx-reset text-lg'></i> Resetear marcas
@@ -407,7 +393,7 @@
                         </div>
 
                         <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <div class="flex flex-wrap items-center gap-4 w-full">
+                            <div class="flex flex-wrap items-center gap-5">
                                 <input type="text" id="buscarPersonal_E4C" placeholder="Buscar por nombre o DNI..." autocomplete="off"
                                     class="w-48 px-4 py-1.5 text-sm uppercase border border-gray-300 rounded-full focus:outline-none focus:border-primary transition-colors" style="min-width: 220px;" />
 
@@ -424,14 +410,14 @@
                                 <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
                                     <select id="tipo_per_E4C" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg">
-                                        @if ($tipoPerLimitar == 0)
-                                            <option value="TODOS" selected>Todos</option><option value="ADMIN_4">Administrativo 4°</option><option value="ADMIN_5">Administrativo 5°</option><option value="OPER_4">Operativo 4°</option><option value="OPER_5">Operativo 5°</option><option value="ESPECIAL">Especiales</option>
-                                        @elseif ($tipoPerLimitar == 1)
-                                            <option value="TODOS" selected>Todos</option><option value="ADMIN_4">Administrativo 4°</option><option value="ADMIN_5">Administrativo 5°</option>
-                                        @elseif ($tipoPerLimitar == 2)
-                                            <option value="TODOS" selected>Todos</option><option value="OPER_4">Operativo 4°</option><option value="OPER_5">Operativo 5°</option>
-                                        @endif
-                                    </select>
+    @if ($tipoPerLimitar == 0)
+        <option value="TODOS" selected>Todos</option><option value="ADMIN_5">Administrativo 5°</option><option value="OPER_5">Operativo 5°</option>
+    @elseif ($tipoPerLimitar == 1)
+        <option value="TODOS" selected>Todos</option><option value="ADMIN_5">Administrativo 5°</option>
+    @elseif ($tipoPerLimitar == 2)
+        <option value="TODOS" selected>Todos</option><option value="OPER_5">Operativo 5°</option>
+    @endif
+</select>
                                 </div>
 
                                 <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
@@ -458,6 +444,16 @@
                                         <span class="text-sm text-gray-700">No</span>
                                     </label>
                                 </div>
+                            </div>
+
+                            {{-- BOTONES EXCEL Y PDF (ETAPA 4) --}}
+                            <div class="flex gap-2 mt-4 lg:mt-0">
+                                <button type="button" id="btnExportExcelE4C" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class='bx bx-spreadsheet text-lg'></i> Excel
+                                </button>
+                                <button type="button" id="btnExportPdfE4C" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                    <i class='bx bxs-file-pdf text-lg'></i> PDF
+                                </button>
                             </div>
                         </div>
 
@@ -537,7 +533,7 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">5</span>Revision de escaneo de DJ</h4>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">5</span>Revision de Validación de Imágenes</h4>
                                 {{-- <p class="text-sm text-gray-500">Validación de Huella y Firma</p> --}}
                             </div>
 
@@ -580,39 +576,36 @@
                                 {{-- SELECT TIPO --}}
                                 <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
-                                    <select id="filtroTipoPerE4" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
-                                        @if($tipoPerLimitar == 0)
-                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 1)
-                                            <option value="00">Todos</option><option value="02">Administrativo 4°</option><option value="05">Administrativo 5°</option>
-                                        @elseif($tipoPerLimitar == 2)
-                                            <option value="00">Todos</option><option value="01">Operativo 4°</option><option value="03">Operativo 5°</option>
-                                        @endif
-                                    </select>
+                                    <select id="filtroTipoPerE4" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+    @if($tipoPerLimitar == 0)
+        <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 1)
+        <option value="00">Todos</option><option value="05">Administrativo 5°</option>
+    @elseif($tipoPerLimitar == 2)
+        <option value="00">Todos</option><option value="03">Operativo 5°</option>
+    @endif
+</select>
                                 </div>
 
                                 {{-- NUEVO: RADIO BUTTONS ESTADO --}}
-                                <div class="flex items-center gap-4 border-l-2 border-gray-300 pl-5">
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE4" value="null" checked class="w-4 h-4 text-primary focus:ring-primary">
-                                        <span class="text-sm font-medium text-gray-700">Todos</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE4" value="0" class="w-4 h-4 text-green-600 focus:ring-green-500">
-                                        <span class="text-sm font-medium text-gray-700">Escaneados</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name="filtroEstadoE4" value="1" class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
-                                        <span class="text-sm font-medium text-gray-700">Sin escanear</span>
-                                    </label>
+                                <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Estado:</label>
+                                    <select id="filtroEstadoE4" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                        <option value="null" selected>Todos</option>
+                                        <option value="0">Escaneados</option>
+                                        <option value="1">Sin escanear</option>
+                                    </select>
                                 </div>
 
                             </div>
 
-                            {{-- BOTÓN REPORTE AVANCES --}}
+                            {{-- BOTONES EXCEL Y PDF DIRECTOS --}}
                             <div class="flex gap-2">
-                                <button type="button" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm" data-hs-overlay="#modal-reporte-avances">
-                                    <i class='bx bx-bar-chart-alt-2 text-lg'></i> Reporte Avances
+                                <button type="button" id="btnExportExcelE4" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                    <i class='bx bx-spreadsheet text-lg'></i> Excel
+                                </button>
+                                <button type="button" id="btnExportPdfE4" class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                                    <i class='bx bxs-file-pdf text-lg'></i> PDF
                                 </button>
                             </div>
                         </div>
@@ -715,10 +708,10 @@
 
     </div> @include('file_control.rrhh.partials_modal_dj')
 
-    <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
+<button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
     @include('file_control.rrhh.partials_modal_comparacion_huellafirma_dni')
 
-{{-- MODAL: REPORTE DE AVANCES (ETAPA 4) --}}
+<!-- {{-- MODAL: REPORTE DE AVANCES (ETAPA 4) --}}
     <div id="modal-reporte-avances" class="hs-overlay hidden fixed inset-0 z-[80] overflow-y-auto pointer-events-none transition-all duration-500">
         <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 translate-y-10 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg sm:w-full m-3 sm:mx-auto">
             <div class="flex flex-col bg-white border border-gray-200 shadow-sm rounded-xl pointer-events-auto">
@@ -744,14 +737,10 @@
                         <label class="block text-sm font-medium text-gray-700 mb-3">Tipo de Personal</label>
                         <div class="flex items-center gap-6">
                             <select id="modalTipoPerE4" class="py-2.5 px-4 block w-full border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none">
-                                <option value="00">TODOS</option>
-                            
-                                <option value="01">OPERATIVO 4º</option>
-                                <option value="02">ADMINISTRATIVO 4º</option>
-                                <option value="03">OPERATIVO 5º</option>
-                                <option value="05">ADMINISTRATIVO 5º</option>
-                               
-                            </select>
+    <option value="00">TODOS</option>
+    <option value="03">OPERATIVO 5º</option>
+    <option value="05">ADMINISTRATIVO 5º</option>
+</select>
                          
                         </div>
                     </div>
@@ -769,7 +758,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 @endsection
 
 @section('script')

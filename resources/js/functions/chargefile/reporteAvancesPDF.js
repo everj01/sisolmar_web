@@ -69,16 +69,21 @@ async function generarPDF(datos, meta) {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
  
     agregarCabecera(doc, meta);
-    const startY = agregarContadores(doc, datos);   // ← cards resumen
-    agregarTabla(doc, datos, startY);
+    const startY = agregarContadores(doc, datos);
+    agregarTabla(doc, datos, startY, meta);
     agregarPieDePagina(doc);
  
-    // Nombre dinámico con la sucursal limpia y fecha
     const f = new Date();
     const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
     const sucursalLimpia = meta.sucursal.trim().replace(/\s+/g, '_');
-    const nombreArchivoDin = `Reporte_Avances_RRHH_${sucursalLimpia}_${fStr}.pdf`;
- 
+    
+    let nombreArchivoDin = `Reporte_Avances_RRHH_${sucursalLimpia}_${fStr}.pdf`;
+    if (meta.origen === 'etapa4') {
+        nombreArchivoDin = `Etapa4_Carga_DJ_${meta.estadoArchivo}_${meta.tipoArchivo}_${sucursalLimpia}_${fStr}.pdf`;
+    } else if (meta.origen === 'etapa5') {
+        nombreArchivoDin = `Etapa5_Validacion_Imagenes_${meta.estadoArchivo}_${meta.tipoArchivo}_${sucursalLimpia}_${fStr}.pdf`;
+    }
+
     doc.save(nombreArchivoDin);
 }
 
@@ -152,7 +157,9 @@ function agregarCabecera(doc, meta) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(...COLOR.textoCab);
-    doc.text('REPORTE DE AVANCES - RECURSOS HUMANOS', ancho / 2, 10, { align: 'center' });
+    
+    const tituloFinal = meta.tituloReporte || 'REPORTE DE AVANCES - RECURSOS HUMANOS';
+    doc.text(tituloFinal, ancho / 2, 10, { align: 'center' });
  
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
@@ -169,22 +176,32 @@ function agregarCabecera(doc, meta) {
  * @param {jsPDF} doc
  * @param {Array<Object>} datos
  */
-function agregarTabla(doc, datos, startY = 26) {
-    const filas = datos.map(r => ({
-        cod                 : r.cod,
-        nombres             : r.nombres,
-        doc                 : r.doc,
-        sucursal            : r.sucursal,
-        tipo                : etiquetaTipo(r.tipo),
-        dj_subido           : r.dj_subido          ? 'SI' : 'NO',
-        firma_actualizada   : r.firma_actualizada   ? 'SI' : 'NO',
-        huella_actualizada  : r.huella_actualizada  ? 'SI' : 'NO',
-        estado              : calcularEstado(r),
-        ultima_actualizacion: formatearFecha(r.ultima_actualizacion),
-    }));
+function agregarTabla(doc, datos, startY = 26, meta) {
+    const filas = datos.map(r => {
+        const base = {
+            cod                 : r.cod,
+            nombres             : r.nombres,
+            doc                 : r.doc,
+            sucursal            : r.sucursal,
+            tipo                : etiquetaTipo(r.tipo),
+            dj_subido           : r.dj_subido ? 'SI' : 'NO',
+            estado              : calcularEstado(r, meta),
+            ultima_actualizacion: formatearFecha(r.ultima_actualizacion),
+        };
+        if (meta.origen !== 'etapa4') {
+            base.firma_actualizada = r.firma_actualizada ? 'SI' : 'NO';
+            base.huella_actualizada = r.huella_actualizada ? 'SI' : 'NO';
+        }
+        return base;
+    });
+
+    let columnasActivas = COLUMNAS;
+    if (meta.origen === 'etapa4') {
+        columnasActivas = COLUMNAS.filter(c => c.dataKey !== 'firma_actualizada' && c.dataKey !== 'huella_actualizada');
+    }
  
     doc.autoTable({
-        columns : COLUMNAS,
+        columns : columnasActivas,
         body    : filas,
         startY,
         margin  : { left: 8, right: 8 },
@@ -288,11 +305,13 @@ function etiquetaTipo(tipo) {
  * @param {Object} registro
  * @returns {'COMPLETO'|'INCOMPLETO'}
  */
-function calcularEstado(registro) {
+function calcularEstado(registro, meta) {
+    if (meta.origen === 'etapa4') {
+        return registro.dj_subido ? 'COMPLETO' : 'INCOMPLETO';
+    }
     const completo = registro.dj_subido && registro.firma_actualizada && registro.huella_actualizada;
     return completo ? 'COMPLETO' : 'INCOMPLETO';
 }
-
 // ---------------------------------------------------------------------------
 // EXPORTACIÓN
 // ---------------------------------------------------------------------------

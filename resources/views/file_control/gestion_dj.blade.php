@@ -85,33 +85,30 @@
 
             {{-- TABLA PESTAÑA 1: sin columna Migrado --}}
             <div id="panelPendiente" class="w-full px-5 py-2 mt-1">
-                <div class="flex gap-3 mb-3 flex-wrap">
-                    <div class="flex gap-3 mb-3 flex-wrap items-center">
+
+                {{-- FILTROS EN CARD --}}
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div class="flex flex-wrap items-center gap-5">
+
+                        {{-- Sucursal --}}
                         <div class="flex items-center gap-2">
-                            <label class="text-sm text-gray-600">Sucursal:</label>
-                            
-                            @php
-                                $sucursalesFiltradas = array_slice($sucursales, 1);
-                            @endphp
-
-                            <select id="filtroSucursalPEN" 
-                            class=" px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-
+                            <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                            @php $sucursalesFiltradas = array_slice($sucursales, 1); @endphp
+                            <select id="filtroSucursalPEN"
+                                class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 @if(count($sucursalesFiltradas) > 1)
                                     <option value="">Todas</option>
                                 @endif
-
                                 @foreach ($sucursalesFiltradas as $sucursal)
-                                    <option value="{{ $sucursal->codigo }}">
-                                        {{ $sucursal->abreviatura }}
-                                    </option>
+                                    <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
                                 @endforeach
-
                             </select>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm text-gray-600">Tipo:</label>
-                            <select id="filtroTipoPerPEN" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+
+                        {{-- Tipo --}}
+                        <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                            <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                            <select id="filtroTipoPerPEN" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 @if($tipoPerLimitar == 0)
                                     <option value="">Todos</option>
                                     <option value="OPERATIVO 4°">Operativo 4°</option>
@@ -130,39 +127,38 @@
                                 @endif
                             </select>
                         </div>
-                        
+
+                        {{-- Cargo --}}
                         <div class="flex items-center gap-2">
-    <label class="text-sm text-gray-600">Cargo:</label>
-    <select id="filtroCargoPEN" class="w-48 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-        <option value="">Todos</option>
-    </select>
-</div>
+                            <label class="text-sm font-medium text-gray-700">Cargo:</label>
+                            <select id="filtroCargoPEN" class="form-select text-sm w-48 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
 
-<div class="flex items-center gap-2 md:ml-4">
-    <label class="relative inline-flex items-center cursor-pointer select-none">
-        <input type="checkbox" id="filtroVigenciaPEN" class="sr-only peer" checked>
-        <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
-        <span class="ml-2 text-sm font-medium text-gray-700">Solo activos</span>
-    </label>
-</div>
-                         {{-- <button type="button" id="btnDescargarDJs_PEN"
-                                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
-                                    <i class='bx bx-archive-in text-base'></i>
-                                    Descargar DJ's
-                                </button> --}}
-                                <button type="button" id="btnDJUnificado_PEN"
-                                    class="btn border-warning text-warning hover:bg-warning hover:text-white">
-                                    <i class='bx bx-file text-base'></i>
-                                    DJ Unificado
+                        {{-- Solo activos --}}
+                        <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="filtroVigenciaPEN" class="sr-only peer" checked>
+                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                                <span class="ml-2 text-sm font-medium text-gray-700">Solo activos</span>
+                            </label>
+                        </div>
 
-                                </button>
-
-                        {{-- Card contador + Botón reporte --}}
-                        
                     </div>
 
+                    {{-- Botón generar seleccionados --}}
+                    @if($tipoUsuario != 9 && $tipoUsuario != 8)
+                    <button type="button" id="btnGenerarSeleccionadosPEN" disabled
+                        class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
+                        <i class='bx bxs-file-pdf text-base'></i>
+                        Generar DJ (<span id="countSelPEN">0</span>)
+                    </button>
+                    @endif
                 </div>
-                <div id="tblPersonas" class="w-full mt-5"></div>
+
+                <div id="tblPersonas" class="w-full mt-2"></div>
+
                 <div class="flex items-center gap-2 mt-3">
                     <label for="page-size" class="text-sm text-gray-600">Mostrar</label>
                     <select id="page-size"

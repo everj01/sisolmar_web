@@ -322,13 +322,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     return '—';
                 }
             },
-            {
-                title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
-                formatter: cell => {
-                    const d = cell.getData();
-                    return d.generadoPor || d.actualizadoPor || '—';
-                }
-            }
+            // {
+            //     title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
+            //     formatter: cell => {
+            //         const d = cell.getData();
+            //         return d.generadoPor || d.actualizadoPor || '—';
+            //     }
+            // }
         ],
     });
     reformatNums(tblEtapa1);
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
     //  NUEVA FUNCIÓN DE FILTRADO LOCAL
     function aplicarFiltrosLocalesE1() {
         const texto = document.getElementById('buscarPersonalE1')?.value.toLowerCase().trim() || '';
-        const radioVal = document.querySelector('input[name="filtroEstadoE1"]:checked')?.value || 'null';
+        const radioVal = document.getElementById('filtroEstadoE1')?.value || 'null';
 
         let filtros = [];
 
@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('filtroSucursalE1')?.addEventListener('change', cargarDatosEtapa1);
     document.getElementById('filtroTipoE1')?.addEventListener('change', cargarDatosEtapa1);
-    document.querySelectorAll('input[name="filtroEstadoE1"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosLocalesE1));
+    document.getElementById('filtroEstadoE1')?.addEventListener('change', aplicarFiltrosLocalesE1);
 
     document.getElementById('page-size-etapa1')?.addEventListener('change', function () {
         tblEtapa1.setPageSize(parseInt(this.value));
@@ -443,6 +443,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const filtros = getFiltrosTexto();
         const f = new Date();
         const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+        const radioVal = document.getElementById('filtroEstadoE1')?.value || 'null';
+        let baseTitle = "ETAPA N°1: REPORTE COMPLETO DE ACTUALIZACIÓN POR SIP";
+        let estadoArchivo = "Todos";
+
+        if (radioVal === '1') {
+            baseTitle = "ETAPA N°1: REPORTE DE PENDIENTES DE ACTUALIZACIÓN POR SIP";
+            estadoArchivo = "Sin_Actualizar";
+        } else if (radioVal === '0') {
+            baseTitle = "ETAPA N°1: REPORTE DE ACTUALIZADOS DEL SIP";
+            estadoArchivo = "Actualizados";
+        }
+        
+        const tituloReporte = `${baseTitle} ${filtros.tipo}`.trim();
+        const tipoArchivo = filtros.tipo === '' ? 'Todos' : filtros.tipo.replace(/ /g, '_');
 
         Swal.fire({ title: 'Generando Excel...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -474,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             worksheet.mergeCells('A2:G2');
             const title2 = worksheet.getCell('A2');
-            title2.value = `REPORTE PENDIENTES DE ACTUALIZACIÓN DE DATOS DE PERSONAL ${filtros.tipo}`.trim();
+            title2.value = tituloReporte;
             title2.font = { bold: true, size: 14 };
             title2.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -549,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
-            link.download = `Reporte_Actualizacion_${filtros.sucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
+            link.download = `Etapa1_Actualizacion_por_SIP_${estadoArchivo}_${tipoArchivo}_${filtros.sucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
             Swal.close();
         } catch (error) {
@@ -581,6 +595,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const filtros = getFiltrosTexto();
         const f = new Date();
         const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+        const radioVal = document.getElementById('filtroEstadoE1')?.value || 'null';
+        let baseTitle = "ETAPA N°1: REPORTE COMPLETO DE ACTUALIZACIÓN POR SIP";
+        let estadoArchivo = "Todos";
+
+        if (radioVal === '1') {
+            baseTitle = "ETAPA N°1: REPORTE DE PENDIENTES DE ACTUALIZACIÓN POR SIP";
+            estadoArchivo = "Sin_Actualizar";
+        } else if (radioVal === '0') {
+            baseTitle = "ETAPA N°1: REPORTE DE ACTUALIZADOS DEL SIP";
+            estadoArchivo = "Actualizados";
+        }
+        
+        const tituloReporte = `${baseTitle} ${filtros.tipo}`.trim();
+        const tipoArchivo = filtros.tipo === '' ? 'Todos' : filtros.tipo.replace(/ /g, '_');
 
         // Convertir logo de Blade a Base64
         let logoBase64 = null;
@@ -635,7 +663,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0); // Negro
-                doc.text(`REPORTE PENDIENTES DE ACTUALIZACIÓN DE DATOS DE PERSONAL ${filtros.tipo}`.trim(), totalWidth / 2, 20, { align: "center" });
+                doc.text(tituloReporte, totalWidth / 2, 20, { align: "center" });
 
                 const subtitulo = filtros.sucursal === 'TODAS LAS SUCURSALES' ? '' : `Sol ${capitalizeWords(filtros.sucursal)}`;
                 if (subtitulo !== '') {
@@ -684,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
-        doc.save(`Reporte_Actualizacion_${filtros.sucursal.replace(/ /g, '_')}_${fStr}.pdf`);
+        doc.save(`Etapa1_Actualizacion_por_SIP_${estadoArchivo}_${tipoArchivo}_${filtros.sucursal.replace(/ /g, '_')}_${fStr}.pdf`);
     });
 
     cargarDatosEtapa1();
@@ -769,13 +797,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     return '—';
                 }
             },
-            {
-                title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
-                formatter: cell => {
-                    const d = cell.getData();
-                    return d.generadoPor || d.verificadoPor || '—';
-                }
-            },
+            // {
+            //     title: "Usuario", hozAlign: "left", widthGrow: 1.5, headerSort: false,
+            //     formatter: cell => {
+            //         const d = cell.getData();
+            //         return d.generadoPor || d.verificadoPor || '—';
+            //     }
+            // },
             {
                 title: "Acciones", hozAlign: "center", headerSort: false, widthGrow: 1,
                 formatter: cell => {
@@ -829,8 +857,29 @@ document.addEventListener('DOMContentLoaded', function () {
         // Textos para filtros
         const selSucursal = document.getElementById('filtroSucursalE2');
         const txtSucursal = selSucursal.options[selSucursal.selectedIndex]?.text?.toUpperCase() || 'TODAS LAS SUCURSALES';
+        
+        const selTipo = document.getElementById('filtroTipoPerE2');
+        const txtTipo = selTipo.options[selTipo.selectedIndex]?.text?.toUpperCase() || 'TODOS';
+        const tipoFiltroTexto = txtTipo === 'TODOS' ? '' : txtTipo;
+
         const f = new Date();
         const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+
+        // 🔥 LÓGICA DE TÍTULOS DINÁMICOS
+        const radioVal = document.getElementById('filtroEstadoE2')?.value || 'null';
+        let baseTitle = "ETAPA N°2: REPORTE COMPLETO DE VERIFICACIÓN";
+        let estadoArchivo = "Todos";
+
+        if (radioVal === '1') {
+            baseTitle = "ETAPA N°2: REPORTE DE PENDIENTES POR VERIFICAR";
+            estadoArchivo = "Sin_Verificar";
+        } else if (radioVal === '0') {
+            baseTitle = "ETAPA N°2: REPORTE DE VERIFICADOS";
+            estadoArchivo = "Verificados";
+        }
+        
+        const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+        const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
 
         Swal.fire({ title: 'Generando Excel...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -871,7 +920,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             worksheet.mergeCells('A3:G3');
             const title3 = worksheet.getCell('A3');
-            title3.value = `REPORTE DE PERSONAL - ETAPA 2 (VERIFICADOS) | Sucursal: ${txtSucursal}`;
+            const subtituloSucursal = txtSucursal === 'TODAS LAS SUCURSALES' ? '' : ` | Sol ${capitalizeWords(txtSucursal)}`;
+            title3.value = `${tituloReporte}${subtituloSucursal}`;
             title3.font = { name: 'Arial', size: 11, bold: true };
             title3.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -984,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
-            link.download = `Reporte_Etapa2_${txtSucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
+            link.download = `Etapa2_Verificacion_${estadoArchivo}_${tipoArchivo}_${txtSucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -1026,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const codSucursal = document.getElementById('filtroSucursalE2')?.value || '00';
         const codTipoPer = document.getElementById('filtroTipoPerE2')?.value || '00';
         const texto = document.getElementById('buscarPersonalE2')?.value.toLowerCase().trim() || '';
-        const radioVal = document.querySelector('input[name="filtroEstadoE2"]:checked')?.value || 'null';
+        const radioVal = document.getElementById('filtroEstadoE2')?.value || 'null';
 
         let filtros = [];
         let tipoTxt = ''; // 🔥 Lo sacamos afuera para poder usarlo en el cálculo de abajo
@@ -1100,7 +1150,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => resaltarTexto(tblPersonasVerificado, valor), 10);
     });
     // Escuchando los radio buttons
-    document.querySelectorAll('input[name="filtroEstadoE2"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE2));
+    document.getElementById('filtroEstadoE2')?.addEventListener('change', aplicarFiltrosE2);
 
     document.getElementById('page-size-verificado')?.addEventListener('change', function () {
         tblPersonasVerificado.setPageSize(parseInt(this.value));
@@ -1295,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const codSucursal = document.getElementById('filtroSucursalE3')?.value || '00';
         const codTipoPer = document.getElementById('filtroTipoPerE3')?.value || '00';
         const texto = document.getElementById('buscarPersonalE3')?.value.toLowerCase().trim() || '';
-        const radioVal = document.querySelector('input[name="filtroEstadoE3"]:checked')?.value || 'null';
+        const radioVal = document.getElementById('filtroEstadoE3')?.value || 'null';
 
         let tipoTxt = '';
         if (codTipoPer !== '00') {
@@ -1379,12 +1429,328 @@ document.addEventListener('DOMContentLoaded', function () {
         aplicarFiltrosE3();
         setTimeout(() => resaltarTexto(tblPersonasEtapa3, valor), 10);
     });
-    document.querySelectorAll('input[name="filtroEstadoE3"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE3));
+    document.getElementById('filtroEstadoE3')?.addEventListener('change', aplicarFiltrosE3);
 
     document.getElementById('page-size-etapa3')?.addEventListener('change', function () {
         tblPersonasEtapa3.setPageSize(parseInt(this.value));
     });
 
+    // ============================================================
+    // EXPORTAR EXCEL PERSONALIZADO ETAPA 3 (Clonado Formato Etapa 2)
+    // ============================================================
+    document.getElementById("btnExportExcelE3")?.addEventListener("click", async () => {
+        let data = tblPersonasEtapa3.getData("active");
+        if (!data.length) return Swal.fire('Sin datos', 'No hay datos para exportar', 'warning');
+
+        const totalRegistros = data.length;
+        const totalGenerados = data.filter(d => estaGenerado(d.codPersonal || d.id, d.cambio)).length;
+        const totalSinGenerar = totalRegistros - totalGenerados;
+
+        const selSucursal = document.getElementById('filtroSucursalE3');
+        const txtSucursal = selSucursal.options[selSucursal.selectedIndex]?.text?.toUpperCase() || 'TODAS LAS SUCURSALES';
+        
+        const selTipo = document.getElementById('filtroTipoPerE3');
+        const txtTipo = selTipo.options[selTipo.selectedIndex]?.text?.toUpperCase() || 'TODOS';
+        const tipoFiltroTexto = txtTipo === 'TODOS' ? '' : txtTipo;
+
+        const f = new Date();
+        const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+
+        const radioVal = document.getElementById('filtroEstadoE3')?.value || 'null';
+        let baseTitle = "ETAPA N°3: REPORTE COMPLETO DE GENERACIÓN DJ";
+        let estadoArchivo = "Todos";
+
+        if (radioVal === '1') {
+            baseTitle = "ETAPA N°3: REPORTE DE PENDIENTES DE GENERACIÓN DJ";
+            estadoArchivo = "Sin_Generar";
+        } else if (radioVal === '0') {
+            baseTitle = "ETAPA N°3: REPORTE DE GENERADOS DJ";
+            estadoArchivo = "Generados";
+        }
+        
+        const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+        const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
+
+        Swal.fire({ title: 'Generando Excel...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Etapa 3 - Generados", { views: [{ showGridLines: false }] });
+
+            if (window.logoUrl) {
+                try {
+                    const response = await fetch(window.logoUrl);
+                    const blob = await response.blob();
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                    const imageId = workbook.addImage({ base64: base64, extension: 'png' });
+                    worksheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 170, height: 50 } });
+                } catch (e) { console.warn("No se pudo cargar logo", e); }
+            }
+
+            worksheet.mergeCells('A1:G1');
+            const title1 = worksheet.getCell('A1');
+            title1.value = "SOL SECURITY";
+            title1.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FF990000' } };
+            title1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.mergeCells('A2:G2');
+            const title2 = worksheet.getCell('A2');
+            title2.value = "SISTEMA INTEGRADO SOLMAR - SISOL WEB";
+            title2.font = { name: 'Arial', size: 12, bold: true };
+            title2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            worksheet.mergeCells('A3:G3');
+            const title3 = worksheet.getCell('A3');
+            const subtituloSucursal = txtSucursal === 'TODAS LAS SUCURSALES' ? '' : ` | Sol ${capitalizeWords(txtSucursal)}`;
+            title3.value = `${tituloReporte}${subtituloSucursal}`;
+            title3.font = { name: 'Arial', size: 11, bold: true };
+            title3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            const statsHeaders = ['A6', 'B6', 'C6', 'D6'];
+            const statsValues = ['A7', 'B7', 'C7', 'D7'];
+
+            worksheet.getCell('A6').value = "Generado";
+            worksheet.getCell('B6').value = "Total";
+            worksheet.getCell('C6').value = "Sin Generar";
+            worksheet.getCell('D6').value = "Generados";
+
+            worksheet.getCell('A7').value = fechaStr;
+            worksheet.getCell('B7').value = totalRegistros;
+            worksheet.getCell('C7').value = totalSinGenerar;
+            worksheet.getCell('D7').value = totalGenerados;
+
+            statsHeaders.forEach(cell => {
+                const c = worksheet.getCell(cell);
+                c.font = { name: 'Arial', bold: true, color: { argb: 'FF000000' } };
+                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } };
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            statsValues.forEach(cell => {
+                const c = worksheet.getCell(cell);
+                c.font = { name: 'Arial', bold: true };
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            const headers = ["N°", "Generado", "Nombres", "DNI", "Sucursal", "Tipo", "Fecha Generado"];
+            const headerRow = worksheet.getRow(10);
+            headerRow.values = headers;
+            headerRow.height = 25;
+
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, name: 'Arial', size: 10 };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            data.forEach((d, index) => {
+                const genBool = estaGenerado(d.codPersonal || d.id, d.cambio);
+                const generadoTxt = genBool ? 'SI' : 'NO';
+                const nombreCompleto = d.NOMBRE || d.PERSONAL || `${d.nombres ?? d.NOMB_1 ?? ''} ${d.apellido1 ?? d.APEL_1 ?? ''} ${d.apellido2 ?? d.APEL_2 ?? ''}`.trim();
+
+                let fechaGen = '—';
+                if (d.fechaGenerado && d.fechaGenerado !== 'sin cambios') {
+                    fechaGen = d.fechaGenerado.replace('T', ' ').substring(0, 16);
+                }
+
+                const row = worksheet.addRow([
+                    index + 1,
+                    generadoTxt,
+                    nombreCompleto,
+                    d.dni ?? d.NRO_DOCU_IDEN ?? '',
+                    d.sucursal ?? d.SUCURSAL ?? '',
+                    d.tipoPer ?? d.TIPO_PER ?? '',
+                    fechaGen
+                ]);
+
+                row.eachCell((cell, colNumber) => {
+                    cell.font = { name: 'Arial', size: 9 };
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+                        left: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+                        bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+                        right: { style: 'thin', color: { argb: 'FFBFBFBF' } }
+                    };
+
+                    if (colNumber === 3) {
+                        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    } else {
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    }
+
+                    if (colNumber === 2) {
+                        if (generadoTxt === 'NO') {
+                            cell.font = { color: { argb: 'FFFF0000' }, bold: true, size: 9, name: 'Arial' };
+                        } else {
+                            cell.font = { color: { argb: 'FF00B050' }, bold: true, size: 9, name: 'Arial' };
+                        }
+                    }
+                });
+            });
+
+            worksheet.columns = [
+                { width: 5 },  // N°
+                { width: 12 }, // Generado
+                { width: 45 }, // Nombres
+                { width: 15 }, // DNI
+                { width: 15 }, // Sucursal
+                { width: 20 }, // Tipo
+                { width: 20 }  // Fecha Generado
+            ];
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+            link.download = `Etapa3_Generacion_DJ_${estadoArchivo}_${tipoArchivo}_${txtSucursal.replace(/ /g, '_')}_${fStr}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            Swal.close();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Problema al generar el Excel.', 'error');
+        }
+    });
+
+    // ============================================================
+    // EXPORTAR PDF PERSONALIZADO ETAPA 3 (Clonado Formato Etapa 2)
+    // ============================================================
+    document.getElementById("btnExportPdfE3")?.addEventListener("click", async () => {
+        let data = tblPersonasEtapa3.getData("active");
+        if (!data.length) return Swal.fire('Sin datos', 'No hay datos para exportar', 'warning');
+
+        const totalRegistros = data.length;
+        const totalGenerados = data.filter(d => estaGenerado(d.codPersonal || d.id, d.cambio)).length;
+        const totalSinGenerar = totalRegistros - totalGenerados;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape');
+        const totalWidth = doc.internal.pageSize.getWidth();
+
+        const selSucursal = document.getElementById('filtroSucursalE3');
+        const txtSucursal = selSucursal?.options[selSucursal.selectedIndex]?.text?.toUpperCase() || 'TODAS LAS SUCURSALES';
+        
+        const selTipo = document.getElementById('filtroTipoPerE3');
+        const txtTipo = selTipo?.options[selTipo.selectedIndex]?.text?.toUpperCase() || 'TODOS';
+        const tipoFiltroTexto = txtTipo === 'TODOS' ? '' : txtTipo;
+
+        const f = new Date();
+        const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+
+        const radioVal = document.getElementById('filtroEstadoE3')?.value || 'null';
+        let baseTitle = "ETAPA N°3: REPORTE COMPLETO DE GENERACIÓN DJ";
+        let estadoArchivo = "Todos";
+
+        if (radioVal === '1') {
+            baseTitle = "ETAPA N°3: REPORTE DE PENDIENTES DE GENERACIÓN DJ";
+            estadoArchivo = "Sin_Generar";
+        } else if (radioVal === '0') {
+            baseTitle = "ETAPA N°3: REPORTE DE GENERADOS DJ";
+            estadoArchivo = "Generados";
+        }
+        
+        const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+        const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
+
+        let logoBase64 = null;
+        try {
+            if (window.logoUrl) {
+                const res = await fetch(window.logoUrl);
+                const blob = await res.blob();
+                logoBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            }
+        } catch (e) { console.warn("No se pudo cargar el logo", e); }
+
+        doc.autoTable({
+            startY: 60,
+            theme: 'grid',
+            headStyles: { fillColor: [243, 244, 246], textColor: [55, 65, 81], fontStyle: 'bold', halign: 'center' },
+            bodyStyles: { fontSize: 8 },
+            columnStyles: { 0: { halign: 'center' }, 1: { halign: 'center' } },
+            head: [["N°", "Generado", "Nombres", "DNI", "Sucursal", "Tipo", "Fecha Generado"]],
+            body: data.map((d, index) => {
+                const nombreCompleto = d.NOMBRE || d.PERSONAL || `${d.nombres ?? d.NOMB_1 ?? ''} ${d.apellido1 ?? d.APEL_1 ?? ''} ${d.apellido2 ?? d.APEL_2 ?? ''}`.trim();
+                const genBool = estaGenerado(d.codPersonal || d.id, d.cambio);
+                const generadoTxt = genBool ? 'SI' : 'NO';
+                const fechaGen = d.fechaGenerado && d.fechaGenerado !== 'sin cambios'
+                    ? d.fechaGenerado.replace('T', ' ').substring(0, 16)
+                    : '—';
+
+                return [
+                    index + 1,
+                    generadoTxt,
+                    nombreCompleto,
+                    d.dni ?? d.NRO_DOCU_IDEN ?? '',
+                    d.sucursal ?? d.SUCURSAL ?? '',
+                    d.tipoPer ?? d.TIPO_PER ?? '',
+                    fechaGen
+                ];
+            }),
+            didDrawPage: function (dataPage) {
+                if (dataPage.pageNumber !== 1) return;
+
+                if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 10, 40, 12);
+
+                doc.setFontSize(10);
+                doc.setTextColor(180, 0, 0);
+                doc.setFont("helvetica", "bold");
+                doc.text("SISTEMA INTEGRADO SOLMAR – SISOL WEB", totalWidth / 2, 14, { align: "center" });
+
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(tituloReporte, totalWidth / 2, 20, { align: "center" });
+
+                const subtitulo = txtSucursal === 'TODAS LAS SUCURSALES' ? '' : `Sol ${txtSucursal}`;
+                if (subtitulo !== '') doc.text(subtitulo, totalWidth / 2, 26, { align: "center" });
+
+                doc.setFontSize(8);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Generado: ${fechaStr}`, totalWidth - 14, 14, { align: "right" });
+
+                const cardW = 45; const cardH = 18; const gap = 10;
+                const totalCardsW = (cardW * 3) + (gap * 2);
+                const startX = (totalWidth - totalCardsW) / 2;
+                const cardY = 32;
+
+                const cards = [
+                    { title: "Total", value: totalRegistros, color: [75, 85, 99] },
+                    { title: "Sin generar", value: totalSinGenerar, color: [202, 138, 4] },
+                    { title: "Generados", value: totalGenerados, color: [4, 120, 87] }
+                ];
+
+                cards.forEach((card, i) => {
+                    const x = startX + (i * (cardW + gap));
+                    doc.setFillColor(...card.color);
+                    doc.roundedRect(x, cardY, cardW, cardH, 2, 2, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(16);
+                    doc.text(String(card.value), x + (cardW / 2), cardY + 10, { align: "center" });
+                    doc.setFontSize(8);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(card.title, x + (cardW / 2), cardY + 15, { align: "center" });
+                });
+            }
+        });
+
+        const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
+        doc.save(`Etapa3_Generacion_DJ_${estadoArchivo}_${tipoArchivo}_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
+    });
+    
     // 🔥 ACCIÓN: DJ UNIFICADO PARA ETAPA 3
     document.getElementById('btnDJUnificadoE3')?.addEventListener('click', async function () {
         const todasEtapa3 = tblPersonasEtapa3.getData("active");
@@ -1569,10 +1935,32 @@ document.addEventListener('DOMContentLoaded', function () {
             const doc = new jsPDF('landscape');
             const totalWidth = doc.internal.pageSize.getWidth();
 
+            // 5. Texto para el subtítulo (Sucursal y Tipo)
             const selSucursal = document.getElementById('filtroSucursalE3');
             const txtSucursal = selSucursal?.options[selSucursal.selectedIndex]?.text?.toUpperCase() || 'TODAS LAS SUCURSALES';
+            
+            const selTipo = document.getElementById('filtroTipoPerE3');
+            const txtTipo = selTipo?.options[selTipo.selectedIndex]?.text?.toUpperCase() || 'TODOS';
+            const tipoFiltroTexto = txtTipo === 'TODOS' ? '' : txtTipo;
+
             const f = new Date();
             const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+
+            // 🔥 LÓGICA DE TÍTULOS DINÁMICOS
+            const radioVal = document.getElementById('filtroEstadoE3')?.value || 'null';
+            let baseTitle = "ETAPA N°3: REPORTE COMPLETO DE GENERADOS DJ";
+            let estadoArchivo = "Todos";
+
+            if (radioVal === '1') {
+                baseTitle = "ETAPA N°3: REPORTES PENDIENTES DE GENERACIÓN DJ";
+                estadoArchivo = "Sin_Generar";
+            } else if (radioVal === '0') {
+                baseTitle = "ETAPA N°3: REPORTE DE GENERADOS DJ";
+                estadoArchivo = "Generados";
+            }
+            
+            const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+            const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
 
             let logoBase64 = null;
             try {
@@ -1620,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     doc.setFontSize(12);
                     doc.setTextColor(0, 0, 0);
-                    doc.text("REPORTE DE AVANCES DJ 2026", totalWidth / 2, 20, { align: "center" });
+                    doc.text(tituloReporte, totalWidth / 2, 20, { align: "center" });
 
                     const subtitulo = txtSucursal === 'TODAS LAS SUCURSALES' ? '' : `Sol ${txtSucursal}`;
                     if (subtitulo !== '') doc.text(subtitulo, totalWidth / 2, 26, { align: "center" });
@@ -1633,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
-            doc.save(`Reporte_Avances_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
+            doc.save(`Etapa3_Generados_DJ_${estadoArchivo}_${tipoArchivo}_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
             Swal.close();
 
         } catch (error) {
@@ -1650,8 +2038,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     let pageSizePersonas_E4C = 20;
 
-    const archivoDJ_E4C    = document.getElementById('archivoDJ_E4C');
-    const zonaDropDJ_E4C   = document.getElementById('zonaDropDJ_E4C');
+    const archivoDJ_E4C = document.getElementById('archivoDJ_E4C');
+    const zonaDropDJ_E4C = document.getElementById('zonaDropDJ_E4C');
     const listaArchivosDJ_E4C = document.getElementById('listaArchivosDJ_E4C');
 
     zonaDropDJ_E4C?.addEventListener('click', () => archivoDJ_E4C.click());
@@ -1711,11 +2099,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     abrirModalSubirDJ_E4C(data.CODI_PERS, data.personal);
                 }
             },
-            { title: 'Cód.',     field: 'CODI_PERS', hozAlign: 'center', minWidth: 60,  widthGrow: 0.5, responsive: false },
-            { title: 'Apellidos', field: 'apellidos', hozAlign: 'left',   minWidth: 120, widthGrow: 2,   responsive: false },
-            { title: 'Nombres',  field: 'nombres',   hozAlign: 'left',   minWidth: 120, widthGrow: 2,   responsive: false },
-            { title: 'Nro Doc.', field: 'nroDoc',    hozAlign: 'center', minWidth: 90,  widthGrow: 0.8, responsive: false },
-            { title: 'Sucursal', field: 'sucursal',  hozAlign: 'center', minWidth: 80,  widthGrow: 0.8, responsive: 0 },
+            { title: 'Cód.', field: 'CODI_PERS', hozAlign: 'center', minWidth: 60, widthGrow: 0.5, responsive: false },
+            { title: 'Apellidos', field: 'apellidos', hozAlign: 'left', minWidth: 120, widthGrow: 2, responsive: false },
+            { title: 'Nombres', field: 'nombres', hozAlign: 'left', minWidth: 120, widthGrow: 2, responsive: false },
+            { title: 'Nro Doc.', field: 'nroDoc', hozAlign: 'center', minWidth: 90, widthGrow: 0.8, responsive: false },
+            { title: 'Sucursal', field: 'sucursal', hozAlign: 'center', minWidth: 80, widthGrow: 0.8, responsive: 0 },
             {
                 title: 'Tipo', field: 'TIPOTRAB2', hozAlign: 'center', minWidth: 120, widthGrow: 1.2, responsive: false,
                 formatter: function (cell) {
@@ -1741,7 +2129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return html;
                 },
                 cellClick: function (e, cell) {
-                    const data   = cell.getRow().getData();
+                    const data = cell.getRow().getData();
                     const codigo = data.CODI_PERS;
                     const nombre = data.personal;
 
@@ -1779,15 +2167,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function limpiarModal_E4C() {
         const f = new Date();
-        const hoy = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-${String(f.getDate()).padStart(2,'0')}`;
+        const hoy = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
         const el = document.getElementById('fecha_emision_dj_E4C');
         if (el) {
             el.value = hoy;
             el.readOnly = true;
             el.classList.add('bg-gray-100', 'cursor-not-allowed');
         }
-        if(archivoDJ_E4C) archivoDJ_E4C.value = '';
-        if(listaArchivosDJ_E4C) listaArchivosDJ_E4C.innerHTML = '';
+        if (archivoDJ_E4C) archivoDJ_E4C.value = '';
+        if (listaArchivosDJ_E4C) listaArchivosDJ_E4C.innerHTML = '';
     }
 
     archivoDJ_E4C?.addEventListener('change', function () {
@@ -1819,12 +2207,12 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault();
 
         const fechaEmision = document.getElementById('fecha_emision_dj_E4C').value;
-        const codPersonal  = document.getElementById('codPersonalDJ_E4C').value;
-        const archivo      = archivoDJ_E4C?.files?.[0];
-        const maxSize      = 1.2 * 1024 * 1024;
+        const codPersonal = document.getElementById('codPersonalDJ_E4C').value;
+        const archivo = archivoDJ_E4C?.files?.[0];
+        const maxSize = 1.2 * 1024 * 1024;
 
         if (!fechaEmision) { Swal.fire({ title: 'Ingrese la fecha de emisión', icon: 'warning' }); return; }
-        if (!archivo)      { Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' });   return; }
+        if (!archivo) { Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' }); return; }
         if (archivo.type !== 'application/pdf') { Swal.fire({ title: 'Solo se permite PDF', icon: 'warning' }); return; }
         if (archivo.size > maxSize) { Swal.fire({ title: 'El archivo supera 1 MB', icon: 'warning' }); return; }
 
@@ -1833,10 +2221,10 @@ document.addEventListener('DOMContentLoaded', function () {
         btnGuardar.innerHTML = 'Guardando...';
 
         const formData = new FormData();
-        formData.append('_token',        document.querySelector('meta[name="csrf-token"]')?.content || '');
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
         formData.append('fecha_emision', fechaEmision);
-        formData.append('codPersonal',   codPersonal);
-        formData.append('pdf',           archivo);
+        formData.append('codPersonal', codPersonal);
+        formData.append('pdf', archivo);
 
         axios.post(`${VITE_URL_APP}/save-dj-folio-2`, formData, { headers: { 'Accept': 'application/json' } })
             .then(() => {
@@ -1933,6 +2321,94 @@ document.addEventListener('DOMContentLoaded', function () {
         if (val && val !== '— Seleccionar —' && val !== '00') return;
         const opciones = [...select.options].filter(opt => opt.value && opt.value !== '— Seleccionar —' && !opt.disabled);
         if (opciones.length > 0) select.value = opciones[0].value;
+    }
+
+    // 🔥 LÓGICA DE EXPORTACIÓN DIRECTA PARA ETAPA 4 (CARGA DJ)
+    document.getElementById('btnExportPdfE4C')?.addEventListener('click', async () => generarReporteE4C('pdf'));
+    document.getElementById('btnExportExcelE4C')?.addEventListener('click', async () => generarReporteE4C('excel'));
+
+    async function generarReporteE4C(formato) {
+        const selectSucursal = document.getElementById('sucursal_E4C');
+        let codSucursal = selectSucursal.value;
+        if (!codSucursal || codSucursal === '— Seleccionar —' || codSucursal === '00') codSucursal = '00';
+        const txtSucursal = selectSucursal.options[selectSucursal.selectedIndex]?.text || 'TODAS LAS SUCURSALES';
+
+        const selectTipo = document.getElementById('tipo_per_E4C');
+        let tipoFiltro = selectTipo?.value || 'TODOS';
+        if (tipoFiltro === 'TODOS') tipoFiltro = '00';
+        else if (tipoFiltro === 'OPER_5') tipoFiltro = '03';
+        else if (tipoFiltro === 'ADMIN_5') tipoFiltro = '05';
+
+        Swal.fire({ title: `Generando ${formato.toUpperCase()}...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            let datos = await obtenerDatos(codSucursal, tipoFiltro);
+
+            if (!datos || datos.length === 0) {
+                Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros.' });
+                return;
+            }
+
+            // Filtrar estado de DJ de la interfaz
+            const filtroDJ = document.getElementById('filtroDJ_E4C')?.value || 'TODOS';
+            if (filtroDJ === 'SI') datos = datos.filter(d => d.dj_subido == true);
+            else if (filtroDJ === 'NO') datos = datos.filter(d => d.dj_subido == false);
+
+            // Filtrar por texto del buscador
+            const textoBusqueda = document.getElementById('buscarPersonal_E4C')?.value.toLowerCase().trim() || '';
+            if (textoBusqueda) {
+                datos = datos.filter(d => {
+                    const str = `${d.nombres} ${d.doc}`.toLowerCase();
+                    return str.includes(textoBusqueda);
+                });
+            }
+
+            if (!datos.length) {
+                Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros que coincidan con la búsqueda.' });
+                return;
+            }
+
+            datos = datos.filter(d => {
+                const tipoTrabajador = (d.tipo || d.TIPO || d.tipoPer || d.TIPO_PER || d.tipotrab2 || '').toUpperCase();
+                return !tipoTrabajador.includes('ESPECIAL');
+            });
+
+            // 🔥 LÓGICA DE TÍTULOS DINÁMICOS ETAPA 4
+            let baseTitle = "ETAPA N°4: REPORTE COMPLETO DE ESCANEOS DE DJ";
+            let estadoArchivo = "Todos";
+
+            if (filtroDJ === 'NO') {
+                baseTitle = "ETAPA N°4: REPORTE DE PENDIENTES DE ESCANEO";
+                estadoArchivo = "Sin_Escanear";
+            } else if (filtroDJ === 'SI') {
+                baseTitle = "ETAPA N°4: REPORTE DE ESCANEADOS";
+                estadoArchivo = "Escaneados";
+            }
+
+            const textoTipo = selectTipo?.options[selectTipo.selectedIndex]?.text || 'Todos';
+            const tipoFiltroTexto = textoTipo === 'Todos' ? '' : textoTipo;
+            const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+            const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
+
+            const meta = {
+                sucursal: txtSucursal.toUpperCase() === '— SELECCIONAR —' || txtSucursal.toUpperCase() === 'TODAS LAS SUCURSALES' ? 'Todas' : txtSucursal,
+                tipo: textoTipo,
+                fecha: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                origen: 'etapa4', // 🔥 BANDERITA
+                tituloReporte: tituloReporte,
+                estadoArchivo: estadoArchivo,
+                tipoArchivo: tipoArchivo
+            };
+
+            if (formato === 'pdf') await generarPDF(datos, meta);
+            else if (formato === 'excel') await generarExcel(datos, meta);
+
+            Swal.close();
+        } catch (error) {
+            console.error('[Error de Reporte E4C]', error);
+            Swal.close();
+            Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error al generar el reporte.' });
+        }
     }
 
 
@@ -2115,14 +2591,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function aplicarFiltrosE4() {
         const texto = document.getElementById('buscarPersonalE4')?.value.toLowerCase().trim() || '';
         const codTipoPer = document.getElementById('filtroTipoPerE4')?.value || '00';
-        const radioVal = document.querySelector('input[name="filtroEstadoE4"]:checked')?.value || 'null';
+        const radioVal = document.getElementById('filtroEstadoE4')?.value || 'null';
 
         let tipoTxt = '';
-        if (codTipoPer === '01') tipoTxt = 'OPER 4°';
         if (codTipoPer === '03') tipoTxt = 'OPER 5°';
-        if (codTipoPer === '02') tipoTxt = 'ADMIN 4°';
         if (codTipoPer === '05') tipoTxt = 'ADMIN 5°';
-        if (codTipoPer === '06') tipoTxt = 'ESPECIAL';
 
         // Filtro visual en Tabulator
         tblEtapa4.setFilter(function (data) {
@@ -2192,7 +2665,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('filtroTipoPerE4')?.addEventListener('change', aplicarFiltrosE4);
 
     // Escuchando los radio buttons de estado para E4
-    document.querySelectorAll('input[name="filtroEstadoE4"]').forEach(radio => radio.addEventListener('change', aplicarFiltrosE4));
+    document.getElementById('filtroEstadoE4')?.addEventListener('change', aplicarFiltrosE4);
 
     document.getElementById('buscarPersonalE4')?.addEventListener('keyup', function () {
         const valor = this.value.toLowerCase().trim();
@@ -2210,15 +2683,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // MODAL REPORTE DE AVANCES (ETAPA 4) — USANDO LA API DEL COMPAÑERO
     // ============================================================
-    document.getElementById('btnModalPdfE4')?.addEventListener('click', async () => generarReporteModalE4('pdf'));
-    document.getElementById('btnModalExcelE4')?.addEventListener('click', async () => generarReporteModalE4('excel'));
+   document.getElementById('btnExportPdfE4')?.addEventListener('click', async () => generarReporteDirectoE4('pdf'));
+    document.getElementById('btnExportExcelE4')?.addEventListener('click', async () => generarReporteDirectoE4('excel'));
 
-    async function generarReporteModalE4(formato) {
-        const selectSucursal = document.getElementById('modalSucursalE4');
-        const codSucursal = selectSucursal.value;
-        const txtSucursal = selectSucursal.options[selectSucursal.selectedIndex].text;
+    async function generarReporteDirectoE4(formato) {
+        // Leemos directamente de los filtros de la interfaz
+        const selectSucursal = document.getElementById('filtroSucursalE4');
+        const codSucursal = selectSucursal?.value || '00';
+        const txtSucursal = selectSucursal?.options[selectSucursal.selectedIndex]?.text || 'TODAS';
 
-        const tipoFiltro = document.querySelector('#modalTipoPerE4').value;
+        const selectTipo = document.getElementById('filtroTipoPerE4');
+        const tipoFiltro = selectTipo?.value || '00';
 
         Swal.fire({ title: `Generando ${formato.toUpperCase()}...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -2237,20 +2712,66 @@ document.addEventListener('DOMContentLoaded', function () {
                 return !tipoTrabajador.includes('ESPECIAL');
             });
 
-            // 3. Metadatos
+            // 🔥 FILTRAMOS POR ESTADO (Select) Y TEXTO PARA QUE CUADRE CON LA VISTA
+            const radioVal = document.getElementById('filtroEstadoE4')?.value || 'null';
+            if (radioVal !== 'null') {
+                datos = datos.filter(d => {
+                    const dj = d.dj_subido || d.djSubido || d.djsubido || d.DJSUBIDO;
+                    const esEscaneado = (dj === 'SI' || dj === true || dj === 1);
+                    if (radioVal === '0') return esEscaneado;
+                    if (radioVal === '1') return !esEscaneado;
+                    return true;
+                });
+            }
+
+            const textoBusqueda = document.getElementById('buscarPersonalE4')?.value.toLowerCase().trim() || '';
+            if (textoBusqueda) {
+                datos = datos.filter(d => {
+                    const str = `${d.nombres || ''} ${d.doc || d.nroDoc || ''} ${d.sucursal || ''}`.toLowerCase();
+                    return str.includes(textoBusqueda);
+                });
+            }
+
+            if (!datos.length) {
+                Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay registros que coincidan con la búsqueda.' });
+                return;
+            }
+
+            // 3. Metadatos y Títulos Dinámicos
             const tipos = {
                 '01': 'OPERATIVO 4º',
                 '02': 'ADMINISTRATIVO 4º',
                 '03': 'OPERATIVO 5º',
                 '05': 'ADMINISTRATIVO 5º',
                 '06': 'ESPECIAL'
-                };
+            };
 
-                const tipoTexto = tipos[tipoFiltro] || 'Todos';
+            const tipoTexto = tipos[tipoFiltro] || 'Todos';
+            
+            // Lógica de títulos Etapa 5
+            let baseTitle = "ETAPA N°5: REPORTE COMPLETO DE VALIDACIÓN DE IMÁGENES";
+            let estadoArchivo = "Todos";
+
+            if (radioVal === '1') {
+                baseTitle = "ETAPA N°5: REPORTE DE PENDIENTES DE VALIDACIÓN DE IMAGENES";
+                estadoArchivo = "Sin_Validar";
+            } else if (radioVal === '0') {
+                baseTitle = "ETAPA N°5: REPORTE DE IMÁGENES VALIDADAS";
+                estadoArchivo = "Validados";
+            }
+
+            const tipoFiltroTexto = tipoTexto === 'Todos' ? '' : tipoTexto;
+            const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+            const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
+
             const meta = {
-                sucursal: txtSucursal.toUpperCase() === 'TODAS' ? 'Todas' : txtSucursal,
+                sucursal: txtSucursal.toUpperCase() === 'TODAS' || txtSucursal.toUpperCase() === 'TODAS LAS SUCURSALES' ? 'Todas' : txtSucursal,
                 tipo: tipoTexto,
-                fecha: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                fecha: new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                origen: 'etapa5', // 🔥 BANDERITA PARA ETAPA 5
+                tituloReporte: tituloReporte,
+                estadoArchivo: estadoArchivo,
+                tipoArchivo: tipoArchivo
             };
 
             // 4. 🔥 LA CLAVE: AMBOS DEBEN RECIBIR LA VARIABLE "datos"
@@ -2261,7 +2782,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             Swal.close();
-            if (window.HSOverlay) HSOverlay.close(document.getElementById('modal-reporte-avances'));
 
         } catch (error) {
             console.error('[Error de Reporte]', error);
@@ -2925,10 +3445,217 @@ document.addEventListener('DOMContentLoaded', function () {
     if (form) {
         console.log('✅ form encontrado, registrando listener submit');
 
+        // ============================================================
+        // SEGUIMIENTO DE CAMBIOS EN EL FORMULARIO DJ
+        // ============================================================
+        let estadoInicialForm = {};
+
+        window.estadoInicialForm = {};
+
+        window.capturarEstadoInicial = function() {
+            const fd = new FormData(form);
+            window.estadoInicialForm = {};
+            for (let [key, value] of fd.entries()) {
+                if (!window.estadoInicialForm[key]) {
+                    window.estadoInicialForm[key] = value;
+                } else {
+                    if (!Array.isArray(window.estadoInicialForm[key])) {
+                        window.estadoInicialForm[key] = [window.estadoInicialForm[key]];
+                    }
+                    window.estadoInicialForm[key].push(value);
+                }
+            }
+        };
+
+        function obtenerResumenCambios() {
+            let cambios = [];
+
+            // 🔥 ESTRATEGIA PRINCIPAL: Comparar contra la "DJ ANTERIOR" (_backupData)
+            // Esto sincroniza el modal exactamente con tu alerta de "6 CAMPOS DIFERENTES"
+            if (typeof _backupData !== 'undefined' && _backupData) {
+                
+                // Recalculamos las diferencias para asegurar que lean lo último que haya escrito el usuario
+                marcarDiferencias(); 
+
+                // Capturamos todos los campos que el sistema ya detectó como diferentes (.has-diff)
+                const camposModificados = form.querySelectorAll('.has-diff');
+                
+                const nombresPersonalizados = {
+                    'dj2026_laboral_1': 'OCUPACIÓN ALTERNA 1',
+                    'dj2026_laboral_2': 'OCUPACIÓN ALTERNA 2'
+                };
+
+                camposModificados.forEach(input => {
+                    const formId = input.id;
+                    const bkField = CAMPO_MAP[formId]; // Mapeamos con tu diccionario existente
+                    
+                    if (bkField) {
+                        let valForm = String(input.value ?? '').trim();
+                        let valBk = String(_backupData[bkField] ?? '').trim();
+
+                        if (FECHA_FIELDS_BK.includes(bkField) && valBk) {
+                            valBk = valBk.replace('T', ' ').split(' ')[0];
+                        }
+
+                        // El Formulario: si es un combo (select), extraemos el texto legible que ve el usuario
+                        let textoActual = valForm;
+                        if (input.tagName.toLowerCase() === 'select') {
+                            if (valForm) {
+                                const opt = input.querySelector(`option[value="${valForm}"]`);
+                                if (opt) textoActual = opt.textContent.trim();
+                            }
+                        }
+
+                        // El Backup: la Base de Datos ya te devuelve el nombre legible para los selects mapeados
+                        let textoInicial = valBk;
+                        
+                        // Obtener el nombre del Label visualmente
+                        let labelText = nombresPersonalizados[formId] || formId;
+                        if (!nombresPersonalizados[formId]) {
+                            const label = input.parentElement?.querySelector('label') || input.closest('div')?.querySelector('label');
+                            if (label && label.textContent) {
+                                labelText = label.textContent.replace('*', '').trim();
+                            } else {
+                                labelText = formId.replace(/_/g, ' '); 
+                            }
+                        }
+
+                        // Limpieza de formato
+                        let vI = (textoInicial || '(Vacío)').toString().toUpperCase();
+                        let vA = (textoActual || '(Vacío)').toString().toUpperCase();
+
+                        // 🔥 Mejora: Formatear fechas YYYY-MM-DD a DD/MM/YYYY si aplica
+                        const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+                        if (regexFecha.test(vI) || regexFecha.test(vA)) {
+                            const formatear = (d) => {
+                                if (!regexFecha.test(d)) return d;
+                                const [y, m, d_] = d.split('-');
+                                return `${d_}/${m}/${y}`;
+                            };
+                            vI = formatear(vI);
+                            vA = formatear(vA);
+                        }
+                        labelText = labelText.toUpperCase();
+
+                        cambios.push(`<li class="mb-2 text-left" style="font-size:13px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 4px;">
+                            <b class="text-gray-800 block">${labelText}:</b> 
+                            <span class="text-red-500 line-through mr-1">${vI}</span> 
+                            <i class='bx bx-right-arrow-alt text-gray-400'></i> 
+                            <span class="text-green-600 font-medium ml-1">${vA}</span>
+                        </li>`);
+                    }
+                });
+            } 
+            // 🔥 PLAN B: Si es una DJ 100% NUEVA (no existe DJ Anterior)
+            else {
+                const fd = new FormData(form);
+                const estadoActual = {};
+                for (let [key, value] of fd.entries()) {
+                    if (!estadoActual[key]) estadoActual[key] = value;
+                    else {
+                        if (!Array.isArray(estadoActual[key])) estadoActual[key] = [estadoActual[key]];
+                        estadoActual[key].push(value);
+                    }
+                }
+
+                // Protegido para funcionar con o sin la variable global
+                const estadoIni = typeof window.estadoInicialForm !== 'undefined' ? window.estadoInicialForm : (typeof estadoInicialForm !== 'undefined' ? estadoInicialForm : {});
+                const todasLasLlaves = new Set([...Object.keys(estadoIni), ...Object.keys(estadoActual)]);
+
+                const ignorarCampos = [
+                    'parentesco[]', 'apellidosNombres[]', 'fechaNacimiento[]', 
+                    '_token', 'cod_postulante', 'source', 'codPeriodo', 
+                    'nombres_apellidos', 'tipo_personal',
+                    'sabe_nadar', 'ciudad_nacimiento'
+                ];
+
+                for (let key of todasLasLlaves) {
+                    if (ignorarCampos.includes(key)) continue;
+
+                    let valInicial = estadoIni[key] || '';
+                    let valActual = estadoActual[key] || '';
+
+                    if (JSON.stringify(valInicial) !== JSON.stringify(valActual)) {
+                        let labelText = key;
+                        const input = form.querySelector(`[name="${key}"]`);
+                        let textoInicial = valInicial;
+                        let textoActual = valActual;
+
+                        if (input) {
+                            const label = input.parentElement?.querySelector('label') || input.closest('div')?.querySelector('label');
+                            if (label && label.textContent) labelText = label.textContent.replace('*', '').trim();
+                            else labelText = key.replace(/_/g, ' '); 
+
+                            if (input.tagName.toLowerCase() === 'select') {
+                                if (valActual && !Array.isArray(valActual)) {
+                                    const optActual = input.querySelector(`option[value="${valActual}"]`);
+                                    if (optActual) textoActual = optActual.textContent.trim();
+                                }
+                                if (valInicial && !Array.isArray(valInicial)) {
+                                    const optInicial = input.querySelector(`option[value="${valInicial}"]`);
+                                    if (optInicial) textoInicial = optInicial.textContent.trim();
+                                }
+                            }
+                        }
+
+                        let vI = Array.isArray(textoInicial) ? textoInicial.join(', ') : textoInicial;
+                        let vA = Array.isArray(textoActual) ? textoActual.join(', ') : textoActual;
+
+                        vI = (vI || '(Vacío)').toString().toUpperCase();
+                        vA = (vA || '(Vacío)').toString().toUpperCase();
+                        labelText = labelText.toUpperCase();
+
+                        cambios.push(`<li class="mb-2 text-left" style="font-size:13px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 4px;">
+                            <b class="text-gray-800 block">${labelText}:</b> 
+                            <span class="text-red-500 line-through mr-1">${vI}</span> 
+                            <i class='bx bx-right-arrow-alt text-gray-400'></i> 
+                            <span class="text-green-600 font-medium ml-1">${vA}</span>
+                        </li>`);
+                    }
+                }
+            }
+            return cambios;
+        }
+
         form.addEventListener('submit', async (e) => {
             console.log('🔥 submit disparado');
             e.preventDefault();
-            e.stopPropagation(); // ← AGREGAR ESTO
+
+            // === NUEVA LÓGICA DE CONFIRMACIÓN DE CAMBIOS ===
+            const cambios = obtenerResumenCambios();
+            let htmlCambios = '';
+
+            if (cambios.length === 0) {
+                htmlCambios = '<p class="text-sm text-gray-500 text-center py-2">No se han detectado cambios en el formulario.</p>';
+            } else {
+                htmlCambios = `<ul class="list-none p-0 m-0 max-h-60 overflow-y-auto">
+                    ${cambios.join('')}
+                </ul>`;
+            }
+
+            const confirmacion = await Swal.fire({
+                title: 'Confirmar guardado',
+                html: `
+                    <div class="text-sm text-gray-700 text-left mb-3">Se guardarán los siguientes cambios en la DJ:</div>
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        ${htmlCambios}
+                    </div>
+                `,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar guardado',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#10b981', // Verde
+                cancelButtonColor: '#ef4444',  // Rojo
+                customClass: {
+                    popup: 'rounded-xl'
+                }
+            });
+
+            if (!confirmacion.isConfirmed) {
+                return; // Si cancela, detiene por completo la ejecución y no guarda
+            }
+            // === FIN LÓGICA DE CONFIRMACIÓN ===
 
             console.log('🔍 form element:', form);
             console.log('🔍 form action:', form.action);
@@ -3829,9 +4556,9 @@ async function llenarFormulario(data) {
     setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
     setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
 
-    cargarUbicaciones('actual', data.PERS_DEPT_ACT?.trim() ?? '', data.PERS_PROV_ACT?.trim() ?? '', data.PERS_DIST_ACT?.trim() ?? '');
-    cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI?.trim() ?? '', data.PERS_PROV_DIRDNI?.trim() ?? '', data.PERS_DIST_DIRDNI?.trim() ?? '');
-    cargarUbicaciones('nac', data.DEPA_CODIGO_NACI?.trim() ?? '', data.PROVI_CODIGO_NACI?.trim() ?? '', data.DIST_NACI?.trim() ?? '');
+    await cargarUbicaciones('actual', data.PERS_DEPT_ACT?.trim() ?? '', data.PERS_PROV_ACT?.trim() ?? '', data.PERS_DIST_ACT?.trim() ?? '');
+    await cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI?.trim() ?? '', data.PERS_PROV_DIRDNI?.trim() ?? '', data.PERS_DIST_DIRDNI?.trim() ?? '');
+    await cargarUbicaciones('nac', data.DEPA_CODIGO_NACI?.trim() ?? '', data.PROVI_CODIGO_NACI?.trim() ?? '', data.DIST_NACI?.trim() ?? '');
 
 
     setValue('#ocupacion_principal', data.dj2026_ocupacion_principal);
@@ -3870,6 +4597,13 @@ async function llenarFormulario(data) {
             document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
         }
     }
+
+    // Tomar fotografía de los datos iniciales luego de cargados
+    setTimeout(() => {
+        if (typeof window.capturarEstadoInicial === 'function') {
+            window.capturarEstadoInicial();
+        }
+    }, 1500); // 🔥 Subido a 1.5 segundos para garantizar que Axios trajo todos los Distritos
 }
 
 // ── Familiares ───────────────────────────────────────────────
@@ -4883,10 +5617,32 @@ document.getElementById("btnReporteVerificados")?.addEventListener("click", asyn
         const totalWidth = doc.internal.pageSize.getWidth();
 
         // 5. Texto para el subtítulo (Sucursal)
+        // 5. Texto para el subtítulo (Sucursal y Tipo)
         const selSucursal = document.getElementById('filtroSucursalE2');
         const txtSucursal = selSucursal?.options[selSucursal.selectedIndex]?.text?.toUpperCase() || 'TODAS LAS SUCURSALES';
+        
+        const selTipo = document.getElementById('filtroTipoPerE2');
+        const txtTipo = selTipo?.options[selTipo.selectedIndex]?.text?.toUpperCase() || 'TODOS';
+        const tipoFiltroTexto = txtTipo === 'TODOS' ? '' : txtTipo;
+
         const f = new Date();
         const fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`;
+
+        // 🔥 LÓGICA DE TÍTULOS DINÁMICOS
+        const radioVal = document.getElementById('filtroEstadoE2')?.value || 'null';
+        let baseTitle = "ETAPA N°2: REPORTE COMPLETO DE VERIFICACIÓN";
+        let estadoArchivo = "Todos";
+
+        if (radioVal === '1') {
+            baseTitle = "ETAPA N°2: REPORTE DE PENDIENTES POR VERIFICAR";
+            estadoArchivo = "Sin_Verificar";
+        } else if (radioVal === '0') {
+            baseTitle = "ETAPA N°2: REPORTE DE VERIFICADOS";
+            estadoArchivo = "Verificados";
+        }
+        
+        const tituloReporte = `${baseTitle} ${tipoFiltroTexto}`.trim();
+        const tipoArchivo = tipoFiltroTexto === '' ? 'Todos' : tipoFiltroTexto.replace(/ /g, '_');
 
         // 6. Cargar Logo de Sol Security
         let logoBase64 = null;
@@ -4944,7 +5700,7 @@ document.getElementById("btnReporteVerificados")?.addEventListener("click", asyn
 
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
-                doc.text("REPORTE DE PERSONAL - ETAPA 2 (VERIFICADOS)", totalWidth / 2, 20, { align: "center" });
+                doc.text(tituloReporte, totalWidth / 2, 20, { align: "center" });
 
                 const subtitulo = txtSucursal === 'TODAS LAS SUCURSALES' ? '' : `Sol ${txtSucursal}`;
                 if (subtitulo !== '') doc.text(subtitulo, totalWidth / 2, 26, { align: "center" });
@@ -4982,7 +5738,7 @@ document.getElementById("btnReporteVerificados")?.addEventListener("click", asyn
         });
 
         const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
-        doc.save(`Reporte_Etapa2_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
+        doc.save(`Etapa2_Verificacion_${estadoArchivo}_${tipoArchivo}_${txtSucursal.replace(/ /g, '_')}_${fStr}.pdf`);
         Swal.close();
 
     } catch (error) {

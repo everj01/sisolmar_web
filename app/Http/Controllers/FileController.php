@@ -841,6 +841,19 @@ class FileController extends Controller
         return response()->json($DJ);
     }
 
+    public function getListaDJ2026(Request $request)
+    {
+        $vigencia = $request->input('vigencia', 'SI');
+        $usuario = session('usuario') ?? '0';
+
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?', [
+            $usuario,
+            $vigencia
+        ]);
+
+        return response()->json($DJ);
+    }
+
     public function getListaDJMigracion()
     {
         $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_MIGRACION_V2]');

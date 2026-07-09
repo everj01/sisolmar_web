@@ -86,7 +86,7 @@ const categoriasSe = {
     ]
 };
 
-const PAUSA_ENTRE_REGISTROS = 800;
+const PAUSA_ENTRE_REGISTROS = 200;
 
 async function esperarConBackoff(intento, baseMs = 1000) {
     const espera = baseMs * Math.pow(2, intento); // 1s, 2s, 4s, 8s...
@@ -226,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function () {
         responsiveLayout: "collapse",
         pagination: true,
         paginationSize: 20,
+        selectable: true,
         rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
         locale: "es",
         rowFormatter: function(row) {
@@ -256,14 +257,36 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         },
         columns: [
-            { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
+            {
+                title: "",
+                formatter: "rowSelection",
+                titleFormatter: "rowSelection",
+                hozAlign: "center",
+                headerSort: false,
+                width: 40,
+            },
+            {
+                title: "N°",
+                hozAlign: "center",
+                width: 60,
+                headerSort: false,
+                formatter: function (cell) {
+                    const table = cell.getTable();
+                    const pos = cell.getRow().getPosition(true);
+                    if (pos <= 0) return '';
+                    const page = table.getPage() || 1;
+                    const size = table.getPageSize() || 20;
+                    return ((page - 1) * size) + pos;
+                }
+            },
+            { title: "Codigo", field: "codPersonal", hozAlign: "center", width: 80 },
             {
                 title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
                 formatter: cell => { const d = cell.getData(); return `${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim(); }
             },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 2,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? ''} `.trim(); }
+                title: "Nombres", field: "NOMB_1", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { const d = cell.getData(); return `${d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim(); }
             },
 
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
@@ -310,20 +333,53 @@ document.addEventListener('DOMContentLoaded', function () {
                 cellClick: (e, cell) => {
                     const btn = e.target.closest('.form-btn');
                     if (!btn) return;
-                    registroSeleccionado = cell.getRow().getData();
+                    const rowData = cell.getRow().getData();
+                    const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+
+                    if (rowData.vigencia && rowData.vigencia.toString().trim().toUpperCase() === 'NO') {
+                        window.NuevaDJ?.abrirRecontratacion(codiPers, { OBS_CESE: rowData.OBS_CESE, FECH_CESE: rowData.FECH_CESE });
+                        return;
+                    }
+
+                    registroSeleccionado = rowData;
                     registroSeleccionado._sinSplit = true;
-
-                    const codiPers = registroSeleccionado.codPersonal || registroSeleccionado.CODI_PERS || registroSeleccionado.id;
-
-                    // Limpiar caché solo de esta persona
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
-
-                    //btnNuevaDJ?.click();
                     abrirFormularioDJ(codiPers, 'pendiente');
                 }
             },
         ],
+    });
+
+    function reformatNums(table) {
+        function rf() { table.getRows("active").forEach(r => r.reformat()); }
+        table.on("dataLoaded", rf);
+        table.on("pageLoaded", rf);
+        table.on("dataSorted", () => { table.setPage(1); rf(); });
+        table.on("dataFiltered", () => { table.setPage(1); rf(); });
+    }
+    reformatNums(tblPersonas);
+
+    tblPersonas.on("rowClick", function (e, row) {
+        if (e.target.closest('.form-btn') || e.target.tagName === 'INPUT') return;
+        const data = row.getData();
+        if (data.vigencia && data.vigencia.toString().trim().toUpperCase() === 'NO') {
+            const codiPers = data.codPersonal || data.CODI_PERS;
+            window.NuevaDJ?.abrirRecontratacion(codiPers, { OBS_CESE: data.OBS_CESE, FECH_CESE: data.FECH_CESE });
+        }
+    });
+
+    tblPersonas.on("rowSelectionChanged", function () {
+        const sel = this.getSelectedRows().length;
+        const btn = document.getElementById('btnGenerarSeleccionadosPEN');
+        const count = document.getElementById('countSelPEN');
+        if (count) count.textContent = sel;
+        if (btn) {
+            btn.disabled = !sel;
+            btn.className = sel
+                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors'
+                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+        }
     });
 
     // ── Tabla coincidencias ──────────────────────────────────
@@ -529,17 +585,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // CARGA DE DATOS (API)
     // ============================================================
     function getPersonal() {
-        // 🔥 Capturamos el valor del switch (checked = 'SI', unchecked = 'TD')
         const toggleActivos = document.getElementById('filtroVigenciaPEN');
         const vigenciaVal = (toggleActivos && toggleActivos.checked) ? 'SI' : 'NO';
 
-        // 🔥 Mandamos el parámetro "vigencia" en la petición
-        axios.get(`${VITE_URL_APP}/get-personal-dj`, { params: { vigencia: vigenciaVal } })
+        tblPersonas.alert("Buscando datos...", "msg");
+
+        axios.get(`${VITE_URL_APP}/get-personal-dj-2026`, { params: { vigencia: vigenciaVal } })
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
 
-                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
                 const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
                 const filtroCargo = document.getElementById('filtroCargoPEN');
                 if (filtroCargo) {
@@ -551,13 +606,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 aplicarFiltrosPEN();
             })
-            .catch(error => console.error("Hubo un error:", error));
+            .catch(error => console.error("Hubo un error:", error))
+            .finally(() => tblPersonas.clearAlert());
     }
 
 
     window.getPersonalSoloDJ = function () {
 
-        axios.get(`${VITE_URL_APP}/get-personal-dj`)
+        axios.get(`${VITE_URL_APP}/get-personal-dj-2026`)
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
@@ -605,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function matchBusqueda(data, texto) {
         const palabras = texto.toLowerCase().split(/\s+/).filter(p => p);
         const campos = [
-            (data.nombres ?? '').toLowerCase(),
+            (`${data.NOMB_1 ?? ''} ${data.NOMB_2 ?? ''}`).toLowerCase(),
             (data.apellido1 ?? '').toLowerCase(),
             (data.apellido2 ?? '').toLowerCase(),
             (data.dni ?? '').toLowerCase(),
@@ -640,6 +696,23 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('filtroVigenciaPEN')?.addEventListener('change', getPersonal);
 
     getPersonal();
+
+    document.getElementById('btnGenerarSeleccionadosPEN')?.addEventListener('click', async function () {
+        const seleccionadas = tblPersonas.getSelectedRows();
+        if (!seleccionadas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin selección', text: 'Selecciona al menos una persona con el checkbox.' });
+            return;
+        }
+        const filas = seleccionadas.map(r => r.getData());
+        const { isConfirmed } = await Swal.fire({
+            icon: 'question', title: 'Generar DJ seleccionados',
+            html: `Se generará <b>1 PDF</b> con <b>${filas.length}</b> declaración(es).<br>¿Desea continuar?`,
+            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+        });
+        if (!isConfirmed) return;
+        await _generarUnificado(filas, 'DJ_Seleccionados', 'pendiente');
+        tblPersonas.deselectRow();
+    });
 
     // ============================================================
     // PESTAÑAS
@@ -1132,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
 
             Swal.update({
-                html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.nombres || codiPers}</small>`
+                html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.NOMB_1 ? `${fila.NOMB_1} ${fila.NOMB_2 ?? ''}`.trim() : codiPers}</small>`
             });
 
             try {

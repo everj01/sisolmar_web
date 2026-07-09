@@ -68,31 +68,40 @@ async function generarExcel(datos, meta) {
         return;
     }
 
+    // 🔥 FILTRAMOS LAS COLUMNAS DEPENDIENDO SI ES ETAPA 4
+    let columnasActivas = COLUMNAS;
+    if (meta.origen === 'etapa4') {
+        columnasActivas = COLUMNAS.filter(c => c.header !== 'FIRMA ACTUALIZADA' && c.header !== 'HUELLA ACTUALIZADA');
+    }
+
     const libro = new ExcelJS.Workbook();
     libro.creator = 'Sistema RRHH';
     libro.created = new Date();
 
     const hoja = libro.addWorksheet(NOMBRE_HOJA, {
-        // Congela las 6 primeras filas (título + filtros + vacía + cards x2 + vacía + encabezados)
         views: [{ state: 'frozen', ySplit: 7 }],
     });
 
-    hoja.columns = COLUMNAS.map(c => ({ width: c.width }));
+    hoja.columns = columnasActivas.map(c => ({ width: c.width }));
 
-    agregarFilaTitulo(hoja);
-    agregarFilaFiltros(hoja, meta);
+    agregarFilaTitulo(hoja, columnasActivas.length, meta.tituloReporte);
+    agregarFilaFiltros(hoja, meta, columnasActivas.length);
     agregarFilaVacia(hoja);
-    agregarFilasContadores(hoja, datos);   // ← 3 filas de cards (etiquetas + valores + vacía)
-    agregarEncabezadosColumnas(hoja);
-    agregarFilasDatos(hoja, datos);
+    agregarFilasContadores(hoja, datos); 
+    agregarEncabezadosColumnas(hoja, columnasActivas);
+    agregarFilasDatos(hoja, datos, meta);
 
     const buffer = await libro.xlsx.writeBuffer();
-
-    // Nombre dinámico con la sucursal limpia y fecha
     const f = new Date();
     const fStr = `${String(f.getDate()).padStart(2, '0')}_${String(f.getMonth() + 1).padStart(2, '0')}_${f.getFullYear()}`;
     const sucursalLimpia = meta.sucursal.trim().replace(/\s+/g, '_');
-    const nombreArchivoDin = `Reporte_Avances_RRHH_${sucursalLimpia}_${fStr}.xlsx`;
+    
+    let nombreArchivoDin = `Reporte_Avances_RRHH_${sucursalLimpia}_${fStr}.xlsx`;
+    if (meta.origen === 'etapa4') {
+        nombreArchivoDin = `Etapa4_Carga_DJ_${meta.estadoArchivo}_${meta.tipoArchivo}_${sucursalLimpia}_${fStr}.xlsx`;
+    } else if (meta.origen === 'etapa5') {
+        nombreArchivoDin = `Etapa5_Validacion_Imagenes_${meta.estadoArchivo}_${meta.tipoArchivo}_${sucursalLimpia}_${fStr}.xlsx`;
+    }
 
     descargarBuffer(buffer, nombreArchivoDin);
 }
@@ -101,18 +110,19 @@ async function generarExcel(datos, meta) {
 // SECCIONES DE LA HOJA
 // ---------------------------------------------------------------------------
 
-function agregarFilaTitulo(hoja) {
-    const fila  = hoja.addRow(['REPORTE DE AVANCES - RECURSOS HUMANOS']);
+function agregarFilaTitulo(hoja, totalCols, tituloReporte) {
+    const tituloFinal = tituloReporte || 'REPORTE DE AVANCES - RECURSOS HUMANOS';
+    const fila  = hoja.addRow([tituloFinal]);
     fila.height = 24;
 
     const celda     = fila.getCell(1);
     celda.font      = { bold: true, color: { argb: COLOR.textoCabecera }, size: 13 };
     celda.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR.fondoTitulo } };
     celda.alignment = { horizontal: 'center', vertical: 'middle' };
-    hoja.mergeCells(1, 1, 1, COLUMNAS.length);
+    hoja.mergeCells(1, 1, 1, totalCols);
 }
 
-function agregarFilaFiltros(hoja, meta) {
+function agregarFilaFiltros(hoja, meta, totalCols) {
     const texto = `Sucursal: ${meta.sucursal}   |   Tipo: ${etiquetaTipo(meta.tipo)}   |   Generado: ${meta.fecha}`;
     const fila  = hoja.addRow([texto]);
     fila.height = 16;
@@ -121,7 +131,7 @@ function agregarFilaFiltros(hoja, meta) {
     celda.font      = { italic: true, color: { argb: COLOR.textoFiltros }, size: 8.5 };
     celda.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR.fondoFiltros } };
     celda.alignment = { horizontal: 'center', vertical: 'middle' };
-    hoja.mergeCells(2, 1, 2, COLUMNAS.length);
+    hoja.mergeCells(2, 1, 2, totalCols);
 }
 
 function agregarFilaVacia(hoja) {
@@ -181,8 +191,8 @@ function agregarFilasContadores(hoja, datos) {
     hoja.addRow([]);
 }
 
-function agregarEncabezadosColumnas(hoja) {
-    const fila  = hoja.addRow(COLUMNAS.map(c => c.header));
+function agregarEncabezadosColumnas(hoja, columnasActivas) {
+    const fila  = hoja.addRow(columnasActivas.map(c => c.header));
     fila.height = 30;
 
     fila.eachCell(celda => {
@@ -193,9 +203,9 @@ function agregarEncabezadosColumnas(hoja) {
     });
 }
 
-function agregarFilasDatos(hoja, datos) {
+function agregarFilasDatos(hoja, datos, meta) {
     datos.forEach((registro, indice) => {
-        const valores = construirFila(registro);
+        const valores = construirFila(registro, meta);
         const fila    = hoja.addRow(valores);
         const esPar   = indice % 2 === 0;
 
@@ -215,7 +225,10 @@ function agregarFilasDatos(hoja, datos) {
             };
         });
 
-        aplicarEstiloEstado(fila.getCell(9), valores[8]);
+        // La celda de estado cambia de índice según el origen
+        const estadoCol = meta.origen === 'etapa4' ? 7 : 9;
+        const estadoVal = meta.origen === 'etapa4' ? valores[6] : valores[8];
+        aplicarEstiloEstado(fila.getCell(estadoCol), estadoVal);
     });
 }
 
@@ -252,18 +265,19 @@ function descargarBuffer(buffer, nombreArchivo) {
 // UTILIDADES
 // ---------------------------------------------------------------------------
 
-function construirFila(r) {
+function construirFila(r, meta) {
+    if (meta.origen === 'etapa4') {
+        return [
+            r.cod, r.nombres, r.doc, r.sucursal, etiquetaTipo(r.tipo),
+            r.dj_subido ? 'SI' : 'NO',
+            calcularEstado(r, meta), formatearFecha(r.ultima_actualizacion),
+        ];
+    }
+
     return [
-        r.cod,
-        r.nombres,
-        r.doc,
-        r.sucursal,
-        etiquetaTipo(r.tipo),
-        r.dj_subido          ? 'SI' : 'NO',
-        r.firma_actualizada  ? 'SI' : 'NO',
-        r.huella_actualizada ? 'SI' : 'NO',
-        calcularEstado(r),
-        formatearFecha(r.ultima_actualizacion),
+        r.cod, r.nombres, r.doc, r.sucursal, etiquetaTipo(r.tipo),
+        r.dj_subido ? 'SI' : 'NO', r.firma_actualizada ? 'SI' : 'NO', r.huella_actualizada ? 'SI' : 'NO',
+        calcularEstado(r, meta), formatearFecha(r.ultima_actualizacion),
     ];
 }
 
@@ -279,7 +293,10 @@ function etiquetaTipo(tipo) {
     return mapa[tipo] ?? tipo;
 }
 
-function calcularEstado(registro) {
+function calcularEstado(registro, meta) {
+    if (meta.origen === 'etapa4') {
+        return registro.dj_subido ? 'COMPLETO' : 'INCOMPLETO';
+    }
     const completo = registro.dj_subido && registro.firma_actualizada && registro.huella_actualizada;
     return completo ? 'COMPLETO' : 'INCOMPLETO';
 }
