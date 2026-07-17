@@ -98,18 +98,15 @@
 
             <div class="px-8 pt-8 pb-6">
 
-                {{-- Logo: agrega el src de tu imagen aquí --}}
-                {{-- Ejemplo: src="{{ asset('images/logo.png') }}" --}}
-                <div class="flex justify-center mb-7">
-                    <img src="{{ asset('images/logo_sol.png') }}" alt="Logo" class="h-14 object-contain">
-                </div>
-
-                {{-- Título --}}
-                <div class="text-center mb-7">
-                    <h1 class="text-xl font-bold tracking-tight" style="color: #0a1628;">
-                        Iniciar Sesión
-                    </h1>
-                    <p class="text-xs text-gray-400 mt-1">Ingresa tus credenciales para continuar</p>
+                {{-- Header de Marca: Logo y Título SISOL --}}
+                <div class="flex flex-col items-center justify-center mb-8">
+                    <div class="flex items-center justify-center gap-5 mb-3">
+                        <img src="{{ asset('images/logo_sol.png') }}" alt="Sol Security" class="h-[54px] w-auto object-contain">
+                        <h1 class="text-[52px] font-black tracking-tighter" style="color: #0a1628; line-height: 0.9;">
+                            SISOL
+                        </h1>
+                    </div>
+                    <p class="text-[13px] text-slate-400 font-medium tracking-wide">Ingresa tus credenciales para continuar</p>
                 </div>
 
                 {{-- Error de sesión --}}

@@ -191,6 +191,21 @@ class FileController extends Controller
         }
     }
 
+    public function getPersonalLegajosPdf(Request $request)
+    {
+        try {
+            $codSucursal = $request->input('codSucursal', '0');
+            $vigencia    = $request->input('vigencia', 'SI');
+
+            $allPersonal = FileControl::getPersonalLegajosPdf($codSucursal, $vigencia);
+            return response()->json(array_values($allPersonal));
+        } catch (\Exception $e) {
+            Log::error('Error en getPersonalLegajosPdf: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+
+
     public function ViewEscaneoDJ()
     {
         $sucursales = FileControl::getSucursales();
@@ -394,35 +409,56 @@ class FileController extends Controller
     public function getFoliosXPersonas(Request $request)
     {
         $personas = $request->personas;
-        $folios = $request->folios;
+        $folios   = $request->folios;
         $resultados = [];
-        //Averiguando la sucursal de la persona
 
         foreach ($personas as $persona) {
-            $sucursal = FileControl::getSucursalXPersona($persona['CODI_PERS']);
-            foreach ($folios as $folio) {
-                $datosFolioPersona = FileControl::getFoliosInfoPersona($persona['CODI_PERS'], $folio['codigo']);
-                foreach ($datosFolioPersona as $dato) {
+            try {
+                $sucursal = FileControl::getSucursalXPersona($persona['CODI_PERS']);
+                $tieneDocumentos = false;
+
+                foreach ($folios as $folio) {
+                    try {
+                        $datosFolioPersona = FileControl::getFoliosInfoPersona($persona['CODI_PERS'], $folio['codigo']);
+                        foreach ($datosFolioPersona as $dato) {
+                            $tieneDocumentos = true;
+                            $resultados[] = [
+                                'persona'     => $dato->personal       ?? ($persona['personal'] ?? null),
+                                'nroDoc'      => $dato->nroDoc         ?? ($persona['nroDoc']   ?? null),
+                                'codPersonal' => $persona['CODI_PERS'],
+                                'folio'       => $folio['nombre'],
+                                'sucursal'    => $sucursal             ?? ($persona['sucursal'] ?? null),
+                                'ruta'        => $dato->ruta_archivo   ?? null,
+                                'ancho'       => $dato->ancho          ?? null,
+                                'hojas'       => $dato->cantidad_hojas ?? null,
+                                'documento'   => $dato->documento      ?? null,
+                                'cargo'       => $dato->cargo          ?? null,
+                                'es_formato'  => $dato->es_formato     ?? null,
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Folio {$folio['codigo']} - persona {$persona['CODI_PERS']}: " . $e->getMessage());
+                    }
+                }
+
+                // Sin documentos → entrada mínima para que siempre aparezca la carátula
+                if (!$tieneDocumentos) {
                     $resultados[] = [
-                        //'persona' => $persona['personal'],
-                        'persona' => $dato->personal ?? null,
-                        'nroDoc' => $dato->nroDoc ?? null,
+                        'persona'     => $persona['personal'] ?? null,
+                        'nroDoc'      => $persona['nroDoc']   ?? null,
                         'codPersonal' => $persona['CODI_PERS'],
-                        'folio' => $folio['nombre'],
-                        'sucursal' => $sucursal,
-                        'ruta' => $dato->ruta_archivo ?? null,
-                        'ancho' => $dato->ancho ?? null,
-                        'hojas' => $dato->cantidad_hojas ?? null,
-                        'documento' => $dato->documento ?? null,
-                        'cargo' => $dato->cargo ?? null,
-                        'es_formato' => $dato->es_formato ?? null,
+                        'folio'       => null,
+                        'sucursal'    => $sucursal ?? ($persona['sucursal'] ?? null),
+                        'ruta'        => null,
+                        'ancho'       => null,
+                        'hojas'       => null,
+                        'documento'   => null,
+                        'cargo'       => null,
+                        'es_formato'  => null,
                     ];
                 }
-                /*$resultados[] = [
-                    'persona' => $persona['personal'],
-                    'folio' => $folio['nombre'],
-                    'ruta' => $datosFolioPersona[0]->ruta_archivo ?? null,
-                ];*/
+            } catch (\Exception $e) {
+                Log::error("Error persona {$persona['CODI_PERS']}: " . $e->getMessage());
             }
         }
 
@@ -431,29 +467,53 @@ class FileController extends Controller
 
     public function getFoliosXPersona_uno(Request $request)
     {
-        $persona = $request->input('codPersona');
-        $folios = $request->folios;
-        $resultados = [];
+        $codPersona  = $request->input('codPersona');
+        $personaData = $request->input('persona', []);
+        $folios      = $request->folios;
+        $resultados  = [];
 
-        $sucursal = FileControl::getSucursalXPersona($persona);
+        $sucursal = FileControl::getSucursalXPersona($codPersona);
+        $tieneDocumentos = false;
 
         foreach ($folios as $folio) {
-            $datosFolioPersona = FileControl::getFoliosInfoPersona($persona, $folio['codigo']);
-            foreach ($datosFolioPersona as $dato) {
-                $resultados[] = [
-                    'persona' => $dato->personal ?? null,
-                    'nroDoc' => $dato->nroDoc ?? null,
-                    'codPersonal' => $persona,
-                    'folio' => $folio['nombre'],
-                    'sucursal' => $sucursal,
-                    'ruta' => $dato->ruta_archivo ?? null,
-                    'ancho' => $dato->ancho ?? null,
-                    'hojas' => $dato->cantidad_hojas ?? null,
-                    'documento' => $dato->documento ?? null,
-                    'cargo' => $dato->cargo ?? null,
-                    'es_formato' => $dato->es_formato ?? null,
-                ];
+            try {
+                $datosFolioPersona = FileControl::getFoliosInfoPersona($codPersona, $folio['codigo']);
+                foreach ($datosFolioPersona as $dato) {
+                    $tieneDocumentos = true;
+                    $resultados[] = [
+                        'persona'     => $dato->personal       ?? ($personaData['personal'] ?? null),
+                        'nroDoc'      => $dato->nroDoc         ?? ($personaData['nroDoc']   ?? null),
+                        'codPersonal' => $codPersona,
+                        'folio'       => $folio['nombre'],
+                        'sucursal'    => $sucursal             ?? ($personaData['sucursal'] ?? null),
+                        'ruta'        => $dato->ruta_archivo   ?? null,
+                        'ancho'       => $dato->ancho          ?? null,
+                        'hojas'       => $dato->cantidad_hojas ?? null,
+                        'documento'   => $dato->documento      ?? null,
+                        'cargo'       => $dato->cargo          ?? null,
+                        'es_formato'  => $dato->es_formato     ?? null,
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::warning("Folio {$folio['codigo']} - persona {$codPersona}: " . $e->getMessage());
             }
+        }
+
+        // Sin documentos → entrada mínima para que siempre aparezca la carátula
+        if (!$tieneDocumentos) {
+            $resultados[] = [
+                'persona'     => $personaData['personal'] ?? null,
+                'nroDoc'      => $personaData['nroDoc']   ?? null,
+                'codPersonal' => $codPersona,
+                'folio'       => null,
+                'sucursal'    => $sucursal ?? ($personaData['sucursal'] ?? null),
+                'ruta'        => null,
+                'ancho'       => null,
+                'hojas'       => null,
+                'documento'   => null,
+                'cargo'       => null,
+                'es_formato'  => null,
+            ];
         }
 
         return response()->json($resultados);
@@ -578,27 +638,29 @@ class FileController extends Controller
 
     public function generarPDF(Request $request)
     {
-        $resultados = $request->input('resultados');
-        //dd($resultados);
-        //exit;
+        set_time_limit(0);
+        $resultados  = $request->input('resultados');
+        $sinCaratula = (bool) $request->input('sinCaratula', false);
         //Agrupar los datos para mostrar en la carátula
         $unicos = [];
-
         $nombreNuevo = 'Reporte';
 
         foreach ($resultados as $item) {
-            $clave = $item['persona'].'|'.$item['sucursal'].'|'.$item['codPersonal'].'|'.$item['cargo'];
-            if (! isset($unicos[$clave])) {
+            $clave = $item['codPersonal'];
+            $nombreNuevo = $item['codPersonal'] . '_' . ($item['persona'] ?? '') . '_' . date('Ymd_Hi');
+
+            if (!isset($unicos[$clave])) {
                 $unicos[$clave] = [
-                    'persona' => $item['persona'],
+                    'persona'     => $item['persona'],
                     'codPersonal' => $item['codPersonal'],
-                    'sucursal' => $item['sucursal'],
-                    'cargo' => $item['cargo'],
+                    'sucursal'    => $item['sucursal'],
+                    'cargo'       => $item['cargo'],
                 ];
-
+            } else {
+                if (!empty($item['persona']))  $unicos[$clave]['persona']  = $item['persona'];
+                if (!empty($item['sucursal'])) $unicos[$clave]['sucursal'] = $item['sucursal'];
+                if (!empty($item['cargo']))    $unicos[$clave]['cargo']    = $item['cargo'];
             }
-
-            $nombreNuevo = $item['codPersonal'].'_'.$item['persona'].'_'.date('Ymd_Hi');
         }
 
         $personasUnicas = array_values($unicos);
@@ -624,44 +686,52 @@ class FileController extends Controller
             }
         }
 
-        $rutasLocales = PdfHelper::descargarImagenesLegajo($urls);
+        try {
+            $rutasLocales = PdfHelper::descargarImagenesLegajo($urls);
+        } catch (\Exception $e) {
+            Log::error('Error descargando imágenes legajo: ' . $e->getMessage());
+            $rutasLocales = [];
+        }
 
         $itemsFinales = [];
-        //Los que tienen imagen en ruta
+
         foreach ($rutasLocales as $item) {
             $itemsFinales[] = [
-                'es_formato' => $item['es_formato'],
+                'es_formato'  => $item['es_formato'],
                 'codPersonal' => $item['codPersonal'],
-                'ruta' => $item['ruta'],
-                'documento' => $item['documento'],
-                'hojas' => $item['hojas'],
-                'ancho' => $item['ancho'],
+                'ruta'        => $item['ruta'],
+                'documento'   => $item['documento'],
+                'hojas'       => $item['hojas'],
+                'ancho'       => $item['ancho'],
             ];
         }
 
-        // Los que deben renderizar una vista Blade porque son formatos (es_formato == 1)
         foreach ($resultados as $resultado) {
             if ($resultado['es_formato'] == 1) {
-                $itemsFinales[] = [
-                    'es_formato' => $resultado['es_formato'],
-                    'codPersonal' => $resultado['codPersonal'],
-                    'documento' => $resultado['documento'],
-                    'nombre_vista' => $this->obtenerNombreVista($resultado), // Función que defines
-                    'datos' => $resultado,
-                    'firma' => public_path('temp_legajos').'/FIRMAS/PERSONAL/'.$resultado['codPersonal'].'.jpg',
-                    'huella' => public_path('temp_legajos').'/HUELLAS_DIGITALES/PERSONAL/'.$resultado['codPersonal'].'.jpg',
-                ];
-                //Hacer la copia local de la FIRMA y HUELLA DIGITAL
-                $rutasLocalesFormato = ImagenHelper::descargarImagenesFormato($resultado['codPersonal']);
+                try {
+                    $itemsFinales[] = [
+                        'es_formato'   => $resultado['es_formato'],
+                        'codPersonal'  => $resultado['codPersonal'],
+                        'documento'    => $resultado['documento'],
+                        'nombre_vista' => $this->obtenerNombreVista($resultado),
+                        'datos'        => $resultado,
+                        'firma'        => public_path('temp_legajos') . '/FIRMAS/PERSONAL/'  . $resultado['codPersonal'] . '.jpg',
+                        'huella'       => public_path('temp_legajos') . '/HUELLAS_DIGITALES/PERSONAL/' . $resultado['codPersonal'] . '.jpg',
+                    ];
+                    ImagenHelper::descargarImagenesFormato($resultado['codPersonal']);
+                } catch (\Exception $e) {
+                    Log::warning('Error formato ' . ($resultado['documento'] ?? '') . ' - persona ' . $resultado['codPersonal'] . ': ' . $e->getMessage());
+                }
             }
         }
 
         //print_r($itemsFinales);
         $pdf = SnappyPdf::loadView('file_control.pdf.reporte', [
-            'personas' => $personasUnicas,
-            'resultados' => $resultados,
-            'imagenes' => $rutasLocales,
-            'items' => $itemsFinales,
+            'personas'    => $personasUnicas,
+            'resultados'  => $resultados,
+            'imagenes'    => $rutasLocales,
+            'items'       => $itemsFinales,
+            'sinCaratula' => $sinCaratula,
         ])->setOption('enable-local-file-access', true);
 
         return response()->streamDownload(function () use ($pdf) {

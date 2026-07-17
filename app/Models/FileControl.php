@@ -16,6 +16,15 @@ class FileControl extends Model
         return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL ?', [$sucursal]);
     }
 
+    public static function getPersonalLegajosPdf($codSucursal = '0', $vigencia = 'SI')
+    {
+        return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_LEGAJO_PDF ?, ?, ?', [
+            $codSucursal,
+            '01',
+            $vigencia,
+        ]);
+    }
+
     public static function getListaDJ()
     {
         return DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]');

@@ -132,137 +132,144 @@
 
 <body>
 
+@php $sinCaratula = $sinCaratula ?? false; @endphp
 
+@if(!$sinCaratula)
+    {{-- ===== CON CARÁTULA (comportamiento actual) ===== --}}
     @foreach ($personas as $pers)
-            @php
-                $documentosMostrados = [];
-            @endphp
-
-            {{-- <div class="container">
-                <img src="{{ public_path('images/gruposolmar/fondo_caratula.png') }}" class="fondo-pdf" alt="Fondo">
-
-                <div class="contenido_caratula ">
-                    <img class="logo_solmar" src="{{ public_path('images/gruposolmar/banner_security.png') }}" alt="LogoSolmar">
-
-                    <div class="datos_personal">
-                        <h1 id="title_caratula">FILE CONTROL</h1>
-                        <h2>MODULO DE LEGAJOS ELECTRONICOS</h2>
-                        <h3>SISOLMAR - SISTEMA INTEGRADO DE SOLMAR</h3>
-
-                        <img src="{{ public_path('images/gruposolmar/logo_5_normas.png') }}" alt="LogoSolmar"
-                            style="width: 105px;">
-
-                        <h2 class="info_personal"><i class="fa fa-user" aria-hidden="true"></i>{{ $pers['persona'] }}</h2>
-                        <h2 class="info_personal">SOLMAR {{ $pers['sucursal'] }}</h2>
-                        <h2 class="info_personal">{{ $pers['cargo'] }}</h2>
-                        <h2 class="info_personal">FILE ELECTRONICO N° {{ $pers['codPersonal'] }}</h2>
-                    </div>
-
-                    <div class="wrapper-aviso">
-                        <div class="aviso">
-                            <p>Este File Electrónico pertenece a la base de datos del SISOLMAR siendo la Jefe de RRHH la
-                                responsable de su custodia y actualización.</p>
-                            <p>No será impreso, salvo excepciones previamente autorizadas por la Jefe de RRHH</p>
-                            <p>Los datos personales de este file electrónico, están protegidos según lo estipulado en la Ley N°
-                                29733 - Ley de Portección de Datos Personales</p>
-                        </div>
-                    </div>
-                    <h3 class="fecha_emision">FECHA DE EMISION: {{ \Carbon\Carbon::now()->format('d/m/Y') }}</h3>
+        <div class="container">
+            <img src="{{ public_path('images/gruposolmar/caratula_legajo.jpg') }}" class="fondo-pdf" alt="Carátula">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;">
+                <div style="position: absolute; top: 48%; left: 31%; font-size: 22px; font-weight: bold; color: #000;">{{ $pers['persona'] }}</div>
+                <div style="position: absolute; top: 56%; left: 31%; font-size: 22px; font-weight: bold; color: #000;">{{ $pers['cargo'] }}</div>
+                <div style="position: absolute; top: 63%; left: 31%; font-size: 22px; font-weight: bold; color: #000;">{{ $pers['sucursal'] }}</div>
+                <div style="position: absolute; top: 70.5%; left: 31%; font-size: 22px; font-weight: bold; color: #000;">FILE N° {{ $pers['codPersonal'] }}</div>
+                <div style="position: absolute; top: 94.7%; left: 85%; font-size: 18px; font-weight: bold; color: #000;">
+                    {{ \Carbon\Carbon::now()->format('d/m/Y') }}
                 </div>
-            </div> --}}
+            </div>
+        </div>
+        <div style="page-break-after: always;"></div>
 
-              <div class="container">
-      <img src="{{ public_path('images/gruposolmar/caratula_legajo.jpg') }}" class="fondo-pdf"
-  alt="Carátula">
+        @php $documentosMostrados = []; @endphp
 
-      <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;">
-          <div style="position: absolute; top: 48%; left: 31%; font-size: 22px; font-weight: bold;
-  color: #000;">{{ $pers['persona'] }}</div>
-          <div style="position: absolute; top: 56%; left: 31%; font-size: 22px; font-weight: bold;
-  color: #000;">{{ $pers['cargo'] }}</div>
-          <div style="position: absolute; top: 63%; left: 31%; font-size: 22px; font-weight: bold;
-  color: #000;">{{ $pers['sucursal'] }}</div>
-          <div style="position: absolute; top: 70.5%; left: 31%; font-size: 22px; font-weight: bold;
-  color: #000;">FILE N° {{ $pers['codPersonal'] }}</div>
-
-           <div style="position: absolute; top: 94.7%; left: 85%; font-size: 18px; font-weight: bold;
-  color: #000;">
-              {{ \Carbon\Carbon::now()->format('d/m/Y') }}
-          </div>
-      </div>
-  </div>
-            <div style="page-break-after: always;"></div>
-
-
-
-            @php
-                $documentosMostrados = [];
-            @endphp
-
-            @foreach ($items as $index => $item)
-
-                @if ($item['codPersonal'] === $pers['codPersonal'])
-
-                    {{-- Si es imagen --}}
-                    @if ($item['es_formato'] === '0')
-                        {{-- Mostrar título del documento solo una vez --}}
-                        @if (!in_array($item['documento'], $documentosMostrados))
-                            <h4 style="text-align: center;">{{ $item['documento'] }}</h4>
-                            @php
-                                $documentosMostrados[] = $item['documento'];
-                            @endphp
-                        @endif
-
-                        <div class="pagina-imagen">
-                            <img src="{{ $item['ruta'] }}" alt="Imagen de {{ $item['documento'] }}"
-                                style="max-width: {{ $item['ancho'] }}; max-height: 1250px; display: block; margin: 0 auto; object-fit: contain; margin-bottom: 10px;">
-                        </div>
-
-                        {{-- Verificar si es la última imagen del documento para aplicar salto de página --}}
-                        @php
-                            $esUltimaImagen = true;
-                            for ($i = $index + 1; $i < count($items); $i++) {
-                                if (
-                                    $items[$i]['codPersonal'] === $pers['codPersonal'] &&
-                                    $items[$i]['documento'] === $item['documento'] &&
-                                    $items[$i]['es_formato'] === '0'
-                                ) {
-                                    $esUltimaImagen = false;
-                                    break;
-                                }
+        @foreach ($items as $index => $item)
+            @if ($item['codPersonal'] === $pers['codPersonal'])
+                @if ($item['es_formato'] === '0')
+                    @if (!in_array($item['documento'], $documentosMostrados))
+                        <h4 style="text-align: center;">{{ $item['documento'] }}</h4>
+                        @php $documentosMostrados[] = $item['documento']; @endphp
+                    @endif
+                    <div class="pagina-imagen">
+                        <img src="{{ $item['ruta'] }}" alt="Imagen de {{ $item['documento'] }}"
+                            style="max-width: {{ $item['ancho'] }}; max-height: 1250px; display: block; margin: 0 auto; object-fit: contain; margin-bottom: 10px;">
+                    </div>
+                    @php
+                        $esUltimaImagen = true;
+                        for ($i = $index + 1; $i < count($items); $i++) {
+                            if ($items[$i]['codPersonal'] === $pers['codPersonal'] && $items[$i]['documento'] === $item['documento'] && $items[$i]['es_formato'] === '0') {
+                                $esUltimaImagen = false;
+                                break;
                             }
-                        @endphp
-
-                        @if ($esUltimaImagen)
-                            <div style="page-break-after: always;"></div>
-                        @endif
-
-                        {{-- Si es formato --}}
-                    @elseif ($item['es_formato'] === '1')
-                        @php
-                            $vista = $item['nombre_vista'];
-                        @endphp
-
-                        @if (view()->exists($vista))
-                            @include($vista, ['datos' => $item['datos'], 'firma' => $item['firma'], 'huella' => $item['huella']])
-                        @else
-                            <p>Vista no encontrada para {{ $item['documento'] }}</p>
-                        @endif
-
-                        {{-- Como solo hay un formato por documento, aplicamos salto de página directamente --}}
+                        }
+                    @endphp
+                    @if ($esUltimaImagen)
                         <div style="page-break-after: always;"></div>
                     @endif
-
+                @elseif ($item['es_formato'] === '1')
+                    @php $vista = $item['nombre_vista']; @endphp
+                    @if (view()->exists($vista))
+                        @include($vista, ['datos' => $item['datos'], 'firma' => $item['firma'], 'huella' => $item['huella']])
+                    @else
+                        <p>Vista no encontrada para {{ $item['documento'] }}</p>
+                    @endif
+                    <div style="page-break-after: always;"></div>
                 @endif
+            @endif
+        @endforeach
 
-            @endforeach
-
-
-
-
-            <div style="page-break-after: always;"></div>
-
+        <div style="page-break-after: always;"></div>
     @endforeach
+
+@else
+    {{-- ===== SIN CARÁTULA: 2 personas por página, solo nombre + imagen ===== --}}
+    @php
+        $personasArr = $personas;
+        $totalPers    = count($personasArr);
+    @endphp
+
+    @for($pi = 0; $pi < $totalPers; $pi += 2)
+        @php
+            $p1 = $personasArr[$pi];
+            $p2 = $personasArr[$pi + 1] ?? null;
+
+            $imgs1 = array_values(array_filter($items, fn($x) =>
+                $x['codPersonal'] === $p1['codPersonal'] &&
+                ($x['es_formato'] ?? null) === '0' &&
+                !empty($x['ruta'])
+            ));
+            $fmts1 = array_values(array_filter($items, fn($x) =>
+                $x['codPersonal'] === $p1['codPersonal'] &&
+                ($x['es_formato'] ?? null) === '1'
+            ));
+
+            $imgs2 = $p2 ? array_values(array_filter($items, fn($x) =>
+                $x['codPersonal'] === $p2['codPersonal'] &&
+                ($x['es_formato'] ?? null) === '0' &&
+                !empty($x['ruta'])
+            )) : [];
+            $fmts2 = $p2 ? array_values(array_filter($items, fn($x) =>
+                $x['codPersonal'] === $p2['codPersonal'] &&
+                ($x['es_formato'] ?? null) === '1'
+            )) : [];
+        @endphp
+
+        {{-- Fila con 1 o 2 personas --}}
+        <div style="display: flex; gap: 16px; page-break-inside: avoid;">
+
+            <div style="flex: 0 0 48%; text-align: center;">
+                <p style="font-size: 12px; font-weight: bold; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; margin-bottom: 10px; color: #1e3a5f;">
+                    {{ $p1['persona'] }}
+                </p>
+                @foreach($imgs1 as $img)
+                    <img src="{{ $img['ruta'] }}" style="max-width: 100%; max-height: 380px; object-fit: contain; display: block; margin: 0 auto 6px;">
+                @endforeach
+            </div>
+
+            @if($p2)
+            <div style="flex: 0 0 48%; text-align: center;">
+                <p style="font-size: 12px; font-weight: bold; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; margin-bottom: 10px; color: #1e3a5f;">
+                    {{ $p2['persona'] }}
+                </p>
+                @foreach($imgs2 as $img)
+                    <img src="{{ $img['ruta'] }}" style="max-width: 100%; max-height: 380px; object-fit: contain; display: block; margin: 0 auto 6px;">
+                @endforeach
+            </div>
+            @endif
+
+        </div>
+        <div style="page-break-after: always;"></div>
+
+        {{-- Formatos de p1 (cada uno página completa) --}}
+        @foreach($fmts1 as $fmt)
+            @php $vista = $fmt['nombre_vista'] ?? null; @endphp
+            @if($vista && view()->exists($vista))
+                @include($vista, ['datos' => $fmt['datos'], 'firma' => $fmt['firma'], 'huella' => $fmt['huella']])
+                <div style="page-break-after: always;"></div>
+            @endif
+        @endforeach
+
+        {{-- Formatos de p2 (cada uno página completa) --}}
+        @foreach($fmts2 as $fmt)
+            @php $vista = $fmt['nombre_vista'] ?? null; @endphp
+            @if($vista && view()->exists($vista))
+                @include($vista, ['datos' => $fmt['datos'], 'firma' => $fmt['firma'], 'huella' => $fmt['huella']])
+                <div style="page-break-after: always;"></div>
+            @endif
+        @endforeach
+    @endfor
+
+@endif
 
 
 

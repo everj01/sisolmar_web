@@ -93,36 +93,49 @@
                 </button>
             </div>
 
-            <div class="w-full px-5 py-2 mt-3 flex justify-between items-center">
-                <input type="text" id="buscarPer" placeholder="Buscar..."
-                    class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm"
+            <div class="w-full px-5 py-2 mt-2">
+                <input type="text" id="buscarPer" placeholder="Buscar por nombre, documento o código..."
+                    class="w-full px-3 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm"
                     autocomplete="off" />
-                <div class="flex items-center space-x-2 w-80 justify-end">
-                    <label for="sucursales" class="text-default-800 text-sm font-medium">Sucursal</label>
-                    <select id="sucursal" class="form-select max-w-xs">
-                        <option disabled selected>-Seleccionar-</option>
-                        @foreach($sucursales as $sucursal)
-                            <option value="{{ $sucursal->abreviatura }}">{{ $sucursal->abreviatura }}</option>
-                        @endforeach
-                    </select>
-                </div>
             </div>
 
-            <div class="w-full px-5 py-1 flex items-center gap-4">
-                <span class="text-default-800 text-sm font-medium">Tipo:</span>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" name="tipoPerFiltro" id="radioPerTodos"
-                        value="TODOS" checked>
-                    <label class="ms-1.5 text-sm" for="radioPerTodos">Todos</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" name="tipoPerFiltro" id="radioPerOper" value="OPER">
-                    <label class="ms-1.5 text-sm" for="radioPerOper">Operativo</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" class="form-radio text-primary" name="tipoPerFiltro" id="radioPerAdmin"
-                        value="ADMIN">
-                    <label class="ms-1.5 text-sm" for="radioPerAdmin">Administrativo</label>
+            <div class="w-full px-5 pb-3">
+                <div class="flex flex-wrap items-center gap-5 bg-slate-50 p-4 rounded-lg border border-slate-200">
+
+                    {{-- Sucursal --}}
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                        <select id="sucursal" class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
+                            <option value="">Todas</option>
+                            @foreach(array_slice($sucursales, 1) as $sucursal)
+                                <option value="{{ $sucursal->abreviatura }}">{{ $sucursal->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Tipo --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                        <select id="tipoPerFiltro" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
+                            <option value="TODOS" selected>Todos</option>
+                            <option value="OPERATIVO 4°">Operativo 4°</option>
+                            <option value="OPERATIVO 5°">Operativo 5°</option>
+                            <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                            <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                            <option value="ESPECIALES">Especiales</option>
+                        </select>
+                    </div>
+
+                    {{-- Vigencia --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label class="text-sm font-medium text-gray-700">Vigencia:</label>
+                        <select id="filtroVigenciaLeg" class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
+                            <option value="00">TODOS</option>
+                            <option value="SI" selected>SI</option>
+                            <option value="NO">NO</option>
+                        </select>
+                    </div>
+
                 </div>
             </div>
 
@@ -140,18 +153,22 @@
                 <h4 class="card-title">Listado de FOLIOS</h4>
             </div>
 
-            <div class="w-full px-5 py-2 mt-3 flex justify-between items-center">
-                <input type="text" id="buscarFol" placeholder="Buscar..."
-                    class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm"
-                    autocomplete="off" />
-
+            <div class="w-full px-5 py-3 mt-2">
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Buscar:</label>
+                        <input type="text" id="buscarFol" placeholder="Buscar folio..."
+                            class="px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition-all text-sm bg-white"
+                            autocomplete="off" style="min-width: 160px;" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="select-all-fol" class="text-sm font-medium text-gray-700">Todos</label>
+                        <input type="checkbox" id="select-all-fol" class="form-checkbox rounded text-dark">
+                    </div>
+                </div>
             </div>
 
-            <div class="w-full px-5 py-2 mt-3">
-                <div class="flex justify-end items-center space-x-2">
-                    <label for="select-all">TODOS</label>
-                    <input type="checkbox" id="select-all-fol" class="form-checkbox rounded text-dark">
-                </div>
+            <div class="w-full px-5 py-2 mt-1">
                 <div id="tblFolios" class="w-full mt-5"></div>
             </div>
         </div>
@@ -161,46 +178,60 @@
                 <h4 class="card-title">Selección de LEGAJOS</h4>
             </div>
 
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-3">
-                    <div>
-                        <label for="clientes" class="text-default-800 text-sm font-medium inline-block mb-2">Cliente</label>
-                        <select id="clientes" class="tom-select w-full">
-                            <option disabled selected>-Seleccionar-</option>
-                            @foreach($clientes as $cliente)
-                                <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div id="divCargos" class="hidden">
-                        <label for="cargos" class="text-default-800 text-sm font-medium inline-block mb-2">Cargo</label>
-                        <select id="cargos" class="tom-select w-full">
-                            <option value="">Seleccionar...</option>
-                            @foreach($cargos as $cargo)
-                                <option value="{{ $cargo->codigo }}">{{ $cargo->nombre }}</option>
-                            @endforeach
-                        </select>
+            <div class="w-full px-5 py-3 mt-2">
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="clientes" class="text-sm font-medium text-gray-700 block mb-1.5">Cliente</label>
+                            <select id="clientes" class="tom-select w-full">
+                                <option disabled selected>-Seleccionar-</option>
+                                @foreach($clientes as $cliente)
+                                    <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div id="divCargos" class="hidden">
+                            <label for="cargos" class="text-sm font-medium text-gray-700 block mb-1.5">Cargo</label>
+                            <select id="cargos" class="tom-select w-full">
+                                <option value="">Seleccionar...</option>
+                                @foreach($cargos as $cargo)
+                                    <option value="{{ $cargo->codigo }}">{{ $cargo->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="w-full px-5 py-2 mt-3">
-                <div id="tblLegajos" class="w-full mt-5 hidden"></div>
+                <div id="legajosSelectAllDiv" class="hidden flex justify-end items-center space-x-2 mb-1">
+                    <label for="select-all-leg" class="text-sm">TODOS</label>
+                    <input type="checkbox" id="select-all-leg" class="form-checkbox rounded text-dark" checked>
+                </div>
+                <div id="tblLegajos" class="w-full mt-2 hidden"></div>
             </div>
         </div>
     </div>
 
     <div class="fixed bottom-0 left-0 right-0 bg-gray-800 py-4 flex justify-center items-center gap-4">
+        {{-- Checkbox Sin carátula --}}
+        <div id="chkSinCaratulaDiv" class="hidden flex items-center gap-2 border border-gray-600 rounded-lg px-4 py-1.5">
+            <label class="text-white text-sm flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="chkSinCaratula" class="form-checkbox rounded text-cyan-400 h-3.5 w-3.5">
+                <span>Sin carátula</span>
+            </label>
+        </div>
+
         <div id="modoGenerarDiv" class="hidden flex items-center gap-3 border border-gray-600 rounded-lg px-4 py-1.5">
             <span class="text-gray-300 text-sm font-medium">Modo:</span>
             <label class="text-white text-sm flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" name="modoGenerar" value="separado" checked
+                <input type="radio" name="modoGenerar" value="unico" checked
                     class="form-radio text-cyan-400 h-3.5 w-3.5">
-                Separados
-            </label>
-            <label class="text-white text-sm flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" name="modoGenerar" value="unico" class="form-radio text-cyan-400 h-3.5 w-3.5">
                 Un solo PDF
+            </label>
+            <label class="text-sm flex items-center gap-1.5 cursor-pointer" id="labelSeparado" style="opacity:0.4">
+                <input type="radio" name="modoGenerar" value="separado" id="radioSeparado" disabled class="form-radio text-cyan-400 h-3.5 w-3.5">
+                <span class="text-white">Separados</span>
             </label>
         </div>
         <button id="btnLeg1"
