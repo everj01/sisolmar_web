@@ -55,6 +55,7 @@ class RoutingController extends Controller
             'dj' => [
                 'gestion_dj' => [FileController::class, 'indexGestionDj'],
                 'actualizar_dj' => [FileController::class, 'indexActualizarDj'],
+                'reporte_personal' => [FileController::class, 'indexReportePersonal'],
             ],
             'file_control' => [
                 'chargefile' => [FileController::class, 'index'],

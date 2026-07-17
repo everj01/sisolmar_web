@@ -64,6 +64,19 @@ class FileController extends Controller
     }
 
 
+     public function indexReportePersonal()
+    {
+        $sucursales = FileControl::getSucursales();
+
+        $tipoPerLimitar = session('limitarTipoPer');
+        $tipoUsuario = session('tipo_rol');
+        $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
+        $esAdmin = in_array($tipoUsuario, [5, 11]);
+
+        return view('file_control.reporte_personal', compact('sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin'));
+    }
+
+
     public function ViewReportes()
       {
           $clientes = FileControl::getClientes();
@@ -366,6 +379,67 @@ class FileController extends Controller
             'data' => $data,
             'last_page' => ceil($total / $size),
             'total' => (int) $total,
+        ]);
+    }
+
+    public function getPersonalReportePersonal(Request $request)
+    {
+        $page        = (int) $request->get('page', 1);
+        $size        = (int) $request->get('size', 20);
+        $search      = trim((string) $request->get('search', ''));
+        $tipo_per    = $request->get('tipo_per', null);
+        $vigencia    = $request->get('vigencia', null);   // 'SI', 'NO', o null = TODOS
+        $codSucursal = $request->get('codSucursal', '0');
+        $usuario     = session('usuario') ?? '0';
+
+        // Traer datos usando el mismo SP que gestion_dj (campos: vigencia, tipoPer, codPersonal, dni, sucursal, apellido1, apellido2, NOMB_1, NOMB_2...)
+        if ($vigencia) {
+            $data = DB::select(
+                'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?',
+                [$usuario, $vigencia]
+            );
+        } else {
+            // TODOS: llamar dos veces y combinar
+            $activos  = DB::select('EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?', [$usuario, 'SI']);
+            $cesados  = DB::select('EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?', [$usuario, 'NO']);
+            $data     = array_merge($activos, $cesados);
+        }
+
+        // Filtrar por sucursal (PHP-side)
+        if ($codSucursal && $codSucursal !== '0') {
+            $data = array_values(array_filter($data, fn($d) =>
+                strtolower(trim($d->sucursal ?? '')) === strtolower(trim($codSucursal))
+            ));
+        }
+
+        // Filtrar por tipo de personal (PHP-side)
+        if ($tipo_per) {
+            $data = array_values(array_filter($data, fn($d) =>
+                trim($d->tipoPer ?? '') === trim($tipo_per)
+            ));
+        }
+
+        // Filtrar por búsqueda de texto (PHP-side)
+        if ($search !== '') {
+            $s = strtolower($search);
+            $data = array_values(array_filter($data, fn($d) =>
+                str_contains(strtolower($d->apellido1  ?? ''), $s) ||
+                str_contains(strtolower($d->apellido2  ?? ''), $s) ||
+                str_contains(strtolower($d->NOMB_1     ?? ''), $s) ||
+                str_contains(strtolower($d->NOMB_2     ?? ''), $s) ||
+                str_contains(strtolower($d->dni        ?? ''), $s) ||
+                str_contains(strtolower($d->codPersonal ?? ''), $s)
+            ));
+        }
+
+        $total  = count($data);
+        $offset = ($page - 1) * $size;
+        $paged  = array_slice($data, $offset, $size);
+
+        return response()->json([
+            'data'      => array_values($paged),
+            'last_page' => max(1, (int) ceil($total / $size)),
+            'total'     => $total,
         ]);
     }
 

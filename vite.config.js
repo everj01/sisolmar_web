@@ -56,6 +56,7 @@ export default defineConfig({
                 'resources/js/functions/legajo.js',
                 'resources/js/functions/legajo_comercial.js',
                 'resources/js/functions/legajos_pdf.js',
+                'resources/js/functions/reporte_personal.js',
                 'resources/js/functions/search_legajos.js',
 
 
