@@ -13,10 +13,33 @@
     <div class="card overflow-hidden">
 
         <div class="card-header flex items-center justify-between">
-            <h4 class="card-title">Listado de Personal</h4>
-            <div class="flex items-center gap-1.5 text-sm text-default-500">
-                <span id="cntTotal" class="font-semibold text-default-700">0</span>
-                <span>registros</span>
+            <div class="flex items-center gap-3">
+                <h4 class="card-title">Listado de Personal</h4>
+                <div id="repLoadingIndicator" class="hidden items-center gap-1.5 text-xs text-gray-400">
+                    <svg class="animate-spin w-3.5 h-3.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    Actualizando...
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[80px]">
+                    <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                    <span id="cntTotal" class="text-lg font-bold text-blue-700">0</span>
+                </div>
+                <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[80px]">
+                    <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
+                    <span id="cntVigentes" class="text-lg font-bold text-green-700">0</span>
+                </div>
+                <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[80px]">
+                    <span class="block text-[9px] text-red-600 font-bold uppercase">Cesados</span>
+                    <span id="cntCesados" class="text-lg font-bold text-red-700">0</span>
+                </div>
+                <div class="bg-neutral-100 px-3 py-2 rounded-lg border border-neutral-300 text-center min-w-[80px]">
+                    <span class="block text-[9px] text-neutral-500 font-bold uppercase">Lista Negra</span>
+                    <span id="cntListaNegra" class="text-lg font-bold text-neutral-800">0</span>
+                </div>
             </div>
         </div>
 
@@ -32,13 +55,14 @@
         <div class="w-full px-5 py-2">
             <div class="flex flex-wrap items-center gap-5 bg-slate-50 p-4 rounded-lg border border-slate-200">
 
+
                 {{-- Sucursal --}}
                 <div class="flex items-center gap-2">
                     <label class="text-sm font-medium text-gray-700">Sucursal:</label>
                     <select id="filtroSucursal" class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
                         <option value="">Todas</option>
                         @foreach(array_slice($sucursales, 1) as $suc)
-                            <option value="{{ $suc->abreviatura }}">{{ $suc->abreviatura }}</option>
+                            <option value="{{ $suc->codigo }}">{{ $suc->abreviatura }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -76,6 +100,18 @@
                     </select>
                 </div>
 
+                {{-- Botones exportar --}}
+                <div class="ml-auto flex items-center gap-2">
+                    <button id="btnExportExcelRep" title="Exportar Excel"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-300 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors">
+                        <i class='bx bx-file text-base'></i> Excel
+                    </button>
+                    <button id="btnExportPdfRep" title="Exportar PDF"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors">
+                        <i class='bx bxs-file-pdf text-base'></i> PDF
+                    </button>
+                </div>
+
             </div>
         </div>
 
@@ -100,27 +136,96 @@
 
 {{-- Modal: Ver detalles --}}
 <div id="modalDetallePersonal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-        <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 flex flex-col max-h-[90vh]">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <i class='bx bx-user text-primary text-xl'></i>
                 </div>
                 <div>
-                    <h5 class="text-base font-semibold text-default-800" id="modalDetalleTitulo">Detalle de Personal</h5>
-                    <p class="text-xs text-default-400" id="modalDetalleCodigo"></p>
+                    <div class="flex items-center gap-2">
+                        <h5 class="text-base font-bold text-gray-900 tracking-tight" id="modalDetalleTitulo">Detalle de Personal</h5>
+                        <span id="modalVigenciaBadge" class="hidden"></span>
+                    </div>
+                    <p class="text-xs text-gray-500 font-semibold" id="modalDetalleCodigo"></p>
                 </div>
             </div>
-            <button id="btnCerrarModalDetalle" class="text-default-400 hover:text-default-600">
+            <button id="btnCerrarModalDetalle" class="text-gray-400 hover:text-gray-600 transition-colors">
                 <i class='bx bx-x text-2xl'></i>
             </button>
         </div>
-        <div class="p-6 overflow-y-auto flex-1">
-            <div class="flex flex-col items-center justify-center gap-2 py-10 text-default-400">
-                <i class='bx bx-time-five text-4xl'></i>
-                <p class="text-sm">Detalle en construcción</p>
+
+        {{-- Body --}}
+        <div class="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+
+            {{-- Sección 1: Información del personal --}}
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Información del Personal</p>
+                <div class="flex gap-4">
+                    {{-- Foto --}}
+                    <div class="flex-shrink-0">
+                        <div class="w-24 h-28 rounded-lg border border-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <img id="modalFotoPersonal" src="" alt="Foto"
+                                class="w-full h-full object-cover hidden"
+                                onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');" />
+                            <div id="modalFotoPlaceholder" class="flex flex-col items-center justify-center text-gray-300 gap-1">
+                                <i class='bx bx-user text-4xl'></i>
+                                <span class="text-[10px]">Sin foto</span>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Campos --}}
+                    <div id="modalInfoPersonal" class="grid grid-cols-2 md:grid-cols-3 gap-3 flex-1"></div>
+                </div>
             </div>
+
+            {{-- Sección 2: Historial de ceses --}}
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Historial de Ingresos / Ceses</p>
+                <div id="modalHistorialCeses">
+                    <div class="flex items-center justify-center gap-2 py-6 text-gray-400 text-sm">
+                        <i class='bx bx-loader-alt bx-spin'></i> Cargando...
+                    </div>
+                </div>
+            </div>
+
+            {{-- Sección 3: Historial de tareajes --}}
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Historial de Tareajes</p>
+                <div id="modalHistorialTareajes">
+                    <div class="flex items-center justify-center gap-2 py-6 text-gray-400 text-sm">
+                        <i class='bx bx-loader-alt bx-spin'></i> Cargando...
+                    </div>
+                </div>
+            </div>
+
+            {{-- Sección 4: Lista negra --}}
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Lista Negra</p>
+                <div id="modalHistorialListaNegra">
+                    <div class="flex items-center justify-center gap-2 py-6 text-gray-400 text-sm">
+                        <i class='bx bx-loader-alt bx-spin'></i> Cargando...
+                    </div>
+                </div>
+            </div>
+
         </div>
+
+        {{-- Footer modal --}}
+        <div class="flex items-center justify-end gap-2 px-6 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50 rounded-b-xl">
+            <span class="text-xs text-gray-400 mr-auto">Exportar ficha individual</span>
+            <button id="btnExportDetalleExcel"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-300 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors">
+                <i class='bx bx-file text-base'></i> Excel
+            </button>
+            <button id="btnExportDetallePdf"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors">
+                <i class='bx bxs-file-pdf text-base'></i> PDF
+            </button>
+        </div>
+
     </div>
 </div>
 
@@ -128,4 +233,9 @@
 
 @vite(['resources/js/functions/reporte_personal.js'])
 @section('script')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        window.logoUrl = "{{ asset('images/logo_sol.png') }}";
+    </script>
 @endsection

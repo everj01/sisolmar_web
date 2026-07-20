@@ -384,6 +384,8 @@ class FileController extends Controller
 
     public function getPersonalReportePersonal(Request $request)
     {
+        session()->save(); // libera el lock de sesión para no bloquear otras requests
+
         $page        = (int) $request->get('page', 1);
         $size        = (int) $request->get('size', 20);
         $search      = trim((string) $request->get('search', ''));
@@ -392,54 +394,144 @@ class FileController extends Controller
         $codSucursal = $request->get('codSucursal', '0');
         $usuario     = session('usuario') ?? '0';
 
-        // Traer datos usando el mismo SP que gestion_dj (campos: vigencia, tipoPer, codPersonal, dni, sucursal, apellido1, apellido2, NOMB_1, NOMB_2...)
-        if ($vigencia) {
-            $data = DB::select(
-                'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?',
-                [$usuario, $vigencia]
-            );
+        $isTodos        = !$vigencia;
+        $needsPhpFilter = $search !== '' || $tipo_per;
+
+        // Helper: llama el SP con todos sus parámetros
+        $exec = fn($vig, $pag, $fils) => DB::select(
+            'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026]
+                @usuario=?, @codEmpresa=?, @vigencia=?, @codSucursal=?, @pagina=?, @filasPorPag=?',
+            [$usuario, '01', $vig, $codSucursal, $pag, $fils]
+        );
+
+        // ── Cards: solo responden a sucursal + tipo_per (sin vigencia ni búsqueda) ──
+        if (!$tipo_per) {
+            // Sin tipo_per: SP da el total con una sola fila (ligero)
+            $cVI = $exec('SI', 1, 1);
+            $cNO = $exec('NO', 1, 1);
+            $totalVigentes = !empty($cVI) ? (int) $cVI[0]->totalRegistros : 0;
+            $totalCesados  = !empty($cNO) ? (int) $cNO[0]->totalRegistros : 0;
+            $allVI = null; $allNO = null;
         } else {
-            // TODOS: llamar dos veces y combinar
-            $activos  = DB::select('EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?', [$usuario, 'SI']);
-            $cesados  = DB::select('EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?', [$usuario, 'NO']);
-            $data     = array_merge($activos, $cesados);
+            // Con tipo_per: traer todo y contar en PHP (los datos se reusan abajo)
+            $allVI = $exec('SI', 1, 99999);
+            $allNO = $exec('NO', 1, 99999);
+            $totalVigentes = count(array_filter($allVI, fn($d) => trim($d->tipoPer ?? '') === trim($tipo_per)));
+            $totalCesados  = count(array_filter($allNO, fn($d) => trim($d->tipoPer ?? '') === trim($tipo_per)));
         }
 
-        // Filtrar por sucursal (PHP-side)
-        if ($codSucursal && $codSucursal !== '0') {
-            $data = array_values(array_filter($data, fn($d) =>
-                strtolower(trim($d->sucursal ?? '')) === strtolower(trim($codSucursal))
-            ));
+        // ── Caso ideal: sin filtros PHP ni TODOS → SP pagina todo ──
+        if (!$isTodos && !$tipo_per && $search === '') {
+            $rows     = $exec($vigencia, $page, $size);
+            $total    = !empty($rows) ? (int) $rows[0]->totalRegistros : 0;
+            $lastPage = max(1, (int) ceil($total / $size));
+            return response()->json([
+                'data'          => $rows,
+                'last_page'     => $lastPage,
+                'total'         => $total,
+                'totalVigentes' => $totalVigentes,
+                'totalCesados'  => $totalCesados,
+            ]);
         }
 
-        // Filtrar por tipo de personal (PHP-side)
+        // ── Necesita filtro PHP: usar datos ya cargados o traerlos ──
+        if ($allVI === null) {
+            $allVI = $exec('SI', 1, 99999);
+            $allNO = $exec('NO', 1, 99999);
+        }
+
+        // Combinar según vigencia seleccionada
+        $data = match(true) {
+            $isTodos           => array_merge($allVI, $allNO),
+            $vigencia === 'SI' => $allVI,
+            default            => $allNO,
+        };
+
+        // Filtro tipo_per (PHP)
         if ($tipo_per) {
             $data = array_values(array_filter($data, fn($d) =>
                 trim($d->tipoPer ?? '') === trim($tipo_per)
             ));
         }
 
-        // Filtrar por búsqueda de texto (PHP-side)
+        // Filtro búsqueda (PHP — no afecta los cards)
         if ($search !== '') {
             $s = strtolower($search);
             $data = array_values(array_filter($data, fn($d) =>
-                str_contains(strtolower($d->apellido1  ?? ''), $s) ||
-                str_contains(strtolower($d->apellido2  ?? ''), $s) ||
-                str_contains(strtolower($d->NOMB_1     ?? ''), $s) ||
-                str_contains(strtolower($d->NOMB_2     ?? ''), $s) ||
-                str_contains(strtolower($d->dni        ?? ''), $s) ||
+                str_contains(strtolower($d->apellido1   ?? ''), $s) ||
+                str_contains(strtolower($d->apellido2   ?? ''), $s) ||
+                str_contains(strtolower($d->NOMB_1      ?? ''), $s) ||
+                str_contains(strtolower($d->NOMB_2      ?? ''), $s) ||
+                str_contains(strtolower($d->dni         ?? ''), $s) ||
                 str_contains(strtolower($d->codPersonal ?? ''), $s)
             ));
         }
 
-        $total  = count($data);
-        $offset = ($page - 1) * $size;
-        $paged  = array_slice($data, $offset, $size);
+        $total    = count($data);
+        $paged    = array_slice($data, ($page - 1) * $size, $size);
+        $lastPage = max(1, (int) ceil($total / $size));
 
         return response()->json([
-            'data'      => array_values($paged),
-            'last_page' => max(1, (int) ceil($total / $size)),
-            'total'     => $total,
+            'data'          => array_values($paged),
+            'last_page'     => $lastPage,
+            'total'         => $total,
+            'totalVigentes' => $totalVigentes,
+            'totalCesados'  => $totalCesados,
+        ]);
+    }
+
+    public function getDetallePersonalHistorial($codPersonal)
+    {
+        session()->save();
+
+        // Solo ceses normales (MOCE_TIPO = '01')
+        $ceses = DB::select("
+            SELECT TOP 200
+                CS.FEC_INGRESO,
+                CS.FEC_CESE,
+                CS.OBSE_CESE
+            FROM [si_solm].[dbo].[ADMI_CESE_PERSONAL] AS CS WITH (NOLOCK)
+            INNER JOIN [si_solm].[dbo].[MOTIVO_CESE]   AS M  WITH (NOLOCK)
+                ON M.MOCE_CODIGO = CS.MOCE_CODIGO
+            WHERE CS.CODI_PERS = ?
+              AND M.MOCE_TIPO  = '01'
+            ORDER BY CS.FEC_INGRESO DESC
+        ", [$codPersonal]);
+
+        $tareajes = DB::select("
+            SELECT DISTINCT TOP 200
+                CAB.ASCA_FECHA      AS fecha,
+                CL.PUCL_DESCRIPCION AS puesto,
+                CC.ABREVIATURA      AS cliente
+            FROM [si_solm].[dbo].[OPER_ASITENCIA_DET]        AS DET WITH (NOLOCK)
+            INNER JOIN [si_solm].[dbo].[OPER_ASISTENCIA_CAB]  AS CAB WITH (NOLOCK) ON CAB.ASCA_CODIGO  = DET.ASCA_CODIGO
+            INNER JOIN [si_solm].[dbo].[OPER_PUESTOV_CLIENTE] AS CL  WITH (NOLOCK) ON CL.PUCL_CODIGO   = DET.PUCL_CODIGO
+            INNER JOIN [si_solm].[dbo].[CLIENTE_PROVEEDOR]    AS CC  WITH (NOLOCK) ON CC.CODI_CLIE_PROV = CAB.CODI_CLIE_PROV
+            WHERE DET.CODI_PERS = ?
+              AND CAB.ASCA_FECHA >= DATEADD(YEAR, -2, GETDATE())
+            ORDER BY CAB.ASCA_FECHA DESC
+        ", [$codPersonal]);
+
+        // Lista negra (MOCE_TIPO <> '01')
+        $listaNegra = DB::select("
+            SELECT TOP 100
+                CS.FEC_CESE,
+                M.MOCE_DESCRIPCION AS motivo,
+                CS.OBSE_CESE
+            FROM [si_solm].[dbo].[ADMI_CESE_PERSONAL] AS CS WITH (NOLOCK)
+            INNER JOIN [si_solm].[dbo].[MOTIVO_CESE]   AS M  WITH (NOLOCK)
+                ON M.MOCE_CODIGO = CS.MOCE_CODIGO
+            WHERE CS.CODI_PERS  = ?
+              AND M.MOCE_TIPO  <> '01'
+              AND CS.ESTA_CESE  = '1'
+            ORDER BY CS.FEC_CESE DESC
+        ", [$codPersonal]);
+
+        return response()->json([
+            'success'     => true,
+            'ceses'       => $ceses,
+            'tareajes'    => $tareajes,
+            'lista_negra' => $listaNegra,
         ]);
     }
 

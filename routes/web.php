@@ -83,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-personal-total-reporte', [FileController::class, 'getPersonalTotalReporte']);
         Route::get('/get-personal-total-prueba', [FileController::class, 'getPersonalTotalPrueba']);
         Route::get('/get-personal-reporte-personal', [FileController::class, 'getPersonalReportePersonal']);
+        Route::get('/get-personal-reporte-personal/detalle/{codPersonal}', [FileController::class, 'getDetallePersonalHistorial']);
         Route::get('/get-personal-legajos', [FileController::class, 'getPersonalLegajos']);
         Route::get('/get-personal-legajos-pdf', [FileController::class, 'getPersonalLegajosPdf']);
 
