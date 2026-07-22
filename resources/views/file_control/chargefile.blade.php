@@ -11,109 +11,112 @@
 
     {{-- ── CARD: Listado de Personal ────────────────────────────────────── --}}
     <div class="card overflow-hidden">
-        <div class="card-header">
-            <div class="flex flex-row items-center justify-between w-full">
-                <h4 class="card-title">Listado de Personal</h4>
-                @if ($tipoUsuario == 5 || $tipoUsuario == 2)
-                    <button type="button"
-                            class="btn bg-info text-white"
-                            data-accion="abrir-reporte-avances">
-                        Reporte de avances
-                    </button>
-                @endif
+        <div class="card-header border-b border-gray-100 pb-4">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <h4 class="text-lg font-bold text-primary uppercase">Listado de Personal</h4>
+                    @if ($tipoUsuario == 5 || $tipoUsuario == 2)
+                        <button type="button"
+                                class="btn bg-info text-white btn-sm px-3 py-1.5 rounded-lg text-xs"
+                                data-accion="abrir-reporte-avances">
+                            Reporte de avances
+                        </button>
+                    @endif
+                </div>
+
+                {{-- Tarjetas de Indicadores --}}
+                <div class="flex gap-2">
+                    <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                        <span id="countTotal" class="text-lg font-bold text-blue-700">0</span>
+                    </div>
+                    <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
+                        <span id="countVigentes" class="text-lg font-bold text-green-700">0</span>
+                    </div>
+                    <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-red-600 font-bold uppercase">Cesados</span>
+                        <span id="countCesados" class="text-lg font-bold text-red-700">0</span>
+                    </div>
+                </div>
             </div>
-            
         </div>
 
         <div class="px-5 pt-4 pb-2 space-y-3">
 
-            {{-- Búsqueda + Sucursal --}}
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <input
-                    type="text"
-                    id="buscarPersonal"
-                    placeholder="Buscar..."
-                    autocomplete="off"
-                    class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
-                           focus:outline-none focus:border-blue-500 transition-colors"
-                />
-                <div class="flex items-center gap-2">
-                    <label for="sucursal" class="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        Sucursal
-                    </label>
-                    <select id="sucursal" class="form-select text-sm">
-                        <option disabled selected>— Seleccionar —</option>
-                        @foreach ($sucursales as $sucursal)
-                            <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            {{-- Caja unificada de Filtros (Estilo Actualizar DJ) --}}
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <div class="flex flex-wrap items-center gap-5">
+                    
+                    {{-- Búsqueda --}}
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="buscarPersonal"
+                            placeholder="Buscar por nombre o DNI..."
+                            autocomplete="off"
+                            class="w-48 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm uppercase" 
+                            style="min-width: 250px;"
+                        />
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <label for="filtroDJ" class="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        DJ actualizada
-                    </label>
-                    <select id="filtroDJ" class="form-select text-sm" name="filtroDJ">
-                        <option value="TODOS" selected>Todos</option>
-                        <option value="SI">Sí</option>
-                        <option value="NO">No</option>
-                    </select>
-                </div>
-            </div>
+                    {{-- Sucursal --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="sucursal" class="text-sm font-medium text-gray-700 whitespace-nowrap">Sucursal:</label>
+                        <select id="sucursal" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option disabled selected>— Seleccionar —</option>
+                            @foreach ($sucursales as $sucursal)
+                                <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-            {{-- Filtros: Tipo de personal + Vigencia en una sola fila --}}
-            <div class="flex flex-wrap items-center gap-x-6 gap-y-2 py-1 mt-2">
+                    {{-- Tipo --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="tipo_per" class="text-sm font-medium text-gray-700 whitespace-nowrap">Tipo:</label>
+                        <select id="tipo_per" name="tipo_per" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            @if ($tipoPerLimitar != 1 && $tipoPerLimitar != 2 && $tipoPerLimitar != 3 && $tipoPerLimitar == 0)
+                                <option value="TODOS" selected>Todos</option>
+                            @endif
 
-                {{-- Tipo de personal --}}
-                <div class="flex items-center gap-2">
-                    <label for="tipo_per" class="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                        Tipo
-                    </label>
-                    <select id="tipo_per" name="tipo_per" class="form-select text-sm w-48">
-                        @if ($tipoPerLimitar != 1 && $tipoPerLimitar != 2 && $tipoPerLimitar != 3 && $tipoPerLimitar == 0)
+                            @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
+                                <option value="ADMIN_4">Administrativo 4°</option>
+                                <option value="ADMIN_5">Administrativo 5°</option>
+                            @endif
+
+                            @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
+                                <option value="OPER_4">Operativo 4°</option>
+                                <option value="OPER_5">Operativo 5°</option>
+                            @endif
+
+                            @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
+                                <option value="ESPECIAL">Especiales</option>
+                            @endif
+                        </select>
+                    </div>
+
+                    {{-- DJ Actualizada (Estado) - OCULTO --}}
+                    <div class="hidden items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="filtroDJ" class="text-sm font-medium text-gray-700 whitespace-nowrap">DJ Actualizada:</label>
+                        <select id="filtroDJ" name="filtroDJ" class="form-select text-sm w-32 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
                             <option value="TODOS" selected>Todos</option>
-                        @endif
+                            <option value="SI">Sí</option>
+                            <option value="NO">No</option>
+                        </select>
+                    </div>
 
-                        @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
-                            <option value="ADMIN_4">Administrativo 4°</option>
-                            <option value="ADMIN_5">Administrativo 5°</option>
-                        @endif
-
-                        @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
-                            <option value="OPER_4">Operativo 4°</option>
-                            <option value="OPER_5">Operativo 5°</option>
-                        @endif
-
-                        @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
-                            <option value="ESPECIAL">Especiales</option>
-                        @endif
-                    </select>
-                </div>
-
-                {{-- Separador vertical --}}
-                <div class="hidden sm:block w-px h-5 bg-gray-300"></div>
-
-                {{-- Vigencia --}}
-                <div class="flex items-center gap-x-4 gap-y-1">
-                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Vigencia</span>
-
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioTodosV" name="vigencia" value="" checked>
-                        <span class="text-sm text-gray-700">Todos</span>
-                    </label>
-
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radiooSi" name="vigencia" value="SI">
-                        <span class="text-sm text-gray-700">Sí</span>
-                    </label>
-
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioNo" name="vigencia" value="NO">
-                        <span class="text-sm text-gray-700">No</span>
-                    </label>
+                    {{-- Vigencia --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="filtroVigencia" class="text-sm font-medium text-gray-700 whitespace-nowrap">Vigencia:</label>
+                        <select id="filtroVigencia" name="vigencia" class="form-select text-sm w-28 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option value="" selected>Todos</option>
+                            <option value="SI">Sí</option>
+                            <option value="NO">No</option>
+                        </select>
+                    </div>
+                    
                 </div>
             </div>
-
         {{-- Tabla de personas --}}
         <div class="px-5 pb-5">
             <div id="tblPersonas" class="w-full"></div>
@@ -155,14 +158,12 @@
                 
                 <div class="flex items-center gap-6">
                     <div class="flex items-center gap-4 border-r pr-4 border-gray-200">
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" class="form-radio text-primary" id="radioPrin" name="tipo_folio" value="PRINCIPAL" checked>
-                            <span class="text-sm">Principal</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" class="form-radio text-primary" id="radioAux" name="tipo_folio" value="ADICIONAL">
-                            <span class="text-sm">Adicional</span>
-                        </label>
+                        <label for="selectTipoFolio" class="text-sm font-medium text-gray-700 whitespace-nowrap">Prioridad:</label>
+                        <select id="selectTipoFolio" class="form-select text-sm py-1.5 w-36 border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500 cursor-pointer">
+                            <option value="TODOS">Todos</option>
+                            <option value="PRINCIPAL" selected>Principal</option>
+                            <option value="ADICIONAL">Adicional</option>
+                        </select>
                     </div>
                     <button type="button" id="btn-modal-folios-close"
                             class="text-gray-500 hover:text-gray-700 transition-colors"
@@ -256,7 +257,7 @@
             <h3 class="text-base font-medium text-gray-900 modal-title">Visor de documento</h3>
             <button type="button" id="btn-modal-view-docs-close"
                     class="text-gray-500 hover:text-gray-700 transition-colors"
-                    data-hs-overlay="#modal-view-docs">
+                    onclick="window.HSOverlay.close(document.getElementById('modal-view-docs')); setTimeout(() => { if(window.parentModalToReopen) window.HSOverlay.open(document.getElementById(window.parentModalToReopen)); }, 400);">
                 <i class="i-tabler-x text-lg"></i>
             </button>
         </div>
@@ -286,7 +287,7 @@
             <h3 class="text-base font-medium text-gray-900 modal-title">Cargar documento</h3>
             <button type="button" id="btn-modal-docs-close"
                     class="text-gray-500 hover:text-gray-700 transition-colors"
-                    data-hs-overlay="#modal-file">
+                    onclick="window.HSOverlay.close(document.getElementById('modal-file')); setTimeout(() => { if(window.parentModalToReopen) window.HSOverlay.open(document.getElementById(window.parentModalToReopen)); }, 400);">
                 <i class="i-tabler-x text-lg"></i>
             </button>
         </div>
@@ -358,7 +359,7 @@
                     <i class="i-tabler-check me-1"></i> Guardar
                 </button>
                 <button type="button" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        data-hs-overlay="#modal-file">
+                        onclick="window.HSOverlay.close(document.getElementById('modal-file')); setTimeout(() => { if(window.parentModalToReopen) window.HSOverlay.open(document.getElementById(window.parentModalToReopen)); }, 400);">
                     <i class="i-tabler-x me-1"></i> Cerrar
                 </button>
             </div>

@@ -14,10 +14,8 @@ let datosOriginales = null;
 
 function limpiarForm() {
     document.getElementById("txtMensajeNuevo").innerText = "Nuevo registro";
-    document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary/25 text-primary-800";
+    document.getElementById("txtMensajeNuevo").className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800";
     document.getElementById("btnRegistrarCargo").innerHTML = 'Guardar <i class="fa-solid fa-floppy-disk"></i>';
-    document.getElementById('soloEdicion').classList.remove("flex");
-    document.getElementById('soloEdicion').classList.add("hidden");
     document.getElementById('codigoEditar').value = '0';
 
     // Limpiar inputs y notificar a Alpine para que resetee sus bindings
@@ -87,12 +85,20 @@ const tblCargos = new Tabulator("#tblCargos", {
         { title: "Nombre", field: "nombre", hozAlign: "left", width: '40%' },
           { title: "Tipo", field: "tipo", hozAlign: "center", width: '18%',
               formatter: function(cell) {
-                  const val = cell.getValue();
-                  if (!val) return '';
-                  const cls = val === 'OPERATIVO'
-                      ? 'bg-info/20 text-info'
-                      : 'bg-primary/20 text-primary';
-                  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${cls}">${val}</span>`;
+                  let val = cell.getValue() || '';
+                  let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Default
+                  let texto = val;
+
+                  if (val === 'OPERATIVO') {
+                      color = 'border-blue-300 bg-blue-100 text-blue-800';
+                  } else if (val === 'ADMINISTRATIVO') {
+                      color = 'border-purple-300 bg-purple-100 text-purple-800';
+                  } else if (val === 'ESPECIAL') {
+                      color = 'border-orange-200 bg-orange-100 text-orange-800';
+                      texto = 'Especial'; // Ajustamos el texto para que coincida con la imagen
+                  }
+
+                  return texto ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${texto}</span>` : '';
               }
           },
           { title: "Área", field: "area", hozAlign: "center", width: '22%' },
@@ -128,8 +134,10 @@ const tblCargos = new Tabulator("#tblCargos", {
                             datosOriginales = { ...data };
                             if (data.cod_tipo == '1') {
                                 document.getElementById('opOperativo').checked = true;
-                            } else {
+                            } else if (data.cod_tipo == '2') {
                                 document.getElementById('opAdmins').checked = true;
+                            } else if (data.cod_tipo == '3') {
+                                document.getElementById('opEspecial').checked = true;
                             }
                             //Disparar el evento para mostrar/ocultar combos
                             document.querySelector('input[name="rdTipoCargo"]:checked')
@@ -156,10 +164,11 @@ const tblCargos = new Tabulator("#tblCargos", {
                                 document.getElementById('divSubservicios').classList.add('hidden');
                             }
                             document.getElementById("txtMensajeNuevo").innerText = "Editando registro";
-                            document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-red-100 text-red-800";
+                            document.getElementById("txtMensajeNuevo").className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800";
                             document.getElementById("btnRegistrarCargo").innerHTML = 'Guardar cambios <i class="fa-solid fa-floppy-disk"></i>';
-                            document.getElementById('soloEdicion').classList.remove("hidden");
-                            document.getElementById('soloEdicion').classList.add("flex");
+                            
+                            // Abrir el modal automáticamente
+                            document.getElementById('btn-modal-gestion').click();
                         })
                         .catch(error => {
                             console.error("Hubo un error:", error);
@@ -252,21 +261,24 @@ document.getElementById("page-size").addEventListener("change", function () {
   function aplicarTodosFiltrosCargo() {
       const filtros = [];
 
-      const tipo = document.querySelector('input[name="cargoFiltro"]:checked')?.value;
+      const tipo = document.getElementById('filtroTipo')?.value;
       if (tipo && tipo !== 'TODOS') {
           filtros.push({ field: 'tipo', type: '=', value: tipo });
       }
 
-      if (document.getElementById('chkEliminados').checked) {
+      const estado = document.getElementById('filtroEstado')?.value;
+      if (estado === '1') {
           filtros.push({ field: 'habilitado', type: '=', value: '1' });
+      } else if (estado === '0') {
+          filtros.push({ field: 'habilitado', type: '=', value: '0' });
       }
 
-      const area = document.getElementById('filtroArea').value;
+      const area = document.getElementById('filtroArea')?.value;
       if (area) {
           filtros.push({ field: 'area', type: '=', value: area });
       }
 
-      const buscar = document.getElementById('buscarCargo').value.toLowerCase().trim();
+      const buscar = document.getElementById('buscarCargo')?.value.toLowerCase().trim();
       if (buscar) {
           filtros.push([
               { field: 'nombre',      type: 'like', value: buscar },
@@ -282,15 +294,21 @@ document.getElementById("page-size").addEventListener("change", function () {
       }
   }
 
-  window.aplicarFiltroSoloActivos = () => aplicarTodosFiltrosCargo();
-  window.aplicarFiltroEliminarCargo = () => aplicarTodosFiltrosCargo();
+  // Nuevos Listeners de Filtros
+  document.getElementById('filtroTipo')?.addEventListener('change', aplicarTodosFiltrosCargo);
+  document.getElementById('filtroArea')?.addEventListener('change', aplicarTodosFiltrosCargo);
+  document.getElementById('filtroEstado')?.addEventListener('change', aplicarTodosFiltrosCargo);
 
-// Función para CANCELAR
+// Función para CANCELAR (limpia)
 document.getElementById("cancelButton").addEventListener("click", function () {
     limpiarForm();
 });
 
-document.querySelector('.clean-btn').addEventListener('click', limpiarForm);
+// Botón Nuevo Cargo: Limpia y abre el Modal
+document.getElementById('btnNuevoCargo')?.addEventListener('click', () => {
+    limpiarForm();
+    document.getElementById('btn-modal-gestion').click();
+});
 
 // Verificar nombre duplicado mientras escribe
 let checkNombreTimeout = null;
@@ -344,42 +362,41 @@ document.getElementById("buscarCargo").addEventListener("keyup", function () {
     ]);
 });
 
-// Función para actualizar la tabla con los filtros
-function filterTableByTipoCargo() {
-      aplicarTodosFiltrosCargo();
-  }
-
-  document.querySelectorAll('input[name="cargoFiltro"]').forEach(radio => {
-      radio.addEventListener('change', filterTableByTipoCargo);
-  });
-
-  document.getElementById('filtroArea').addEventListener('change', aplicarTodosFiltrosCargo);
-
-//Si es ADMIN no SERVICIO
+// Si NO es OPERATIVO, ocultamos SERVICIO y SUBSERVICIO
 const opOperativo = document.getElementById('opOperativo');
-const opAdmins = document.getElementById('opAdmins');
 const divServicio = document.getElementById('slcPosicion').parentElement;
-const divSubservicio = document.getElementById('divSubservicios');
+const divSubservicios = document.getElementById('divSubservicios');
+
 document.querySelectorAll('input[name="rdTipoCargo"]').forEach(radio => {
     radio.addEventListener('change', () => {
-
-        if (opAdmins.checked) {
+        if (!opOperativo.checked) {
             // Ocultar combos
             divServicio.classList.add('hidden');
-            divSubservicio.classList.add('hidden');
+            divSubservicios.classList.add('hidden');
         } else {
             // Mostrar combos
             divServicio.classList.remove('hidden');
-            divSubservicio.classList.remove('hidden');
+            divSubservicios.classList.remove('hidden');
         }
-
     });
 });
 
   function cargarCargos(){
       axios.get(`${ VITE_URL_APP }/api/get-cargo`)
       .then(response => {
-          tblCargos.setData(response.data);
+          const data = response.data || [];
+          tblCargos.setData(data);
+          
+          // 🔥 Lógica de Indicadores
+          const total = data.length;
+          const activos = data.filter(c => c.habilitado == 1).length;
+          const inactivos = total - activos;
+
+          if (document.getElementById('countTotal')) {
+              document.getElementById('countTotal').textContent = total;
+              document.getElementById('countActivos').textContent = activos;
+              document.getElementById('countInactivos').textContent = inactivos;
+          }
       })
       .catch(error => {
           console.error("Hubo un error:", error);
@@ -390,16 +407,14 @@ function cargarCounters() {
     axios.get(`${VITE_URL_APP}/api/cargo-counters`)
         .then(response => {
             const counters = response.data;
-
-            document.querySelector('label[for="radioTodos"]').innerHTML =
-                `TODOS (${counters.todos})`;
-
-            document.querySelector('label[for="radioOper"]').innerHTML =
-                `OPERATIVO (${counters.operativo})`;
-
-            document.querySelector('label[for="radioAdmin"]').innerHTML =
-                `ADMINISTRATIVO (${counters.administrativo})`;
-
+            const selectTipo = document.getElementById('filtroTipo');
+            
+            if(selectTipo) {
+                selectTipo.options[0].text = `Todos (${counters.todos})`;
+                selectTipo.options[1].text = `Operativos (${counters.operativo})`;
+                selectTipo.options[2].text = `Administrativos (${counters.administrativo})`;
+                selectTipo.options[3].text = `Especiales (${counters.especial || 0})`; // Fallback a 0 por si el SP de contadores aún no lo trae
+            }
         })
         .catch(error => {
             console.error("Error obteniendo contadores:", error);
@@ -515,6 +530,7 @@ document.getElementById('formSaveCargo').addEventListener('submit', function (ev
                 limpiarForm();
                 cargarCounters();
                 cargarCargos();
+                document.getElementById('btn-modal-gestion-close').click();
             })
             .catch(function (error) {
                 Swal.fire({ title: 'Error al registrar', icon: 'error' });
@@ -537,6 +553,7 @@ document.getElementById('formSaveCargo').addEventListener('submit', function (ev
                 limpiarForm();
                 cargarCounters();
                 cargarCargos();
+                document.getElementById('btn-modal-gestion-close').click();
             })
             .catch(function (error) {
                 Swal.fire({ title: 'Error al actualizar', icon: 'error' });

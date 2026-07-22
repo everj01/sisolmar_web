@@ -60,7 +60,7 @@ class FileControl extends Model
 
     public static function getCargos()
     {
-        return DB::select('EXEC SW_LISTAR_CARGOS');
+        return DB::select('EXEC SW_LISTAR_CARGO_GESTION_DE_CARGOS');
     }
 
     public static function getLegajos($cliente, $cargo, $codPersonal)

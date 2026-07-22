@@ -28,7 +28,10 @@ btnSeleccionar.addEventListener('click', () => archivoInput.click());
 
     const init = () => {
         seleccionarPrimeraSucursalValida();
-        setTimeout(() => reloadTabla(), 100);
+        setTimeout(() => {
+            reloadTabla();
+            cargarIndicadores(); // 🔥 Disparamos las tarjetas en el primer render
+        }, 100);
     };
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -70,7 +73,7 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         params.search = document.getElementById("buscarPersonal").value.trim();
         params.codSucursal = codSucursal;
         params.tipo_per = document.getElementById("tipo_per")?.value || "TODOS";
-        params.vigencia = document.querySelector('input[name="vigencia"]:checked')?.value || "";
+        params.vigencia = document.getElementById("filtroVigencia")?.value || "";
 
         const filtroDJ = document.getElementById("filtroDJ")?.value || "TODOS";
         if (filtroDJ === "SI") params.tiene_folio_25 = "1";
@@ -91,32 +94,21 @@ const tblPersonas = new Tabulator("#tblPersonas", {
 
     columns: [
         { title: "Cód.", field: "CODI_PERS", hozAlign: "center", width: '8%', responsive: false },
-        { title: "Apellidos", field: "apellidos", hozAlign: "left", width: '15%', responsive: false },
+        { 
+            title: "Apellidos", field: "apellidos", hozAlign: "left", width: '15%', responsive: false,
+            formatter: function (cell) {
+                let val = cell.getValue() || '';
+                return val.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            }
+        },
         {
             title: "Nombres", field: "nombres", hozAlign: "left", width: '20%', responsive: false,
             formatter: function (cell) {
-                const data = cell.getRow().getData();
-                const nombre = cell.getValue();
-                const icono = data.tiene_folio_25 == 1
-                    ? `<span title="DJ disponible" style="
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    width:24px; height:24px;
-                    border-radius:6px;
-                    background:#f3f4f6;
-                    border:1px solid #f0fdf4 ;
-                    margin-left:5px;
-                    cursor:default;
-                    pointer-events:none;
-                    vertical-align:middle;">
-                    <img src="${VITE_URL_APP}/images/prueba.png" style="width:14px; height:14px; object-fit:contain; display:block;">
-                </span>`
-                    : '';
-                return `<span style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>${nombre}</span>
-                            ${icono}
-                        </span>`;
+                let val = cell.getValue() || '';
+                const nombre = val.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                
+                // Botón azulito de DJ ocultado por instrucción
+                return `<span>${nombre}</span>`;
             }
         },
         { title: "Nro Doc.", field: "nroDoc", hozAlign: "center", width: '12%', responsive: false },
@@ -125,7 +117,19 @@ const tblPersonas = new Tabulator("#tblPersonas", {
             formatter: function(cell) {
                 let val = cell.getValue() || '';
                 // Reemplazamos las abreviaturas por la palabra completa al vuelo
-                return val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                val = val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                
+                let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Color por defecto
+                
+                if (val.toUpperCase().includes('OPERATIVO')) { 
+                    color = 'border-blue-300 bg-blue-100 text-blue-800'; 
+                } else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                    color = 'border-purple-300 bg-purple-100 text-purple-800'; 
+                } else if (val.toUpperCase().includes('ESPECIAL')) { 
+                    color = 'border-yellow-300 bg-yellow-100 text-yellow-800'; // Amarillo pedido para Especiales
+                }
+
+                return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
             }
         },
         {
@@ -234,6 +238,7 @@ const tblDocs = new Tabulator("#tblDocs", {
 
                 // — Botón subir —
                 if (e.target.classList.contains('charge-btn')) {
+                    window.parentModalToReopen = 'modal-folios-personal';
                     document.querySelector('#modal-file h3.modal-title').textContent = `Documento: ${dataTbl.documento}`;
                     document.getElementById('codFolioActual').value = codFolio;
 
@@ -303,6 +308,7 @@ const tblDocs = new Tabulator("#tblDocs", {
 
                 // — Botón ver —
                 if (e.target.classList.contains('viewdoc-btn')) {
+                    window.parentModalToReopen = 'modal-folios-personal';
                     if (esDJ) {
                         window.open(`${VITE_URL_APP}/ver-dj/${dataTbl.codPersonal}`, '_blank');
                     } else {
@@ -385,6 +391,7 @@ const tblLegajos = new Tabulator("#tblDocsLegajo", {
             },
             cellClick: function (e, cell) {
                 if (e.target.classList.contains('charge-btn-leg')) {
+                    window.parentModalToReopen = 'modal-legajos-personal';
                     const dataTbl = cell.getRow().getData();
                     const codFolio = parseInt(dataTbl.codFolio);
 
@@ -646,19 +653,23 @@ document.getElementById("page-size-personas").addEventListener("change", functio
     reloadTabla();
 });
 
-document.getElementById("buscarPersonal").addEventListener("keyup", () => reloadTabla());
-document.getElementById("sucursal").addEventListener("change", () => reloadTabla());
-document.getElementById("tipo_per")?.addEventListener("change", () => reloadTabla());
-document.querySelectorAll('input[name="vigencia"]').forEach(r => r.addEventListener("change", () => reloadTabla()));
-document.getElementById("filtroDJ").addEventListener("change", () => reloadTabla());
-// Filtro de tipo de folio (Principal / Adicional)
-document.querySelectorAll('input[name="tipo_folio"]').forEach(radio => {
-    radio.addEventListener('change', filterTableByTipoFolio);
+// Estos SÍ recalcularán las tarjetas:
+document.getElementById("sucursal").addEventListener("change", () => {
+    reloadTabla();
+    cargarIndicadores();
+});
+document.getElementById("tipo_per")?.addEventListener("change", () => {
+    reloadTabla();
+    cargarIndicadores();
 });
 
-document.getElementById("buscarFolio").addEventListener("keyup", function () {
-    tblDocs.setFilter([[{ field: "documento", type: 'like', value: this.value.toLowerCase().trim() }]]);
-});
+// Estos NO recalcularán las tarjetas (solo filtran la tabla visualmente):
+document.getElementById("buscarPersonal").addEventListener("keyup", () => reloadTabla());
+document.getElementById("filtroVigencia")?.addEventListener("change", () => reloadTabla());
+document.getElementById("filtroDJ")?.addEventListener("change", () => reloadTabla());
+// Filtros combinados para el Modal de Folios (Select + Búsqueda)
+document.getElementById('selectTipoFolio')?.addEventListener('change', filterTableByTipoFolio);
+document.getElementById('buscarFolio')?.addEventListener('keyup', filterTableByTipoFolio);
 
 // ============================================================
 // LISTENERS — Legajos
@@ -686,8 +697,36 @@ document.addEventListener('DOMContentLoaded', function () {
 window.addEventListener("sidebar-toggled", () => tblPersonas?.redraw(true));
 
 // ============================================================
-// FUNCIONES — Tabla
+// FUNCIONES — Tabla e Indicadores
 // ============================================================
+function cargarIndicadores() {
+    let codSucursal = document.getElementById("sucursal").value;
+    if (!codSucursal || codSucursal === "-Seleccionar-" || codSucursal === "00") codSucursal = "0";
+
+    // 🔥 SOLO filtramos por Sucursal y Tipo (ignoramos búsqueda, DJ y Vigencia)
+    const params = {
+        codSucursal: codSucursal,
+        tipo_per: document.getElementById("tipo_per")?.value || "TODOS",
+        size: 99999, // Traemos todos para la matemática
+        page: 1
+    };
+
+    axios.get(`${VITE_URL_APP}/get-personal-total`, { params })
+        .then(response => {
+            const data = response.data.data || [];
+            
+            const total = data.length;
+            // 🔥 Ahora contamos en base a si están Vigentes en la empresa
+            const vigentes = data.filter(d => d.PERS_VIGENCIA === 'SI').length; 
+            const cesados = total - vigentes;
+
+            document.getElementById('countTotal').textContent = total;
+            document.getElementById('countVigentes').textContent = vigentes;
+            document.getElementById('countCesados').textContent = cesados;
+        })
+        .catch(error => console.error("Error al cargar indicadores:", error));
+}
+
 function reloadTabla() {
     const search = document.getElementById("buscarPersonal").value.trim();
     tblPersonas.setData(`${VITE_URL_APP}/get-personal-total`, { page: 1, size: pageSizePersonas });
@@ -710,8 +749,21 @@ function resaltarTexto(valor) {
 }
 
 function filterTableByTipoFolio() {
-    const tipo = document.querySelector('input[name="tipo_folio"]:checked').value;
-    tblDocs.setFilter("tipo_folio", "=", tipo);
+    const tipo = document.getElementById('selectTipoFolio').value;
+    const busqueda = document.getElementById("buscarFolio").value.toLowerCase().trim();
+
+    // 1. Limpiamos filtros anteriores para evitar conflictos
+    tblDocs.clearFilter();
+
+    // 2. Aplicamos el filtro de Prioridad (solo si no es "TODOS")
+    if (tipo !== "TODOS") {
+        tblDocs.addFilter("tipo_folio", "=", tipo);
+    }
+
+    // 3. Aplicamos el filtro de texto (si el usuario escribió algo)
+    if (busqueda !== "") {
+        tblDocs.addFilter("documento", "like", busqueda);
+    }
 }
 
 function seleccionarPrimeraSucursalValida() {

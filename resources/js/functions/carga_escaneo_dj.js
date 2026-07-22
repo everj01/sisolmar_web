@@ -17,7 +17,10 @@ zonaDropDJ.addEventListener('click', () => archivoDJ.click());
 (function init() {
     const run = () => {
         seleccionarPrimeraSucursalValida();
-        setTimeout(() => reloadTabla(), 100);
+        setTimeout(() => {
+            reloadTabla();
+            cargarIndicadores();
+        }, 100);
     };
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -59,7 +62,7 @@ const tblPersonas = new Tabulator('#tblPersonas', {
         params.search      = document.getElementById('buscarPersonal').value.trim();
         params.codSucursal = codSucursal;
         params.tipo_per    = document.getElementById('tipo_per')?.value || 'TODOS';
-        params.vigencia    = document.querySelector('input[name="vigencia"]:checked')?.value || '';
+        params.vigencia    = document.getElementById('filtroVigencia')?.value || '';
 
         const filtroDJ = document.getElementById('filtroDJ')?.value || 'TODOS';
         if (filtroDJ === 'SI') params.tiene_folio_25 = '1';
@@ -84,8 +87,20 @@ const tblPersonas = new Tabulator('#tblPersonas', {
         {
             title: 'Tipo', field: 'TIPOTRAB2', hozAlign: 'center', minWidth: 120, widthGrow: 1.2, responsive: false,
             formatter: function (cell) {
-                const val = cell.getValue() || '';
-                return val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                let val = cell.getValue() || '';
+                val = val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                
+                let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Color por defecto
+                
+                if (val.toUpperCase().includes('OPERATIVO')) { 
+                    color = 'border-blue-300 bg-blue-100 text-blue-800'; 
+                } else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                    color = 'border-purple-300 bg-purple-100 text-purple-800'; 
+                } else if (val.toUpperCase().includes('ESPECIAL')) { 
+                    color = 'border-yellow-300 bg-yellow-100 text-yellow-800'; // Amarillo patito
+                }
+
+                return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
             }
         },
         {
@@ -241,15 +256,51 @@ document.getElementById('page-size-personas').addEventListener('change', functio
     reloadTabla();
 });
 
+// Estos SÍ recalcularán las tarjetas (afectan al universo base):
+document.getElementById('sucursal').addEventListener('change', () => {
+    reloadTabla();
+    cargarIndicadores();
+});
+document.getElementById('tipo_per')?.addEventListener('change', () => {
+    reloadTabla();
+    cargarIndicadores();
+});
+
+// Estos NO recalcularán las tarjetas (solo filtran visualmente):
 document.getElementById('buscarPersonal').addEventListener('keyup', () => reloadTabla());
-document.getElementById('sucursal').addEventListener('change', () => reloadTabla());
-document.getElementById('tipo_per')?.addEventListener('change', () => reloadTabla());
 document.getElementById('filtroDJ').addEventListener('change', () => reloadTabla());
-document.querySelectorAll('input[name="vigencia"]').forEach(r => r.addEventListener('change', () => reloadTabla()));
+document.getElementById('filtroVigencia')?.addEventListener('change', () => reloadTabla());
 
 // ============================================================
 // FUNCIONES
 // ============================================================
+function cargarIndicadores() {
+    let codSucursal = document.getElementById("sucursal").value;
+    if (!codSucursal || codSucursal === "— Seleccionar —" || codSucursal === "00") codSucursal = "0";
+
+    // SOLO filtramos por Sucursal y Tipo (ignoramos búsqueda, estado de DJ y Vigencia)
+    const params = {
+        codSucursal: codSucursal,
+        tipo_per: document.getElementById("tipo_per")?.value || "TODOS",
+        size: 99999, // Traemos todos para la matemática
+        page: 1
+    };
+
+    axios.get(`${VITE_URL_APP}/get-personal-total`, { params })
+        .then(response => {
+            const data = response.data.data || [];
+            
+            const total = data.length;
+            const actualizados = data.filter(d => d.tiene_folio_25 == 1).length; 
+            const sinActualizar = total - actualizados;
+
+            document.getElementById('countTotal').textContent = total;
+            document.getElementById('countActualizados').textContent = actualizados;
+            document.getElementById('countSinActualizar').textContent = sinActualizar;
+        })
+        .catch(error => console.error("Error al cargar indicadores:", error));
+}
+
 function reloadTabla() {
     tblPersonas.setData(`${VITE_URL_APP}/get-personal-total`, { page: 1, size: pageSizePersonas });
 }

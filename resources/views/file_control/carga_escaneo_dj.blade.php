@@ -7,81 +7,103 @@
 <div class="grid grid-cols-1 gap-6 mt-8">
 
     <div class="card overflow-hidden">
-        <div class="card-header">
-            <h4 class="card-title">Listado de Personal</h4>
+        <div class="card-header border-b border-gray-100 pb-4">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <h4 class="text-lg font-bold text-primary uppercase">Listado de Personal</h4>
+                </div>
+
+                {{-- Tarjetas de Indicadores --}}
+                <div class="flex gap-2">
+                    <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                        <span id="countTotal" class="text-lg font-bold text-blue-700">0</span>
+                    </div>
+                    <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-green-600 font-bold uppercase">Actualiz.</span>
+                        <span id="countActualizados" class="text-lg font-bold text-green-700">0</span>
+                    </div>
+                    <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-red-600 font-bold uppercase">Sin Actual.</span>
+                        <span id="countSinActualizar" class="text-lg font-bold text-red-700">0</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="px-5 pt-4 pb-2 space-y-3">
+            {{-- Caja unificada de Filtros (Estilo Actualizar DJ) --}}
+            <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <div class="flex flex-wrap items-center gap-5">
+                    
+                    {{-- Búsqueda --}}
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="buscarPersonal"
+                            placeholder="Buscar por nombre o DNI..."
+                            autocomplete="off"
+                            class="w-48 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm uppercase" 
+                            style="min-width: 250px;"
+                        />
+                    </div>
 
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <input
-                    type="text"
-                    id="buscarPersonal"
-                    placeholder="Buscar por nombre o DNI..."
-                    autocomplete="off"
-                    class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
-                           focus:outline-none focus:border-blue-500 transition-colors"
-                    style="min-width: 220px;"
-                />
+                    {{-- Sucursal --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="sucursal" class="text-sm font-medium text-gray-700 whitespace-nowrap">Sucursal:</label>
+                        <select id="sucursal" class="form-select text-sm w-36 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option disabled selected>— Seleccionar —</option>
+                            @foreach ($sucursales as $suc)
+                                <option value="{{ $suc->codigo }}">{{ $suc->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Sucursal</label>
-                    <select id="sucursal" class="form-select text-sm">
-                        <option disabled selected>— Seleccionar —</option>
-                        @foreach ($sucursales as $suc)
-                            <option value="{{ $suc->codigo }}">{{ $suc->abreviatura }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                    {{-- Tipo --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="tipo_per" class="text-sm font-medium text-gray-700 whitespace-nowrap">Tipo:</label>
+                        <select id="tipo_per" name="tipo_per" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            @if ($tipoPerLimitar == 0)
+                                <option value="TODOS" selected>Todos</option>
+                                <option value="ADMIN_4">Administrativo 4°</option>
+                                <option value="ADMIN_5">Administrativo 5°</option>
+                                <option value="OPER_4">Operativo 4°</option>
+                                <option value="OPER_5">Operativo 5°</option>
+                                <option value="ESPECIAL">Especiales</option>
+                            @elseif ($tipoPerLimitar == 1)
+                                <option value="TODOS" selected>Todos</option>
+                                <option value="ADMIN_4">Administrativo 4°</option>
+                                <option value="ADMIN_5">Administrativo 5°</option>
+                            @elseif ($tipoPerLimitar == 2)
+                                <option value="TODOS" selected>Todos</option>
+                                <option value="OPER_4">Operativo 4°</option>
+                                <option value="OPER_5">Operativo 5°</option>
+                            @endif
+                        </select>
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Tipo</label>
-                    <select id="tipo_per" class="form-select text-sm w-44">
-                        @if ($tipoPerLimitar == 0)
-                            <option value="TODOS" selected>Todos</option>
-                            <option value="ADMIN_4">Administrativo 4°</option>
-                            <option value="ADMIN_5">Administrativo 5°</option>
-                            <option value="OPER_4">Operativo 4°</option>
-                            <option value="OPER_5">Operativo 5°</option>
-                            <option value="ESPECIAL">Especiales</option>
-                        @elseif ($tipoPerLimitar == 1)
-                            <option value="TODOS" selected>Todos</option>
-                            <option value="ADMIN_4">Administrativo 4°</option>
-                            <option value="ADMIN_5">Administrativo 5°</option>
-                        @elseif ($tipoPerLimitar == 2)
-                            <option value="TODOS" selected>Todos</option>
-                            <option value="OPER_4">Operativo 4°</option>
-                            <option value="OPER_5">Operativo 5°</option>
-                        @endif
-                    </select>
-                </div>
+                    {{-- DJ Actualizada (Estado) --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="filtroDJ" class="text-sm font-medium text-gray-700 whitespace-nowrap">DJ:</label>
+                        <select id="filtroDJ" class="form-select text-sm w-36 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option value="TODOS">Todos</option>
+                            <option value="SI">Subida</option>
+                            <option value="NO">Pendiente</option>
+                        </select>
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-medium text-gray-700 whitespace-nowrap">DJ</label>
-                    <select id="filtroDJ" class="form-select text-sm">
-                        <option value="TODOS">Todos</option>
-                        <option value="SI">Subida</option>
-                        <option value="NO">Pendiente</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-x-4">
-                    <span class="text-sm font-medium text-gray-700">Vigencia</span>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" name="vigencia" value="" class="form-radio text-primary">
-                        <span class="text-sm text-gray-700">Todos</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" name="vigencia" value="SI" checked class="form-radio text-primary">
-                        <span class="text-sm text-gray-700">Sí</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" name="vigencia" value="NO" class="form-radio text-primary">
-                        <span class="text-sm text-gray-700">No</span>
-                    </label>
+                    {{-- Vigencia --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="filtroVigencia" class="text-sm font-medium text-gray-700 whitespace-nowrap">Vigencia:</label>
+                        <select id="filtroVigencia" name="vigencia" class="form-select text-sm w-32 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option value="" selected>Todos</option>
+                            <option value="SI">Sí</option>
+                            <option value="NO">No</option>
+                        </select>
+                    </div>
+                    
                 </div>
             </div>
-
         </div>
 
         <div class="px-5 pb-5 pt-2">
