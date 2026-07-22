@@ -223,11 +223,11 @@
                         <div class="flex items-center gap-4 mt-2">
                             <div class="flex items-center gap-2">
                                 <input type="checkbox" id="switchVencimiento" class="form-switch text-danger cursor-pointer">
-                                <label for="switchVencimiento" class="text-sm font-bold cursor-pointer">Vencimiento</label>
+                                <label for="switchVencimiento" class="text-sm font-bold cursor-pointer">Caducidad</label>
                             </div>
                             <div id="periodoDiv" class="hidden flex items-center gap-2">
                                 <label for="periodo" class="text-sm font-medium text-gray-700 whitespace-nowrap">Periodo:</label>
-                                <select id="periodo" class="form-select text-sm px-3 py-1.5 border-gray-300 rounded-md">
+                                <select id="periodo" class="form-select text-sm w-44 pl-3 pr-8 py-1.5 border-gray-300 rounded-md">
                                     <option disabled selected>— Seleccionar —</option>
                                     @foreach ($periodos as $periodo)
                                         <option value="{{ $periodo->codigo }}">{{ $periodo->descripcion }}</option>

@@ -280,12 +280,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: "Tipo", field: "TIPO_PER", hozAlign: "center", widthGrow: 2,
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
-                    let color = 'border-gray-300 bg-gray-100 text-gray-800';
-                    if (val.toUpperCase().includes('OPERATIVO')) { color = 'border-blue-300 bg-blue-100 text-blue-800'; }
-                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { color = 'border-purple-300 bg-purple-100 text-purple-800'; }
-                    else if (val.toUpperCase().includes('ESPECIAL')) { color = 'border-orange-300 bg-orange-100 text-orange-800'; }
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        // Borde resaltado para Administrativo igual que en la otra tabla
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
 
-                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
                 }
             },
             {
@@ -297,9 +305,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const val = cell.getValue();
                     if (val && val !== 'sin cambios') {
                         const f = formatearFechaHora(val);
-                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700 whitespace-nowrap">
+                        return `<div class="flex items-center justify-center text-sm text-gray-700 whitespace-nowrap">
                             <span class="flex items-center gap-1"><i class='bx bx-calendar text-blue-500'></i> <span>${f.fecha}</span></span>
-                            <span class="flex items-center gap-1"><i class='bx bx-time-five text-orange-500'></i> <span>${f.hora}</span></span>
                         </div>`;
                     }
                     return '—';
@@ -779,7 +786,25 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             { title: "DNI", field: "dni", hozAlign: "center", width: 110 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1 },
-            { title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2 },
+            { 
+                title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
+                formatter: cell => {
+                    const val = cell.getValue() ?? '';
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
+
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
+                }
+            },
             {
                 title: "Fecha Verificado",
                 field: "cambio",
@@ -1246,7 +1271,25 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             { title: "DNI", field: "dni", hozAlign: "center", width: 110 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1 },
-            { title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2 },
+            { 
+                title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
+                formatter: cell => {
+                    const val = cell.getValue() ?? '';
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
+
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
+                }
+            },
             {
                 title: "Fecha Generado",
                 field: "fechaGenerado",
@@ -2107,8 +2150,22 @@ document.addEventListener('DOMContentLoaded', function () {
             {
                 title: 'Tipo', field: 'TIPOTRAB2', hozAlign: 'center', minWidth: 120, widthGrow: 1.2, responsive: false,
                 formatter: function (cell) {
-                    const val = cell.getValue() || '';
-                    return val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                    let val = cell.getValue() || '';
+                    val = val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                    
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
+
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
                 }
             },
             {
@@ -2470,9 +2527,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     const fecha = d.ultima_actualizacion || d.fechaAct || d.FECHA_ACT || d.fechaSubida || null;
                     if (fecha) {
                         const f = formatearFechaHora(fecha);
-                        return `<div class="flex items-center justify-center gap-2 text-sm text-gray-700">
-                            <span class="flex items-center gap-1"><i class='bx bx-calendar'></i> <span>${f.fecha}</span></span>
-                            <span class="flex items-center gap-1"><i class='bx bx-time-five'></i> <span>${f.hora}</span></span>
+                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700 whitespace-nowrap">
+                            <span class="flex items-center gap-1"><i class='bx bx-calendar text-blue-500'></i> <span>${f.fecha}</span></span>
+                            <span class="flex items-center gap-1"><i class='bx bx-time-five text-orange-500'></i> <span>${f.hora}</span></span>
                         </div>`.trim();
                     }
                     return '—';
@@ -2501,7 +2558,7 @@ document.addEventListener('DOMContentLoaded', function () {
             { title: "Nro Doc", field: "nroDoc", hozAlign: "center", width: 110, formatter: (cell) => cell.getValue() || cell.getData().NRODOC },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1, formatter: (cell) => cell.getValue() || cell.getData().SUCURSAL },
             {
-                title: "Tipo Trabajador",
+                title: "Tipo",
                 field: "TIPOTRAB2",
                 hozAlign: "center",
                 widthGrow: 1.5,
@@ -2511,13 +2568,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Reemplazamos la abreviatura por la palabra completa sin tocar la Base de Datos
                     val = val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
 
-                    // Le damos el estilo visual "Badge"
-                    let color = 'border-gray-300 bg-gray-100 text-gray-800';
-                    if (val.includes('OPERATIVO')) color = 'border-blue-300 bg-blue-100 text-blue-800';
-                    else if (val.includes('ADMINISTRATIVO')) color = 'border-purple-300 bg-purple-100 text-purple-800';
-                    else if (val.includes('ESPECIAL')) color = 'border-orange-300 bg-orange-100 text-orange-800';
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
 
-                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
                 }
             },
             // 🔥 COLUMNA ACCIONES

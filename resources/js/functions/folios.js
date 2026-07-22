@@ -53,44 +53,52 @@ const tblFolios = new Tabulator("#tblFolios", {
             title: "Tipo", field: "tipoFolio", hozAlign: "center", widthGrow: 2,
             formatter: function (cell) {
                 let tipo = cell.getValue() || '';
-                let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Color por defecto
+                let color = 'border-gray-400 bg-gray-100 text-gray-800 shadow-sm';
 
                 if (tipo === "FORMATO") {
-                    color = 'border-yellow-300 bg-yellow-100 text-yellow-800';
+                    color = 'border-amber-500 bg-yellow-100 text-yellow-800 shadow-sm';
                 } else if (tipo === "DOCUMENTO") {
-                    color = 'border-purple-300 bg-purple-100 text-purple-800';
+                    // 🔥 Morado a 500 para que marque la diferencia
+                    color = 'border-purple-500 bg-purple-100 text-purple-800 shadow-sm';
                 } else if (tipo === "CERTIFICADO") {
-                    color = 'border-blue-300 bg-blue-100 text-blue-800';
+                    // 🔥 Azul a 500 para emparejar la intensidad
+                    color = 'border-blue-500 bg-blue-100 text-blue-800 shadow-sm';
                 }
 
-                return tipo ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${tipo}</span>` : '—';
+                return tipo ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 105px;">${tipo}</span>` : '—';
             }
         },
         {
             title: "Prioridad", field: "prioridad", hozAlign: "center", widthGrow: 2,
             formatter: function (cell) {
                 let val = cell.getValue() || '';
-                // Oscurecemos el fondo a 200 y el borde a 400 para que resalte más el ADICIONAL
-                let color = 'border-gray-400 bg-gray-200 text-gray-500'; 
+                
+                let color = 'border-teal-500 bg-teal-100 text-teal-800 shadow-sm'; 
 
                 if (val === "PRINCIPAL") {
-                    color = 'border-blue-300 bg-blue-100 text-blue-800';
+                    // 🔥 Índigo a 500 para que resalte bien contra el rosa
+                    color = 'border-indigo-500 bg-indigo-100 text-indigo-800 shadow-sm';
                 }
 
-                return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
+                return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 95px;">${val}</span>` : '—';
             }
         },
         {
             title: "Caduca", field: "periodo", hozAlign: "center", widthGrow: 2,
             formatter: function (cell) {
                 let val = cell.getValue() || '';
-                let color = 'border-gray-300 bg-gray-200 text-gray-500'; // Color neutral para "NO VENCE"
+                
+                let color = 'bg-gray-200 shadow-sm'; 
+                // 🔥 TRUCO: Forzamos el color negro directo al HTML para que Tailwind no lo purgue
+                let extraStyle = 'border-color: black; color: black;';
 
                 if (val && val !== "NO VENCE") {
-                    color = 'border-amber-300 bg-amber-100 text-amber-800'; // Naranja/Ámbar para los que sí vencen
+                    color = 'border-orange-500 bg-orange-100 text-orange-800 shadow-sm'; 
+                    extraStyle = ''; // El naranja sí lo lee normal, lo dejamos vacío
                 }
 
-                return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
+                // Inyectamos el extraStyle directamente en la etiqueta
+                return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 130px; ${extraStyle}">${val}</span>` : '—';
             }
         },
         {

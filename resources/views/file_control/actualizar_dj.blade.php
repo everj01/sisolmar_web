@@ -194,7 +194,7 @@
 
                                 <div class="flex items-center gap-2">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
-                                    <select id="filtroTipoPerE2" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                    <select id="filtroTipoPerE2" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
     @if($tipoPerLimitar == 0)
         <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 1)
@@ -296,7 +296,7 @@
 
                                 <div class="flex items-center gap-2">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
-                                    <select id="filtroTipoPerE3" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                                    <select id="filtroTipoPerE3" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
     @if($tipoPerLimitar == 0)
         <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 1)
@@ -409,7 +409,7 @@
 
                                 <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
-                                    <select id="tipo_per_E4C" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg">
+                                    <select id="tipo_per_E4C" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg">
     @if ($tipoPerLimitar == 0)
         <option value="TODOS" selected>Todos</option><option value="ADMIN_5">Administrativo 5°</option><option value="OPER_5">Operativo 5°</option>
     @elseif ($tipoPerLimitar == 1)

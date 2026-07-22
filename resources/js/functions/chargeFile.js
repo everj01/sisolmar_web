@@ -116,20 +116,23 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         { title: "Tipo",     field: "TIPOTRAB2",  hozAlign: "center", width: '14%', responsive: false,
             formatter: function(cell) {
                 let val = cell.getValue() || '';
-                // Reemplazamos las abreviaturas por la palabra completa al vuelo
+                // Reemplazamos las abreviaturas por la palabra completa al vuelo (Mantenemos tu lógica original)
                 val = val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
                 
-                let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Color por defecto
+                let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm'; // Color por defecto
                 
                 if (val.toUpperCase().includes('OPERATIVO')) { 
-                    color = 'border-blue-300 bg-blue-100 text-blue-800'; 
-                } else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
-                    color = 'border-purple-300 bg-purple-100 text-purple-800'; 
-                } else if (val.toUpperCase().includes('ESPECIAL')) { 
-                    color = 'border-yellow-300 bg-yellow-100 text-yellow-800'; // Amarillo pedido para Especiales
+                    color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                } 
+                else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                    color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                } 
+                else if (val.toUpperCase().includes('ESPECIAL')) { 
+                    color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm';
                 }
 
-                return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap">${val}</span>` : '—';
+                // Inyectamos las clases idénticas al de la Etapa 1 (justify-center, min-width y flex)
+                return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
             }
         },
         {
@@ -139,7 +142,8 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                 let html = `<button type="button" class="btn rounded-full docs-btn bg-success/25 text-success hover:bg-success hover:text-white">Folios</button>`;
                 if (usuarioActual?.tipo_rol != 8) {
                     html += ` <button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white">Legajos</button>`;
-                    html += ` <button type="button" class="btn rounded-full bio-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-fingerprint bio-btn"></i></button>`;
+                    // Se agregó la clase "hidden" para ocultar el botón de la huellita
+                    html += ` <button type="button" class="hidden btn rounded-full bio-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-fingerprint bio-btn"></i></button>`;
                 }
                 return html;
             },
@@ -152,6 +156,10 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                 updateCardTitle(persona);
 
                 if (e.target.classList.contains('docs-btn')) {
+                    // Reseteamos el filtro de prioridad y la búsqueda para que siempre inicie limpio
+                    document.getElementById('selectTipoFolio').value = 'TODOS';
+                    document.getElementById('buscarFolio').value = '';
+
                     getDocsObligatorios(codigo);
                     document.getElementById('btn-modal-folios').click();
                     setTimeout(() => tblDocs.redraw(true), 300);
@@ -196,7 +204,23 @@ const tblDocs = new Tabulator("#tblDocs", {
         }
     },
     columns: [
-        { title: "Folio", field: "documento", hozAlign: "left", width: '40%' },
+        { title: "Folio", field: "documento", hozAlign: "left", width: '30%' },
+        { 
+            title: "Prioridad", field: "tipo_folio", hozAlign: "center", width: '10%',
+            formatter: function (cell) {
+                const val = cell.getValue();
+                if (!val) return '—';
+                
+                // Colores más vivos, diseño tipo píldora y sombra suave
+                const isPrincipal = val.toUpperCase() === 'PRINCIPAL';
+                const color = isPrincipal 
+                    ? 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm' 
+                    // Aquí le subimos la intensidad al borde morado a 500 para que resalte
+                    : 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm';
+                    
+                return `<span class="inline-flex items-center rounded-full border px-3 py-0.5 text-[10px] font-bold tracking-wider uppercase ${color}">${val}</span>`;
+            }
+        },
         {
             title: "Emisión", field: "fecha_emision", hozAlign: "center", width: '20%',
             formatter: function (cell) {

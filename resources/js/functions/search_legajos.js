@@ -164,7 +164,7 @@ function cargarCargos(codCliente){
 
 function cargarClientes(){
     document.getElementById('dataDocsLeg').classList.add('hidden');
-    axios.get(`${ VITE_URL_APP }/api/get-clientes-legajos`)
+    axios.get(`${ VITE_URL_APP }/api/get-clientes`)
     .then(response => {
         console.log(response);
         console.log('clientes', response.data);

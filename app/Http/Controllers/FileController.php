@@ -38,13 +38,13 @@ class FileController extends Controller
         $instituciones = FileControl::getInstitucionesDJ();
         $sucursales = FileControl::getSucursales();
 
-        // 🔥 1. Obtener cargos
+        // 1. Obtener cargos
         $cargos = FileControl::getCargos();
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
 
-        // 🔥 2. Añadir 'cargos' al compact
+        // 2. Añadir 'cargos' al compact
         return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'cargos', 'tipoPerLimitar', 'tipoUsuario'));
     }
 
@@ -1149,6 +1149,7 @@ class FileController extends Controller
         $cargos = FileControl::getCargos();
         //$clientes = FileControl::getClientes();
         $clientes = FileControl::getClientesLegajos();
+        $clientes = FileControl::getClientes();
 
         return view('file_control.search_legajos', compact('personal', 'cargos', 'clientes'));
     }

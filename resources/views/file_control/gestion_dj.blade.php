@@ -19,6 +19,11 @@
             margin-bottom: -1px;
             border-bottom-color: white !important;
         }
+
+        .hover-select-nativo:hover {
+            background-color: #2563eb !important; /* Azul Tailwind */
+            color: #ffffff !important;
+        }
     </style>
 @endsection
 
@@ -28,12 +33,29 @@
 
     <div id="divListado" class="grid lg:grid-cols-1 gap-6 mt-8">
         <div class="card overflow-hidden">
-            <div class="card-header">
-                <h4 class="card-title">Registro de personal (DJ)</h4>
+            <div class="card-header border-b border-gray-100 py-4 px-5">
+                <div class="flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h4 class="text-lg font-bold text-primary uppercase flex items-center">
+                            <i class='bx bx-id-card text-2xl mr-2'></i> REGISTRO DE PERSONAL (DJ)
+                        </h4>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px] shadow-sm">
+                            <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                            <span id="countTotalPen" class="text-lg font-bold text-blue-700">0</span>
+                        </div>
+                        <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px] shadow-sm">
+                            <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
+                            <span id="countVigentesPen" class="text-lg font-bold text-green-700">0</span>
+                        </div>
+                        <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[90px] shadow-sm">
+                            <span class="block text-[9px] text-red-600 font-bold uppercase">No Vigentes</span>
+                            <span id="countNoVigentesPen" class="text-lg font-bold text-red-700">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-       
-
-
 
             {{-- CONTROLES COMUNES --}}
             <div class="w-full px-5 py-2 mt-2 flex justify-between items-center">
@@ -129,20 +151,32 @@
                         </div>
 
                         {{-- Cargo --}}
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-medium text-gray-700">Cargo:</label>
-                            <select id="filtroCargoPEN" class="form-select text-sm w-48 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="">Todos</option>
-                            </select>
+                        <div class="flex items-center gap-2 w-80"> <!-- Ampliado a w-80 -->
+                            <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Cargo:</label>
+                            <div class="flex-1 relative" id="custom-select-cargo">
+                                <input type="text" id="filtroCargoPEN" placeholder="Todos" autocomplete="off"
+                                    class="form-input text-sm w-full pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white cursor-text" />
+                                
+                                <!-- Icono Flecha (Igual a un select nativo) -->
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-500">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+
+                                <!-- Lista Desplegable: min-w-full y w-max permiten que crezca sin limitarse al input -->
+                                <div id="listaCargosPEN" class="absolute z-50 min-w-full w-max bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto overflow-x-hidden py-1">
+                                    <!-- Las opciones se inyectan con JS -->
+                                </div>
+                            </div>
                         </div>
 
-                        {{-- Solo activos --}}
+                        {{-- Estado (Vigencia) --}}
                         <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
-                            <label class="relative inline-flex items-center cursor-pointer select-none">
-                                <input type="checkbox" id="filtroVigenciaPEN" class="sr-only peer" checked>
-                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
-                                <span class="ml-2 text-sm font-medium text-gray-700">Solo activos</span>
-                            </label>
+                            <label class="text-sm font-medium text-gray-700">Estado:</label>
+                            <select id="filtroVigenciaPEN" class="form-select text-sm w-36 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                <option value="" selected>Todos</option>
+                                <option value="SI">Activos</option>
+                                <option value="NO">Cesados</option>
+                            </select>
                         </div>
 
                     </div>

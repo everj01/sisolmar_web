@@ -158,9 +158,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
     cargarGeneradosCache();
 
-    // Cache stale-while-revalidate para las dos vistas de personal
-    const _personalCache = { SI: null, NO: null, _tsSI: 0, _tsNO: 0 };
+    // Cache stale-while-revalidate para las vistas de personal
+    // Cache stale-while-revalidate para las vistas de personal
+    const _personalCache = { SI: null, NO: null, TODOS: null, _tsSI: 0, _tsNO: 0, _tsTODOS: 0 };
     const _CACHE_TTL = 90_000; // 90 segundos
+
+    // === INICIO LÓGICA CUSTOM SELECT CARGO ===
+    let cargosDisponibles = [];
+
+    function renderCustomCargoOptions(cargosLista) {
+        const contenedor = document.getElementById('listaCargosPEN');
+        if (!contenedor) return;
+        contenedor.innerHTML = '';
+
+        const optTodos = document.createElement('div');
+        optTodos.className = 'px-3 py-1.5 cursor-pointer text-gray-700 hover-select-nativo text-sm';
+        optTodos.textContent = 'Todos';
+        optTodos.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('filtroCargoPEN').value = '';
+            contenedor.classList.add('hidden');
+            aplicarFiltrosPEN();
+        });
+        contenedor.appendChild(optTodos);
+
+        cargosLista.forEach(cargo => {
+            const div = document.createElement('div');
+            // Cambiamos "truncate" por "whitespace-nowrap" para que el texto no se corte
+            div.className = 'px-3 py-1.5 cursor-pointer text-gray-700 hover-select-nativo text-sm whitespace-nowrap';
+            div.textContent = cargo;
+            div.title = cargo;
+            div.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('filtroCargoPEN').value = cargo;
+                contenedor.classList.add('hidden');
+                aplicarFiltrosPEN();
+            });
+            contenedor.appendChild(div);
+        });
+    }
+    // === FIN LÓGICA CUSTOM SELECT CARGO ===
 
     document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
 
@@ -286,31 +323,41 @@ document.addEventListener('DOMContentLoaded', function () {
             { title: "Codigo", field: "codPersonal", hozAlign: "center", width: 80 },
             {
                 title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
-                formatter: cell => { const d = cell.getData(); return `${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim(); }
+                formatter: cell => { 
+                    const d = cell.getData(); 
+                    const apellidos = `${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim();
+                    return apellidos ? capitalizeWords(apellidos) : ''; 
+                }
             },
             {
                 title: "Nombres", field: "NOMB_1", hozAlign: "left", widthGrow: 2,
-                formatter: cell => { const d = cell.getData(); return `${d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim(); }
+                formatter: cell => { 
+                    const d = cell.getData(); 
+                    const nombres = `${d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim();
+                    return nombres ? capitalizeWords(nombres) : ''; 
+                }
             },
 
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
             { title: "Cargo", field: "cargo", hozAlign: "left", widthGrow: 2 }, // 🔥 NUEVA COLUMNA 🔥
             {
-                title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
+                title: "Tipo", field: "tipoPer", hozAlign: "center", minWidth: 150, widthGrow: 2,
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
-                    let color = '';
-                    if (val.includes('OPERATIVO')) {
-                        color = 'border-blue-300 bg-blue-100 text-blue-800';
-                    } else if (val.includes('ADMINISTRATIVO')) {
-                        color = 'border-purple-300 bg-purple-100 text-purple-800';
-                    } else if (val.includes('ESPECIAL')) {
-                        color = 'border-orange-300 bg-orange-100 text-orange-800';
-                    } else {
-                        color = 'border-gray-300 bg-gray-100 text-gray-800';
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
                     }
-                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium whitespace-nowrap">${capitalizeWords(val)}</span>` : '';
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
+
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap uppercase" style="min-width: 125px;">${val}</span>` : '—';
                 }
             },
             {
@@ -318,16 +365,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 formatter: cell => {
                     const d = cell.getData();
                     if (d.cambio != null) {
-                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700">
-                            <span class="flex items-center gap-1"><i class='bx bx-calendar'></i> <span>${formatearFechaHora(d.cambio).fecha}</span></span>
-                            <span class="flex items-center gap-1"><i class='bx bx-time-five'></i> <span>${formatearFechaHora(d.cambio).hora}</span></span>
+                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700 whitespace-nowrap">
+                            <span class="flex items-center gap-1"><i class='bx bx-calendar text-blue-500'></i> <span>${formatearFechaHora(d.cambio).fecha}</span></span>
+                            <span class="flex items-center gap-1"><i class='bx bx-time-five text-orange-500'></i> <span>${formatearFechaHora(d.cambio).hora}</span></span>
                         </div>`.trim();
                     }
                     return `${d.cambio ?? 'Sin cambios'}`.trim();
                 }
             },
             {
-                title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
+                title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, width: 95,
                 formatter: cell => {
                     const d = cell.getData();
                     const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">DJ</button>`;
@@ -592,16 +639,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     function _aplicarDatosTabla(datosTabla) {
         tblPersonas.setData(datosTabla);
-        const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
-        const filtroCargo = document.getElementById('filtroCargoPEN');
-        if (filtroCargo) {
-            filtroCargo.innerHTML = '<option value="">Todos</option>';
-            cargosUnicos.forEach(cargo => filtroCargo.add(new Option(cargo, cargo)));
+        
+        // Guardamos los cargos en la variable global
+        cargosDisponibles = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+        
+        const inputCargo = document.getElementById('filtroCargoPEN');
+        if (inputCargo) {
+            const valorPrevio = inputCargo.value;
+            
+            // Renderizar la lista base
+            renderCustomCargoOptions(cargosDisponibles);
+
+            // Validar si el texto actual sigue siendo válido en la nueva lista
+            if (valorPrevio && !cargosDisponibles.includes(valorPrevio)) {
+                inputCargo.value = '';
+            }
         }
+        
         aplicarFiltrosPEN();
     }
 
     async function _fetchPersonal(vigencia) {
+        if (!vigencia) return [];
         const res = await axios.get(`${VITE_URL_APP}/get-personal-dj-2026`, { params: { vigencia } });
         const datos = res.data;
         _personalCache[vigencia] = datos;
@@ -609,23 +668,47 @@ document.addEventListener('DOMContentLoaded', function () {
         return datos;
     }
 
-    function getPersonal(silent = false) {
-        const toggleActivos = document.getElementById('filtroVigenciaPEN');
-        const vigenciaVal = (toggleActivos && toggleActivos.checked) ? 'SI' : 'NO';
-        const ahora = Date.now();
-        const cacheValido = _personalCache[vigenciaVal] && (ahora - _personalCache[`_ts${vigenciaVal}`]) < _CACHE_TTL;
+    async function _cargarTodosLosDatos() {
+        const [datosSI, datosNO] = await Promise.all([
+            _personalCache.SI ? Promise.resolve(_personalCache.SI) : _fetchPersonal('SI'),
+            _personalCache.NO ? Promise.resolve(_personalCache.NO) : _fetchPersonal('NO')
+        ]);
+        return [...(datosSI || []), ...(datosNO || [])];
+    }
 
-        if (cacheValido) {
-            // Servir al instante desde cache
-            _aplicarDatosTabla(_personalCache[vigenciaVal]);
-            // Refrescar en background sin mostrar loading
-            _fetchPersonal(vigenciaVal).then(datos => _aplicarDatosTabla(datos)).catch(console.error);
+    function getPersonal(silent = false) {
+        const selectVigencia = document.getElementById('filtroVigenciaPEN');
+        const vigenciaVal = selectVigencia ? selectVigencia.value : ''; // '' = Todos, 'SI' = Activos, 'NO' = Cesados
+        const ahora = Date.now();
+
+        if (vigenciaVal === 'SI' || vigenciaVal === 'NO') {
+            const cacheValido = _personalCache[vigenciaVal] && (ahora - _personalCache[`_ts${vigenciaVal}`]) < _CACHE_TTL;
+            if (cacheValido) {
+                _aplicarDatosTabla(_personalCache[vigenciaVal]);
+                _fetchPersonal(vigenciaVal).then(datos => _aplicarDatosTabla(datos)).catch(console.error);
+            } else {
+                if (!silent) tblPersonas.alert("Buscando datos...", "msg");
+                _fetchPersonal(vigenciaVal)
+                    .then(datos => _aplicarDatosTabla(datos))
+                    .catch(error => console.error("Hubo un error:", error))
+                    .finally(() => tblPersonas.clearAlert());
+            }
         } else {
-            if (!silent) tblPersonas.alert("Buscando datos...", "msg");
-            _fetchPersonal(vigenciaVal)
-                .then(datos => _aplicarDatosTabla(datos))
-                .catch(error => console.error("Hubo un error:", error))
-                .finally(() => tblPersonas.clearAlert());
+            // Caso 'Todos' ('')
+            const cacheSIValido = _personalCache.SI && (ahora - _personalCache._tsSI) < _CACHE_TTL;
+            const cacheNOValido = _personalCache.NO && (ahora - _personalCache._tsNO) < _CACHE_TTL;
+
+            if (cacheSIValido && cacheNOValido) {
+                const todos = [...(_personalCache.SI || []), ...(_personalCache.NO || [])];
+                _aplicarDatosTabla(todos);
+                _cargarTodosLosDatos().then(todosFrescos => _aplicarDatosTabla(todosFrescos)).catch(console.error);
+            } else {
+                if (!silent) tblPersonas.alert("Buscando datos...", "msg");
+                _cargarTodosLosDatos()
+                    .then(todos => _aplicarDatosTabla(todos))
+                    .catch(error => console.error("Hubo un error:", error))
+                    .finally(() => tblPersonas.clearAlert());
+            }
         }
     }
 
@@ -637,15 +720,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
 
-                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
-                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
-                const filtroCargo = document.getElementById('filtroCargoPEN');
-                if (filtroCargo) {
-                    filtroCargo.innerHTML = '<option value="">Todos</option>';
-                    cargosUnicos.forEach(cargo => {
-                        filtroCargo.add(new Option(cargo, cargo));
-                    });
-                }
+                // 🔥 LLENADO DINÁMICO DEL CUSTOM SELECT DE CARGOS 🔥
+                cargosDisponibles = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+                renderCustomCargoOptions(cargosDisponibles);
 
                 aplicarFiltrosPEN();
             })
@@ -701,22 +778,74 @@ document.addEventListener('DOMContentLoaded', function () {
             if (sucursal && data.codSucursal !== sucursal) return false;
             if (tipoPer && data.tipoPer !== tipoPer) return false;
 
-            // 🔥 CAMBIO AQUÍ: Comparamos el nombre exacto del cargo
-            if (cargo && data.cargo !== cargo) return false;
+            // 🔥 CAMBIO AQUÍ: Filtrado parcial para que funcione como autocomplete
+            if (cargo && !(data.cargo || '').toLowerCase().includes(cargo.toLowerCase())) return false;
 
             if (texto && !matchBusqueda(data, texto)) return false;
             return true;
         });
+
+        // =========================================================================
+        // 🔥 LÓGICA DE INDICADORES: Calculamos en base a la data cargada actual
+        // =========================================================================
+        const todaLaData = tblPersonas.getData();
+
+        // Filtramos solo por los selects (ignoramos la búsqueda de texto para que los totales no se alteren al buscar un nombre)
+        const dataParaTarjetas = todaLaData.filter(d => {
+            const cumpleSucursal = (sucursal === '') || (d.codSucursal === sucursal);
+            const cumpleTipo = (tipoPer === '') || (d.tipoPer === tipoPer);
+            const cumpleCargo = (cargo === '') || ((d.cargo || '').toLowerCase().includes(cargo.toLowerCase()));
+            return cumpleSucursal && cumpleTipo && cumpleCargo;
+        });
+
+        const total = dataParaTarjetas.length;
+        const vigentes = dataParaTarjetas.filter(d => (d.vigencia || '').toUpperCase() === 'SI').length;
+        const noVigentes = total - vigentes;
+
+        if (document.getElementById('countTotalPen')) document.getElementById('countTotalPen').textContent = total;
+        if (document.getElementById('countVigentesPen')) document.getElementById('countVigentesPen').textContent = vigentes;
+        if (document.getElementById('countNoVigentesPen')) document.getElementById('countNoVigentesPen').textContent = noVigentes;
     }
 
     document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
     document.getElementById('filtroTipoPerPEN')?.addEventListener('change', aplicarFiltrosPEN);
-    document.getElementById('filtroCargoPEN')?.addEventListener('change', aplicarFiltrosPEN);
     document.getElementById('filtroVigenciaPEN')?.addEventListener('change', getPersonal);
 
-    // Precarga ambas vistas en paralelo para que el toggle sea instantáneo
+    // Eventos del Custom Select Cargo
+    const inputCargo = document.getElementById('filtroCargoPEN');
+    const contenedorCargos = document.getElementById('listaCargosPEN');
+    const wrapCargo = document.getElementById('custom-select-cargo');
+
+    if (inputCargo && contenedorCargos && wrapCargo) {
+        
+        // Función auxiliar para renderizar filtrando por el valor actual del input
+        const mostrarOpcionesFiltradas = () => {
+            const val = inputCargo.value.toLowerCase();
+            contenedorCargos.classList.remove('hidden');
+            const filtrados = cargosDisponibles.filter(c => c.toLowerCase().includes(val));
+            renderCustomCargoOptions(filtrados);
+        };
+
+        // Mostrar lista al hacer click o enfocar, respetando lo que ya está escrito
+        inputCargo.addEventListener('focus', mostrarOpcionesFiltradas);
+        inputCargo.addEventListener('click', mostrarOpcionesFiltradas);
+
+        // Filtrar lista al escribir y actualizar tabla
+        inputCargo.addEventListener('input', (e) => {
+            mostrarOpcionesFiltradas();
+            aplicarFiltrosPEN(); 
+        });
+
+        // Ocultar al hacer click afuera
+        document.addEventListener('click', (e) => {
+            if (!wrapCargo.contains(e.target)) {
+                contenedorCargos.classList.add('hidden');
+            }
+        });
+    }
+
+    // Carga inicial (como 'Todos' es el por defecto, traerá activos y cesados juntos)
     getPersonal();
-    _fetchPersonal('NO').catch(() => {});
 
     document.getElementById('btnGenerarSeleccionadosPEN')?.addEventListener('click', async function () {
         const seleccionadas = tblPersonas.getSelectedRows();
@@ -915,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     // Invalidar cache para que la recarga traiga datos frescos
-                    _personalCache.SI = null; _personalCache.NO = null;
+                    _personalCache.SI = null; _personalCache.NO = null; _personalCache.TODOS = null;
                     getPersonal();
                 }
             } catch (error) {
