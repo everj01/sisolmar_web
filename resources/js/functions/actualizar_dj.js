@@ -238,19 +238,14 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         // ------------------------------------
         columns: [
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 60,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
             },
             {
                 title: "Actualizado", field: "SIP_CAMBIO", hozAlign: "center", width: 140,
@@ -338,7 +333,9 @@ document.addEventListener('DOMContentLoaded', function () {
             // }
         ],
     });
-    reformatNums(tblEtapa1);
+    
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    // reformatNums(tblEtapa1); 
 
     //  NUEVA FUNCIÓN DE FILTRADO LOCAL
     function aplicarFiltrosLocalesE1() {
@@ -414,8 +411,22 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Mantiene el resaltado amarillo si cambias de página en Tabulator
-    tblEtapa1.on("renderComplete", () => {
-        if (tblEtapa1._ultimoFiltro) resaltarTexto(tblEtapa1, tblEtapa1._ultimoFiltro);
+    tblEtapa1.on("renderComplete", function () {
+        if (this._ultimoFiltro) resaltarTexto(this, this._ultimoFiltro);
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
     });
     // ============================================================
     // EXPORTACIÓN EXCEL Y PDF (PERSONALIZADO TIPO SISOLMAR)
@@ -746,19 +757,14 @@ document.addEventListener('DOMContentLoaded', function () {
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 60,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
             },
             {
                 title: "Verificado", field: "migrado", hozAlign: "center", widthGrow: 1.2,
@@ -858,10 +864,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
-    reformatNums(tblPersonasVerificado);
+    
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    // reformatNums(tblPersonasVerificado);
 
-    tblPersonasVerificado.on("renderComplete", () => {
-        if (tblPersonasVerificado._ultimoFiltro) resaltarTexto(tblPersonasVerificado, tblPersonasVerificado._ultimoFiltro);
+    tblPersonasVerificado.on("renderComplete", function () {
+        if (this._ultimoFiltro) resaltarTexto(this, this._ultimoFiltro);
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
     });
 
     // ============================================================
@@ -1211,19 +1233,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 headerSort: false,
                 width: 50,
             },
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 50,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 50, 
+                headerSort: false, 
+                responsive: false 
             },
             // {
             //     title: "Verificado", field: "migrado", hozAlign: "center", widthGrow: 1.5,
@@ -1344,10 +1361,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
-    reformatNums(tblPersonasEtapa3);
+    
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    // reformatNums(tblPersonasEtapa3);
 
-    tblPersonasEtapa3.on("renderComplete", () => {
-        if (tblPersonasEtapa3._ultimoFiltro) resaltarTexto(tblPersonasEtapa3, tblPersonasEtapa3._ultimoFiltro);
+    tblPersonasEtapa3.on("renderComplete", function () {
+        if (this._ultimoFiltro) resaltarTexto(this, this._ultimoFiltro);
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
     });
 
     tblPersonasEtapa3.on("rowSelectionChanged", function () {
@@ -2115,19 +2148,14 @@ document.addEventListener('DOMContentLoaded', function () {
         },
 
         columns: [
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 60,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
             },
             {
                 title: 'Escaneo', field: 'tiene_folio_25', hozAlign: 'center', minWidth: 100, widthGrow: 1.2, responsive: false, headerSort: true,
@@ -2201,12 +2229,28 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         ],
     });
-    reformatNums(tblPersonas_E4C);
+    
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    // reformatNums(tblPersonas_E4C);
 
-    tblPersonas_E4C.on("renderComplete", () => {
-        if (tblPersonas_E4C._ultimoFiltro) {
-            resaltarTexto(tblPersonas_E4C, tblPersonas_E4C._ultimoFiltro);
+    tblPersonas_E4C.on("renderComplete", function () {
+        if (this._ultimoFiltro) {
+            resaltarTexto(this, this._ultimoFiltro);
         }
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
     });
 
     function mostrarInfoTabla_E4C() {
@@ -2488,19 +2532,14 @@ document.addEventListener('DOMContentLoaded', function () {
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
         columns: [
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 60,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
             },
             {
                 title: "Escaneo DJ",
@@ -2620,7 +2659,29 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ],
     });
-    reformatNums(tblEtapa4);
+    
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    // reformatNums(tblEtapa4);
+
+    tblEtapa4.on("renderComplete", function () {
+        if (this._ultimoFiltro) {
+            resaltarTexto(this, this._ultimoFiltro);
+        }
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
+    });
 
     // Función para traer datos una sola vez con Axios
     function cargarDatosEtapa4() {
@@ -2935,19 +2996,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         },
         columns: [
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 60,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
             },
             {
                 title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
@@ -3092,7 +3148,27 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         ],
     });
-    reformatNums(tblPersonasMigrado);
+    
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    // reformatNums(tblPersonasMigrado);
+
+    tblPersonasMigrado.on("renderComplete", function () {
+        if (this._ultimoFiltro) resaltarTexto(this, this._ultimoFiltro);
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
+    });
 
     // ── Tabla coincidencias ──────────────────────────────────
     const tblPersonasCN = new Tabulator("#tblPersonasCN", {

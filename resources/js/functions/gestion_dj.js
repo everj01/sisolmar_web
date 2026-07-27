@@ -306,19 +306,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 headerSort: false,
                 width: 40,
             },
-            {
-                title: "N°",
-                hozAlign: "center",
-                width: 60,
-                headerSort: false,
-                formatter: function (cell) {
-                    const table = cell.getTable();
-                    const pos = cell.getRow().getPosition(true);
-                    if (pos <= 0) return '';
-                    const page = table.getPage() || 1;
-                    const size = table.getPageSize() || 20;
-                    return ((page - 1) * size) + pos;
-                }
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
             },
             { title: "Codigo", field: "codPersonal", hozAlign: "center", width: 80 },
             {
@@ -402,14 +397,35 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
     });
 
-    function reformatNums(table) {
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    /* function reformatNums(table) {
         function rf() { table.getRows("active").forEach(r => r.reformat()); }
         table.on("dataLoaded", rf);
         table.on("pageLoaded", rf);
         table.on("dataSorted", () => { table.setPage(1); rf(); });
         table.on("dataFiltered", () => { table.setPage(1); rf(); });
     }
-    reformatNums(tblPersonas);
+    reformatNums(tblPersonas); */
+
+    tblPersonas.on("renderComplete", function () {
+        if (this._ultimoFiltro) {
+            resaltarTexto(this, this._ultimoFiltro);
+        }
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
+    });
 
     tblPersonas.on("rowClick", function (e, row) {
         if (e.target.closest('.form-btn') || e.target.tagName === 'INPUT') return;

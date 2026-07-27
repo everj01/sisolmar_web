@@ -198,8 +198,8 @@
                     <select id="page-size"
                         class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                         <option value="5">5</option>
-                        <option value="10" selected>10</option>
-                        <option value="20">20</option>
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
@@ -336,8 +336,8 @@
         <select id="page-size-migrado" 
             class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
             <option value="5">5</option>
-            <option value="10" selected>10</option>
-            <option value="20">20</option>
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
             <option value="50">50</option>
             <option value="100">100</option>
         </select>

@@ -82,7 +82,16 @@ const tblCargos = new Tabulator("#tblCargos", {
     },
     rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
     columns: [
-        { title: "Nombre", field: "nombre", hozAlign: "left", width: '40%' },
+        { 
+            title: "N°", 
+            field: "nro_fila_estatico", 
+            formatter: function() { return ""; }, 
+            hozAlign: "center", 
+            width: '6%', 
+            headerSort: false, 
+            responsive: false 
+        },
+        { title: "Nombre", field: "nombre", hozAlign: "left", width: '34%' },
           { title: "Tipo", field: "tipo", hozAlign: "center", width: '18%',
               formatter: function(cell) {
                   let val = cell.getValue() || '';
@@ -236,6 +245,23 @@ const tblCargos = new Tabulator("#tblCargos", {
             row.getElement().style.backgroundColor = "#ffe9e9";
         }
     }
+});
+
+// =========================================================
+// INYECCIÓN DE NUMERACIÓN ESTÁTICA
+// =========================================================
+tblCargos.on("renderComplete", function () {
+    // Usamos 10 por defecto porque así está en paginationSize
+    const page = this.getPage() || 1;
+    const size = this.getPageSize() || 10;
+    const offset = (page - 1) * size;
+    
+    this.getRows("active").forEach((row, index) => {
+        const cell = row.getCell("nro_fila_estatico");
+        if (cell) {
+            cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+        }
+    });
 });
 
 document.getElementById("page-size").addEventListener("change", function () {

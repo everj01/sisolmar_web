@@ -93,6 +93,15 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     },
 
     columns: [
+        { 
+            title: "N°", 
+            field: "nro_fila_estatico", // Asignamos un identificador para llamarlo luego
+            formatter: function() { return ""; }, // Lo dejamos vacío porque lo inyectaremos post-render
+            hozAlign: "center", 
+            width: 55, 
+            headerSort: false, 
+            responsive: false 
+        },
         { title: "Cód.", field: "CODI_PERS", hozAlign: "center", width: '8%', responsive: false },
         { 
             title: "Apellidos", field: "apellidos", hozAlign: "left", width: '15%', responsive: false,
@@ -185,6 +194,21 @@ tblPersonas.on("dataLoaded", function () {
 
 tblPersonas.on("renderComplete", function () {
     if (this._ultimoFiltro) resaltarTexto(this._ultimoFiltro);
+
+    // =========================================================
+    // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+    // =========================================================
+    const page = this.getPage() || 1;
+    const size = this.getPageSize() || 10;
+    const offset = (page - 1) * size;
+    
+    // getRows("active") trae las filas en el orden visual ACTUAL de la pantalla
+    this.getRows("active").forEach((row, index) => {
+        const cell = row.getCell("nro_fila_estatico");
+        if (cell) {
+            cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+        }
+    });
 });
 
 // ============================================================

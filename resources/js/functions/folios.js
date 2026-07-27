@@ -47,6 +47,15 @@ const tblFolios = new Tabulator("#tblFolios", {
         }
     },
     columns: [
+        { 
+            title: "N°", 
+            field: "nro_fila_estatico", 
+            formatter: function() { return ""; }, 
+            hozAlign: "center", 
+            width: 55, 
+            headerSort: false, 
+            responsive: false 
+        },
         { title: "Folios", field: "nombre", hozAlign: "left", widthGrow: 3 },
         { title: "Categoría", field: "nombre_categoria", hozAlign: "center", widthGrow: 3 },
         {
@@ -249,6 +258,23 @@ const tblFolios = new Tabulator("#tblFolios", {
             row.getElement().style.backgroundColor = "#ffe9e9";
         }
     }
+});
+
+// =========================================================
+// INYECCIÓN DE NUMERACIÓN ESTÁTICA
+// =========================================================
+tblFolios.on("renderComplete", function () {
+    // Usamos 20 por defecto porque así lo definiste en paginationSize
+    const page = this.getPage() || 1;
+    const size = this.getPageSize() || 20; 
+    const offset = (page - 1) * size;
+    
+    this.getRows("active").forEach((row, index) => {
+        const cell = row.getCell("nro_fila_estatico");
+        if (cell) {
+            cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+        }
+    });
 });
 
 //-------- Desactivar/Activar la institucion
