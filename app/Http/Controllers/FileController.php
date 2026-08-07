@@ -1226,19 +1226,39 @@ class FileController extends Controller
                 $rutaArchivo = $rutas[0];
             }
 
-            $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
-                ->attach('archivo', file_get_contents($archivo), $archivo->getClientOriginalName())
-                ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
-                    'nameFile' => $nameFile,
-                    'ruta' => $rutaArchivo,
-                ]);
+            // $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+            //     ->attach('archivo', file_get_contents($archivo), $archivo->getClientOriginalName())
+            //     ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+            //         'nameFile' => $nameFile,
+            //         'ruta' => $rutaArchivo,
+            //     ]);
 
-            if ($response->failed()) {
+            // if ($response->failed()) {
+            //     return response()->json([
+            //         'error' => 'No se pudo guardar el archivo en el servidor remoto.',
+            //         'detalle' => $response->body(),
+            //     ], 500);
+            // }
+
+$rutaFisicaRelativa = str_replace('/', '\\', $rutaArchivo);
+            $rutaDirectorioDestino = "\\\\192.168.10.2\\Biblioteca_Grafica\\" . $rutaFisicaRelativa;
+            
+            // Creamos la carpeta si no existe
+            if (!file_exists($rutaDirectorioDestino)) {
+                mkdir($rutaDirectorioDestino, 0777, true);
+            }
+
+            $rutaFinal = $rutaDirectorioDestino . "\\" . $nameFile;
+            
+            $resultado = file_put_contents($rutaFinal, file_get_contents($archivo));
+            
+            if ($resultado === false) {
                 return response()->json([
-                    'error' => 'No se pudo guardar el archivo en el servidor remoto.',
-                    'detalle' => $response->body(),
+                    'error' => 'No se pudo guardar el archivo en el servidor local.',
+                    'detalle' => 'Fallo al escribir en ' . $rutaFinal,
                 ], 500);
             }
+
         }
 
         // Guardar en BD
@@ -1303,14 +1323,44 @@ class FileController extends Controller
         foreach ($result as $item) {
             $rutaEncontrada = false;
 
-            // Probar primero con ruta_aux
+            // // Probar primero con ruta_aux
+            // if (isset($item->ruta_aux)) {
+            //     $rutaBase = str_replace('//', 'http://', $item->ruta_aux);
+
+            //     foreach ($extensiones as $ext) {
+            //         $rutaConExt = $rutaBase.'.'.$ext;
+
+            //         if (self::urlExiste($rutaConExt)) {
+            //             $rutasValidas[] = $rutaConExt;
+            //             $rutaEncontrada = true;
+            //             break;
+            //         }
+            //     }
+            // }
+
+            // // Si no se encontró nada en ruta_aux, probar con ruta
+            // if (! $rutaEncontrada && isset($item->ruta)) {
+            //     $rutaBase = str_replace('//', 'http://', $item->ruta);
+
+            //     foreach ($extensiones as $ext) {
+            //         $rutaConExt = $rutaBase.'.'.$ext;
+
+            //         if (self::urlExiste($rutaConExt)) {
+            //             $rutasValidas[] = $rutaConExt;
+            //             break;
+            //         }
+            //     }
+            // }
+
+// Probar primero con ruta_aux
             if (isset($item->ruta_aux)) {
-                $rutaBase = str_replace('//', 'http://', $item->ruta_aux);
+                // Convertimos el string de DB ("//190.116.178.163/..." o "//...") a ruta de red local Windows
+                $rutaBase = str_replace(['//190.116.178.163/', '//', '/'], ['\\\\192.168.10.2\\', '\\\\192.168.10.2\\', '\\'], $item->ruta_aux);
 
                 foreach ($extensiones as $ext) {
                     $rutaConExt = $rutaBase.'.'.$ext;
 
-                    if (self::urlExiste($rutaConExt)) {
+                    if (self::archivoExisteLocal($rutaConExt)) {
                         $rutasValidas[] = $rutaConExt;
                         $rutaEncontrada = true;
                         break;
@@ -1320,17 +1370,18 @@ class FileController extends Controller
 
             // Si no se encontró nada en ruta_aux, probar con ruta
             if (! $rutaEncontrada && isset($item->ruta)) {
-                $rutaBase = str_replace('//', 'http://', $item->ruta);
+                $rutaBase = str_replace(['//190.116.178.163/', '//', '/'], ['\\\\192.168.10.2\\', '\\\\192.168.10.2\\', '\\'], $item->ruta);
 
                 foreach ($extensiones as $ext) {
                     $rutaConExt = $rutaBase.'.'.$ext;
 
-                    if (self::urlExiste($rutaConExt)) {
+                    if (self::archivoExisteLocal($rutaConExt)) {
                         $rutasValidas[] = $rutaConExt;
                         break;
                     }
                 }
             }
+
         }
 
         if (empty($rutasValidas)) {
@@ -1775,19 +1826,25 @@ class FileController extends Controller
         // }
     }
 
-    // Función para validar si la URL existe
-    private static function urlExiste($url)
-    {
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_NOBODY, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_exec($ch);
-        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+    // // Función para validar si la URL existe
+    // private static function urlExiste($url)
+    // {
+    //     $ch = curl_init($url);
+    //     curl_setopt($ch, CURLOPT_NOBODY, true);
+    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    //     curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    //     curl_exec($ch);
+    //     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    //     curl_close($ch);
 
-        return $statusCode === 200;
+    //     return $statusCode === 200;
+    // }
+
+private static function archivoExisteLocal($rutaUnc)
+    {
+        return file_exists($rutaUnc) && is_readable($rutaUnc);
     }
+
 
     // public function saveFolioPersona(Request $request)
     // {

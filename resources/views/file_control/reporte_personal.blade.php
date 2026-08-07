@@ -12,33 +12,37 @@
 <div class="grid lg:grid-cols-1 gap-6 mt-8">
     <div class="card overflow-hidden">
 
-        <div class="card-header flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <h4 class="card-title">Listado de Personal</h4>
-                <div id="repLoadingIndicator" class="hidden items-center gap-1.5 text-xs text-gray-400">
-                    <svg class="animate-spin w-3.5 h-3.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-                    Actualizando...
+        <div class="card-header border-b border-gray-100 py-4 px-5">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <h4 class="text-lg font-bold text-primary uppercase flex items-center">
+                        <i class='bx bx-group text-2xl mr-2'></i> LISTADO DE PERSONAL
+                    </h4>
+                    <div id="repLoadingIndicator" class="hidden items-center gap-1.5 text-xs text-gray-400">
+                        <svg class="animate-spin w-3.5 h-3.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        Actualizando...
+                    </div>
                 </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[80px]">
-                    <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
-                    <span id="cntTotal" class="text-lg font-bold text-blue-700">0</span>
-                </div>
-                <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[80px]">
-                    <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
-                    <span id="cntVigentes" class="text-lg font-bold text-green-700">0</span>
-                </div>
-                <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[80px]">
-                    <span class="block text-[9px] text-red-600 font-bold uppercase">Cesados</span>
-                    <span id="cntCesados" class="text-lg font-bold text-red-700">0</span>
-                </div>
-                <div class="bg-neutral-100 px-3 py-2 rounded-lg border border-neutral-300 text-center min-w-[80px]">
-                    <span class="block text-[9px] text-neutral-500 font-bold uppercase">Lista Negra</span>
-                    <span id="cntListaNegra" class="text-lg font-bold text-neutral-800">0</span>
+                <div class="flex gap-2">
+                    <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px] shadow-sm">
+                        <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                        <span id="cntTotal" class="text-lg font-bold text-blue-700">0</span>
+                    </div>
+                    <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px] shadow-sm">
+                        <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
+                        <span id="cntVigentes" class="text-lg font-bold text-green-700">0</span>
+                    </div>
+                    <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[90px] shadow-sm">
+                        <span class="block text-[9px] text-red-600 font-bold uppercase">Cesados</span>
+                        <span id="cntCesados" class="text-lg font-bold text-red-700">0</span>
+                    </div>
+                    <div class="bg-neutral-100 px-3 py-2 rounded-lg border border-neutral-300 text-center min-w-[90px] shadow-sm">
+                        <span class="block text-[9px] text-neutral-500 font-bold uppercase">Lista Negra</span>
+                        <span id="cntListaNegra" class="text-lg font-bold text-neutral-800">0</span>
+                    </div>
                 </div>
             </div>
         </div>

@@ -14,23 +14,51 @@ class ImagenHelper
             mkdir($carpeta, 0755, true);
         }
 
+        // file://192.168.10.2/Biblioteca_Grafica
+        
+        // $archivos = [
+        //     [
+        //         //'url' => "http://190.116.178.163/Biblioteca_Grafica/HUELLAS_DIGITALES/PERSONAL/{$codPersonal}.jpg",
+        //         'url' => "file://192.168.10.2/Biblioteca_Grafica/HUELLAS_DIGITALES/PERSONAL/{$codPersonal}.jpg",
+        //         'tipo' => 'huella',
+        //     ],
+        //     [
+        //         //'url' => "http://190.116.178.163/Biblioteca_Grafica/FIRMAS/PERSONAL/{$codPersonal}.jpg",
+        //         'url' => "file://192.168.10.2/Biblioteca_Grafica/FIRMAS/PERSONAL/{$codPersonal}.jpg",
+        //         'tipo' => 'firma',
+        //     ],
+        // ];
+        
+        // foreach ($archivos as $archivo) {
+        //     $rutaRemota = $archivo['url'];
+        //     $nombreArchivo = basename($rutaRemota);
+        
+        //     // Obtener la ruta relativa desde "Biblioteca_Grafica/"
+        //     $relativePath = Str::after($rutaRemota, 'Biblioteca_Grafica/');
+        //     $subcarpeta = dirname($relativePath);
+
         $archivos = [
             [
-                'url' => "http://190.116.178.163/Biblioteca_Grafica/HUELLAS_DIGITALES/PERSONAL/{$codPersonal}.jpg",
+                'url' => "\\\\192.168.10.2\\Biblioteca_Grafica\\HUELLAS_DIGITALES\\PERSONAL\\{$codPersonal}.jpg",
                 'tipo' => 'huella',
             ],
             [
-                'url' => "http://190.116.178.163/Biblioteca_Grafica/FIRMAS/PERSONAL/{$codPersonal}.jpg",
+                'url' => "\\\\192.168.10.2\\Biblioteca_Grafica\\FIRMAS\\PERSONAL\\{$codPersonal}.jpg",
                 'tipo' => 'firma',
             ],
         ];
         
         foreach ($archivos as $archivo) {
+            // La ruta UNC real para descargar con file_get_contents
             $rutaRemota = $archivo['url'];
-            $nombreArchivo = basename($rutaRemota);
+            
+            // Normalizamos las barras invertidas a normales SOLO para que funcione el Str::after de abajo
+            $rutaNormalizada = str_replace('\\', '/', $rutaRemota);
+            
+            $nombreArchivo = basename($rutaNormalizada);
         
-            // Obtener la ruta relativa desde "Biblioteca_Grafica/"
-            $relativePath = Str::after($rutaRemota, 'Biblioteca_Grafica/');
+            // Obtener la ruta relativa desde "Biblioteca_Grafica/" (ahora funcionará perfecto)
+            $relativePath = Str::after($rutaNormalizada, 'Biblioteca_Grafica/');
             $subcarpeta = dirname($relativePath);
         
             // Ruta local completa para guardar

@@ -38,18 +38,18 @@
                 <span class="tab-circle">2</span> ETAPA: Verificación
             </button>
             <button data-target="etapa3" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                class="tab-btn hidden" style="display: none !important;">
                 <span class="tab-circle">3</span> ETAPA: Generación DJ en PDF
             </button>
 
             <button data-target="etapa_carga" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn {{ $esRrhhMigracion ? 'active bg-blue-900 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                class="tab-btn hidden" style="display: none !important;">
                 <span class="tab-circle">4</span> ETAPA: Carga de DJ
             </button>
 
             <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
                 class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                <span class="tab-circle">5</span> ETAPA: Validación de Imágenes
+                <span class="tab-circle">3</span> ETAPA: Validación de Imágenes
             </button>
         </nav>
     </div>
@@ -252,7 +252,7 @@
                 </div>
             </div>
         </div>
-        <div id="etapa3" class="tab-content hidden">
+        <div id="etapa3" class="tab-content hidden" style="display: none !important;">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
                     <div class="w-full px-5 py-4">
@@ -366,7 +366,7 @@
         {{-- ============================================================ --}}
         {{-- NUEVA 4° ETAPA: CARGA DE DJ                                  --}}
         {{-- ============================================================ --}}
-        <div id="etapa_carga" class="tab-content {{ $esRrhhMigracion ? 'active' : 'hidden' }}">
+        <div id="etapa_carga" class="tab-content hidden" style="display: none !important;">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
                     <div class="w-full px-5 py-4">
@@ -533,7 +533,7 @@
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">5</span>Revision de Validación de Imágenes</h4>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">3</span>Revision de Validación de Imágenes</h4>
                                 {{-- <p class="text-sm text-gray-500">Validación de Huella y Firma</p> --}}
                             </div>
 

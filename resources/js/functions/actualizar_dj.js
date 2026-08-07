@@ -4726,16 +4726,37 @@ async function llenarFormulario(data) {
     setValue('#celular_emergencia', data.PERS_NROEMERGENCIA ? data.PERS_NROEMERGENCIA.trim() : '');
     setValue('#parentesco_emergencia', data.PERS_EMERC_FAMILIAR ? data.PERS_EMERC_FAMILIAR.trim() : '');
 
-    if (data.FOTO_PATH) {
+    // if (data.FOTO_PATH) {
+    //     const img = document.getElementById('previewFoto');
+    //     const placeholderEl = document.getElementById('placeholderFoto');
+    //     if (img) {
+    //         img.src = data.FOTO_PATH + '?v=' + (Math.floor(Math.random() * 900) + 100);
+    //         img.classList.remove('hidden');
+    //         if (placeholderEl) placeholderEl.classList.add('hidden');
+    //         document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
+    //     }
+    // }
+
+// =======================================================================
+    // 🟢 NUEVO CÓDIGO LOCAL (Consumiendo el proxy Base64 del Backend)
+    // =======================================================================
+    if (data.CODI_PERS) {
         const img = document.getElementById('previewFoto');
         const placeholderEl = document.getElementById('placeholderFoto');
         if (img) {
-            img.src = data.FOTO_PATH + '?v=' + (Math.floor(Math.random() * 900) + 100);
-            img.classList.remove('hidden');
-            if (placeholderEl) placeholderEl.classList.add('hidden');
-            document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
+            axios.get(`${API_URL}/proxy-foto`, { params: { codi_pers: data.CODI_PERS } })
+                .then(res => {
+                    if (res.data && res.data.success) {
+                        img.src = res.data.base64;
+                        img.classList.remove('hidden');
+                        if (placeholderEl) placeholderEl.classList.add('hidden');
+                        document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
+                    }
+                })
+                .catch(e => console.warn("No se pudo cargar foto por red local"));
         }
     }
+
 
     // Tomar fotografía de los datos iniciales luego de cargados
     setTimeout(() => {
@@ -5024,36 +5045,77 @@ async function cargarDatosBackup(codiPers) {
         const btnPrev = document.getElementById("btnPrevisualizar");
         if (btnPrev) btnPrev.style.display = 'none';
 
-        // Foto en DJ Antiguo (Panel Backup)
+        // // Foto en DJ Antiguo (Panel Backup)
+        // let imgBk = document.getElementById('previewFotoBackup');
+        // let placeholderBk = document.getElementById('placeholderFotoBackup');
+
+        // if (imgBk) {
+        //     // Como el backend de backup no trae FOTO_PATH, armamos la ruta directa con el codiPers
+        //     const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codiPers}.jpg`;
+
+        //     // Asignamos la imagen
+        //     imgBk.src = fotoUrl + '?v=' + (Math.floor(Math.random() * 900) + 100);
+
+        //     // Si carga bien, mostramos la foto y ocultamos el placeholder
+        //     imgBk.onload = function () {
+        //         imgBk.classList.remove('hidden');
+        //         if (placeholderBk) placeholderBk.classList.add('hidden');
+        //     };
+
+        //     // Si no hay foto en el servidor, dejamos el placeholder visible
+        //     imgBk.onerror = function () {
+        //         imgBk.classList.add('hidden');
+        //         if (placeholderBk) placeholderBk.classList.remove('hidden');
+        //     };
+        // } else {
+        //     // Fallback por si acaso no pusiste los IDs en el blade
+        //     const panelInfo = document.querySelector('#panelBackup');
+        //     if (panelInfo) {
+        //         const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codiPers}.jpg`;
+        //         panelInfo.insertAdjacentHTML('afterbegin', `<div class="mb-4 text-center mt-4"><img src="${fotoUrl}" class="rounded-lg mx-auto border border-gray-300 shadow-sm" style="max-height: 140px;" onerror="this.style.display='none'" /></div>`);
+        //     }
+        // }
+
+
+// =======================================================================
+        // 🟢 NUEVO CÓDIGO LOCAL (Consumiendo el proxy Base64 del Backend)
+        // =======================================================================
         let imgBk = document.getElementById('previewFotoBackup');
         let placeholderBk = document.getElementById('placeholderFotoBackup');
 
         if (imgBk) {
-            // Como el backend de backup no trae FOTO_PATH, armamos la ruta directa con el codiPers
-            const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codiPers}.jpg`;
-
-            // Asignamos la imagen
-            imgBk.src = fotoUrl + '?v=' + (Math.floor(Math.random() * 900) + 100);
-
-            // Si carga bien, mostramos la foto y ocultamos el placeholder
-            imgBk.onload = function () {
-                imgBk.classList.remove('hidden');
-                if (placeholderBk) placeholderBk.classList.add('hidden');
-            };
-
-            // Si no hay foto en el servidor, dejamos el placeholder visible
-            imgBk.onerror = function () {
-                imgBk.classList.add('hidden');
-                if (placeholderBk) placeholderBk.classList.remove('hidden');
-            };
+            axios.get(`${API_URL}/proxy-foto`, { params: { codi_pers: codiPers } })
+                .then(res => {
+                    if (res.data && res.data.success) {
+                        imgBk.src = res.data.base64;
+                        imgBk.classList.remove('hidden');
+                        if (placeholderBk) placeholderBk.classList.add('hidden');
+                    } else {
+                        throw new Error('Sin imagen local');
+                    }
+                })
+                .catch(() => {
+                    imgBk.classList.add('hidden');
+                    if (placeholderBk) placeholderBk.classList.remove('hidden');
+                });
         } else {
-            // Fallback por si acaso no pusiste los IDs en el blade
             const panelInfo = document.querySelector('#panelBackup');
             if (panelInfo) {
-                const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codiPers}.jpg`;
-                panelInfo.insertAdjacentHTML('afterbegin', `<div class="mb-4 text-center mt-4"><img src="${fotoUrl}" class="rounded-lg mx-auto border border-gray-300 shadow-sm" style="max-height: 140px;" onerror="this.style.display='none'" /></div>`);
+                const idImgFallback = 'img_bk_fallback_' + codiPers;
+                panelInfo.insertAdjacentHTML('afterbegin', `<div class="mb-4 text-center mt-4"><img id="${idImgFallback}" class="rounded-lg mx-auto border border-gray-300 shadow-sm" style="max-height: 140px; display:none;" /></div>`);
+                axios.get(`${API_URL}/proxy-foto`, { params: { codi_pers: codiPers } })
+                    .then(res => {
+                        if (res.data && res.data.success) {
+                            const imgF = document.getElementById(idImgFallback);
+                            if (imgF) {
+                                imgF.src = res.data.base64;
+                                imgF.style.display = 'block';
+                            }
+                        }
+                    });
             }
         }
+
 
         // Familiares backup
         const tbody = document.getElementById('bodyBackupFamiliares');
@@ -5927,23 +5989,55 @@ window.addEventListener('solicitarBiometrico', function (e) {
                     gridContainer.insertBefore(cajaFoto, gridContainer.lastElementChild);
                 }
 
-                const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codigo}.jpg?v=${new Date().getTime()}`;
+                // const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codigo}.jpg?v=${new Date().getTime()}`;
 
-                cajaFoto.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-                        <i class="fa fa-user" style="color:#6366f1; font-size:12px;"></i>
-                        <span style="font-size:12px; font-weight:600; color:#374151;">FOTO</span>
-                        <span style="font-size:10px; color:#9ca3af; font-weight:500; margin-left:2px;">ROSTRO</span>
+                // cajaFoto.innerHTML = `
+                //     <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                //         <i class="fa fa-user" style="color:#6366f1; font-size:12px;"></i>
+                //         <span style="font-size:12px; font-weight:600; color:#374151;">FOTO</span>
+                //         <span style="font-size:10px; color:#9ca3af; font-weight:500; margin-left:2px;">ROSTRO</span>
+                //     </div>
+                //     <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
+                //         <div style="position:relative;width:100%;height:420px;background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                //             <img id="foto_rostro_${codigo}" src="${fotoUrl}" 
+                //                  style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:zoom-in;" 
+                //                  onclick="if(window.abrirLightbox) abrirLightbox('foto_rostro_${codigo}')"
+                //                  onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\\'m21 15-5-5L5 21\\'/></svg>Sin foto en servidor</div>'" />
+                //         </div>
+                //     </div>
+                // `;
+
+// =======================================================================
+            // 🟢 NUEVO CÓDIGO LOCAL (Consumiendo el proxy Base64 del Backend)
+            // =======================================================================
+            cajaFoto.innerHTML = `
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <i class="fa fa-user" style="color:#6366f1; font-size:12px;"></i>
+                    <span style="font-size:12px; font-weight:600; color:#374151;">FOTO</span>
+                    <span style="font-size:10px; color:#9ca3af; font-weight:500; margin-left:2px;">ROSTRO LOCAL</span>
+                </div>
+                <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
+                    <div id="caja_foto_inner_${codigo}" style="position:relative;width:100%;height:420px;background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                        <i class='bx bx-loader-alt bx-spin text-3xl text-gray-400'></i>
                     </div>
-                    <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
-                        <div style="position:relative;width:100%;height:420px;background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-                            <img id="foto_rostro_${codigo}" src="${fotoUrl}" 
-                                 style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:zoom-in;" 
-                                 onclick="if(window.abrirLightbox) abrirLightbox('foto_rostro_${codigo}')"
-                                 onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\\'m21 15-5-5L5 21\\'/></svg>Sin foto en servidor</div>'" />
-                        </div>
-                    </div>
-                `;
+                </div>
+            `;
+
+            axios.get(`${VITE_URL_APP}/api/dj/proxy-foto`, { params: { codi_pers: codigo } })
+                .then(res => {
+                    const inner = document.getElementById(`caja_foto_inner_${codigo}`);
+                    if (inner && res.data && res.data.success) {
+                        inner.innerHTML = `<img id="foto_rostro_${codigo}" src="${res.data.base64}" 
+                             style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:zoom-in;" 
+                             onclick="if(window.abrirLightbox) abrirLightbox('foto_rostro_${codigo}')" />`;
+                    } else if (inner) {
+                        inner.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;"><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox="0 0 24 24"><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d="m21 15-5-5L5 21"/></svg>Sin foto local</div>';
+                    }
+                })
+                .catch(() => {
+                    const inner = document.getElementById(`caja_foto_inner_${codigo}`);
+                    if (inner) inner.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;"><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox="0 0 24 24"><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d="m21 15-5-5L5 21"/></svg>Error al cargar foto local</div>';
+                });
             }
             // ============================================================
 
