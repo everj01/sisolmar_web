@@ -13,6 +13,7 @@ use App\Http\Controllers\ReportePersonalController;
 use App\Http\Controllers\RoutingController;
 use App\Http\Controllers\UbicacionController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\ActualizacionesDjController;
 use App\Mail\AlertaCaducidadMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -22,8 +23,11 @@ use Illuminate\Support\Facades\Broadcast;
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 
 Route::middleware(['auth'])->group(function () {
+    
 
     // ─── RUTAS WEB (vistas y acciones directas) ───────────────────────────────
+    Route::get('/dj/periodos/gestionar', [ActualizacionesDjController::class, 'index'])->name('dj.periodos.index');
+    Route::get('/api/dj/periodos/listado', [ActualizacionesDjController::class, 'getPeriodos']);
     Route::get('/api/reporte-avances-dj', [App\Http\Controllers\DjController::class, 'reporteAvancesDj']);
     Route::get('/api/reporte-etapa4-dj', [App\Http\Controllers\DjController::class, 'reporteEtapa4Dj']);
     Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
@@ -261,6 +265,10 @@ Route::middleware(['auth'])->group(function () {
 
         // Biométrico
         Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
+
+        // Periodos de Actualización DJ
+        Route::get('/dj/periodos/personal-corte', [ActualizacionesDjController::class, 'getPersonalPorCorte']);
+        Route::post('/dj/periodos/guardar', [ActualizacionesDjController::class, 'storePeriodo']);
 
         // DJ módulo (antes con prefix 'dj')
         Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
