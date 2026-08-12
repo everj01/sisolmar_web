@@ -1797,34 +1797,14 @@ async function llenarFormulario(data) {
     setValue('#celular_emergencia', data.PERS_NROEMERGENCIA ? data.PERS_NROEMERGENCIA.trim() : '');
     setValue('#parentesco_emergencia', data.PERS_EMERC_FAMILIAR ? data.PERS_EMERC_FAMILIAR.trim() : '');
 
-    // if (data.FOTO_PATH) {
-    //     const img = document.getElementById('previewFoto');
-    //     const placeholderEl = document.getElementById('placeholderFoto');
-    //     if (img) {
-    //         img.src = data.FOTO_PATH + '?v=' + (Math.floor(Math.random() * 900) + 100);
-    //         img.classList.remove('hidden');
-    //         if (placeholderEl) placeholderEl.classList.add('hidden');
-    //         document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
-    //     }
-    // }
-
-// =======================================================================
-    // 🟢 NUEVO CÓDIGO LOCAL (Consumiendo el proxy Base64 del Backend)
-    // =======================================================================
-    if (data.CODI_PERS) {
+    if (data.FOTO_PATH) {
         const img = document.getElementById('previewFoto');
         const placeholderEl = document.getElementById('placeholderFoto');
         if (img) {
-            axios.get(`${API_URL}/dj/proxy-foto`, { params: { codi_pers: data.CODI_PERS } })
-                .then(res => {
-                    if (res.data && res.data.success) {
-                        img.src = res.data.base64;
-                        img.classList.remove('hidden');
-                        if (placeholderEl) placeholderEl.classList.add('hidden');
-                        document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
-                    }
-                })
-                .catch(e => console.warn("No se pudo cargar foto por red local"));
+            img.src = data.FOTO_PATH + '?v=' + (Math.floor(Math.random() * 900) + 100);
+            img.classList.remove('hidden');
+            if (placeholderEl) placeholderEl.classList.add('hidden');
+            document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
         }
     }
 

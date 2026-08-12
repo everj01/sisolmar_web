@@ -34,87 +34,46 @@ class ReportePersonalController extends Controller
         $url = trim($request->get('url', ''));
     
         // Validar que la URL sea del servidor permitido
-        // $dominioPermitido = 'http://190.116.178.163/Biblioteca_Grafica/';
+        $dominioPermitido = 'http://190.116.178.163/Biblioteca_Grafica/';
     
-        // if (empty($url) || !str_starts_with($url, $dominioPermitido)) {
-        //     return response()->json(['error' => 'URL no permitida.'], 403);
-        // }
-    
-        // try {
-        //     // Usar cURL para descargar la imagen desde el servidor interno
-        //     $ch = curl_init($url);
-        //     curl_setopt_array($ch, [
-        //         CURLOPT_RETURNTRANSFER => true,
-        //         CURLOPT_FOLLOWLOCATION => true,
-        //         CURLOPT_TIMEOUT        => 10,
-        //         CURLOPT_SSL_VERIFYPEER => false,
-        //     ]);
-    
-        //     $contenido  = curl_exec($ch);
-        //     $httpCode   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        //     $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-        //     curl_close($ch);
-    
-        //     // Si no existe el archivo en el servidor
-        //     if ($httpCode === 404 || $contenido === false || empty($contenido)) {
-        //         return response()->json(['error' => 'Archivo no encontrado.'], 404);
-        //     }
-    
-        //     if ($httpCode !== 200) {
-        //         return response()->json(['error' => "Error al obtener el archivo (HTTP {$httpCode})."], 502);
-        //     }
-    
-        //     return response($contenido, 200, [
-        //         'Content-Type'        => $contentType ?? 'image/jpeg',
-        //         'Content-Disposition' => 'inline',
-        //         'Cache-Control'       => 'no-store',
-        //     ]);
-    
-        // } catch (\Exception $e) {
-        //     return response()->json(['error' => 'Error interno: ' . $e->getMessage()], 500);
-        // }
-
-
-$dominioPermitido = 'http://190.116.178.163/Biblioteca_Grafica/';
-    
-        // Dejamos la validación intacta porque el frontend seguirá enviando la URL HTTP
         if (empty($url) || !str_starts_with($url, $dominioPermitido)) {
             return response()->json(['error' => 'URL no permitida.'], 403);
         }
     
         try {
-            // 1. Extraemos solo la parte relativa de la URL (ej: "Fotos/12345.jpg")
-            $rutaRelativa = str_replace($dominioPermitido, '', $url);
-            
-            // 2. Cambiamos las barras de URL a barras de Windows
-            $rutaRelativaFisica = str_replace('/', '\\', $rutaRelativa);
-            
-            // 3. Armamos la ruta UNC completa hacia el otro servidor
-            $rutaLocalUnc = "\\\\192.168.10.2\\Biblioteca_Grafica\\" . $rutaRelativaFisica;
+            // Usar cURL para descargar la imagen desde el servidor interno
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
     
-            // Si no existe el archivo físico en red
-            if (!file_exists($rutaLocalUnc) || !is_readable($rutaLocalUnc)) {
-                return response()->json(['error' => 'Archivo no encontrado localmente.'], 404);
+            $contenido  = curl_exec($ch);
+            $httpCode   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+    
+            // Si no existe el archivo en el servidor
+            if ($httpCode === 404 || $contenido === false || empty($contenido)) {
+                return response()->json(['error' => 'Archivo no encontrado.'], 404);
             }
     
-            $contenido = file_get_contents($rutaLocalUnc);
-            
-            // Intentamos adivinar el mime type nativo para los headers, por defecto jpeg
-            $contentType = mime_content_type($rutaLocalUnc) ?: 'image/jpeg';
+            if ($httpCode !== 200) {
+                return response()->json(['error' => "Error al obtener el archivo (HTTP {$httpCode})."], 502);
+            }
     
             return response($contenido, 200, [
-                'Content-Type'        => $contentType,
+                'Content-Type'        => $contentType ?? 'image/jpeg',
                 'Content-Disposition' => 'inline',
                 'Cache-Control'       => 'no-store',
             ]);
     
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error interno (red local): ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error interno: ' . $e->getMessage()], 500);
         }
-
-
     }
-
     public function datosGenerales(Request $request)
     {
         $codSucursal  = trim($request->get('codSucursal',  ''));

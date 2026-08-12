@@ -370,52 +370,35 @@ class DjController extends Controller
             $ruta = 'Fotos';
     
             // Enviar al proxy externo (mismo mecanismo que saveFolioPersona)
-            // $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
-            //     ->attach('archivo', file_get_contents($archivo->getRealPath()), $nameFile)
-            //     ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
-            //         'nameFile' => $nameFile,
-            //         'ruta'     => $ruta,
-            //     ]);
+            $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                ->attach('archivo', file_get_contents($archivo->getRealPath()), $nameFile)
+                ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                    'nameFile' => $nameFile,
+                    'ruta'     => $ruta,
+                ]);
     
-            // if ($response->failed()) {
-            //     Log::error('uploadFotoPersonal: fallo en proxy', [
-            //         'codi_pers' => $codiPers,
-            //         'status'    => $response->status(),
-            //         'body'      => $response->body(),
-            //     ]);
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'No se pudo guardar la foto en el servidor remoto.',
-            //         'detalle' => $response->body(),
-            //     ], 500);
-            // }
+            if ($response->failed()) {
+                Log::error('uploadFotoPersonal: fallo en proxy', [
+                    'codi_pers' => $codiPers,
+                    'status'    => $response->status(),
+                    'body'      => $response->body(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo guardar la foto en el servidor remoto.',
+                    'detalle' => $response->body(),
+                ], 500);
+            }
     
-            // Log::info('uploadFotoPersonal: foto subida correctamente', [
-            //     'codi_pers' => $codiPers,
-            //     'nameFile'  => $nameFile,
-            // ]);
-    
-            // return response()->json([
-            //     'success'  => true,
-            //     'message'  => 'Foto guardada correctamente.',
-            //     'foto_url' => "http://190.116.178.163/Biblioteca_Grafica/Fotos/{$nameFile}",
-            //     'foto_url' => "file:\\192.168.10.2\Biblioteca_Grafica/Fotos/{$nameFile}",
-            // ]);
-
-            $rutaDestinoFisica = "\\\\192.168.10.2\\Biblioteca_Grafica\\Fotos\\" . $nameFile;
-            
-            // Escribimos el archivo directamente en la carpeta compartida de red
-            file_put_contents($rutaDestinoFisica, file_get_contents($archivo->getRealPath()));
-            
-            Log::info('uploadFotoPersonal: foto subida correctamente por red local', [
+            Log::info('uploadFotoPersonal: foto subida correctamente', [
                 'codi_pers' => $codiPers,
                 'nameFile'  => $nameFile,
             ]);
     
             return response()->json([
                 'success'  => true,
-                'message'  => 'Foto guardada correctamente (Local).',
-                'foto_url' => $rutaDestinoFisica,
+                'message'  => 'Foto guardada correctamente.',
+                'foto_url' => "http://190.116.178.163/Biblioteca_Grafica/Fotos/{$nameFile}",
             ]);
     
         } catch (\Exception $e) {
@@ -601,8 +584,7 @@ class DjController extends Controller
             
 
             // 7. Agregar foto path
-            //$data['FOTO_PATH'] = "http://190.116.178.163//Biblioteca_Grafica//Fotos//{$codiPers}.jpg";
-            $data['FOTO_PATH'] = "\\\\192.168.10.2\\Biblioteca_Grafica\\Fotos\\{$codiPers}.jpg";
+            $data['FOTO_PATH'] = "http://190.116.178.163/Biblioteca_Grafica/Fotos/{$codiPers}.jpg";
 
             return response()->json([
                 'success' => true,
@@ -2767,49 +2749,33 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             return response()->json(['success' => false], 400);
         }
 
-        // $url = "http://190.116.178.163/Biblioteca_Grafica/Fotos/{$codiPers}.jpg";
-
-        // try {
-        //     $ch = curl_init($url);
-        //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        //     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-        //     if ($httpCode !== 200 || empty($imageData)) {
-        //         return response()->json(['success' => false, 'message' => 'Imagen no encontrada'], 404);
-        //     }
-
-        //     $base64 = 'data:' . ($contentType ?: 'image/jpeg') . ';base64,' . base64_encode($imageData);
-
-        //     return response()->json([
-        //         'success' => true,
-        //         'base64' => $base64,
-        //     ]);
-        // } catch (\Exception $e) {
-        //     Log::error('Error proxy foto: ' . $e->getMessage());
-
-        //     return response()->json(['success' => false, 'message' => 'Error al obtener imagen'], 500);
-        // }
-
-$rutaFisicaLocal = "\\\\192.168.10.2\\Biblioteca_Grafica\\Fotos\\{$codiPers}.jpg";
+        $url = "http://190.116.178.163/Biblioteca_Grafica/Fotos/{$codiPers}.jpg";
 
         try {
-            if (!file_exists($rutaFisicaLocal) || !is_readable($rutaFisicaLocal)) {
-                return response()->json(['success' => false, 'message' => 'Imagen no encontrada localmente'], 404);
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            
+            // Ejecutamos la petición y obtenemos la información (Faltaba en tu código comentado)
+            $imageData = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || empty($imageData)) {
+                return response()->json(['success' => false, 'message' => 'Imagen no encontrada'], 404);
             }
 
-            $imageData = file_get_contents($rutaFisicaLocal);
-            $base64 = 'data:image/jpeg;base64,' . base64_encode($imageData);
+            $base64 = 'data:' . ($contentType ?: 'image/jpeg') . ';base64,' . base64_encode($imageData);
 
             return response()->json([
                 'success' => true,
                 'base64' => $base64,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error proxy foto (red local): ' . $e->getMessage());
-
-            return response()->json(['success' => false, 'message' => 'Error al obtener imagen local'], 500);
+            Log::error('Error proxy foto: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al obtener imagen'], 500);
         }
-
     }
 
     public function reportePersonalSinMigracion(Request $request)
