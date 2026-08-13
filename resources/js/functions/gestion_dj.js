@@ -153,6 +153,173 @@ document.addEventListener('DOMContentLoaded', function () {
 
     cargarGeneradosCache();
 
+    // === LÓGICA DEL MODAL SUBIR DJ (Migrado) ===
+    const archivoDJ_E4C = document.getElementById('archivoDJ_E4C');
+    const zonaDropDJ_E4C = document.getElementById('zonaDropDJ_E4C');
+    const listaArchivosDJ_E4C = document.getElementById('listaArchivosDJ_E4C');
+
+    let ultimoContextoMenu = null; // Guardará los datos para poder regresar al menú
+
+    zonaDropDJ_E4C?.addEventListener('click', () => archivoDJ_E4C.click());
+
+    // Abstracción del menú SweetAlert
+    window.abrirMenuOpcionesArchivo = function(codiPers, nombre, tieneDJ) {
+        Swal.fire({
+            title: 'Opciones de Archivo',
+            html: `
+                <div class="flex flex-col gap-3 mt-4">
+                    <button id="swal-btn-subir" class="btn border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm">
+                        <i class="bx bx-upload text-xl"></i> Subir DJ
+                    </button>
+                    ${tieneDJ ? `
+                    <button id="swal-btn-ver" class="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm">
+                        <i class="bx bx-show text-xl"></i> Ver DJ Escaneado
+                    </button>
+                    <button id="swal-btn-bio" class="btn border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm">
+                        <i class="bx bx-fingerprint text-xl"></i> Validación Biométrica
+                    </button>
+                    ` : ''}
+                </div>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+            width: '320px',
+            customClass: { popup: 'rounded-2xl', title: 'text-lg font-bold text-gray-700 border-b pb-3' },
+            didOpen: () => {
+                // Evento: Subir DJ
+                document.getElementById('swal-btn-subir').addEventListener('click', () => {
+                    Swal.close();
+                    if (typeof abrirModalSubirDJ_E4C === 'function') {
+                        abrirModalSubirDJ_E4C(codiPers, nombre, tieneDJ);
+                    }
+                });
+                
+                // Evento: Ver DJ Escaneado
+                const btnVer = document.getElementById('swal-btn-ver');
+                if (btnVer) {
+                    btnVer.addEventListener('click', () => {
+                        Swal.close();
+                        window.open(`${VITE_URL_APP}/ver-dj/${codiPers}`, '_blank');
+                    });
+                }
+
+                // Evento: Validación Biométrica (Nuevo)
+                const btnBio = document.getElementById('swal-btn-bio');
+                if (btnBio) {
+                    btnBio.addEventListener('click', () => {
+                        Swal.close();
+                        // Disparamos el CustomEvent que ya existe abajo en el código
+                        const event = new CustomEvent('solicitarBiometrico', {
+                            detail: { codigo: codiPers, persona: nombre }
+                        });
+                        window.dispatchEvent(event);
+                    });
+                }
+            }
+        });
+    };
+
+    window.abrirModalSubirDJ_E4C = function(codigo, nombre, tieneDJ = true) {
+        ultimoContextoMenu = { codigo, nombre, tieneDJ }; // Guardamos el contexto
+        document.getElementById('codPersonalDJ_E4C').value = codigo;
+        document.querySelector('.nombre-personal_E4C').textContent = nombre ?? '';
+        limpiarModal_E4C();
+        document.getElementById('btn-modal-dj_E4C').click();
+    };
+
+    // Eventos para regresar al menú si cancelan o cierran el modal (El timeout es para esperar que cierre la ventana actual)
+    document.getElementById('btn-cancelar-dj_E4C')?.addEventListener('click', () => {
+        if (ultimoContextoMenu) {
+            setTimeout(() => { window.abrirMenuOpcionesArchivo(ultimoContextoMenu.codigo, ultimoContextoMenu.nombre, ultimoContextoMenu.tieneDJ); }, 350);
+        }
+    });
+    
+    // (Opcional) Si también le dan clic a la 'X' superior del modal
+    document.getElementById('btn-modal-dj-close_E4C')?.addEventListener('click', () => {
+        if (ultimoContextoMenu) {
+            setTimeout(() => { window.abrirMenuOpcionesArchivo(ultimoContextoMenu.codigo, ultimoContextoMenu.nombre, ultimoContextoMenu.tieneDJ); }, 350);
+        }
+    });
+
+    function limpiarModal_E4C() {
+        const f = new Date();
+        const hoy = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+        const el = document.getElementById('fecha_emision_dj_E4C');
+        if (el) {
+            el.value = hoy;
+            el.readOnly = true;
+            el.classList.add('bg-gray-100', 'cursor-not-allowed');
+        }
+        if (archivoDJ_E4C) archivoDJ_E4C.value = '';
+        if (listaArchivosDJ_E4C) listaArchivosDJ_E4C.innerHTML = '';
+    }
+
+    archivoDJ_E4C?.addEventListener('change', function () {
+        const archivos = Array.from(this.files);
+        if (!archivos.length) return;
+        const maxSize = 1.2 * 1024 * 1024;
+
+        for (const archivo of archivos) {
+            if (archivo.type !== 'application/pdf') {
+                Swal.fire({ title: 'Solo se permite PDF para el DJ', icon: 'warning' });
+                this.value = ''; listaArchivosDJ_E4C.innerHTML = ''; return;
+            }
+            if (archivo.size > maxSize) {
+                Swal.fire({ title: 'Archivo demasiado grande', text: `"${archivo.name}" pesa ${(archivo.size / 1024 / 1024).toFixed(2)} MB. Límite: 1 MB.`, icon: 'warning' });
+                this.value = ''; listaArchivosDJ_E4C.innerHTML = ''; return;
+            }
+        }
+
+        listaArchivosDJ_E4C.innerHTML = archivos.map(a => `
+            <li class="flex items-center gap-2 text-sm text-gray-700">
+                <i class="bx bxs-file-pdf text-red-500 text-lg"></i>
+                <span>${a.name}</span>
+                <span class="text-gray-400">(${(a.size / 1024).toFixed(1)} KB)</span>
+            </li>
+        `).join('');
+    });
+
+    document.getElementById('formSubirDJ_E4C')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const fechaEmision = document.getElementById('fecha_emision_dj_E4C').value;
+        const codPersonal = document.getElementById('codPersonalDJ_E4C').value;
+        const archivo = archivoDJ_E4C?.files?.[0];
+        const maxSize = 1.2 * 1024 * 1024;
+
+        if (!fechaEmision) { Swal.fire({ title: 'Ingrese la fecha de emisión', icon: 'warning' }); return; }
+        if (!archivo) { Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' }); return; }
+        if (archivo.type !== 'application/pdf') { Swal.fire({ title: 'Solo se permite PDF', icon: 'warning' }); return; }
+        if (archivo.size > maxSize) { Swal.fire({ title: 'El archivo supera 1 MB', icon: 'warning' }); return; }
+
+        const btnGuardar = document.getElementById('btn-guardar-dj_E4C');
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = 'Guardando...';
+
+        const formData = new FormData();
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+        formData.append('fecha_emision', fechaEmision);
+        formData.append('codPersonal', codPersonal);
+        formData.append('pdf', archivo);
+
+        axios.post(`${VITE_URL_APP}/save-dj-folio-2`, formData, { headers: { 'Accept': 'application/json' } })
+            .then(() => {
+                document.getElementById('btn-modal-dj-close_E4C').click();
+                limpiarModal_E4C();
+                getPersonal(); // Recargamos la tabla de Gestión DJ
+                Swal.fire({ title: 'DJ subida correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
+            })
+            .catch(error => {
+                const msg = error.response?.data?.error || error.response?.data?.message || 'Error al guardar el DJ';
+                Swal.fire({ title: msg, icon: 'error' });
+            })
+            .finally(() => {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = '<i class="bx bx-upload text-lg me-1"></i> Subir DJ';
+            });
+    });
+    // === FIN LÓGICA DEL MODAL SUBIR DJ ===
+
     // Cache stale-while-revalidate para las vistas de personal
     // Cache stale-while-revalidate para las vistas de personal
     const _personalCache = { SI: null, NO: null, TODOS: null, _tsSI: 0, _tsNO: 0, _tsTODOS: 0 };
@@ -364,19 +531,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             {
-                title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, width: 95,
+                title: "Acciones", field: "acciones", hozAlign: "left", headerSort: false, minWidth: 160, widthGrow: 0, responsive: false,
                 formatter: cell => {
-                    const d = cell.getData();
-                    const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">DJ</button>`;
-                    const btnPDF = `<button type="button" class="btn rounded-full form-btn bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar"><i class='bx bxs-file-pdf'></i></button>`;
-                    return d.estado === 'pendiente' ? btnDJ : btnDJ /*+ btnPDF*/;
-                },
-                cellClick: (e, cell) => {
+                const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white px-3 py-1 text-xs whitespace-nowrap flex items-center justify-center">DJ</button>`;
+
+                let html = `<div class="flex items-center gap-2 flex-nowrap">
+                    ${btnDJ}
+                    <button type="button" class="btn rounded-full bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-600 w-8 h-8 flex items-center justify-center border border-slate-200 shadow-sm transition-colors folder-menu-btn" title="Opciones de Archivo">
+                        <i class="bx bx-folder-open text-lg pointer-events-none"></i>
+                    </button>
+                </div>`;
+                
+                return html;
+            },
+            cellClick: (e, cell) => {
+                const rowData = cell.getRow().getData();
+                const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+                const nombre = rowData.personal || rowData.NOMB_1 ? `${rowData.NOMB_1 ?? ''} ${rowData.APEL_1 ?? ''}`.trim() : 'Personal';
+                const tieneDJ = true; // Forzado
+
+                // Lógica Menú Flotante: Si hacen clic en la carpetita
+                if (e.target.closest('.folder-menu-btn')) {
+                    window.abrirMenuOpcionesArchivo(codiPers, nombre, tieneDJ);
+                    return;
+                }
+
+                    // Lógica Original: Botón DJ
                     const btn = e.target.closest('.form-btn');
                     if (!btn) return;
-                    const rowData = cell.getRow().getData();
-                    const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
-
+                    
                     if (rowData.vigencia && rowData.vigencia.toString().trim().toUpperCase() === 'NO') {
                         window.NuevaDJ?.abrirRecontratacion(codiPers, { OBS_CESE: rowData.OBS_CESE, FECH_CESE: rowData.FECH_CESE });
                         return;
@@ -2751,4 +2934,412 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         if (e.target === this) cerrarModal();
     });
 
+})();
+
+// ============================================================
+// BIOMÉTRICO (Migrado de actualizar_dj.js)
+// ============================================================
+// 🔥 Limpieza previa del evento para evitar ventanas dobles al recargar Vite
+if (window._bioHandler) {
+    window.removeEventListener('solicitarBiometrico', window._bioHandler);
+}
+
+window._bioHandler = function (e) {
+    const { codigo, persona } = e.detail;
+
+    Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    axios.get(`${VITE_URL_APP}/api/get-biometrico/${codigo}`)
+        .then(response => {
+            Swal.close();
+            const data = response.data;
+            document.getElementById('modal-bio-title').textContent = persona;
+
+            // Renderizamos DNI, huellas y firmas
+            document.getElementById('bio-huella-antigua').innerHTML = renderImagen(data.huella_antigua);
+            document.getElementById('bio-huella-nueva').innerHTML = renderImagen(data.huella_nueva);
+            document.getElementById('bio-firma-antigua').innerHTML = renderImagen(data.firma_antigua);
+            document.getElementById('bio-firma-nueva').innerHTML = renderImagen(data.firma_nueva);
+            document.getElementById('bio-doc-dni-antiguo').innerHTML = renderImagen(data.dni_anverso_antigua, true, data.dni_reverso_antigua);
+            document.getElementById('bio-doc-firma-nueva').innerHTML = renderImagen(data.firma_nueva);
+            document.getElementById('bio-doc-huella-nueva').innerHTML = renderImagen(data.huella_nueva);
+
+            // Inyectamos la columna de la foto dinámicamente
+            const dniDiv = document.getElementById('bio-doc-dni-antiguo');
+            if (dniDiv) {
+                const gridContainer = dniDiv.parentElement.parentElement;
+                gridContainer.style.gridTemplateColumns = '2fr 1fr 1fr';
+
+                let cajaFoto = document.getElementById('caja-foto-inyectada');
+                if (!cajaFoto) {
+                    cajaFoto = document.createElement('div');
+                    cajaFoto.id = 'caja-foto-inyectada';
+                    gridContainer.insertBefore(cajaFoto, gridContainer.lastElementChild);
+                }
+
+                const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codigo}.jpg?v=${new Date().getTime()}`;
+
+                cajaFoto.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <i class="fa fa-user" style="color:#6366f1; font-size:12px;"></i>
+                        <span style="font-size:12px; font-weight:600; color:#374151;">FOTO</span>
+                        <span style="font-size:10px; color:#9ca3af; font-weight:500; margin-left:2px;">ROSTRO</span>
+                    </div>
+                    <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
+                        <div style="position:relative;width:100%;height:420px;background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                            <img id="foto_rostro_${codigo}" src="${fotoUrl}" 
+                                 style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:zoom-in;" 
+                                 onclick="if(window.abrirLightbox) abrirLightbox('foto_rostro_${codigo}')"
+                                 onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\\'m21 15-5-5L5 21\\'/></svg>Sin foto en servidor</div>'" />
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Abrir el modal primero
+            document.getElementById('btn-modal-biometrico').click();
+
+            const forzarVistaLimpia = () => {
+                // 1. Ocultar estrictamente SOLO el contenedor de las pestañas (NAV)
+                const tabFh = document.getElementById('bio-tab-fh');
+                if (tabFh) {
+                    const navContainer = tabFh.closest('nav') || tabFh.parentElement;
+                    if (navContainer) {
+                        navContainer.style.setProperty('display', 'none', 'important');
+                        
+                        // Limpiamos los bordes del div padre sin ocultarlo
+                        if (navContainer.parentElement && navContainer.parentElement.tagName === 'DIV') {
+                            navContainer.parentElement.style.setProperty('border', 'none', 'important');
+                            navContainer.parentElement.style.setProperty('margin', '0', 'important');
+                            navContainer.parentElement.style.setProperty('padding', '0', 'important');
+                        }
+                    }
+                }
+
+                // 2. Ocultar forzosamente el panel de "Firmas y Huellas" (el que tapa todo)
+                const panelFh = document.getElementById('bio-panel-fh');
+                if (panelFh) {
+                    panelFh.style.setProperty('display', 'none', 'important');
+                    panelFh.classList.add('hidden');
+                    panelFh.classList.remove('active');
+                }
+
+                // 3. Mostrar forzosamente el panel "DOC" (donde están el DNI y la Foto)
+                const panelDoc = document.getElementById('bio-panel-doc');
+                if (panelDoc) {
+                    panelDoc.style.setProperty('display', 'block', 'important');
+                    panelDoc.classList.remove('hidden');
+                    panelDoc.classList.add('active');
+                }
+            };
+
+            // Ejecutamos en ráfaga para ganarle al framework sin matar las imágenes
+            forzarVistaLimpia();
+            setTimeout(forzarVistaLimpia, 50);
+            setTimeout(forzarVistaLimpia, 300);
+            setTimeout(forzarVistaLimpia, 600);
+        })
+        .catch(() => Swal.fire({ title: 'Error al obtener biométrico', icon: 'error' }));
+};
+
+// 🔥 Volvemos a registrar el evento blindado
+window.addEventListener('solicitarBiometrico', window._bioHandler);
+
+window.bioSwitchTab = function (tab) {
+    const esFH = tab === 'fh';
+    const panelFh = document.getElementById('bio-panel-fh');
+    const panelDoc = document.getElementById('bio-panel-doc');
+
+    // Gestionamos la clase 'active' para evitar que el framework superponga las vistas
+    if (panelFh) {
+        if (esFH) {
+            panelFh.style.setProperty('display', 'block', 'important');
+            panelFh.classList.remove('hidden');
+            panelFh.classList.add('active'); // Mantiene compatibilidad con el framework
+        } else {
+            panelFh.style.setProperty('display', 'none', 'important');
+            panelFh.classList.add('hidden');
+            panelFh.classList.remove('active'); // Evita que el framework la fuerce a visible
+        }
+    }
+    
+    if (panelDoc) {
+        if (!esFH) {
+            panelDoc.style.setProperty('display', 'block', 'important');
+            panelDoc.classList.remove('hidden');
+            panelDoc.classList.add('active');
+        } else {
+            panelDoc.style.setProperty('display', 'none', 'important');
+            panelDoc.classList.add('hidden');
+            panelDoc.classList.remove('active');
+        }
+    }
+
+    const tabFh = document.getElementById('bio-tab-fh');
+    const tabDoc = document.getElementById('bio-tab-doc');
+
+    if (tabFh) {
+        tabFh.classList.toggle('border-indigo-500', esFH);
+        tabFh.classList.toggle('text-indigo-600', esFH);
+        tabFh.classList.toggle('border-transparent', !esFH);
+        tabFh.classList.toggle('text-gray-500', !esFH);
+    }
+
+    if (tabDoc) {
+        tabDoc.classList.toggle('border-indigo-500', !esFH);
+        tabDoc.classList.toggle('text-indigo-600', !esFH);
+        tabDoc.classList.toggle('border-transparent', esFH);
+        tabDoc.classList.toggle('text-gray-500', esFH);
+    }
+};
+
+// ============================================================
+// RENDER DE IMÁGENES (biométrico)
+// ============================================================
+function renderImagen(img, esDni = false, reverso = null) {
+    if (!img || typeof img !== 'string' || !img.startsWith('data:')) {
+        return `
+            <div style="width:100%;${esDni ? 'height:420px;' : 'height:180px;'}
+                display:flex;flex-direction:column;align-items:center;justify-content:center;
+                background:#f8fafc;border:1.5px dashed #e2e8f0;border-radius:12px;color:#94a3b8;gap:8px;">
+                <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span style="font-size:12px;font-weight:500;">Sin imagen</span>
+            </div>`;
+    }
+
+    const id = 'img_' + Math.random().toString(36).substr(2, 9);
+    let mostrandoReverso = false;
+
+    const toggleBtn = esDni ? `
+        <button onclick="toggleDni_${id}()" id="toggleBtn_${id}" style="
+            width:100%;font-size:12px;padding:7px 0;background:#f1f5f9;border:none;
+            border-top:1px solid #e2e8f0;border-radius:0 0 12px 12px;
+            cursor:pointer;color:#475569;font-weight:500;transition:background .15s;">
+            <svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>Ver reverso
+        </button>` : '';
+
+    setTimeout(() => {
+        if (esDni) {
+            window[`toggleDni_${id}`] = function () {
+                mostrandoReverso = !mostrandoReverso;
+                document.getElementById(id).src = mostrandoReverso ? (reverso || img) : img;
+                const badge = document.getElementById('badge_' + id);
+                if (badge) badge.textContent = mostrandoReverso ? 'REVERSO' : 'ANVERSO';
+                document.getElementById('toggleBtn_' + id).innerHTML = mostrandoReverso
+                    ? `<svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Ver anverso`
+                    : `<svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Ver reverso`;
+            };
+        }
+        const btn = document.getElementById('toggleBtn_' + id);
+        if (btn) {
+            btn.onmouseover = () => btn.style.background = '#e2e8f0';
+            btn.onmouseout = () => btn.style.background = '#f1f5f9';
+        }
+    }, 0);
+
+    const btnAccion = esDni
+        ? `<button onclick="abrirLightbox('${id}')" style="
+                position:absolute;bottom:8px;right:8px;background:rgba(99,102,241,0.9);color:white;
+                border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:500;
+                cursor:pointer;z-index:11;display:flex;align-items:center;gap:5px;
+                box-shadow:0 2px 8px rgba(99,102,241,0.4);transition:background .15s;"
+                onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(99,102,241,0.9)'">
+                <svg width="12" height="12" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7"/>
+                </svg>Ver
+           </button>`
+        : `<button onclick="toggleLupa('${id}')" id="lupaBtn_${id}" style="
+                position:absolute;bottom:8px;right:8px;background:rgba(99,102,241,0.9);color:white;
+                border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;z-index:11;
+                display:flex;align-items:center;justify-content:center;
+                box-shadow:0 2px 8px rgba(99,102,241,0.4);transition:transform .15s,background .15s;"
+                onmouseover="this.style.transform='scale(1.1)';this.style.background='#4f46e5'"
+                onmouseout="this.style.transform='scale(1)';this.style.background='rgba(99,102,241,0.9)'"
+                title="Activar lupa">
+                <svg width="13" height="13" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+           </button>`;
+
+    const lupaDiv = !esDni ? `
+        <div id="lupa_${id}" style="
+            display:none;position:absolute;width:130px;height:130px;border-radius:50%;
+            border:2.5px solid #6366f1;box-shadow:0 0 0 3px rgba(99,102,241,0.15);
+            pointer-events:none;background-repeat:no-repeat;z-index:10;"></div>` : '';
+
+    return `
+        <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
+            <div id="cont_${id}" class="m-0 p-0" style="position:relative;width:100%;
+                ${esDni ? 'height:420px;' : 'height:180px;'}
+                background:#f8fafc;overflow:hidden;
+                display:flex;align-items:center;justify-content:center;
+                ${!esDni ? 'cursor:crosshair;' : ''}">
+                <img id="${id}" src="${img}"
+                     style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:${esDni ? 'zoom-in' : 'crosshair'};"
+                     ${esDni ? `onclick="abrirLightbox('${id}')"` : ''}
+                     onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\\'m21 15-5-5L5 21\\'/></svg>Sin imagen</div>'" />
+                ${lupaDiv}
+                ${esDni ? `<span id="badge_${id}" style="position:absolute;top:8px;left:8px;background:rgba(99,102,241,0.9);color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;letter-spacing:0.5px;z-index:5;">ANVERSO</span>` : ''}
+                ${btnAccion}
+            </div>
+            ${toggleBtn}
+        </div>`;
+}
+
+// ============================================================
+// LUPA
+// ============================================================
+window.toggleLupa = function (id) {
+    const lupa = document.getElementById('lupa_' + id);
+    const img = document.getElementById(id);
+    const cont = document.getElementById('cont_' + id);
+    if (!lupa || !img || !cont) return;
+
+    const activa = lupa.style.display === 'block';
+
+    if (!activa) {
+        lupa.style.display = 'block';
+        cont.style.overflow = 'visible';
+
+        cont.onmousemove = function (e) {
+            const contRect = cont.getBoundingClientRect();
+            const imgRect = img.getBoundingClientRect();
+            const cx = e.clientX - contRect.left;
+            const cy = e.clientY - contRect.top;
+            const ix = e.clientX - imgRect.left;
+            const iy = e.clientY - imgRect.top;
+            const lw = lupa.offsetWidth, lh = lupa.offsetHeight, scale = 2.8;
+
+            lupa.style.left = (cx - lw / 2) + 'px';
+            lupa.style.top = (cy - lh / 2) + 'px';
+            lupa.style.backgroundImage = `url('${img.src}')`;
+            lupa.style.backgroundSize = `${imgRect.width * scale}px ${imgRect.height * scale}px`;
+            lupa.style.backgroundPosition = `${-(ix * scale - lw / 2)}px ${-(iy * scale - lh / 2)}px`;
+        };
+
+        cont.onmouseleave = function () {
+            lupa.style.display = 'none';
+            cont.style.overflow = 'hidden';
+            cont.onmousemove = cont.onmouseleave = null;
+        };
+    } else {
+        lupa.style.display = 'none';
+        cont.style.overflow = 'hidden';
+        cont.onmousemove = cont.onmouseleave = null;
+    }
+};
+
+// ============================================================
+// LIGHTBOX
+// ============================================================
+(function () {
+    const lb = document.createElement('div');
+    lb.id = 'lb-overlay';
+    lb.style.cssText = `display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;`;
+
+    lb.innerHTML = `
+        <div style="width:100%;padding:10px 20px;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);">
+            <span id="lb-titulo" style="color:#e5e7eb;font-size:13px;font-weight:500;">Vista de imagen</span>
+            <button id="lb-close-top" style="background:rgba(220,38,38,0.7);border:1px solid rgba(220,38,38,0.5);color:white;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="lb-canvas" style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:grab;user-select:none;position:relative;">
+            <img id="lb-img" style="max-width:90vw;max-height:75vh;transform-origin:center center;pointer-events:none;display:block;"/>
+            <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:8px;">
+                <button id="lb-zout" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg width="15" height="15" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M8 11h6"/></svg>
+                </button>
+                <span id="lb-zoom-label" style="color:#e5e7eb;font-size:12px;font-weight:600;min-width:40px;text-align:center;">100%</span>
+                <button id="lb-zin" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg width="15" height="15" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>
+                </button>
+                <div style="width:1px;height:24px;background:rgba(255,255,255,0.2);"></div>
+                <button id="lb-reset" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+                <div style="width:1px;height:24px;background:rgba(255,255,255,0.2);"></div>
+                <button id="lb-fullscreen" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg id="lb-fs-icon" width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7"/></svg>
+                </button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(lb);
+
+    let scale = 1, posX = 0, posY = 0, dragging = false, startX = 0, startY = 0;
+    const lbImg = document.getElementById('lb-img');
+    const lbCanvas = document.getElementById('lb-canvas');
+    const lbLabel = document.getElementById('lb-zoom-label');
+
+    const applyTransform = () => {
+        lbImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        lbLabel.textContent = Math.round(scale * 100) + '%';
+    };
+    const resetView = () => { scale = 1; posX = 0; posY = 0; applyTransform(); };
+
+    lbCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        scale = Math.min(Math.max(scale + (e.deltaY > 0 ? -0.15 : 0.15), 0.3), 8);
+        applyTransform();
+    }, { passive: false });
+
+    lbCanvas.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        dragging = true; startX = e.clientX - posX; startY = e.clientY - posY;
+        lbCanvas.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        posX = e.clientX - startX; posY = e.clientY - startY; applyTransform();
+    });
+    document.addEventListener('mouseup', () => { dragging = false; lbCanvas.style.cursor = 'grab'; });
+
+    document.getElementById('lb-zin').onclick = () => { scale = Math.min(scale + 0.25, 8); applyTransform(); };
+    document.getElementById('lb-zout').onclick = () => { scale = Math.max(scale - 0.25, 0.3); applyTransform(); };
+    document.getElementById('lb-reset').onclick = resetView;
+    document.getElementById('lb-close-top').onclick = cerrarLightbox;
+    document.getElementById('lb-fullscreen').onclick = () => {
+        if (!document.fullscreenElement) {
+            lb.requestFullscreen?.();
+            document.getElementById('lb-fs-icon').innerHTML = `<path d="M8 3H3m0 0v5m0-5 7 7M16 21h5m0 0v-5m0 5-7-7"/>`;
+        } else {
+            document.exitFullscreen?.();
+            document.getElementById('lb-fs-icon').innerHTML = `<path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7"/>`;
+        }
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (lb.style.display === 'none') return;
+        if (e.key === 'Escape') cerrarLightbox();
+        if (e.key === '+' || e.key === '=') { scale = Math.min(scale + 0.25, 8); applyTransform(); }
+        if (e.key === '-') { scale = Math.max(scale - 0.25, 0.3); applyTransform(); }
+        if (e.key === '0') resetView();
+    });
+
+    ['lb-zin', 'lb-zout', 'lb-reset', 'lb-fullscreen'].forEach(id => {
+        const b = document.getElementById(id);
+        b.onmouseover = () => b.style.background = 'rgba(255,255,255,0.25)';
+        b.onmouseout = () => b.style.background = 'rgba(255,255,255,0.12)';
+    });
+
+    window.abrirLightbox = function (imgId) {
+        const imgEl = document.getElementById(imgId);
+        if (!imgEl) return;
+        lbImg.src = imgEl.src;
+        lb.style.display = 'flex';
+        resetView();
+    };
+
+    function cerrarLightbox() {
+        lb.style.display = 'none';
+        lbImg.src = '';
+        if (document.fullscreenElement) document.exitFullscreen?.();
+    }
 })();

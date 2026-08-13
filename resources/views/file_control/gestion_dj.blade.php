@@ -362,12 +362,66 @@
             </div>
         </div>
     </div>
-    <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
-
     @include('file_control.rrhh.partials_modal_dj')
     @include('file_control.rrhh.partials_modal_nueva_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')
     @include('file_control.rrhh.partials_modal_reporte')
+
+    {{-- MODAL BIOMÉTRICO (Migrado desde Actualizar DJ) --}}
+    <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
+    @include('file_control.rrhh.partials_modal_comparacion_huellafirma_dni')
+
+    {{-- MODAL DE CARGA DE DJ (Migrado desde Actualizar DJ) --}}
+    <button type="button" class="hidden" id="btn-modal-dj_E4C" data-hs-overlay="#modal-carga-dj_E4C"></button>
+    <div id="modal-carga-dj_E4C" class="hs-overlay hidden fixed inset-0 z-[80] overflow-y-auto transition-all duration-500 pointer-events-none">
+        <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 translate-y-10 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto border border-gray-200">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Subir Declaración Jurada</h3>
+                    <p class="text-sm text-gray-500 font-medium nombre-personal_E4C mt-0.5"></p>
+                </div>
+                <button type="button" id="btn-modal-dj-close_E4C" class="text-gray-500 hover:text-gray-700 transition-colors" data-hs-overlay="#modal-carga-dj_E4C">
+                    <i class="bx bx-x text-2xl"></i>
+                </button>
+            </div>
+            <form id="formSubirDJ_E4C">
+                @csrf
+                <input type="hidden" id="codPersonalDJ_E4C" value="">
+                <div class="px-5 py-5 space-y-5">
+                    <p class="text-sm text-center text-gray-500 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                        Solo se acepta archivo <strong>PDF</strong> con un peso máximo de <strong>1 MB</strong>.
+                    </p>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Fecha de Emisión</label>
+                        <input type="date" id="fecha_emision_dj_E4C" required class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Archivo PDF</label>
+                        <div id="zonaDropDJ_E4C" role="button" class="cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:border-primary hover:bg-blue-50 transition-colors">
+                            <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white shadow-sm border border-gray-200 text-gray-600">
+                                <i class="bx bxs-file-pdf text-3xl"></i>
+                            </span>
+                            <div class="text-center text-sm text-gray-600">
+                                <span class="font-medium">Haz click aquí para </span>
+                                <span class="font-bold text-blue-600 hover:underline">SELECCIONAR</span>
+                            </div>
+                            <p class="text-xs text-gray-400">Máximo 1 MB</p>
+                            <input type="file" id="archivoDJ_E4C" accept=".pdf" class="hidden">
+                        </div>
+                        <ul id="listaArchivosDJ_E4C" class="mt-3 space-y-2"></ul>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-slate-50 rounded-b-lg">
+                    <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1" id="btn-guardar-dj_E4C">
+                        <i class="bx bx-upload text-lg"></i> Subir DJ
+                    </button>
+                    <button type="button" id="btn-cancelar-dj_E4C" class="btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium" data-hs-overlay="#modal-carga-dj_E4C">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 @endsection
 

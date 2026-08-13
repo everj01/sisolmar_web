@@ -48,8 +48,8 @@
             </button>
 
             <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                <span class="tab-circle">3</span> ETAPA: Validación de Imágenes
+                class="tab-btn hidden" style="display: none !important;">
+                <span class="tab-circle">5</span> ETAPA: Validación de Imágenes
             </button>
         </nav>
     </div>
@@ -103,14 +103,14 @@
     <select id="filtroTipoE1" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
     @if($tipoPerLimitar == 0)
         <option value="00">Todos</option>
-        <option value="03">Operativo 5°</option>
+        <option value="03" selected>Operativo 5°</option>
         <option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 1)
-        <option value="00">Todos</option>
+        <option value="00" selected>Todos</option>
         <option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 2)
         <option value="00">Todos</option>
-        <option value="03">Operativo 5°</option>
+        <option value="03" selected>Operativo 5°</option>
     @endif
 </select>
                                 </div>
@@ -196,11 +196,11 @@
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
                                     <select id="filtroTipoPerE2" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
     @if($tipoPerLimitar == 0)
-        <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
+        <option value="00">Todos</option><option value="03" selected>Operativo 5°</option><option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 1)
-        <option value="00">Todos</option><option value="05">Administrativo 5°</option>
+        <option value="00" selected>Todos</option><option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 2)
-        <option value="00">Todos</option><option value="03">Operativo 5°</option>
+        <option value="00">Todos</option><option value="03" selected>Operativo 5°</option>
     @endif
 </select>
                                 </div>
@@ -526,14 +526,14 @@
             </div>
         </div>
 
-        <div id="etapa4" class="tab-content hidden">
+        <div id="etapa4" class="tab-content hidden" style="display: none !important;">
             <div class="grid lg:grid-cols-1 gap-6">
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
                     <div class="w-full px-5 py-4">
 
                         <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
                             <div>
-                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">3</span>Revision de Validación de Imágenes</h4>
+                                <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">5</span>Revision de Validación de Imágenes</h4>
                                 {{-- <p class="text-sm text-gray-500">Validación de Huella y Firma</p> --}}
                             </div>
 
@@ -578,11 +578,11 @@
                                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
                                     <select id="filtroTipoPerE4" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
     @if($tipoPerLimitar == 0)
-        <option value="00">Todos</option><option value="03">Operativo 5°</option><option value="05">Administrativo 5°</option>
+        <option value="00">Todos</option><option value="03" selected>Operativo 5°</option><option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 1)
-        <option value="00">Todos</option><option value="05">Administrativo 5°</option>
+        <option value="00" selected>Todos</option><option value="05">Administrativo 5°</option>
     @elseif($tipoPerLimitar == 2)
-        <option value="00">Todos</option><option value="03">Operativo 5°</option>
+        <option value="00">Todos</option><option value="03" selected>Operativo 5°</option>
     @endif
 </select>
                                 </div>

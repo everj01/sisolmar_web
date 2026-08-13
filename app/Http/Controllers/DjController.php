@@ -887,6 +887,12 @@ class DjController extends Controller
             $data = $request->all();
             $source = $request->input('source', 'migracion');
 
+            // === NUEVO: CAPTURAR DATOS ANTIGUOS PARA COMPARAR CAMBIOS ===
+            $oldData = DB::selectOne('SELECT * FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?', [$codiPers]);
+            $oldFam  = DB::selectOne('SELECT COUNT(*) as cant FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?', [$codiPers]);
+            $oldFamCount = $oldFam ? $oldFam->cant : 0;
+            // =============================================================
+
             // ✅ 1. SOLO MARCAR COMO MIGRADO en sw_MIGRA_PERSONAL (NO actualizar otros campos)
             DB::update(
                 'UPDATE sisolm_web.dbo.sw_MIGRA_PERSONAL 
@@ -907,12 +913,6 @@ class DjController extends Controller
             // ✅ 4. COPIAR FAMILIARES a DJ2026_DERECHO_HABIENTE
             $this->migrarFamiliares($codiPers);
 
-            // ✅ 5. GUARDAR OCUPACIONES en tabla temporal
-            //$this->saveOcupacionesTemp($dni, $data);
-
-            // ✅ 6. COPIAR OCUPACIONES a DJ2026_OCUPACIONES_PER
-            //$this->migrarOcupaciones($dni);
-
             // ✅ 6. GUARDAR TELÉFONOS EN sw_MIGRA_TELEFONO
             $this->saveTelefonosTemp($codiPers, $data);
 
@@ -920,6 +920,73 @@ class DjController extends Controller
             $this->migrarTelefonos($codiPers);
 
             DB::commit();
+
+            // === INICIO: ENVÍO DE CORREO AUTOMÁTICO DINÁMICO ===
+            try {
+                $correoDestino = $data['correo'] ?? null;
+                
+                if (!empty($correoDestino) && filter_var($correoDestino, FILTER_VALIDATE_EMAIL)) {
+                    
+                    $nombrePersonal = trim(($data['nombre1'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
+                    
+                    if (empty($nombrePersonal)) {
+                        $nombrePersonal = $data['nombres_apellidos'] ?? 'Personal';
+                    }
+
+                    // --- NUEVA LÓGICA: COMPARACIÓN DINÁMICA DE DATOS ---
+                    $camposModificados = [];
+                    
+                    if ($oldData) {
+                        // Mapa: 'nombre_del_input' => ['columna_db', 'Nombre Bonito']
+                        $mapaCampos = [
+                            'correo'               => ['PERS_EMAIL',             'Correo Electrónico'],
+                            'celular'              => ['PERS_TELEFONO',          'Celular'],
+                            'whatsapp'             => ['PERS_WHATSAPP',          'WhatsApp'],
+                            'direccion_actual'     => ['DIRECCION',              'Dirección Actual'],
+                            'cuenta_banco'         => ['dj2026_banco',           'Cuenta Bancaria'],
+                            'ocupacion_principal'  => ['dj2026_ocupacion_principal', 'Ocupación Principal'],
+                            'brevete'              => ['PERS_BREVETE',           'Brevete'],
+                            'contacto_emergencia'  => ['PERS_NOMCONTACTO',       'Nombre Contacto Emergencia'],
+                            'celular_emergencia'   => ['PERS_NROEMERGENCIA',     'Celular de Emergencia']
+                        ];
+
+                        foreach ($mapaCampos as $inputKey => $dbInfo) {
+                            if (isset($data[$inputKey]) && trim($data[$inputKey]) !== '') {
+                                $columnaDB = $dbInfo[0];
+                                $nombreBonito = $dbInfo[1];
+
+                                $newValue = trim((string)$data[$inputKey]);
+                                $oldValue = trim((string)($oldData->{$columnaDB} ?? ''));
+                                
+                                // Si detecta que el valor nuevo es distinto al de la BD
+                                if (strtoupper($newValue) !== strtoupper($oldValue)) {
+                                    // Agrega el campo y el VALOR NUEVO en negrita
+                                    $camposModificados[] = $nombreBonito . ': <strong>' . $newValue . '</strong>';
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Comparamos si agregaron/quitaron Familiares
+                    $newFamCount = isset($data['FAM_NOMBRES']) ? count(array_filter($data['FAM_NOMBRES'])) : 0;
+                    if (isset($oldFamCount) && $oldFamCount != $newFamCount) {
+                         $camposModificados[] = 'Datos Familiares: <strong>Se actualizaron los derechohabientes</strong>';
+                    }
+                    // ----------------------------------------------------
+
+                    $datosCorreo = [
+                        'nombre'  => mb_strtoupper($nombrePersonal, 'UTF-8'),
+                        'dni'     => $dni,
+                        'fecha'   => date('d/m/Y h:i A'),
+                        'cambios' => $camposModificados // Pasamos el array dinámico al correo
+                    ];
+
+                    \Illuminate\Support\Facades\Mail::to($correoDestino)->send(new \App\Mail\DjAprobadaMail($datosCorreo));
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error al enviar correo de confirmación DJ: ' . $e->getMessage());
+            }
+            // === FIN: ENVÍO DE CORREO AUTOMÁTICO ===
 
             return response()->json([
                 'success' => true,
@@ -2456,7 +2523,7 @@ class DjController extends Controller
         // ";
 
         $toDate = function($col) {
-            return "TRY_CONVERT(datetime, NULLIF(TRIM({$col}), ''), 120)";
+            return "TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM({$col})), ''), 120)";
         };
 
         // Eliminar todos los familiares existentes del trabajador en DERECHO_HABIENTExd
