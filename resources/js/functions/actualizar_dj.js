@@ -201,6 +201,20 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // ⬇️ NUEVO: Auto-abrir pestaña si viene en la URL (Deep Linking) ⬇️
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+    if (tabFromUrl) {
+        const tabBtn = document.querySelector(`.tab-btn[data-target="${tabFromUrl}"]`);
+        if (tabBtn && !tabBtn.classList.contains('cursor-not-allowed')) {
+            // Un pequeño setTimeout garantiza que todo el DOM y Tabulator estén listos
+            setTimeout(() => {
+                tabBtn.click();
+            }, 100);
+        }
+    }
+    // ⬆️ FIN NUEVO ⬆️
+
     function reformatNums(table) {
         function rf() { table.getRows("active").forEach(r => r.reformat()); }
         table.on("dataLoaded", rf);
@@ -3817,6 +3831,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const tabActiva = document.querySelector('.tab-btn.border-b-white')?.dataset?.tab ?? 'pendiente';
                 const payload = {
                     ...data,
+                    cambios: cambios,
                     source: tabActiva,
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES: formData.getAll('apellidosNombres[]'),

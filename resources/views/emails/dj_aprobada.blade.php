@@ -105,7 +105,7 @@
                                                 @foreach($datosCorreo['cambios'] as $cambio)
                                                 <tr>
                                                     <td width="20" valign="top" style="color: #00a877; font-weight: bold;">✓</td>
-                                                    <!-- Usamos {!! !!} para renderizar el <strong> que enviamos desde el controlador -->
+                                                    {{-- Usamos las llaves con exclamación para renderizar el tag strong que enviamos desde el controlador --}}
                                                     <td>{!! $cambio !!}</td>
                                                 </tr>
                                                 @endforeach

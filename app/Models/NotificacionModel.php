@@ -41,5 +41,39 @@ class NotificacionModel extends Model
             ->whereRaw("DATEDIFF(day, GETDATE(), fd.fecha_caducidad) BETWEEN 0 AND ?", [$dias])
             ->get();
     }
+
+    public static function pendientesEtapa2()
+    {
+        // SIN CACHÉ: Lo ejecutamos en vivo para evitar datos pegados
+        try {
+            $resultados = DB::select("EXEC SW_LISTAR_PERSONAL_DJ_MIGRACION_ETAPA2_VIGENTES_DNI");
+        } catch (\Exception $e) {
+            $resultados = DB::select("EXEC SW_LISTAR_PERSONAL_DJ_MIGRACION_ETAPA2_VIGENTES_DNI '00', '00'");
+        }
+
+        $conteos = [];
+
+        foreach ($resultados as $item) {
+            // Convierte todo a un array y fuerza las LLAVES A MAYÚSCULAS
+            $row = array_change_key_case((array) $item, CASE_UPPER);
+
+            $estado = strtoupper(trim($row['VERIFICADO_CAMBIO'] ?? $row['MIGRADO'] ?? ''));
+            $tipoPersonal = strtoupper(trim($row['TIPOPER'] ?? $row['TIPO_PER'] ?? ''));
+
+            if ($estado !== 'SI' && $estado !== 'VERIFICADO' && !str_contains($tipoPersonal, 'ESPECIAL')) {
+                
+                $sucursal = trim($row['SUCURSAL'] ?? 'SIN SUCURSAL');
+                
+                if (!isset($conteos[$sucursal])) {
+                    $conteos[$sucursal] = 0;
+                }
+                
+                $conteos[$sucursal]++;
+            }
+        }
+
+        ksort($conteos);
+        return $conteos;
+    }
 }
 

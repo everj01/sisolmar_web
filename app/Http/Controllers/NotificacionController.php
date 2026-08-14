@@ -120,6 +120,21 @@ class NotificacionController extends Controller{
             'total'   => count($personas)
         ]);
     }
+
+    public function pendientesEtapa2()
+    {
+        // Trae ['CALLAO' => 5, 'LIMA' => 12, ...]
+        $conteosPorSucursal = NotificacionModel::pendientesEtapa2();
+        
+        // Suma todos los valores del array para el globo rojo de la campana
+        $totalGeneral = array_sum($conteosPorSucursal);
+
+        return response()->json([
+            'success' => true,
+            'total'   => $totalGeneral,
+            'data'    => $conteosPorSucursal
+        ]);
+    }
 }
 
 

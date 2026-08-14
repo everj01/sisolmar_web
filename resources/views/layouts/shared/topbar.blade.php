@@ -21,22 +21,21 @@
 
             {{-- Notificaciones --}}
             <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                <button id="btn-notifications" class="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50
-  dark:hover:bg-slate-700 text-gray-500 hover:text-gray-700 dark:text-slate-400 transition-all">
+                
+                <button id="btn-notifications" type="button" class="hs-dropdown-toggle relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-500 hover:text-gray-700 dark:text-slate-400 transition-all shadow-sm">
                     <i class="bx bx-bell text-lg"></i>
-                    <span id="notif-count"
-                        class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1 hidden">
+                    <span id="notif-count" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1 hidden">
                         0
                     </span>
                 </button>
-                <div
-                    class="hs-dropdown-menu duration mt-2 w-full max-w-sm rounded-lg border border-default-200 bg-white opacity-0 shadow-md transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden">
-                    <div class="block px-4 py-2 font-medium text-center text-default-700 rounded-t-lg bg-default-50">
-                        Folios por vencer en los próximos 10 días
+                
+                <div class="hs-dropdown-menu duration mt-2 w-full max-w-sm rounded-xl border border-gray-200 bg-white opacity-0 shadow-xl transition-[opacity,margin] hs-dropdown-open:opacity-100 hidden z-50 overflow-hidden">
+                    <div class="block px-4 py-3 font-bold text-center text-gray-700 bg-gray-50 border-b border-gray-200 shadow-sm">
+                        Centro de Notificaciones
                     </div>
-                    <div class="max-h-[400px] overflow-y-auto">
-                        <div class="divide-y divide-default-100" id="notif-list">
-                            <div class="px-4 py-6 text-center text-sm text-default-500">
+                    <div class="max-h-[350px] overflow-y-auto">
+                        <div class="flex flex-col" id="notif-list">
+                            <div class="px-4 py-6 text-center text-sm text-gray-500">
                                 Cargando notificaciones...
                             </div>
                         </div>
@@ -171,6 +170,44 @@
                     onclick="sessionStorage.removeItem('folioToastShown'); document.getElementById('logout-form').submit();">
                     <i class="i-tabler-logout me-1"></i> Cerrar Sesión
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Botón oculto para disparar el modal dinámico desde JS --}}
+<button id="btn-open-modal-etapa2" data-hs-overlay="#modal-detalle-etapa2" class="hidden"></button>
+
+{{-- Modal: Detalle Sucursales Etapa 2 --}}
+<div id="modal-detalle-etapa2" class="hs-overlay w-full h-full fixed top-0 left-0 z-[80] transition-all duration-300 overflow-x-hidden overflow-y-auto hidden pointer-events-none">
+    <div class="hs-overlay-open:opacity-100 hs-overlay-open:duration-500 opacity-0 transition-all sm:max-w-md sm:w-full m-3 sm:mx-auto mt-10">
+        <div class="flex flex-col bg-white border border-gray-200 shadow-xl rounded-xl pointer-events-auto">
+            <div class="flex justify-between items-center py-3 px-4 border-b border-gray-200 bg-slate-50 rounded-t-xl">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i class="bx bx-check-shield text-xl text-primary"></i>
+                    Detalle de Pendientes (Etapa 2)
+                </h3>
+                <button type="button" class="flex justify-center items-center w-7 h-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-200" data-hs-overlay="#modal-detalle-etapa2">
+                    <i class="bx bx-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-3 px-2">
+                    <span class="text-sm text-gray-500 font-bold uppercase tracking-wider">Sucursales</span>
+                    <span class="text-xs font-bold text-red-600 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full shadow-sm">
+                        Total: <span id="modal-etapa2-total">0</span>
+                    </span>
+                </div>
+                <div id="modal-etapa2-list" class="max-h-[350px] overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    <!-- JS inyecta la lista detallada aquí -->
+                </div>
+            </div>
+            <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t border-gray-200 bg-slate-50 rounded-b-xl">
+                <button type="button" class="btn border border-gray-300 bg-white text-gray-700 text-sm px-4 py-2 rounded-lg hover:bg-gray-100 font-medium" data-hs-overlay="#modal-detalle-etapa2">Cerrar</button>
+                <!-- Le agregamos ?tab=etapa2 a la ruta -->
+                <a href="/dj/actualizar_dj?tab=etapa2" class="btn bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 font-medium shadow-sm">
+                    Ir al Módulo <i class="bx bx-right-arrow-alt text-base align-middle"></i>
+                </a>
             </div>
         </div>
     </div>

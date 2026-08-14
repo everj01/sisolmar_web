@@ -133,6 +133,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/notificaciones-matriculas/{codigo}/leer', [NotificacionController::class, 'marcarNotificacionLeida']);
         Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
         Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer'])->name('notificaciones.foliosPorVencer');
+        Route::get('/notificaciones/pendientes-etapa2', [NotificacionController::class, 'pendientesEtapa2']);
 
         // Solicitudes y otros
         Route::post('/save-solicitud', [FileController::class, 'saveSolicitud']);
