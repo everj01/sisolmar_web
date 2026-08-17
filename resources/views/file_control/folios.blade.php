@@ -236,6 +236,15 @@
                             </div>
                         </div>
 
+                        {{-- Solo lectura --}}
+                        <div class="flex items-center gap-4 mt-2">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="switchLectura" class="form-switch text-danger cursor-pointer">
+                                <label for="switchLectura" class="text-sm font-bold cursor-pointer">Sólo lectura</label>
+                            </div>
+                        </div>
+                   
+
                         {{-- Institución (oculto por defecto) --}}
                         <div id="institucionDiv" class="hidden flex items-center gap-5 mt-2">
                             <span class="text-sm font-bold text-gray-700">Plataforma:</span>

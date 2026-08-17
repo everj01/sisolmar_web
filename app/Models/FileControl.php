@@ -151,7 +151,7 @@ class FileControl extends Model
             'fecha_creacion'  => DB::raw('GETDATE()'),
         ]);
     }
-     public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null)
+     public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null, $solo_lectura = 0)
     {
         $inserted = DB::table('sw_folios')->insert([
             'nombre'          => $nombre,
@@ -163,12 +163,13 @@ class FileControl extends Model
             'codResponsable'  => $responsable,
             'cod_categoria'   => $cod_categoria,
             'fecha_creacion' => DB::raw('GETDATE()'),
+            'solo_lectura' => $solo_lectura,
             'creado_por' => $usuario
         ]);
 
         return $inserted;
     }
-     public static function updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null)
+     public static function updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null, $solo_lectura = 0)
       {
           $updated = DB::table('sw_folios')
               ->where('codigo', $codigo)
@@ -181,6 +182,7 @@ class FileControl extends Model
                   'plataforma'         => $plataforma,
                   'codResponsable'     => $responsable,
                   'cod_categoria'      => $cod_categoria,
+                  'solo_lectura' => $solo_lectura,
                   'fecha_modificacion' => DB::raw('GETDATE()'),
                   'modificado_por' => $usuario
               ]);

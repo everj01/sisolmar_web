@@ -2012,6 +2012,8 @@ class FileController extends Controller
         $tipo_fecha = $request->input('periodo');
         $plataforma = $request->input('plataforma');
         $responsable = $request->input('responsable');
+
+        $solo_lectura = $request->input('solo_lectura');
         
         // 2. ATRAPA EL DATO QUE VIENE DEL FRONT
         $cod_categoria = $request->input('cod_categoria'); 
@@ -2019,9 +2021,9 @@ class FileController extends Controller
 
         // 3. PÁSALE LA VARIABLE AL MODELO (Lo agregué al final de los parámetros)
         if (empty($codigo)) {
-            $result = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria);
+            $result = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria, $solo_lectura);
         } else {
-            $result = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria);
+            $result = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria, $solo_lectura);
         }
 
         if ($result) {

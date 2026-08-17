@@ -169,6 +169,13 @@ const tblFolios = new Tabulator("#tblFolios", {
                         document.getElementById('periodoDiv').classList.add('hidden');
                     }
 
+                    if (rowData.solo_lectura == 1) {
+                        document.querySelector('#switchLectura').checked = true;
+            
+                    } else {
+                        document.querySelector('#switchLectura').checked = false;
+                    }
+
                     var plataforma = rowData.plataforma;
                     var radioButtons = institucionDiv.querySelectorAll('input[type="radio"]');
 
@@ -551,6 +558,8 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
     var responsable = document.getElementById('responsable').value;
     var categoria = document.getElementById('categoria').value; // <-- CAPTURAS EL DATO
     var institucion = document.querySelector('input[name="institucion"]:checked')?.value;
+    var switchLectura = document.getElementById('switchLectura');
+    var soloLectura = switchLectura.checked ? 1 : 0 ;
 
     if (vencimiento == 0) {
         periodo = null;
@@ -566,8 +575,9 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
             vencimiento: vencimiento,
             periodo: periodo,
             responsable: responsable,
-            cod_categoria: categoria, // <-- LO MANDAS AL CONTROLADOR
+            cod_categoria: categoria,
             plataforma: institucion,
+            solo_lectura: soloLectura,
         })
             .then(function (response) {
                 cargarFolios();
