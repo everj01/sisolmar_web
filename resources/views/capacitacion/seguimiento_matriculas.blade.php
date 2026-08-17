@@ -507,28 +507,28 @@
     <div class="px-6 pb-6">
         <div class="rounded-2xl border border-default-200/60 bg-white shadow-sm p-6">
             <!-- Tab Navigation -->
-            <div class="flex items-center gap-1 mb-4">
+            <div class="flex flex-wrap items-center gap-1 mb-4">
                 <button
                     @click="tabActivo = 'cursos'; setTimeout(() => { if (window.tabulatorCursos) window.tabulatorCursos.redraw(true) }, 100)"
                     :class="tabActivo === 'cursos'
-                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
-                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-book text-sm"></i>
                     Cursos registrados
                 </button>
                 <button
                     @click="tabActivo = 'personal'; setTimeout(() => { if (window.tabulatorPersonal) window.tabulatorPersonal.redraw(true) }, 100)"
                     :class="tabActivo === 'personal'
-                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
-                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-users text-sm"></i>
                     Lista de personal
                 </button>
                 <button
                     @click="tabActivo = 'memos'; setTimeout(() => { if (window.tabulatorMemos) window.tabulatorMemos.redraw(true) }, 100)"
                     :class="tabActivo === 'memos'
-                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
-                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-notes text-sm"></i>
                     MEMOs enviados
                 </button>
@@ -539,21 +539,21 @@
                 x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
                     <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
-                    <div class="flex items-center gap-2">
-                        <div class="relative">
+                    <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full lg:w-auto">
+                        <div class="relative sm:flex-none sm:min-w-[220px]">
                             <i
                                 class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
                             <input id="buscarCursoSeguimiento" placeholder="Buscar por nombre o código..."
-                                class="w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                                class="w-full sm:w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
                         </div>
                         <select id="filtroResponsableCursos"
-                            class="w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                            class="w-full sm:w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                             <option value="">Todos los responsables</option>
                         </select>
                         <select id="filtroTipoCursos"
-                            class="w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                            class="w-full sm:w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                             <option value="">Todos los tipos</option>
                         </select>
                     </div>
