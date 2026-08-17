@@ -483,11 +483,13 @@
                             <span>Usuarios en progreso</span>
                         </div>
 
+                        {{-- Badge Notificaciones por correo (comentado temporalmente)
                         <div @click="abrirInfo('Notificaciones por correo', mensajes.notificaciones)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-sky-50 transition-colors">
                             <i class="ti ti-mail text-xs text-sky-600"></i>
                             <span>Notificaciones por correo</span>
                         </div>
+                        --}}
 
                         <div @click="abrirInfo('MEMOs por nivel', mensajes.memos)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-purple-50 transition-colors">

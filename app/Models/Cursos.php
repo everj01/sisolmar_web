@@ -22,6 +22,7 @@
           'fecha_modificacion',
           'habilitado',
           'tipo_curso',
+          'categoria',
           'area_conocimiento',
           'area',
           'periodicidad',

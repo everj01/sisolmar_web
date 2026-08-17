@@ -47,15 +47,49 @@ function _blobExcel(buffer) {
 
 function _cargarImagen(url) {
     return new Promise((resolve) => {
+        if (!url) {
+            resolve(null);
+            return;
+        }
         const img = new Image();
-        img.onload = () => resolve(img);
+        img.onload = () =>
+            resolve(
+                img.naturalWidth > 0 && img.naturalHeight > 0 ? img : null,
+            );
         img.onerror = () => resolve(null);
         img.src = url;
     });
 }
 
+function _imagenAPngDataUrl(img) {
+    if (!img) return null;
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        ctx.drawImage(img, 0, 0);
+        return canvas.toDataURL("image/png");
+    } catch (e) {
+        return null;
+    }
+}
+
+async function _cargarFirma(url) {
+    const img = await _cargarImagen(url);
+    if (!img) return null;
+    return {
+        src: _imagenAPngDataUrl(img),
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+    };
+}
+
 async function _fetchSistemas() {
-    const { data } = await axios.get(`${VITE_URL_APP}/api/obtener-capacitacion-sistemas`);
+    const { data } = await axios.get(
+        `${VITE_URL_APP}/api/obtener-capacitacion-sistemas`,
+    );
     return data;
 }
 
@@ -141,32 +175,70 @@ async function ensureCatalogsLoaded() {
                     personalTodasEmpresasRes,
                 ] = await Promise.all([
                     axios.get(`${VITE_URL_APP}/api/get-sucursales`),
-                    axios.get(`${VITE_URL_APP}/api/obtener-capacitacion-sistemas`),
+                    axios.get(
+                        `${VITE_URL_APP}/api/obtener-capacitacion-sistemas`,
+                    ),
                     axios.get(`${VITE_URL_APP}/api/obtener-areas`),
                     axios.get(`${VITE_URL_APP}/api/reporte-cursos`),
                     axios.get(`${VITE_URL_APP}/api/obtener-personal`),
                     axios.get(`${VITE_URL_APP}/api/get-empresas`),
-                    axios.get(`${VITE_URL_APP}/api/obtener-personal-todas-empresas`),
+                    axios.get(
+                        `${VITE_URL_APP}/api/obtener-personal-todas-empresas`,
+                    ),
                 ]);
 
-                const personalesTodas = (personalTodasEmpresasRes.data.success && Array.isArray(personalTodasEmpresasRes.data.personal)) ? personalTodasEmpresasRes.data.personal : [];
-                const tipos = [...new Set(personalesTodas.map(p => p.tipo_trabajador).filter(Boolean))];
-                const cargos = [...new Set(personalesTodas.map(p => p.cargo).filter(Boolean))];
+                const personalesTodas =
+                    personalTodasEmpresasRes.data.success &&
+                    Array.isArray(personalTodasEmpresasRes.data.personal)
+                        ? personalTodasEmpresasRes.data.personal
+                        : [];
+                const tipos = [
+                    ...new Set(
+                        personalesTodas
+                            .map((p) => p.tipo_trabajador)
+                            .filter(Boolean),
+                    ),
+                ];
+                const cargos = [
+                    ...new Set(
+                        personalesTodas.map((p) => p.cargo).filter(Boolean),
+                    ),
+                ];
 
                 return {
-                    sucursales: sucursalesRes.data.success ? sucursalesRes.data.sucursales : [],
+                    sucursales: sucursalesRes.data.success
+                        ? sucursalesRes.data.sucursales
+                        : [],
                     sistemas: sistemasRes.data || [],
                     areas: areasRes.data.success ? areasRes.data.areas : [],
-                    cursos: cursosRes.data.success ? (cursosRes.data.Cursos || []) : [],
-                    personales: (personalesRes.data.success && Array.isArray(personalesRes.data.personal)) ? personalesRes.data.personal : [],
-                    empresas: Array.isArray(empresasRes.data) ? empresasRes.data : [],
+                    cursos: cursosRes.data.success
+                        ? cursosRes.data.Cursos || []
+                        : [],
+                    personales:
+                        personalesRes.data.success &&
+                        Array.isArray(personalesRes.data.personal)
+                            ? personalesRes.data.personal
+                            : [],
+                    empresas: Array.isArray(empresasRes.data)
+                        ? empresasRes.data
+                        : [],
                     personalesTodasEmpresas: personalesTodas,
                     tiposTrabajo: tipos.sort(),
                     cargosReporte: cargos.sort(),
                 };
             } catch (e) {
-                console.error('Error cargando catálogos:', e);
-                return { sucursales: [], sistemas: [], areas: [], cursos: [], personales: [], empresas: [], personalesTodasEmpresas: [], tiposTrabajo: [], cargosReporte: [] };
+                console.error("Error cargando catálogos:", e);
+                return {
+                    sucursales: [],
+                    sistemas: [],
+                    areas: [],
+                    cursos: [],
+                    personales: [],
+                    empresas: [],
+                    personalesTodasEmpresas: [],
+                    tiposTrabajo: [],
+                    cargosReporte: [],
+                };
             }
         })();
     }
@@ -193,7 +265,20 @@ export default document.addEventListener("alpine:init", () => {
         abrirModalReporteGeneral() {
             window.dispatchEvent(new CustomEvent("abrir-reporte-general"));
         },
+        abrirModalReporteFormato() {
+            window.dispatchEvent(new CustomEvent("abrir-reporte-formato"));
+        },
     }));
+
+    const _rankEstado = (estado) => {
+        const orden = {
+            APROBADO: 0,
+            DESAPROBADO: 1,
+            "EN CURSO": 2,
+            "SIN ACCEDER": 3,
+        };
+        return orden[estado] ?? 4;
+    };
 
     Alpine.data("modalReportePorCapacitacion", () => ({
         open: false,
@@ -206,6 +291,7 @@ export default document.addEventListener("alpine:init", () => {
         selectedFechaFin: "",
         selectedEstado: 0,
         selectedSucursal: "",
+        personalVigente: "1",
 
         cursos: [],
         todosLosCursos: [],
@@ -255,7 +341,9 @@ export default document.addEventListener("alpine:init", () => {
         async cargarSucursales() {
             this.loadingSucursales = true;
             try {
-                const response = await axios.get(`${VITE_URL_APP}/api/get-sucursales`);
+                const response = await axios.get(
+                    `${VITE_URL_APP}/api/get-sucursales`,
+                );
                 if (response.data.success) {
                     this.sucursales = response.data.sucursales;
                 }
@@ -309,7 +397,9 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`);
+                const response = await axios.get(
+                    `${VITE_URL_APP}/api/reporte-cursos`,
+                );
 
                 if (response.data.success) {
                     this.todosLosCursos = [...response.data.Cursos];
@@ -385,6 +475,7 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedFechaFin = "";
             this.selectedEstado = 0;
             this.selectedSucursal = "";
+            this.personalVigente = "1";
 
             this.cursos = [...this.todosLosCursos];
             this.periodos = [];
@@ -415,14 +506,25 @@ export default document.addEventListener("alpine:init", () => {
 
         get todosCursosSeleccionados() {
             const visibles = this.cursos.filter(
-                (c) => !this.searchCurso || c.Nombre.toLowerCase().includes(this.searchCurso.toLowerCase()),
+                (c) =>
+                    !this.searchCurso ||
+                    c.Nombre.toLowerCase().includes(
+                        this.searchCurso.toLowerCase(),
+                    ),
             );
-            return visibles.length > 0 && visibles.every((c) => this.courseIds.includes(c.Id));
+            return (
+                visibles.length > 0 &&
+                visibles.every((c) => this.courseIds.includes(c.Id))
+            );
         },
 
         toggleSeleccionarTodos() {
             const visibles = this.cursos.filter(
-                (c) => !this.searchCurso || c.Nombre.toLowerCase().includes(this.searchCurso.toLowerCase()),
+                (c) =>
+                    !this.searchCurso ||
+                    c.Nombre.toLowerCase().includes(
+                        this.searchCurso.toLowerCase(),
+                    ),
             );
             if (this.todosCursosSeleccionados) {
                 this.courseIds = this.courseIds.filter(
@@ -497,7 +599,9 @@ export default document.addEventListener("alpine:init", () => {
 
         get cursoActual() {
             if (this.personal.length > 0) {
-                return this.personal[this.selectedCursoIndex] || this.personal[0];
+                return (
+                    this.personal[this.selectedCursoIndex] || this.personal[0]
+                );
             }
             return null;
         },
@@ -883,7 +987,9 @@ export default document.addEventListener("alpine:init", () => {
                     );
 
                     const personalOrdenado = [...personalCurso].sort((a, b) => {
-                        const cmpNombre = (a.NombreCompleto || "").localeCompare(b.NombreCompleto || "");
+                        const cmpNombre = (
+                            a.NombreCompleto || ""
+                        ).localeCompare(b.NombreCompleto || "");
                         if (cmpNombre !== 0) return cmpNombre;
                         return (a.Estado || "").localeCompare(b.Estado || "");
                     });
@@ -1440,27 +1546,45 @@ export default document.addEventListener("alpine:init", () => {
 
         get sistemasEnCursos() {
             const map = {};
-            this.cursosFilas.forEach(c => { map[c.Sistema] = true; });
+            this.cursosFilas.forEach((c) => {
+                map[c.Sistema] = true;
+            });
             return Object.keys(map).sort();
         },
 
         get areasDelSistemaActual() {
-            if (this.selectedSistemaIndex < 0 || this.selectedSistemaIndex >= this.sistemasEnCursos.length) return [];
-            const sistemaNombre = this.sistemasEnCursos[this.selectedSistemaIndex];
+            if (
+                this.selectedSistemaIndex < 0 ||
+                this.selectedSistemaIndex >= this.sistemasEnCursos.length
+            )
+                return [];
+            const sistemaNombre =
+                this.sistemasEnCursos[this.selectedSistemaIndex];
             const areas = {};
-            this.cursosFilas.forEach(c => {
+            this.cursosFilas.forEach((c) => {
                 if (c.Sistema === sistemaNombre) areas[c.Area] = true;
             });
             return Object.keys(areas).sort();
         },
 
         get cursosAreaActual() {
-            if (this.selectedSistemaIndex < 0 || this.selectedSistemaIndex >= this.sistemasEnCursos.length) return [];
-            const sistemaNombre = this.sistemasEnCursos[this.selectedSistemaIndex];
-            let filtered = this.cursosFilas.filter(c => c.Sistema === sistemaNombre);
-            if (this.selectedAreaIdx > 0 && this.selectedAreaIdx <= this.areasDelSistemaActual.length) {
-                const areaNombre = this.areasDelSistemaActual[this.selectedAreaIdx - 1];
-                filtered = filtered.filter(c => c.Area === areaNombre);
+            if (
+                this.selectedSistemaIndex < 0 ||
+                this.selectedSistemaIndex >= this.sistemasEnCursos.length
+            )
+                return [];
+            const sistemaNombre =
+                this.sistemasEnCursos[this.selectedSistemaIndex];
+            let filtered = this.cursosFilas.filter(
+                (c) => c.Sistema === sistemaNombre,
+            );
+            if (
+                this.selectedAreaIdx > 0 &&
+                this.selectedAreaIdx <= this.areasDelSistemaActual.length
+            ) {
+                const areaNombre =
+                    this.areasDelSistemaActual[this.selectedAreaIdx - 1];
+                filtered = filtered.filter((c) => c.Area === areaNombre);
             }
             return filtered;
         },
@@ -1553,13 +1677,18 @@ export default document.addEventListener("alpine:init", () => {
 
             try {
                 const params = {};
-                if (this.selectedSistema) params.systemId = this.selectedSistema;
+                if (this.selectedSistema)
+                    params.systemId = this.selectedSistema;
                 if (this.selectedArea) params.areaId = this.selectedArea;
 
-                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`, {
-                    params,
-                });
-                const cursosRaw = response.data.Cursos || response.data.cursos || [];
+                const response = await axios.get(
+                    `${VITE_URL_APP}/api/reporte-cursos`,
+                    {
+                        params,
+                    },
+                );
+                const cursosRaw =
+                    response.data.Cursos || response.data.cursos || [];
 
                 if (!response.data.success || !Array.isArray(cursosRaw)) {
                     return false;
@@ -1585,7 +1714,12 @@ export default document.addEventListener("alpine:init", () => {
             const ok = await this._fetchCursos();
             if (!ok || this.cursosFilas.length === 0) {
                 this.exportando = false;
-                if (ok) Swal.fire("Atención", "No se encontraron cursos con los filtros seleccionados.", "warning");
+                if (ok)
+                    Swal.fire(
+                        "Atención",
+                        "No se encontraron cursos con los filtros seleccionados.",
+                        "warning",
+                    );
                 return;
             }
             await this.exportarExcelHistorialCursos();
@@ -1596,7 +1730,12 @@ export default document.addEventListener("alpine:init", () => {
             const ok = await this._fetchCursos();
             if (!ok || this.cursosFilas.length === 0) {
                 this.exportando = false;
-                if (ok) Swal.fire("Atención", "No se encontraron cursos con los filtros seleccionados.", "warning");
+                if (ok)
+                    Swal.fire(
+                        "Atención",
+                        "No se encontraron cursos con los filtros seleccionados.",
+                        "warning",
+                    );
                 return;
             }
             await this.exportarPDFHistorialCursos();
@@ -1614,144 +1753,152 @@ export default document.addEventListener("alpine:init", () => {
 
             this.exportando = true;
             try {
-                const filasExport = this.obtenerCursosFilasOrdenadosParaExport();
-            const sistema = this.sistemas.find(
-                (s) => String(s.codigo) === String(this.selectedSistema),
-            );
-            const nombreArea = this.selectedAreaIdx > 0
-                ? (this.areasDelSistemaActual[this.selectedAreaIdx - 1] || "Área")
-                : "Todas las áreas";
-            const nombreSistema = sistema
-                ? sistema.descripcion
-                : "Sistema de gestión";
+                const filasExport =
+                    this.obtenerCursosFilasOrdenadosParaExport();
+                const sistema = this.sistemas.find(
+                    (s) => String(s.codigo) === String(this.selectedSistema),
+                );
+                const nombreArea =
+                    this.selectedAreaIdx > 0
+                        ? this.areasDelSistemaActual[
+                              this.selectedAreaIdx - 1
+                          ] || "Área"
+                        : "Todas las áreas";
+                const nombreSistema = sistema
+                    ? sistema.descripcion
+                    : "Sistema de gestión";
 
-            const workbook = new ExcelJS.Workbook();
+                const workbook = new ExcelJS.Workbook();
 
-            const logoImageId = await _cargarLogoExcel(workbook);
+                const logoImageId = await _cargarLogoExcel(workbook);
 
-            const sheet = workbook.addWorksheet("Historial");
+                const sheet = workbook.addWorksheet("Historial");
 
-            const headerRowNumber = 5;
+                const headerRowNumber = 5;
 
-            sheet.getRow(1);
-            sheet.getRow(2);
-            sheet.getRow(3);
-            sheet.getRow(4);
+                sheet.getRow(1);
+                sheet.getRow(2);
+                sheet.getRow(3);
+                sheet.getRow(4);
 
-            if (logoImageId !== null) {
-                sheet.addImage(logoImageId, {
-                    tl: { col: 1, row: 0 },
-                    br: { col: 3, row: 2 },
-                    editAs: "absolute",
+                if (logoImageId !== null) {
+                    sheet.addImage(logoImageId, {
+                        tl: { col: 1, row: 0 },
+                        br: { col: 3, row: 2 },
+                        editAs: "absolute",
+                    });
+                }
+
+                sheet.getRow(1).height = 50;
+
+                sheet.mergeCells("D1:H1");
+
+                const infoCell = sheet.getCell("D1");
+                infoCell.value = `Área responsable: ${nombreArea}`;
+                infoCell.font = {
+                    bold: true,
+                    size: 13,
+                    color: { argb: "FF1F4E79" },
+                };
+                infoCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
+
+                sheet.mergeCells("D2:H2");
+
+                const sistemaCell = sheet.getCell("D2");
+                sistemaCell.value = `Sistema de gestión: ${nombreSistema}`;
+                sistemaCell.font = {
+                    size: 11,
+                    color: { argb: "FF333333" },
+                };
+                sistemaCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
+
+                sheet.mergeCells("D3:H3");
+
+                const totalCell = sheet.getCell("D3");
+                totalCell.value = `Total: ${filasExport.length} curso(s) · ${this.textoRangoFechasHistorial}`;
+                totalCell.font = {
+                    size: 11,
+                    color: { argb: "FF333333" },
+                };
+                totalCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
+
+                sheet.getRow(4).height = 8;
+
+                const headers = [
+                    "#",
+                    "Capacitación",
+                    "Descripción",
+                    "Sistema",
+                    "Área",
+                    "Matriculados",
+                    "Responsable",
+                    "Fecha inicio",
+                    "Fecha fin",
+                    "Fecha creación",
+                ];
+
+                const headerRow = sheet.getRow(headerRowNumber);
+
+                headerRow.values = headers;
+
+                headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
+
+                filasExport.forEach((fila, i) => {
+                    const row = sheet.addRow([
+                        i + 1,
+                        fila.Nombre,
+                        fila.Descripcion,
+                        fila.Sistema,
+                        fila.Area,
+                        fila.Total_Matriculados,
+                        fila.Responsable,
+                        fila.Fecha_Inicio,
+                        fila.Fecha_Fin,
+                        fila.Fecha_Creacion,
+                    ]);
+
+                    row.eachCell((cell) => _estiloDatoExcel(cell));
                 });
-            }
 
-            sheet.getRow(1).height = 50;
+                sheet.columns = [
+                    { width: 5 },
+                    { width: 35 },
+                    { width: 30 },
+                    { width: 18 },
+                    { width: 18 },
+                    { width: 12 },
+                    { width: 26 },
+                    { width: 14 },
+                    { width: 14 },
+                    { width: 14 },
+                ];
 
-            sheet.mergeCells("D1:H1");
+                sheet.autoFilter = {
+                    from: `A${headerRowNumber}`,
+                    to: `J${headerRowNumber}`,
+                };
 
-            const infoCell = sheet.getCell("D1");
-            infoCell.value = `Área responsable: ${nombreArea}`;
-            infoCell.font = {
-                bold: true,
-                size: 13,
-                color: { argb: "FF1F4E79" },
-            };
-            infoCell.alignment = {
-                vertical: "middle",
-                horizontal: "right",
-            };
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = _blobExcel(buffer);
 
-            sheet.mergeCells("D2:H2");
+                const d = new Date();
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
+                const nombreArchivo = `REPORTE_HISTORIAL_CURSOS_${fechaRep}.xlsx`;
 
-            const sistemaCell = sheet.getCell("D2");
-            sistemaCell.value = `Sistema de gestión: ${nombreSistema}`;
-            sistemaCell.font = {
-                size: 11,
-                color: { argb: "FF333333" },
-            };
-            sistemaCell.alignment = {
-                vertical: "middle",
-                horizontal: "right",
-            };
-
-            sheet.mergeCells("D3:H3");
-
-            const totalCell = sheet.getCell("D3");
-            totalCell.value = `Total: ${filasExport.length} curso(s) · ${this.textoRangoFechasHistorial}`;
-            totalCell.font = {
-                size: 11,
-                color: { argb: "FF333333" },
-            };
-            totalCell.alignment = {
-                vertical: "middle",
-                horizontal: "right",
-            };
-
-            sheet.getRow(4).height = 8;
-
-            const headers = [
-                "#",
-                "Capacitación",
-                "Descripción",
-                "Sistema",
-                "Área",
-                "Matriculados",
-                "Responsable",
-                "Fecha inicio",
-                "Fecha fin",
-                "Fecha creación",
-            ];
-
-            const headerRow = sheet.getRow(headerRowNumber);
-
-            headerRow.values = headers;
-
-            headerRow.eachCell((cell) => _estiloEncabezadoExcel(cell));
-
-            filasExport.forEach((fila, i) => {
-                const row = sheet.addRow([
-                    i + 1,
-                    fila.Nombre,
-                    fila.Descripcion,
-                    fila.Sistema,
-                    fila.Area,
-                    fila.Total_Matriculados,
-                    fila.Responsable,
-                    fila.Fecha_Inicio,
-                    fila.Fecha_Fin,
-                    fila.Fecha_Creacion,
-                ]);
-
-                row.eachCell((cell) => _estiloDatoExcel(cell));
-            });
-
-            sheet.columns = [
-                { width: 5 },
-                { width: 35 },
-                { width: 30 },
-                { width: 18 },
-                { width: 18 },
-                { width: 12 },
-                { width: 26 },
-                { width: 14 },
-                { width: 14 },
-                { width: 14 },
-            ];
-
-            sheet.autoFilter = {
-                from: `A${headerRowNumber}`,
-                to: `J${headerRowNumber}`,
-            };
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = _blobExcel(buffer);
-
-            const d = new Date();
-            const fechaRep = `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,"0")}_${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}_${String(d.getMinutes()).padStart(2,"0")}`;
-            const nombreArchivo = `REPORTE_HISTORIAL_CURSOS_${fechaRep}.xlsx`;
-
-            await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+                await this.registrarReporteEnHistorial(
+                    nombreArchivo,
+                    null,
+                    blob,
+                );
 
                 saveAs(blob, nombreArchivo);
 
@@ -1790,14 +1937,18 @@ export default document.addEventListener("alpine:init", () => {
 
                 const pageWidth = doc.internal.pageSize.getWidth();
 
-                const filasExport = this.obtenerCursosFilasOrdenadosParaExport();
+                const filasExport =
+                    this.obtenerCursosFilasOrdenadosParaExport();
 
                 const sistema = this.sistemas.find(
                     (s) => String(s.codigo) === String(this.selectedSistema),
                 );
-                const nombreAreaPdf = this.selectedAreaIdx > 0
-                    ? (this.areasDelSistemaActual[this.selectedAreaIdx - 1] || "")
-                    : "TODAS LAS ÁREAS";
+                const nombreAreaPdf =
+                    this.selectedAreaIdx > 0
+                        ? this.areasDelSistemaActual[
+                              this.selectedAreaIdx - 1
+                          ] || ""
+                        : "TODAS LAS ÁREAS";
 
                 const logoSol = await _cargarImagen("/images/logo_sol.png");
 
@@ -1827,7 +1978,9 @@ export default document.addEventListener("alpine:init", () => {
                 );
                 doc.text("RUC: 20445414833", startX, lineY + 7);
 
-                const title = sistema ? `${sistema.descripcion.toUpperCase()}` : "";
+                const title = sistema
+                    ? `${sistema.descripcion.toUpperCase()}`
+                    : "";
                 const subtitle = nombreAreaPdf;
 
                 doc.setTextColor(0, 0, 0);
@@ -1853,11 +2006,15 @@ export default document.addEventListener("alpine:init", () => {
                 doc.setFontSize(10);
                 doc.text(textoListado, startX, 56);
 
-                const periodoLinea = this.textoRangoFechasHistorial.toUpperCase();
+                const periodoLinea =
+                    this.textoRangoFechasHistorial.toUpperCase();
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(9);
                 const twPeriodo = pageWidth - startX - 100;
-                const lineasPeriodo = doc.splitTextToSize(periodoLinea, twPeriodo);
+                const lineasPeriodo = doc.splitTextToSize(
+                    periodoLinea,
+                    twPeriodo,
+                );
                 doc.text(lineasPeriodo, startX, 61);
 
                 const tableStartY =
@@ -1926,7 +2083,7 @@ export default document.addEventListener("alpine:init", () => {
                 });
 
                 const d = new Date();
-                const fechaRep = `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,"0")}_${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}_${String(d.getMinutes()).padStart(2,"0")}`;
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
                 const nombreArchivo = `REPORTE_HISTORIAL_CURSOS_${fechaRep}.pdf`;
 
                 const pdfBlob = doc.output("blob");
@@ -1939,11 +2096,7 @@ export default document.addEventListener("alpine:init", () => {
 
                 saveAs(pdfBlob, nombreArchivo);
 
-                Swal.fire(
-                    "Éxito",
-                    "PDF generado correctamente.",
-                    "success",
-                );
+                Swal.fire("Éxito", "PDF generado correctamente.", "success");
             } catch (error) {
                 console.error(error);
                 Swal.fire("Error", "No se pudo generar el PDF.", "error");
@@ -1991,14 +2144,19 @@ export default document.addEventListener("alpine:init", () => {
             this.loadingCursos = true;
             try {
                 const params = {};
-                if (this.selectedSistema) params.systemId = this.selectedSistema;
+                if (this.selectedSistema)
+                    params.systemId = this.selectedSistema;
                 if (this.selectedArea) params.areaId = this.selectedArea;
 
-                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`, {
-                    params,
-                });
+                const response = await axios.get(
+                    `${VITE_URL_APP}/api/reporte-cursos`,
+                    {
+                        params,
+                    },
+                );
 
-                const cursosRaw = response.data.Cursos || response.data.cursos || [];
+                const cursosRaw =
+                    response.data.Cursos || response.data.cursos || [];
 
                 if (!response.data.success || !Array.isArray(cursosRaw)) {
                     this.cursosFilas = [];
@@ -2102,7 +2260,8 @@ export default document.addEventListener("alpine:init", () => {
                 );
                 Swal.fire(
                     "Error",
-                    error.response?.data?.message || "No se pudo guardar en el historial de reportes.",
+                    error.response?.data?.message ||
+                        "No se pudo guardar en el historial de reportes.",
                     "warning",
                 );
             }
@@ -2123,6 +2282,9 @@ export default document.addEventListener("alpine:init", () => {
         sortDirection: null,
         searchQuery: "",
         showDeletedOnly: false,
+        filtroFecha: "",
+        perPage: 5,
+        currentPage: 1,
 
         selectedReportes: [],
         downloadingZip: false,
@@ -2137,7 +2299,15 @@ export default document.addEventListener("alpine:init", () => {
                 this.sortDirection = null;
                 this.searchQuery = "";
                 this.showDeletedOnly = false;
+                this.filtroFecha = "";
+                this.currentPage = 1;
                 this.selectedReportes = [];
+            });
+
+            this.$watch("reportesFiltrados", () => {
+                if (this.currentPage > this.totalPages) {
+                    this.currentPage = this.totalPages;
+                }
             });
         },
 
@@ -2154,6 +2324,8 @@ export default document.addEventListener("alpine:init", () => {
             this.sortDirection = null;
             this.searchQuery = "";
             this.showDeletedOnly = false;
+            this.filtroFecha = "";
+            this.currentPage = 1;
             this.selectedReportes = [];
         },
 
@@ -2167,6 +2339,7 @@ export default document.addEventListener("alpine:init", () => {
                     this.reportes = response.data.reportes;
                     this.cacheLoaded = true;
                     this.searchQuery = "";
+                    this.currentPage = 1;
                 }
             } catch (error) {
                 console.error(error);
@@ -2203,6 +2376,7 @@ export default document.addEventListener("alpine:init", () => {
                 this.sortColumn = columna;
                 this.sortDirection = "asc";
             }
+            this.currentPage = 1;
         },
 
         get reportesFiltrados() {
@@ -2216,16 +2390,23 @@ export default document.addEventListener("alpine:init", () => {
                 const query = this.searchQuery.trim().toLowerCase();
                 resultados = resultados.filter((r) => {
                     const nombre = (r.nombre_archivo || "").toLowerCase();
-                    const descripcion = (r.descripcion || "").toLowerCase();
-                    const id = String(r.id);
-                    const fecha = this.formatearFecha(
-                        r.fecha_creacion,
-                    ).toLowerCase();
+                    return nombre.includes(query);
+                });
+            }
+
+            if (this.filtroFecha) {
+                resultados = resultados.filter((r) => {
+                    const s = String(r.fecha_creacion || "");
+                    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) {
+                        return `${match[1]}-${match[2]}-${match[3]}` ===
+                            this.filtroFecha;
+                    }
+                    const d = new Date(s);
+                    if (isNaN(d.getTime())) return false;
                     return (
-                        nombre.includes(query) ||
-                        descripcion.includes(query) ||
-                        id.includes(query) ||
-                        fecha.includes(query)
+                        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` ===
+                        this.filtroFecha
                     );
                 });
             }
@@ -2257,6 +2438,35 @@ export default document.addEventListener("alpine:init", () => {
 
         get reportesSeleccionables() {
             return this.reportesFiltrados.filter((r) => r.habilitado);
+        },
+
+        get totalPages() {
+            return Math.max(
+                1,
+                Math.ceil(this.reportesFiltrados.length / this.perPage),
+            );
+        },
+
+        get reportesPaginados() {
+            const inicio = (this.currentPage - 1) * this.perPage;
+            return this.reportesFiltrados.slice(
+                inicio,
+                inicio + this.perPage,
+            );
+        },
+
+        get paginasVisibles() {
+            const total = this.totalPages;
+            const actual = this.currentPage;
+            const ventana = 5;
+            let inicio = Math.max(1, actual - Math.floor(ventana / 2));
+            let fin = Math.min(total, inicio + ventana - 1);
+            inicio = Math.max(1, fin - ventana + 1);
+            const paginas = [];
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
         },
 
         get todosSeleccionados() {
@@ -2378,7 +2588,10 @@ export default document.addEventListener("alpine:init", () => {
                     Swal.fire("Eliminado", response.data.message, "success");
                 }
             } catch (error) {
-                console.error("Error al eliminar reporte permanentemente:", error);
+                console.error(
+                    "Error al eliminar reporte permanentemente:",
+                    error,
+                );
                 Swal.fire(
                     "Error",
                     "No se pudo eliminar el reporte permanentemente.",
@@ -2388,6 +2601,14 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         async descargarArchivo(id, tipo) {
+            Swal.fire({
+                title: "Consultando reporte",
+                text: "Espere un momento, se está consultando el reporte...",
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
             try {
                 const response = await axios.get(
                     `/api/capacitacion/descargar-reporte/${id}/${tipo}`,
@@ -2399,7 +2620,7 @@ export default document.addEventListener("alpine:init", () => {
                 const contentDisposition =
                     response.headers["content-disposition"];
                 const d = new Date();
-                const fechaRep = `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,"0")}_${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}_${String(d.getMinutes()).padStart(2,"0")}`;
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
                 let nombreArchivo = `REPORTE_${fechaRep}.${tipo === "pdf" ? "pdf" : "xlsx"}`;
                 if (contentDisposition) {
                     const match =
@@ -2418,8 +2639,10 @@ export default document.addEventListener("alpine:init", () => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+                Swal.close();
             } catch (error) {
                 console.error("Error al descargar archivo:", error);
+                Swal.close();
                 Swal.fire(
                     "Error",
                     "No se pudo descargar el archivo. Intente nuevamente.",
@@ -2518,6 +2741,8 @@ export default document.addEventListener("alpine:init", () => {
         loadingSucursales: false,
         buscando: false,
         exportando: false,
+        generandoPDF: false,
+        generandoExcel: false,
         loadingInicial: true,
 
         selectedSistema: "",
@@ -2531,8 +2756,10 @@ export default document.addEventListener("alpine:init", () => {
         selectedEstadoId: "0",
         selectedFechaDesde: "",
         selectedFechaHasta: "",
+        selectedAnio: "",
 
         sistemas: [],
+        aniosDisponibles: [],
         areas: [],
         cursos: [],
         todosLosCursos: [],
@@ -2564,6 +2791,7 @@ export default document.addEventListener("alpine:init", () => {
                 ),
             );
         },
+
         get cursosTotalPages() {
             return Math.max(
                 1,
@@ -2572,15 +2800,34 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         get cursosPersonalActual() {
-            const p = this.selectedPersonalIdx >= 0 ? this.resultados[this.selectedPersonalIdx] : null;
-            return p?.Cursos || [];
+            const p =
+                this.selectedPersonalIdx >= 0
+                    ? this.resultados[this.selectedPersonalIdx]
+                    : null;
+            const cursos = p?.Cursos || [];
+            if (!this.sortColumn) {
+                return [...cursos].sort(
+                    (a, b) => _rankEstado(a.Estado) - _rankEstado(b.Estado),
+                );
+            }
+            return cursos;
         },
+
         get cursosPersonalActualPaginado() {
             const start = (this.cursosPage - 1) * this.cursosPerPage;
-            return this.cursosPersonalActual.slice(start, start + this.cursosPerPage);
+            return this.cursosPersonalActual.slice(
+                start,
+                start + this.cursosPerPage,
+            );
         },
+
         get totalPagesCursosPersonal() {
-            return Math.max(1, Math.ceil(this.cursosPersonalActual.length / this.cursosPerPage));
+            return Math.max(
+                1,
+                Math.ceil(
+                    this.cursosPersonalActual.length / this.cursosPerPage,
+                ),
+            );
         },
 
         personalesPaginados() {
@@ -2590,6 +2837,7 @@ export default document.addEventListener("alpine:init", () => {
                 start + this.personalPerPage,
             );
         },
+        
         cursosPaginados() {
             const start = (this.cursosPage - 1) * this.cursosPerPage;
             return this.cursos.slice(start, start + this.cursosPerPage);
@@ -2613,11 +2861,26 @@ export default document.addEventListener("alpine:init", () => {
             this.sistemas = catalogs.sistemas;
             this.sucursales = catalogs.sucursales;
             this.todosLosCursos = catalogs.cursos;
+            this.aniosDisponibles = [
+                ...new Set(
+                    catalogs.cursos.map((c) => c.Anio_Curso).filter(Boolean),
+                ),
+            ].sort((a, b) => b - a);
             this.filtrarCursos();
             this.todosLosPersonales = catalogs.personales;
-            const tipos = [...new Set(catalogs.personales.map(p => p.tipo_trabajador).filter(Boolean))];
+            const tipos = [
+                ...new Set(
+                    catalogs.personales
+                        .map((p) => p.tipo_trabajador)
+                        .filter(Boolean),
+                ),
+            ];
             this.tiposTrabajador = tipos.sort();
-            const cargos = [...new Set(catalogs.personales.map(p => p.cargo).filter(Boolean))];
+            const cargos = [
+                ...new Set(
+                    catalogs.personales.map((p) => p.cargo).filter(Boolean),
+                ),
+            ];
             this.cargos = cargos.sort();
             this.filtrarPersonales();
 
@@ -2666,7 +2929,9 @@ export default document.addEventListener("alpine:init", () => {
         async cargarCursos() {
             this.loadingCursos = true;
             try {
-                const response = await axios.get(`${VITE_URL_APP}/api/reporte-cursos`);
+                const response = await axios.get(
+                    `${VITE_URL_APP}/api/reporte-cursos`,
+                );
                 if (response.data.success) {
                     this.todosLosCursos = response.data.Cursos || [];
                     this.filtrarCursos();
@@ -2710,7 +2975,9 @@ export default document.addEventListener("alpine:init", () => {
         async cargarClientes() {
             this.loadingClientes = true;
             try {
-                const { data } = await axios.get(`${VITE_URL_APP}/api/get-clientes-pac`);
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/get-clientes-pac`,
+                );
                 this.clientes = Array.isArray(data) ? data : [];
             } catch (e) {
                 console.error(e);
@@ -2793,6 +3060,12 @@ export default document.addEventListener("alpine:init", () => {
                         ).getTime() / 1000;
                     if (c.Fecha_Creacion > hastaTs) return false;
                 }
+                if (
+                    this.selectedAnio &&
+                    c.Anio_Curso &&
+                    Number(c.Anio_Curso) !== Number(this.selectedAnio)
+                )
+                    return false;
                 if (this.searchCurso) {
                     const term = this.searchCurso.toLowerCase();
                     if (!(c.Nombre || "").toLowerCase().includes(term))
@@ -2908,129 +3181,6 @@ export default document.addEventListener("alpine:init", () => {
 
         async obtenerPersonalRecord() {
             if (this.selectedUsernames.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
-                return;
-            }
-            if (this.selectedCourseIds.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
-                return;
-            }
-
-            this.view = "results";
-            this.resultados = [];
-            this.buscando = true;
-
-            try {
-                const payload = {
-                    usernames: this.selectedUsernames || null,
-                    courseIds: this.selectedCourseIds || null,
-                    desde: this.selectedFechaDesde || null,
-                    hasta: this.selectedFechaHasta || null,
-                    estadoId: parseInt(this.selectedEstadoId) || 0,
-                };
-
-                const response = await axios.post(`${VITE_URL_APP}/api/obtener-personal-record`, payload);
-
-                if (!response.data.success) {
-                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
-                    return;
-                }
-
-                const personales = response.data.Personales || [];
-                if (personales.length === 0) {
-                    Swal.fire("Atención", "No se encontraron resultados con los criterios seleccionados.", "warning");
-                    return;
-                }
-
-                this.resultados = personales;
-                this.totalResultados = personales.length;
-                this.selectedPersonalIdx = 0;
-                this.cursosPage = 1;
-                this.sortColumn = null;
-                this.sortDirection = null;
-            } catch (error) {
-                console.error(error);
-                Swal.fire("Error", error.response?.data?.message || "No se pudo obtener el récord.", "error");
-            } finally {
-                this.buscando = false;
-            }
-        },
-
-        seleccionarPersonal(idx) {
-            this.selectedPersonalIdx = idx;
-            this.cursosPage = 1;
-            this.sortColumn = null;
-            this.sortDirection = null;
-        },
-
-        ordenarCursos(columna) {
-            if (this.sortColumn === columna) {
-                this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
-            } else {
-                this.sortColumn = columna;
-                this.sortDirection = "asc";
-            }
-
-            const cursos = this.cursosPersonalActual;
-            const dir = this.sortDirection;
-            const col = this.sortColumn;
-
-            cursos.sort((a, b) => {
-                if (col === "Nota_Final") {
-                    const va = parseFloat(a[col]) || 0;
-                    const vb = parseFloat(b[col]) || 0;
-                    return dir === "asc" ? va - vb : vb - va;
-                }
-                if (col === "Fecha_Acceso") {
-                    const va = a.Fecha_Nota || a.Fecha_Ultimo_Acceso || "";
-                    const vb = b.Fecha_Nota || b.Fecha_Ultimo_Acceso || "";
-                    if (va < vb) return dir === "asc" ? -1 : 1;
-                    if (va > vb) return dir === "asc" ? 1 : -1;
-                    return 0;
-                }
-                const va = (a[col] || "").toString().toLowerCase();
-                const vb = (b[col] || "").toString().toLowerCase();
-                const cmp = va.localeCompare(vb, "es", { sensitivity: "base" });
-                return dir === "asc" ? cmp : -cmp;
-            });
-
-            this.cursosPage = 1;
-        },
-
-        cerrar() {
-            this.open = false;
-            this.view = "filters";
-            this.selectedSistema = "";
-            this.selectedArea = "";
-            this.selectedCliente = "";
-            this.selectedSucursal = "";
-            this.selectedTipoTrabajador = "";
-            this.selectedCargo = "";
-            this.searchPersonal = "";
-            this.searchCurso = "";
-            this.selectedEstadoId = "0";
-            this.selectedFechaDesde = "";
-            this.selectedFechaHasta = "";
-            this.selectedCourseIds = [];
-            this.selectedUsernames = [];
-            this.selectAllCursos = false;
-            this.selectAllPersonal = false;
-            this.resultados = [];
-            this.totalResultados = 0;
-            this.selectedPersonalIdx = -1;
-            this.buscando = false;
-        },
-
-        volverAFiltros() {
-            this.view = "filters";
-            this.resultados = [];
-            this.totalResultados = 0;
-            this.selectedPersonalIdx = -1;
-            this.buscando = false;
-        },
-
-        async exportarPDFRecord() {
-            if (this.selectedUsernames.length === 0) {
                 Swal.fire(
                     "Atención",
                     "Debe seleccionar al menos un personal.",
@@ -3047,6 +3197,8 @@ export default document.addEventListener("alpine:init", () => {
                 return;
             }
 
+            this.view = "results";
+            this.resultados = [];
             this.buscando = true;
 
             try {
@@ -3074,6 +3226,169 @@ export default document.addEventListener("alpine:init", () => {
 
                 const personales = response.data.Personales || [];
                 if (personales.length === 0) {
+                    Swal.fire(
+                        "Atención",
+                        "No se encontraron resultados con los criterios seleccionados.",
+                        "warning",
+                    );
+                    return;
+                }
+
+                this.resultados = personales;
+                this.totalResultados = personales.length;
+                this.selectedPersonalIdx = 0;
+                this.cursosPage = 1;
+                this.sortColumn = null;
+                this.sortDirection = null;
+            } catch (error) {
+                console.error(error);
+                Swal.fire(
+                    "Error",
+                    error.response?.data?.message ||
+                        "No se pudo obtener el récord.",
+                    "error",
+                );
+            } finally {
+                this.buscando = false;
+            }
+        },
+
+        seleccionarPersonal(idx) {
+            this.selectedPersonalIdx = idx;
+            this.cursosPage = 1;
+            this.sortColumn = null;
+            this.sortDirection = null;
+        },
+
+        ordenarCursos(columna) {
+            if (this.sortColumn === columna) {
+                this.sortDirection =
+                    this.sortDirection === "asc" ? "desc" : "asc";
+            } else {
+                this.sortColumn = columna;
+                this.sortDirection = "asc";
+            }
+
+            const cursos = this.cursosPersonalActual;
+            const dir = this.sortDirection;
+            const col = this.sortColumn;
+
+            cursos.sort((a, b) => {
+                if (col === "Nota_Final") {
+                    const va = parseFloat(a[col]) || 0;
+                    const vb = parseFloat(b[col]) || 0;
+                    return dir === "asc" ? va - vb : vb - va;
+                }
+                if (col === "Fecha_Acceso") {
+                    const va = a.Fecha_Nota || a.Fecha_Ultimo_Acceso || "";
+                    const vb = b.Fecha_Nota || b.Fecha_Ultimo_Acceso || "";
+                    if (va < vb) return dir === "asc" ? -1 : 1;
+                    if (va > vb) return dir === "asc" ? 1 : -1;
+                    return 0;
+                }
+                if (col === "Estado") {
+                    return dir === "asc"
+                        ? _rankEstado(a.Estado) - _rankEstado(b.Estado)
+                        : _rankEstado(b.Estado) - _rankEstado(a.Estado);
+                }
+                const va = (a[col] || "").toString().toLowerCase();
+                const vb = (b[col] || "").toString().toLowerCase();
+                const cmp = va.localeCompare(vb, "es", { sensitivity: "base" });
+                return dir === "asc" ? cmp : -cmp;
+            });
+
+            this.cursosPage = 1;
+        },
+
+        cerrar() {
+            this.open = false;
+            this.view = "filters";
+            this.selectedSistema = "";
+            this.selectedArea = "";
+            this.selectedCliente = "";
+            this.selectedSucursal = "";
+            this.selectedTipoTrabajador = "";
+            this.selectedCargo = "";
+            this.searchPersonal = "";
+            this.searchCurso = "";
+            this.selectedEstadoId = "0";
+            this.selectedFechaDesde = "";
+            this.selectedFechaHasta = "";
+            this.selectedAnio = "";
+            this.selectedCourseIds = [];
+            this.selectedUsernames = [];
+            this.selectAllCursos = false;
+            this.selectAllPersonal = false;
+            this.resultados = [];
+            this.totalResultados = 0;
+            this.selectedPersonalIdx = -1;
+            this.buscando = false;
+        },
+
+        volverAFiltros() {
+            this.view = "filters";
+            this.resultados = [];
+            this.totalResultados = 0;
+            this.selectedPersonalIdx = -1;
+            this.buscando = false;
+        },
+
+        async exportarPDFRecord() {
+            if (this.generandoPDF) return;
+            if (this.selectedUsernames.length === 0) {
+                Swal.fire(
+                    "Atención",
+                    "Debe seleccionar al menos un personal.",
+                    "warning",
+                );
+                return;
+            }
+            if (this.selectedCourseIds.length === 0) {
+                Swal.fire(
+                    "Atención",
+                    "Debe seleccionar al menos un curso.",
+                    "warning",
+                );
+                return;
+            }
+
+            this.generandoPDF = true;
+
+            Swal.fire({
+                title: "Generando PDF...",
+                text: "Por favor espere mientras se genera el reporte.",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            try {
+                const payload = {
+                    usernames: this.selectedUsernames || null,
+                    courseIds: this.selectedCourseIds || null,
+                    desde: this.selectedFechaDesde || null,
+                    hasta: this.selectedFechaHasta || null,
+                    estadoId: parseInt(this.selectedEstadoId) || 0,
+                };
+
+                const response = await axios.post(
+                    `${VITE_URL_APP}/api/obtener-personal-record`,
+                    payload,
+                );
+
+                if (!response.data.success) {
+                    Swal.close();
+                    Swal.fire(
+                        "Error",
+                        response.data.message || "No se obtuvieron resultados.",
+                        "warning",
+                    );
+                    return;
+                }
+
+                const personales = response.data.Personales || [];
+                if (personales.length === 0) {
+                    Swal.close();
                     Swal.fire(
                         "Atención",
                         "No se encontraron resultados para generar el PDF.",
@@ -3159,7 +3474,9 @@ export default document.addEventListener("alpine:init", () => {
                     doc.setFontSize(13);
                     doc.setTextColor(0, 0, 0);
                     const titulo = "RECORD DE CAPACITACIONES";
-                    doc.text(titulo, pageWidth / 2, tituloY, { align: "center" });
+                    doc.text(titulo, pageWidth / 2, tituloY, {
+                        align: "center",
+                    });
 
                     // Subrayado del título
                     const tW = doc.getTextWidth(titulo);
@@ -3371,8 +3688,12 @@ export default document.addEventListener("alpine:init", () => {
                         c.Nombre || "",
                         c.Estado || "",
                         c.Nota_Final != null
-                            ? (c.Fecha_Nota ? fmtFecha(c.Fecha_Nota) : "")
-                            : (c.Fecha_Ultimo_Acceso ? fmtFecha(c.Fecha_Ultimo_Acceso) : ""),
+                            ? c.Fecha_Nota
+                                ? fmtFecha(c.Fecha_Nota)
+                                : ""
+                            : c.Fecha_Ultimo_Acceso
+                              ? fmtFecha(c.Fecha_Ultimo_Acceso)
+                              : "",
                         c.Nota_Final != null ? c.Nota_Final : "",
                     ]);
 
@@ -3446,12 +3767,14 @@ export default document.addEventListener("alpine:init", () => {
                 }
 
                 saveAs(pdfBlob, nombreArchivo);
+                Swal.close();
                 Swal.fire("Éxito", "PDF generado correctamente.", "success");
             } catch (error) {
                 console.error(error);
+                Swal.close();
                 Swal.fire("Error", "No se pudo generar el PDF.", "error");
             } finally {
-                this.buscando = false;
+                this.generandoPDF = false;
             }
         },
 
@@ -3462,33 +3785,71 @@ export default document.addEventListener("alpine:init", () => {
                 formData.append("descripcion", "");
 
                 if (pdfBlob) {
-                    formData.append("archivo_pdf", pdfBlob, nombreArchivo.replace(/\.pdf$/i, "") + ".pdf");
+                    formData.append(
+                        "archivo_pdf",
+                        pdfBlob,
+                        nombreArchivo.replace(/\.pdf$/i, "") + ".pdf",
+                    );
                 }
 
                 if (excelBlob) {
-                    formData.append("archivo_excel", excelBlob, nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx");
+                    formData.append(
+                        "archivo_excel",
+                        excelBlob,
+                        nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx",
+                    );
                 }
 
-                await axios.post(`${VITE_URL_APP}/api/capacitacion/registrar-reporte`, formData);
+                await axios.post(
+                    `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
+                    formData,
+                );
 
-                window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+                window.dispatchEvent(
+                    new CustomEvent("historial-reportes-actualizado"),
+                );
             } catch (error) {
-                console.error("Error al registrar reporte en historial:", error);
-                Swal.fire("Error", error.response?.data?.message || "No se pudo guardar en el historial de reportes.", "warning");
+                console.error(
+                    "Error al registrar reporte en historial:",
+                    error,
+                );
+                Swal.fire(
+                    "Error",
+                    error.response?.data?.message ||
+                        "No se pudo guardar en el historial de reportes.",
+                    "warning",
+                );
             }
         },
 
         async exportarExcelRecord() {
+            if (this.generandoExcel) return;
             if (this.selectedUsernames.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
+                Swal.fire(
+                    "Atención",
+                    "Debe seleccionar al menos un personal.",
+                    "warning",
+                );
                 return;
             }
             if (this.selectedCourseIds.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
+                Swal.fire(
+                    "Atención",
+                    "Debe seleccionar al menos un curso.",
+                    "warning",
+                );
                 return;
             }
 
-            this.exportando = true;
+            this.generandoExcel = true;
+
+            Swal.fire({
+                title: "Generando Excel...",
+                text: "Por favor espere mientras se genera el reporte.",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading(),
+            });
 
             try {
                 const payload = {
@@ -3499,16 +3860,29 @@ export default document.addEventListener("alpine:init", () => {
                     estadoId: parseInt(this.selectedEstadoId) || 0,
                 };
 
-                const response = await axios.post(`${VITE_URL_APP}/api/obtener-personal-record`, payload);
+                const response = await axios.post(
+                    `${VITE_URL_APP}/api/obtener-personal-record`,
+                    payload,
+                );
 
                 if (!response.data.success) {
-                    Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                    Swal.close();
+                    Swal.fire(
+                        "Error",
+                        response.data.message || "No se obtuvieron resultados.",
+                        "warning",
+                    );
                     return;
                 }
 
                 const personales = response.data.Personales || [];
                 if (personales.length === 0) {
-                    Swal.fire("Atención", "No se encontraron resultados para exportar.", "warning");
+                    Swal.close();
+                    Swal.fire(
+                        "Atención",
+                        "No se encontraron resultados para exportar.",
+                        "warning",
+                    );
                     return;
                 }
 
@@ -3534,21 +3908,39 @@ export default document.addEventListener("alpine:init", () => {
                 sheet.mergeCells("D1:H1");
                 const infoCell = sheet.getCell("D1");
                 infoCell.value = "RÉCORD DE CAPACITACIONES";
-                infoCell.font = { bold: true, size: 13, color: { argb: "FF1F4E79" } };
-                infoCell.alignment = { vertical: "middle", horizontal: "right" };
+                infoCell.font = {
+                    bold: true,
+                    size: 13,
+                    color: { argb: "FF1F4E79" },
+                };
+                infoCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
 
                 sheet.mergeCells("D2:H2");
                 const totalCell = sheet.getCell("D2");
                 totalCell.value = `Total: ${personales.length} personal(es)`;
                 totalCell.font = { size: 11, color: { argb: "FF333333" } };
-                totalCell.alignment = { vertical: "middle", horizontal: "right" };
+                totalCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
 
                 sheet.getRow(4).height = 8;
 
                 const headers = [
-                    "#", "Sucursal", "N° Documento", "Apellidos y Nombres",
-                    "Código Pers.", "Cargo", "Tipo Trabajador", "Cliente",
-                    "Capacitación", "Estado", "Nota Final",
+                    "#",
+                    "Sucursal",
+                    "N° Documento",
+                    "Apellidos y Nombres",
+                    "Código Pers.",
+                    "Cargo",
+                    "Tipo Trabajador",
+                    "Cliente",
+                    "Capacitación",
+                    "Estado",
+                    "Nota Final",
                 ];
 
                 const headerRow = sheet.getRow(headerRowNumber);
@@ -3586,7 +3978,9 @@ export default document.addEventListener("alpine:init", () => {
                                 personal.Cliente || "—",
                                 curso.Nombre || "—",
                                 curso.Estado || "—",
-                                curso.Nota_Final != null ? curso.Nota_Final : "—",
+                                curso.Nota_Final != null
+                                    ? curso.Nota_Final
+                                    : "—",
                             ]);
                             row.eachCell((cell) => _estiloDatoExcel(cell));
                         });
@@ -3594,17 +3988,17 @@ export default document.addEventListener("alpine:init", () => {
                 });
 
                 sheet.columns = [
-                    { width: 5 },   // #
-                    { width: 16 },  // Sucursal
-                    { width: 16 },  // N° Documento
-                    { width: 35 },  // Apellidos y Nombres
-                    { width: 14 },  // Código Pers.
-                    { width: 22 },  // Cargo
-                    { width: 18 },  // Tipo Trabajador
-                    { width: 18 },  // Cliente
-                    { width: 35 },  // Capacitación
-                    { width: 14 },  // Estado
-                    { width: 12 },  // Nota Final
+                    { width: 5 }, // #
+                    { width: 16 }, // Sucursal
+                    { width: 16 }, // N° Documento
+                    { width: 35 }, // Apellidos y Nombres
+                    { width: 14 }, // Código Pers.
+                    { width: 22 }, // Cargo
+                    { width: 18 }, // Tipo Trabajador
+                    { width: 18 }, // Cliente
+                    { width: 35 }, // Capacitación
+                    { width: 14 }, // Estado
+                    { width: 12 }, // Nota Final
                 ];
 
                 sheet.autoFilter = {
@@ -3616,16 +4010,25 @@ export default document.addEventListener("alpine:init", () => {
                 const blob = _blobExcel(buffer);
                 const nombreArchivo = `RECORD_CAPACITACIONES_${fechaRep}.xlsx`;
 
-                await this.registrarReporteEnHistorial(nombreArchivo, null, blob);
+                await this.registrarReporteEnHistorial(
+                    nombreArchivo,
+                    null,
+                    blob,
+                );
 
                 saveAs(blob, nombreArchivo);
-
-                Swal.fire("Éxito", "Record exportado a Excel correctamente.", "success");
+                Swal.close();
+                Swal.fire(
+                    "Éxito",
+                    "Record exportado a Excel correctamente.",
+                    "success",
+                );
             } catch (error) {
                 console.error(error);
+                Swal.close();
                 Swal.fire("Error", "No se pudo exportar el Excel.", "error");
             } finally {
-                this.exportando = false;
+                this.generandoExcel = false;
             }
         },
     }));
@@ -3669,15 +4072,26 @@ export default document.addEventListener("alpine:init", () => {
         cursosPage: 1,
 
         get personalTotalPages() {
-            return Math.max(1, Math.ceil(this.personalesFiltrados.length / this.personalPerPage));
+            return Math.max(
+                1,
+                Math.ceil(
+                    this.personalesFiltrados.length / this.personalPerPage,
+                ),
+            );
         },
         get cursosTotalPages() {
-            return Math.max(1, Math.ceil(this.cursos.length / this.cursosPerPage));
+            return Math.max(
+                1,
+                Math.ceil(this.cursos.length / this.cursosPerPage),
+            );
         },
 
         personalesPaginados() {
             const start = (this.personalPage - 1) * this.personalPerPage;
-            return this.personalesFiltrados.slice(start, start + this.personalPerPage);
+            return this.personalesFiltrados.slice(
+                start,
+                start + this.personalPerPage,
+            );
         },
         cursosPaginados() {
             const start = (this.cursosPage - 1) * this.cursosPerPage;
@@ -3711,7 +4125,7 @@ export default document.addEventListener("alpine:init", () => {
 
                 this.cargarClientes();
             } catch (e) {
-                console.error('Error cargando datos:', e);
+                console.error("Error cargando datos:", e);
                 this.empresas = [];
                 this.sucursales = [];
                 this.todosLosPersonales = [];
@@ -3726,7 +4140,9 @@ export default document.addEventListener("alpine:init", () => {
         async cargarClientes() {
             this.loadingClientes = true;
             try {
-                const { data } = await axios.get(`${VITE_URL_APP}/api/get-clientes-pac`);
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/get-clientes-pac`,
+                );
                 this.clientes = Array.isArray(data) ? data : [];
             } catch (e) {
                 console.error(e);
@@ -3740,55 +4156,80 @@ export default document.addEventListener("alpine:init", () => {
             let resultados = [...this.todosLosPersonales];
 
             if (this.selectedCliente) {
-                const clienteSel = this.clientes.find(c => String(c.codigo) === String(this.selectedCliente));
+                const clienteSel = this.clientes.find(
+                    (c) => String(c.codigo) === String(this.selectedCliente),
+                );
                 if (clienteSel) {
                     const desc = String(clienteSel.descripcion).toLowerCase();
-                    resultados = resultados.filter(p => {
-                        const emp = String(p.empresa || '').toLowerCase();
-                        return emp === desc || emp.includes(desc) || desc.includes(emp);
+                    resultados = resultados.filter((p) => {
+                        const emp = String(p.empresa || "").toLowerCase();
+                        return (
+                            emp === desc ||
+                            emp.includes(desc) ||
+                            desc.includes(emp)
+                        );
                     });
                 } else {
                     resultados = [];
                 }
             }
 
-            if (this.selectedEmpresa === '__sin_empresa__') {
-                resultados = resultados.filter(p => !p.empresa && !p.empresa_codigo);
+            if (this.selectedEmpresa === "__sin_empresa__") {
+                resultados = resultados.filter(
+                    (p) => !p.empresa && !p.empresa_codigo,
+                );
             } else if (this.selectedEmpresa) {
-                const empSel = this.empresas.find(e => String(e.codigo) === String(this.selectedEmpresa));
+                const empSel = this.empresas.find(
+                    (e) => String(e.codigo) === String(this.selectedEmpresa),
+                );
                 if (empSel) {
                     const codigo = String(empSel.codigo).toLowerCase();
                     const desc = String(empSel.descripcion).toLowerCase();
-                    resultados = resultados.filter(p => {
-                        const emp = String(p.empresa || p.empresa_codigo || '').toLowerCase();
+                    resultados = resultados.filter((p) => {
+                        const emp = String(
+                            p.empresa || p.empresa_codigo || "",
+                        ).toLowerCase();
                         if (!emp) return false;
-                        return emp === desc || emp === codigo || emp.includes(desc) || desc.includes(emp);
+                        return (
+                            emp === desc ||
+                            emp === codigo ||
+                            emp.includes(desc) ||
+                            desc.includes(emp)
+                        );
                     });
                 }
             }
             if (this.selectedSucursal) {
-                const sucSel = this.sucursales.find(s => String(s.codigo) === String(this.selectedSucursal));
+                const sucSel = this.sucursales.find(
+                    (s) => String(s.codigo) === String(this.selectedSucursal),
+                );
                 if (sucSel) {
-                    resultados = resultados.filter(p =>
-                        String(p.sucursal).toLowerCase() === String(sucSel.sucursal).toLowerCase()
+                    resultados = resultados.filter(
+                        (p) =>
+                            String(p.sucursal).toLowerCase() ===
+                            String(sucSel.sucursal).toLowerCase(),
                     );
                 }
             }
             if (this.selectedTipoTrabajo) {
-                resultados = resultados.filter(p =>
-                    String(p.tipo_trabajador) === String(this.selectedTipoTrabajo)
+                resultados = resultados.filter(
+                    (p) =>
+                        String(p.tipo_trabajador) ===
+                        String(this.selectedTipoTrabajo),
                 );
             }
             if (this.selectedCargo) {
-                resultados = resultados.filter(p =>
-                    String(p.cargo) === String(this.selectedCargo)
+                resultados = resultados.filter(
+                    (p) => String(p.cargo) === String(this.selectedCargo),
                 );
             }
             if (this.searchPersonal) {
                 const term = this.searchPersonal.toLowerCase();
-                resultados = resultados.filter(p =>
-                    (p.nombre_completo || '').toLowerCase().includes(term) ||
-                    (p.dni || '').includes(term)
+                resultados = resultados.filter(
+                    (p) =>
+                        (p.nombre_completo || "")
+                            .toLowerCase()
+                            .includes(term) || (p.dni || "").includes(term),
                 );
             }
 
@@ -3797,22 +4238,27 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         filtrarCursos() {
-            this.cursos = this.todosLosCursos.filter(c => {
+            this.cursos = this.todosLosCursos.filter((c) => {
                 if (this.selectedFechaDesde && c.Fecha_Creacion) {
-                    const desdeTs = new Date(this.selectedFechaDesde).getTime() / 1000;
+                    const desdeTs =
+                        new Date(this.selectedFechaDesde).getTime() / 1000;
                     if (c.Fecha_Creacion < desdeTs) return false;
                 }
                 if (this.selectedFechaHasta && c.Fecha_Creacion) {
-                    const hastaTs = new Date(this.selectedFechaHasta + ' 23:59:59').getTime() / 1000;
+                    const hastaTs =
+                        new Date(
+                            this.selectedFechaHasta + " 23:59:59",
+                        ).getTime() / 1000;
                     if (c.Fecha_Creacion > hastaTs) return false;
                 }
                 if (this.selectedEstado) {
-                    const estadoCurso = (c.Estado || '').toUpperCase();
+                    const estadoCurso = (c.Estado || "").toUpperCase();
                     if (estadoCurso !== this.selectedEstado) return false;
                 }
                 if (this.searchCurso) {
                     const term = this.searchCurso.toLowerCase();
-                    if (!(c.Nombre || '').toLowerCase().includes(term)) return false;
+                    if (!(c.Nombre || "").toLowerCase().includes(term))
+                        return false;
                 }
                 return true;
             });
@@ -3827,7 +4273,8 @@ export default document.addEventListener("alpine:init", () => {
                 this.selectedUsernames.splice(idx, 1);
             }
             this.selectAllPersonal =
-                this.selectedUsernames.length === this.personalesFiltrados.length &&
+                this.selectedUsernames.length ===
+                    this.personalesFiltrados.length &&
                 this.personalesFiltrados.length > 0;
         },
 
@@ -3836,7 +4283,9 @@ export default document.addEventListener("alpine:init", () => {
                 this.selectedUsernames = [];
                 this.selectAllPersonal = false;
             } else {
-                this.selectedUsernames = this.personalesFiltrados.map(p => p.dni).filter(Boolean);
+                this.selectedUsernames = this.personalesFiltrados
+                    .map((p) => p.dni)
+                    .filter(Boolean);
                 this.selectAllPersonal = true;
             }
         },
@@ -3858,7 +4307,9 @@ export default document.addEventListener("alpine:init", () => {
                 this.selectedCourseIds = [];
                 this.selectAllCursos = false;
             } else {
-                this.selectedCourseIds = this.cursos.map(c => c.Id).filter(Boolean);
+                this.selectedCourseIds = this.cursos
+                    .map((c) => c.Id)
+                    .filter(Boolean);
                 this.selectAllCursos = true;
             }
         },
@@ -3876,7 +4327,7 @@ export default document.addEventListener("alpine:init", () => {
 
         get sucursalesEnResultados() {
             const sucs = new Set();
-            this.resultados.forEach(p => {
+            this.resultados.forEach((p) => {
                 if (p.Sucursal) sucs.add(p.Sucursal);
             });
             return Array.from(sucs).sort();
@@ -3886,20 +4337,25 @@ export default document.addEventListener("alpine:init", () => {
             if (this.selectedSucursalIdx < 0) return [];
             const suc = this.sucursalesEnResultados[this.selectedSucursalIdx];
             if (!suc) return [];
-            return this.resultados.filter(p => p.Sucursal === suc);
+            return this.resultados.filter((p) => p.Sucursal === suc);
         },
 
         get cursosPersonalActual() {
             if (this.selectedPersonalIdx < 0) return [];
-            const personal = this.personalesDeSucursalActual[this.selectedPersonalIdx];
+            const personal =
+                this.personalesDeSucursalActual[this.selectedPersonalIdx];
             if (!personal) return [];
             let cursos = personal.Cursos || [];
             if (this.cursosSortColumn) {
-                const dir = this.cursosSortDirection === 'desc' ? -1 : 1;
+                const dir = this.cursosSortDirection === "desc" ? -1 : 1;
                 cursos = [...cursos].sort((a, b) => {
-                    let va = (a[this.cursosSortColumn] || '').toString().toLowerCase();
-                    let vb = (b[this.cursosSortColumn] || '').toString().toLowerCase();
-                    if (this.cursosSortColumn === 'Nota_Final') {
+                    let va = (a[this.cursosSortColumn] || "")
+                        .toString()
+                        .toLowerCase();
+                    let vb = (b[this.cursosSortColumn] || "")
+                        .toString()
+                        .toLowerCase();
+                    if (this.cursosSortColumn === "Nota_Final") {
                         va = parseFloat(va) || 0;
                         vb = parseFloat(vb) || 0;
                         return (va - vb) * dir;
@@ -3912,11 +4368,19 @@ export default document.addEventListener("alpine:init", () => {
 
         get cursosPersonalActualPaginado() {
             const start = (this.cursosPage - 1) * this.cursosPerPage;
-            return this.cursosPersonalActual.slice(start, start + this.cursosPerPage);
+            return this.cursosPersonalActual.slice(
+                start,
+                start + this.cursosPerPage,
+            );
         },
 
         get totalPagesCursosPersonal() {
-            return Math.max(1, Math.ceil(this.cursosPersonalActual.length / this.cursosPerPage));
+            return Math.max(
+                1,
+                Math.ceil(
+                    this.cursosPersonalActual.length / this.cursosPerPage,
+                ),
+            );
         },
 
         seleccionarSucursal(idx) {
@@ -3937,15 +4401,16 @@ export default document.addEventListener("alpine:init", () => {
 
         ordenarCursos(col) {
             if (this.cursosSortColumn === col) {
-                this.cursosSortDirection = this.cursosSortDirection === 'asc' ? 'desc' : 'asc';
+                this.cursosSortDirection =
+                    this.cursosSortDirection === "asc" ? "desc" : "asc";
             } else {
                 this.cursosSortColumn = col;
-                this.cursosSortDirection = 'asc';
+                this.cursosSortDirection = "asc";
             }
         },
 
         volverAFiltros() {
-            this.view = 'filters';
+            this.view = "filters";
             this.resultados = [];
             this.selectedSucursalIdx = -1;
             this.selectedPersonalIdx = -1;
@@ -3954,11 +4419,19 @@ export default document.addEventListener("alpine:init", () => {
 
         async _fetchReporte() {
             if (this.selectedUsernames.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un personal.", "warning");
+                Swal.fire(
+                    "Atención",
+                    "Debe seleccionar al menos un personal.",
+                    "warning",
+                );
                 return null;
             }
             if (this.selectedCourseIds.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un curso.", "warning");
+                Swal.fire(
+                    "Atención",
+                    "Debe seleccionar al menos un curso.",
+                    "warning",
+                );
                 return null;
             }
 
@@ -3971,16 +4444,27 @@ export default document.addEventListener("alpine:init", () => {
                 cliente: this.selectedCliente || null,
             };
 
-            const response = await axios.post(`${VITE_URL_APP}/api/obtener-reporte-general`, payload);
+            const response = await axios.post(
+                `${VITE_URL_APP}/api/obtener-reporte-general`,
+                payload,
+            );
 
             if (!response.data.success) {
-                Swal.fire("Error", response.data.message || "No se obtuvieron resultados.", "warning");
+                Swal.fire(
+                    "Error",
+                    response.data.message || "No se obtuvieron resultados.",
+                    "warning",
+                );
                 return null;
             }
 
             const personales = response.data.Personales || [];
             if (personales.length === 0) {
-                Swal.fire("Atención", "No se encontraron resultados.", "warning");
+                Swal.fire(
+                    "Atención",
+                    "No se encontraron resultados.",
+                    "warning",
+                );
                 return null;
             }
 
@@ -3988,7 +4472,7 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         async obtenerReporte() {
-            this.view = 'results';
+            this.view = "results";
             this.resultados = [];
             this.selectedSucursalIdx = -1;
             this.selectedPersonalIdx = -1;
@@ -4010,17 +4494,27 @@ export default document.addEventListener("alpine:init", () => {
             this.exportando = true;
 
             try {
-                const personales = this.resultados.length > 0
-                    ? this.resultados
-                    : await this._fetchReporte();
+                const personales =
+                    this.resultados.length > 0
+                        ? this.resultados
+                        : await this._fetchReporte();
 
                 if (!personales || personales.length === 0) {
-                    if (!this.resultados.length) Swal.fire("Atención", "No se encontraron resultados para generar el PDF.", "warning");
+                    if (!this.resultados.length)
+                        Swal.fire(
+                            "Atención",
+                            "No se encontraron resultados para generar el PDF.",
+                            "warning",
+                        );
                     return;
                 }
 
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+                const doc = new jsPDF({
+                    orientation: "landscape",
+                    unit: "mm",
+                    format: "a4",
+                });
 
                 const logoSol = await _cargarImagen("/images/logo_sol.png");
                 const pageWidth = doc.internal.pageSize.getWidth();
@@ -4040,7 +4534,14 @@ export default document.addEventListener("alpine:init", () => {
                     const logoWidth = 50;
                     if (logoSol) {
                         const ratio = logoSol.height / logoSol.width;
-                        doc.addImage(logoSol, "PNG", marginL, 8, logoWidth, logoWidth * ratio);
+                        doc.addImage(
+                            logoSol,
+                            "PNG",
+                            marginL,
+                            8,
+                            logoWidth,
+                            logoWidth * ratio,
+                        );
                         logoBottomY = 8 + logoWidth * ratio;
                     }
                     const lineY = logoBottomY + 2;
@@ -4050,18 +4551,29 @@ export default document.addEventListener("alpine:init", () => {
                     doc.setFont("helvetica", "italic");
                     doc.setFontSize(6);
                     doc.setTextColor(80, 80, 80);
-                    doc.text("Chimbote: Calle Los Laureles Nº206 Urb. La Caleta", marginL, lineY + 3.5);
+                    doc.text(
+                        "Chimbote: Calle Los Laureles Nº206 Urb. La Caleta",
+                        marginL,
+                        lineY + 3.5,
+                    );
                     doc.text("RUC: 20445414833", marginL, lineY + 6);
 
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(11);
                     doc.setTextColor(0, 0, 0);
                     const titulo = "REPORTE GENERAL DE CAPACITACIONES";
-                    doc.text(titulo, pageWidth / 2, lineY + 18, { align: "center" });
+                    doc.text(titulo, pageWidth / 2, lineY + 18, {
+                        align: "center",
+                    });
                     const tW = doc.getTextWidth(titulo);
                     doc.setLineWidth(0.3);
                     doc.setDrawColor(0, 0, 0);
-                    doc.line(pageWidth / 2 - tW / 2, lineY + 19.5, pageWidth / 2 + tW / 2, lineY + 19.5);
+                    doc.line(
+                        pageWidth / 2 - tW / 2,
+                        lineY + 19.5,
+                        pageWidth / 2 + tW / 2,
+                        lineY + 19.5,
+                    );
 
                     let y = lineY + 24;
                     if (tituloExtra) {
@@ -4077,7 +4589,7 @@ export default document.addEventListener("alpine:init", () => {
                 let yPos = dibujarCabecera();
 
                 const sucursales = {};
-                personales.forEach(p => {
+                personales.forEach((p) => {
                     const key = p.Sucursal || "SIN SUCURSAL";
                     if (!sucursales[key]) sucursales[key] = [];
                     sucursales[key].push(p);
@@ -4112,11 +4624,18 @@ export default document.addEventListener("alpine:init", () => {
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(8);
                     doc.setTextColor(0, 0, 0);
-                    doc.text("SUCURSAL: " + (sucName === "SIN SUCURSAL" ? "SIN SUCURSAL" : sucName), marginL + 2, yPos + 4);
+                    doc.text(
+                        "SUCURSAL: " +
+                            (sucName === "SIN SUCURSAL"
+                                ? "SIN SUCURSAL"
+                                : sucName),
+                        marginL + 2,
+                        yPos + 4,
+                    );
                     yPos += 5.5;
 
                     const filas = [];
-                    grupo.forEach(p => {
+                    grupo.forEach((p) => {
                         const cursos = p.Cursos || [];
                         if (cursos.length === 0) {
                             filas.push([
@@ -4130,7 +4649,7 @@ export default document.addEventListener("alpine:init", () => {
                                 "—",
                             ]);
                         } else {
-                            cursos.forEach(c => {
+                            cursos.forEach((c) => {
                                 filas.push([
                                     p.CodigoPersonal || "—",
                                     p.NombreCompleto || "—",
@@ -4139,9 +4658,15 @@ export default document.addEventListener("alpine:init", () => {
                                     c.Nombre || "—",
                                     c.Estado || "—",
                                     c.Nota_Final != null
-                                        ? (c.Fecha_Nota ? fmtFecha(c.Fecha_Nota) : "")
-                                        : (c.Fecha_Ultimo_Acceso ? fmtFecha(c.Fecha_Ultimo_Acceso) : ""),
-                                    c.Nota_Final != null ? String(c.Nota_Final) : "—",
+                                        ? c.Fecha_Nota
+                                            ? fmtFecha(c.Fecha_Nota)
+                                            : ""
+                                        : c.Fecha_Ultimo_Acceso
+                                          ? fmtFecha(c.Fecha_Ultimo_Acceso)
+                                          : "",
+                                    c.Nota_Final != null
+                                        ? String(c.Nota_Final)
+                                        : "—",
                                 ]);
                             });
                         }
@@ -4150,16 +4675,18 @@ export default document.addEventListener("alpine:init", () => {
                     if (filas.length > 0) {
                         doc.autoTable({
                             startY: yPos,
-                            head: [[
-                                "Código Pers.",
-                                "Apellidos y Nombres",
-                                "Nro. Doc",
-                                "Cargo",
-                                "Capacitación",
-                                "Estado",
-                                "Fecha / Últ. Acceso",
-                                "Nota",
-                            ]],
+                            head: [
+                                [
+                                    "Código Pers.",
+                                    "Apellidos y Nombres",
+                                    "Nro. Doc",
+                                    "Cargo",
+                                    "Capacitación",
+                                    "Estado",
+                                    "Fecha / Últ. Acceso",
+                                    "Nota",
+                                ],
+                            ],
                             body: filas,
                             theme: "grid",
                             styles: {
@@ -4202,8 +4729,13 @@ export default document.addEventListener("alpine:init", () => {
                     const formData = new FormData();
                     formData.append("nombre_archivo", nombreArchivo);
                     formData.append("archivo_pdf", pdfBlob, nombreArchivo);
-                    await axios.post(`${VITE_URL_APP}/api/capacitacion/registrar-reporte`, formData);
-                    window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+                    await axios.post(
+                        `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
+                        formData,
+                    );
+                    window.dispatchEvent(
+                        new CustomEvent("historial-reportes-actualizado"),
+                    );
                 } catch (error) {
                     console.error("Error al guardar en historial:", error);
                 }
@@ -4222,12 +4754,18 @@ export default document.addEventListener("alpine:init", () => {
             this.exportando = true;
 
             try {
-                const personales = this.resultados.length > 0
-                    ? this.resultados
-                    : await this._fetchReporte();
+                const personales =
+                    this.resultados.length > 0
+                        ? this.resultados
+                        : await this._fetchReporte();
 
                 if (!personales || personales.length === 0) {
-                    if (!this.resultados.length) Swal.fire("Atención", "No se encontraron resultados para exportar.", "warning");
+                    if (!this.resultados.length)
+                        Swal.fire(
+                            "Atención",
+                            "No se encontraron resultados para exportar.",
+                            "warning",
+                        );
                     return;
                 }
 
@@ -4253,21 +4791,38 @@ export default document.addEventListener("alpine:init", () => {
                 sheet.mergeCells("D1:J1");
                 const infoCell = sheet.getCell("D1");
                 infoCell.value = "REPORTE GENERAL DE CAPACITACIONES";
-                infoCell.font = { bold: true, size: 13, color: { argb: "FF1F4E79" } };
-                infoCell.alignment = { vertical: "middle", horizontal: "right" };
+                infoCell.font = {
+                    bold: true,
+                    size: 13,
+                    color: { argb: "FF1F4E79" },
+                };
+                infoCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
 
                 sheet.mergeCells("D2:J2");
                 const totalCell = sheet.getCell("D2");
                 totalCell.value = `Total: ${personales.length} personal(es)`;
                 totalCell.font = { size: 11, color: { argb: "FF333333" } };
-                totalCell.alignment = { vertical: "middle", horizontal: "right" };
+                totalCell.alignment = {
+                    vertical: "middle",
+                    horizontal: "right",
+                };
 
                 sheet.getRow(4).height = 8;
 
                 const headers = [
-                    "#", "Sucursal", "Código Pers.", "Apellidos y Nombres",
-                    "Nro. Doc", "Cargo", "Capacitación", "Estado",
-                    "Fecha / Últ. Acceso", "Nota",
+                    "#",
+                    "Sucursal",
+                    "Código Pers.",
+                    "Apellidos y Nombres",
+                    "Nro. Doc",
+                    "Cargo",
+                    "Capacitación",
+                    "Estado",
+                    "Fecha / Últ. Acceso",
+                    "Nota",
                 ];
 
                 const headerRow = sheet.getRow(headerRowNumber);
@@ -4293,9 +4848,10 @@ export default document.addEventListener("alpine:init", () => {
                         row.eachCell((cell) => _estiloDatoExcel(cell));
                     } else {
                         cursos.forEach((curso) => {
-                            const fechaVal = curso.Nota_Final != null
-                                ? (curso.Fecha_Nota || "")
-                                : (curso.Fecha_Ultimo_Acceso || "");
+                            const fechaVal =
+                                curso.Nota_Final != null
+                                    ? curso.Fecha_Nota || ""
+                                    : curso.Fecha_Ultimo_Acceso || "";
                             const row = sheet.addRow([
                                 rowIdx++,
                                 personal.Sucursal || "—",
@@ -4306,7 +4862,9 @@ export default document.addEventListener("alpine:init", () => {
                                 curso.Nombre || "—",
                                 curso.Estado || "—",
                                 fechaVal,
-                                curso.Nota_Final != null ? String(curso.Nota_Final) : "—",
+                                curso.Nota_Final != null
+                                    ? String(curso.Nota_Final)
+                                    : "—",
                             ]);
                             row.eachCell((cell) => _estiloDatoExcel(cell));
                         });
@@ -4339,8 +4897,13 @@ export default document.addEventListener("alpine:init", () => {
                     const formData = new FormData();
                     formData.append("nombre_archivo", nombreArchivo);
                     formData.append("archivo_excel", blob, nombreArchivo);
-                    await axios.post(`${VITE_URL_APP}/api/capacitacion/registrar-reporte`, formData);
-                    window.dispatchEvent(new CustomEvent("historial-reportes-actualizado"));
+                    await axios.post(
+                        `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
+                        formData,
+                    );
+                    window.dispatchEvent(
+                        new CustomEvent("historial-reportes-actualizado"),
+                    );
                 } catch (error) {
                     console.error("Error al guardar en historial:", error);
                 }
@@ -4378,6 +4941,1187 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedCourseIds = [];
             this.selectAllPersonal = false;
             this.selectAllCursos = false;
+        },
+    }));
+
+    Alpine.data("modalReporteFormato", () => ({
+        open: false,
+
+        loadingInicial: true,
+        loadingCursos: false,
+        loadingPersonal: false,
+
+        view: "filtros",
+        generando: false,
+        exportandoPDF: false,
+        reporteData: null,
+
+        fechaCreacionDesde: "",
+        fechaCreacionHasta: "",
+        selectedAnio: "",
+        searchCurso: "",
+
+        selectedSucursal: "",
+        selectedVigencia: "1",
+        selectedCargo: "",
+        selectedTipoTrabajador: "",
+        selectedCliente: "",
+        searchPersonal: "",
+
+        todosLosCursos: [],
+        cursos: [],
+        aniosDisponibles: [],
+        todosLosPersonales: [],
+        personales: [],
+        sucursales: [],
+
+        selectedCursoId: null,
+        selectedPersonalDnis: [],
+        selectAllPersonal: false,
+
+        cursosPerPage: 15,
+        personalPerPage: 20,
+        cursosPage: 1,
+        personalPage: 1,
+
+        async init() {
+            window.addEventListener("abrir-reporte-formato", () => {
+                this.abrir();
+            });
+        },
+
+        async abrir() {
+            this.open = true;
+            this.loadingInicial = true;
+
+            const catalogs = await ensureCatalogsLoaded();
+            this.sucursales = catalogs.sucursales;
+            this.todosLosCursos = [...(catalogs.cursos || [])];
+            this.aniosDisponibles = [
+                ...new Set(
+                    this.todosLosCursos
+                        .map((c) => c.Anio_Curso)
+                        .filter(Boolean),
+                ),
+            ].sort((a, b) => b - a);
+            this.selectedAnio = this.aniosDisponibles[0] || "";
+            this.filtrarCursos();
+
+            await this.cargarPersonal();
+
+            this.loadingInicial = false;
+        },
+
+        async cargarPersonal() {
+            this.loadingPersonal = true;
+            try {
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/obtener-personal`,
+                    {
+                        params: { vigente: 2 },
+                    },
+                );
+                this.todosLosPersonales =
+                    data.success && Array.isArray(data.personal)
+                        ? data.personal
+                        : [];
+                this.filtrarPersonales();
+            } catch (e) {
+                console.error(e);
+                this.todosLosPersonales = [];
+                this.personales = [];
+            } finally {
+                this.loadingPersonal = false;
+            }
+        },
+
+        formatearFecha(timestamp) {
+            if (!timestamp || timestamp <= 0) return "";
+            let fecha;
+            if (
+                typeof timestamp === "number" ||
+                /^\d+$/.test(String(timestamp))
+            ) {
+                fecha = new Date(Number(timestamp) * 1000);
+            } else {
+                fecha = new Date(
+                    String(timestamp).includes("T")
+                        ? timestamp
+                        : String(timestamp).replace(" ", "T"),
+                );
+            }
+            if (isNaN(fecha.getTime())) return "";
+            const dia = String(fecha.getDate()).padStart(2, "0");
+            const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+            return `${dia}/${mes}/${fecha.getFullYear()}`;
+        },
+
+        filtrarCursos() {
+            this.cursos = this.todosLosCursos.filter((c) => {
+                if (this.fechaCreacionDesde && c.Fecha_Creacion) {
+                    const desdeTs =
+                        new Date(this.fechaCreacionDesde).getTime() / 1000;
+                    if (c.Fecha_Creacion < desdeTs) return false;
+                }
+                if (this.fechaCreacionHasta && c.Fecha_Creacion) {
+                    const hastaTs =
+                        new Date(
+                            this.fechaCreacionHasta + " 23:59:59",
+                        ).getTime() / 1000;
+                    if (c.Fecha_Creacion > hastaTs) return false;
+                }
+                if (
+                    this.selectedAnio &&
+                    c.Anio_Curso &&
+                    Number(c.Anio_Curso) !== Number(this.selectedAnio)
+                ) {
+                    return false;
+                }
+                if (this.searchCurso) {
+                    const term = this.searchCurso.toLowerCase();
+                    if (!(c.Nombre || "").toLowerCase().includes(term))
+                        return false;
+                }
+                return true;
+            });
+            this.cursosPage = 1;
+        },
+
+        filtrarPersonales() {
+            let resultados = [...this.todosLosPersonales];
+
+            if (this.selectedSucursal) {
+                const sucursalSel = this.sucursales.find(
+                    (s) => String(s.codigo) === String(this.selectedSucursal),
+                );
+                if (sucursalSel) {
+                    resultados = resultados.filter(
+                        (p) =>
+                            String(p.sucursal) === String(sucursalSel.sucursal),
+                    );
+                } else {
+                    resultados = [];
+                }
+            }
+
+            if (this.selectedVigencia === "1") {
+                resultados = resultados.filter((p) => p.vigente === true);
+            } else if (this.selectedVigencia === "0") {
+                resultados = resultados.filter((p) => p.vigente === false);
+            }
+
+            if (this.selectedCargo) {
+                resultados = resultados.filter(
+                    (p) =>
+                        String((p.cargo || "").trim()) ===
+                        String(this.selectedCargo),
+                );
+            }
+            if (this.selectedTipoTrabajador) {
+                resultados = resultados.filter(
+                    (p) =>
+                        String((p.tipo_trabajador || "").trim()) ===
+                        String(this.selectedTipoTrabajador),
+                );
+            }
+            if (this.selectedCliente) {
+                resultados = resultados.filter(
+                    (p) =>
+                        String((p.cliente || "").trim()) ===
+                        String(this.selectedCliente),
+                );
+            }
+
+            if (this.searchPersonal) {
+                const term = this.searchPersonal.toLowerCase();
+                resultados = resultados.filter(
+                    (p) =>
+                        (p.nombre_completo || "")
+                            .toLowerCase()
+                            .includes(term) || (p.dni || "").includes(term),
+                );
+            }
+
+            this.personales = resultados;
+            this.personalPage = 1;
+        },
+
+        get cargosDisponibles() {
+            return [
+                ...new Set(
+                    this.todosLosPersonales
+                        .map((p) => (p.cargo || "").trim())
+                        .filter(Boolean),
+                ),
+            ].sort((a, b) => a.localeCompare(b));
+        },
+        get tiposTrabajadorDisponibles() {
+            return [
+                ...new Set(
+                    this.todosLosPersonales
+                        .map((p) => (p.tipo_trabajador || "").trim())
+                        .filter(Boolean),
+                ),
+            ].sort((a, b) => a.localeCompare(b));
+        },
+        get clientesDisponibles() {
+            return [
+                ...new Set(
+                    this.todosLosPersonales
+                        .map((p) => (p.cliente || "").trim())
+                        .filter(Boolean),
+                ),
+            ].sort((a, b) => a.localeCompare(b));
+        },
+
+        get cursosTotalPages() {
+            return Math.max(
+                1,
+                Math.ceil(this.cursos.length / this.cursosPerPage),
+            );
+        },
+        get personalTotalPages() {
+            return Math.max(
+                1,
+                Math.ceil(this.personales.length / this.personalPerPage),
+            );
+        },
+
+        cursosPaginados() {
+            const start = (this.cursosPage - 1) * this.cursosPerPage;
+            return this.cursos.slice(start, start + this.cursosPerPage);
+        },
+        personalesPaginados() {
+            const start = (this.personalPage - 1) * this.personalPerPage;
+            return this.personales.slice(start, start + this.personalPerPage);
+        },
+
+        seleccionarCurso(id) {
+            this.selectedCursoId = this.selectedCursoId === id ? null : id;
+        },
+        togglePersonal(dni) {
+            const idx = this.selectedPersonalDnis.indexOf(dni);
+            if (idx === -1) {
+                this.selectedPersonalDnis.push(dni);
+            } else {
+                this.selectedPersonalDnis.splice(idx, 1);
+            }
+            this.selectAllPersonal =
+                this.selectedPersonalDnis.length === this.personales.length &&
+                this.personales.length > 0;
+        },
+        toggleAllPersonal() {
+            if (this.selectAllPersonal) {
+                this.selectedPersonalDnis = [];
+                this.selectAllPersonal = false;
+            } else {
+                this.selectedPersonalDnis = this.personales
+                    .map((p) => p.dni)
+                    .filter(Boolean);
+                this.selectAllPersonal = true;
+            }
+        },
+
+        async generarReporte() {
+            if (
+                this.selectedCursoId === null ||
+                this.selectedCursoId === undefined
+            ) {
+                Swal.fire(
+                    "Atención",
+                    "Seleccione una capacitación.",
+                    "warning",
+                );
+                return;
+            }
+            if (this.selectedPersonalDnis.length === 0) {
+                Swal.fire(
+                    "Atención",
+                    "Seleccione al menos un personal.",
+                    "warning",
+                );
+                return;
+            }
+
+            this.generando = true;
+            try {
+                const { data } = await axios.post(
+                    `${VITE_URL_APP}/api/obtener-reporte-formato`,
+                    {
+                        courseId: this.selectedCursoId,
+                        persDnis: this.selectedPersonalDnis,
+                    },
+                );
+
+                if (!data.success) {
+                    Swal.fire(
+                        "Error",
+                        data.message || "No se pudo generar el reporte.",
+                        "error",
+                    );
+                    return;
+                }
+
+                const personal = Array.isArray(data.Personal)
+                    ? data.Personal
+                    : [];
+                if (personal.length === 0) {
+                    Swal.fire(
+                        "Atención",
+                        "El personal seleccionado no participó o no culminó la capacitación.",
+                        "warning",
+                    );
+                    return;
+                }
+
+                this.reporteData = data;
+                this.view = "resultado";
+            } catch (e) {
+                console.error(e);
+                Swal.fire(
+                    "Error",
+                    e.response?.data?.message ||
+                        "No se pudo generar el reporte. Intente nuevamente.",
+                    "error",
+                );
+            } finally {
+                this.generando = false;
+            }
+        },
+
+        volverAFiltros() {
+            this.view = "filtros";
+            this.reporteData = null;
+        },
+
+        async generarPDF() {
+            if (!this.reporteData) {
+                Swal.fire(
+                    "Atención",
+                    "No hay datos para generar el PDF.",
+                    "warning",
+                );
+                return;
+            }
+
+            if (this.exportandoPDF) return;
+
+            this.exportandoPDF = true;
+
+            try {
+                const { jsPDF } = window.jspdf;
+
+                const data = this.reporteData;
+                const logoSol = await _cargarImagen("/images/logo_sol.png");
+
+                const firmaResponsable = await _cargarFirma(
+                    data.Firma_Responsable || "",
+                );
+                console.log("firmaResponsable:", firmaResponsable);
+                const personalFirmas = {};
+                await Promise.all(
+                    (data.Personal || []).map(async (p) => {
+                        if (p.Firma_Personal) {
+                            personalFirmas[p.DNI_Personal] =
+                                await _cargarFirma(p.Firma_Personal);
+                        }
+                    }),
+                );
+
+                const margenIzq = 14.1;
+
+                const headerStyle = {
+                    fillColor: [167, 203, 240],
+                    textColor: [0, 0, 0],
+                    fontStyle: "bold",
+                    halign: "center",
+                };
+
+                function dibujarCelda(doc, x, y, w, h, lineas, opts = {}) {
+                    const fontSize = opts.fontSize || 8;
+                    const align = opts.align || "left";
+                    const ptToMm = 0.3528;
+                    const lineHeight = fontSize * ptToMm * 1.15;
+
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.2);
+                    doc.rect(x, y, w, h);
+
+                    doc.setFontSize(fontSize);
+                    const totalTextHeight = lineas.length * lineHeight;
+                    let ty = y + (h - totalTextHeight) / 2 + lineHeight * 0.8;
+
+                    lineas.forEach((segments) => {
+                        let lineWidth = 0;
+                        segments.forEach((seg) => {
+                            doc.setFont(
+                                undefined,
+                                seg.bold ? "bold" : "normal",
+                            );
+                            lineWidth += doc.getTextWidth(seg.text);
+                        });
+
+                        let tx =
+                            align === "center"
+                                ? x + (w - lineWidth) / 2
+                                : x + 2;
+
+                        segments.forEach((seg) => {
+                            doc.setFont(
+                                undefined,
+                                seg.bold ? "bold" : "normal",
+                            );
+                            doc.text(seg.text, tx, ty);
+                            tx += doc.getTextWidth(seg.text);
+                        });
+
+                        ty += lineHeight;
+                    });
+                    doc.setFont(undefined, "normal");
+                }
+
+                function dibujarEncabezadoPagina(
+                    doc,
+                    paginaActual,
+                    totalPaginas,
+                ) {
+                    const x0 = margenIzq;
+                    const y0 = 10;
+                    const widths = [30, 85, 45, 25];
+                    const heights = [13, 12, 10];
+                    const alturaTotal = heights[0] + heights[1] + heights[2];
+                    const colX = [
+                        x0,
+                        x0 + widths[0],
+                        x0 + widths[0] + widths[1],
+                        x0 + widths[0] + widths[1] + widths[2],
+                    ];
+
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.2);
+
+                    if (logoSol) {
+                        doc.addImage(
+                            logoSol,
+                            "PNG",
+                            x0 + 2,
+                            y0 + (alturaTotal - 15) / 2,
+                            26,
+                            15,
+                        );
+                    }
+                    doc.rect(x0, y0, widths[0], alturaTotal);
+
+                    dibujarCelda(
+                        doc,
+                        colX[1],
+                        y0,
+                        widths[1],
+                        heights[0],
+                        [[{ text: "SOL SECURITY S.A.C.", bold: true }]],
+                        { align: "center" },
+                    );
+                    dibujarCelda(
+                        doc,
+                        colX[2],
+                        y0,
+                        widths[2],
+                        heights[0],
+                        [
+                            [{ text: "CODIGO", bold: true }],
+                            [{ text: "FAS-05-007", bold: false }],
+                        ],
+                        { align: "center" },
+                    );
+                    dibujarCelda(
+                        doc,
+                        colX[3],
+                        y0,
+                        widths[3],
+                        heights[0],
+                        [[{ text: "SEXTA EDICIÓN", bold: true }]],
+                        { align: "center" },
+                    );
+
+                    dibujarCelda(
+                        doc,
+                        colX[1],
+                        y0 + heights[0],
+                        widths[1],
+                        heights[1],
+                        [
+                            [
+                                { text: "Formato: ", bold: true },
+                                {
+                                    text: "Registro de inducción, charla, capacitación,",
+                                    bold: false,
+                                },
+                            ],
+                            [
+                                {
+                                    text: "entrenamiento y simulacros de emergencia",
+                                    bold: false,
+                                },
+                            ],
+                        ],
+                        { align: "left" },
+                    );
+                    dibujarCelda(
+                        doc,
+                        colX[2],
+                        y0 + heights[0],
+                        widths[2],
+                        heights[1],
+                        [
+                            [{ text: "FECHA DE APROBACIÓN:", bold: true }],
+                            [{ text: "10 Febrero 2026", bold: false }],
+                        ],
+                        { align: "center" },
+                    );
+                    dibujarCelda(
+                        doc,
+                        colX[3],
+                        y0 + heights[0],
+                        widths[3],
+                        heights[1],
+                        [
+                            [
+                                {
+                                    text: `Página ${paginaActual} de ${totalPaginas}`,
+                                    bold: false,
+                                },
+                            ],
+                        ],
+                        { align: "center" },
+                    );
+
+                    dibujarCelda(
+                        doc,
+                        colX[1],
+                        y0 + heights[0] + heights[1],
+                        widths[1],
+                        heights[2],
+                        [
+                            [
+                                { text: "Área de Influencia: ", bold: true },
+                                { text: "Todas las áreas", bold: false },
+                            ],
+                        ],
+                        { align: "left" },
+                    );
+                    dibujarCelda(
+                        doc,
+                        colX[2],
+                        y0 + heights[0] + heights[1],
+                        widths[2],
+                        heights[2],
+                        [
+                            [{ text: "FECHA DE REVISIÓN:", bold: true }],
+                            [{ text: "-", bold: false }],
+                        ],
+                        { align: "center" },
+                    );
+                    dibujarCelda(
+                        doc,
+                        colX[3],
+                        y0 + heights[0] + heights[1],
+                        widths[3],
+                        heights[2],
+                        [[{ text: "", bold: false }]],
+                        { align: "center" },
+                    );
+                }
+
+                function dibujarFirmaEnCelda(doc, firma, cell, opts = {}) {
+                    if (
+                        !firma ||
+                        !firma.src ||
+                        !isFinite(firma.width) ||
+                        !isFinite(firma.height) ||
+                        firma.width <= 0 ||
+                        firma.height <= 0 ||
+                        !isFinite(cell.x) ||
+                        !isFinite(cell.y) ||
+                        !isFinite(cell.width) ||
+                        !isFinite(cell.height) ||
+                        cell.width <= 0 ||
+                        cell.height <= 0
+                    ) {
+                        return;
+                    }
+                    const pad = opts.pad ?? 1;
+                    const align = opts.align || "center";
+                    const maxW = cell.width - pad * 2;
+                    const maxH = cell.height - pad * 2;
+                    let ratio = firma.width / firma.height;
+                    let w;
+                    let h;
+                    if (opts.height != null) {
+                        h = Math.min(opts.height, maxH);
+                        w = h * ratio;
+                        if (w > maxW) {
+                            w = maxW;
+                            h = w / ratio;
+                        }
+                    } else {
+                        w = maxW;
+                        h = w / ratio;
+                        if (h > maxH) {
+                            h = maxH;
+                            w = h * ratio;
+                        }
+                        if (w > maxW) {
+                            w = maxW;
+                            h = w / ratio;
+                        }
+                        if (h < 3) {
+                            h = Math.min(3, maxH);
+                            w = h * ratio;
+                            if (w > maxW) {
+                                w = maxW;
+                                h = w / ratio;
+                            }
+                        }
+                    }
+                    const x =
+                        align === "left"
+                            ? cell.x + pad
+                            : cell.x + (cell.width - w) / 2;
+                    const y = cell.y + (cell.height - h) / 2;
+                    doc.addImage(firma.src, "PNG", x, y, w, h);
+                }
+
+                const renderContenido = (doc, totalPaginas) => {
+                    let ultimaPaginaEncabezado = 0;
+
+                    const onDidDrawPage = (tableData) => {
+                        if (!totalPaginas) return;
+                        if (tableData.pageNumber === ultimaPaginaEncabezado)
+                            return;
+                        ultimaPaginaEncabezado = tableData.pageNumber;
+                        dibujarEncabezadoPagina(
+                            doc,
+                            tableData.pageNumber,
+                            totalPaginas,
+                        );
+                    };
+
+                    const margenContenido = {
+                        top: 49,
+                        left: margenIzq,
+                        right: margenIzq,
+                        bottom: margenIzq,
+                    };
+
+                    const normalizarTipo = (s) =>
+                        (s || "")
+                            .toUpperCase()
+                            .normalize("NFD")
+                            .replace(/[\u0300-\u036f]/g, "")
+                            .replace(/\s+/g, " ")
+                            .trim();
+
+                    const tipoCursoSeleccionado = normalizarTipo(
+                        data.Tipo_Curso,
+                    );
+                    const marcarTipo = (label) =>
+                        normalizarTipo(label) === tipoCursoSeleccionado
+                            ? `${label} (X)`
+                            : `${label} (  )`;
+
+                    // Datos del empleador
+                    doc.autoTable({
+                        startY: 49,
+                        margin: margenContenido,
+                        theme: "grid",
+                        didDrawPage: onDidDrawPage,
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2,
+                            textColor: [0, 0, 0],
+                            valign: "middle",
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.2,
+                        },
+                        head: [
+                            [
+                                {
+                                    content: "DATOS DEL EMPLEADOR",
+                                    colSpan: 5,
+                                    styles: headerStyle,
+                                },
+                            ],
+                            [
+                                {
+                                    content: "RAZÓN SOCIAL",
+                                    styles: headerStyle,
+                                },
+                                {
+                                    content: "RUC",
+                                    styles: headerStyle,
+                                },
+                                {
+                                    content:
+                                        "DOMICILIO (Dirección, distrito,\ndepartamento, provincia)",
+                                    styles: headerStyle,
+                                },
+                                {
+                                    content: "ACTIVIDAD ECONÓMICA",
+                                    styles: headerStyle,
+                                },
+                                {
+                                    content:
+                                        "Nº DE TRABAJADORES EN EL\nCENTRO LABORAL",
+                                    styles: headerStyle,
+                                },
+                            ],
+                        ],
+                        body: [
+                            [
+                                {
+                                    content: "SOL SECURITY S.A.C.",
+                                    styles: { halign: "center" },
+                                },
+                                {
+                                    content: "20445414833",
+                                    styles: { halign: "center" },
+                                },
+                                {
+                                    content:
+                                        "Calle José Gálvez 334, Callao -\nProv. Const. Del Callao",
+                                    styles: { halign: "center" },
+                                },
+                                {
+                                    content: "SEGURIDAD PRIVADA\nY ELECTRÓNICA",
+                                    styles: { halign: "center" },
+                                },
+                                {
+                                    content: data.Total_Aprobados || "0",
+                                    styles: { halign: "center" },
+                                },
+                            ],
+                        ],
+                        columnStyles: {
+                            0: { cellWidth: 33 },
+                            1: { cellWidth: 27 },
+                            2: { cellWidth: 55 },
+                            3: { cellWidth: 35 },
+                            4: { cellWidth: 35 },
+                        },
+                    });
+
+                    // Marcar (X)
+                    doc.autoTable({
+                        startY: doc.lastAutoTable.finalY,
+                        margin: margenContenido,
+                        theme: "grid",
+                        didDrawPage: onDidDrawPage,
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2,
+                            valign: "middle",
+                            textColor: [0, 0, 0],
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.2,
+                        },
+                        body: [
+                            [
+                                {
+                                    content: "MARCAR (X)",
+                                    colSpan: 5,
+                                    styles: headerStyle,
+                                },
+                            ],
+                            [
+                                marcarTipo("INDUCCIÓN"),
+                                marcarTipo("CHARLA"),
+                                marcarTipo("CAPACITACIÓN"),
+                                marcarTipo("ENTRENAMIENTO"),
+                                marcarTipo("SIMULACROS DE EMERGENCIA"),
+                            ],
+                        ],
+                        columnStyles: {
+                            0: { cellWidth: 33 },
+                            1: { cellWidth: 27 },
+                            2: { cellWidth: 30 },
+                            3: { cellWidth: 35 },
+                            4: { cellWidth: 60 },
+                        },
+                    });
+
+                    // Datos de capacitación y capacitador
+                    doc.autoTable({
+                        startY: doc.lastAutoTable.finalY,
+                        margin: margenContenido,
+                        theme: "grid",
+                        didDrawPage: onDidDrawPage,
+                        didDrawCell: (cellData) => {
+                            if (
+                                cellData.section === "body" &&
+                                cellData.row.index === 2 &&
+                                cellData.column.index === 3
+                            ) {
+                                dibujarFirmaEnCelda(
+                                    doc,
+                                    firmaResponsable,
+                                    cellData.cell,
+                                );
+                            }
+                        },
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2,
+                            valign: "middle",
+                            textColor: [0, 0, 0],
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.2,
+                        },
+                        body: [
+                            [
+                                {
+                                    content: "TEMA:",
+                                    styles: {
+                                        ...headerStyle,
+                                        halign: "left",
+                                        cellWidth: 33,
+                                    },
+                                },
+                                {
+                                    content: data.Nombre_Curso || "",
+                                    colSpan: 3,
+                                },
+                            ],
+                            [
+                                {
+                                    content: "FECHA:",
+                                    styles: { ...headerStyle, halign: "left" },
+                                },
+                                {
+                                    content: data.Fecha_Reporte || "",
+                                    colSpan: 3,
+                                },
+                            ],
+                            [
+                                {
+                                    content: "CAPACITADOR:",
+                                    styles: { ...headerStyle, halign: "left" },
+                                },
+                                data.Nombre_Responsable || "",
+                                { content: "FIRMA", styles: headerStyle },
+                                {
+                                    content: "",
+                                    styles: { minCellHeight: 16 },
+                                },
+                            ],
+                            [
+                                {
+                                    content: "Nº DE HORAS:",
+                                    styles: { ...headerStyle, halign: "left" },
+                                },
+                                { content: "01", colSpan: 3 },
+                            ],
+                        ],
+                        columnStyles: {
+                            0: { cellWidth: 33 },
+                            1: { cellWidth: 92 },
+                            2: { cellWidth: 25 },
+                            3: { cellWidth: 35 },
+                        },
+                    });
+
+                    // Listado de personal capacitado
+                    doc.autoTable({
+                        startY: doc.lastAutoTable.finalY,
+                        margin: margenContenido,
+                        theme: "grid",
+                        didDrawPage: onDidDrawPage,
+                        didDrawCell: (cellData) => {
+                            if (
+                                cellData.section === "body" &&
+                                cellData.column.index === 4
+                            ) {
+                                const persona = (data.Personal || [])[
+                                    cellData.row.index
+                                ];
+                                dibujarFirmaEnCelda(
+                                    doc,
+                                    persona
+                                        ? personalFirmas[persona.DNI_Personal]
+                                        : null,
+                                    cellData.cell,
+                                );
+                            }
+                        },
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 1.5,
+                            valign: "middle",
+                            textColor: [0, 0, 0],
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.2,
+                        },
+                        head: [
+                            [
+                                { content: "Nº", styles: headerStyle },
+                                {
+                                    content: "APELLIDOS Y NOMBRES",
+                                    styles: headerStyle,
+                                },
+                                { content: "DNI", styles: headerStyle },
+                                { content: "CARGO", styles: headerStyle },
+                                { content: "FIRMA", styles: headerStyle },
+                            ],
+                        ],
+                        body: (data.Personal || []).map((persona, index) => [
+                            String(index + 1),
+                            persona.Nombre_Personal || "",
+                            persona.DNI_Personal || "",
+                            persona.Cargo_Personal || "",
+                            { content: "", styles: { minCellHeight: 10 } },
+                        ]),
+                        columnStyles: {
+                            0: { cellWidth: 10, halign: "center" },
+                            1: { cellWidth: 75 },
+                            2: { cellWidth: 25, halign: "center" },
+                            3: { cellWidth: 45 },
+                            4: { cellWidth: 30 },
+                        },
+                    });
+
+                    // Responsable del registro
+                    doc.autoTable({
+                        startY: doc.lastAutoTable.finalY + 10,
+                        margin: margenContenido,
+                        theme: "grid",
+                        didDrawPage: onDidDrawPage,
+                        didDrawCell: (cellData) => {
+                            if (
+                                cellData.section === "body" &&
+                                cellData.row.index === 4 &&
+                                cellData.column.index === 1
+                            ) {
+                                dibujarFirmaEnCelda(doc, firmaResponsable, cellData.cell, {
+                                    pad: 0.5,
+                                    align: "left",
+                                    height: 13,
+                                });
+                            }
+                        },
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2,
+                            valign: "middle",
+                            textColor: [0, 0, 0],
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.2,
+                        },
+                        body: [
+                            [
+                                {
+                                    content: "RESPONSABLE DEL REGISTRO",
+                                    colSpan: 2,
+                                    styles: headerStyle,
+                                },
+                            ],
+                            [
+                                {
+                                    content: "Nombre:",
+                                    styles: {
+                                        fontStyle: "bold",
+                                        halign: "left",
+                                        cellWidth: 33,
+                                    },
+                                },
+                                {
+                                    content: data.Nombre_Responsable || "",
+                                },
+                            ],
+                            [
+                                {
+                                    content: "Cargo:",
+                                    styles: {
+                                        fontStyle: "bold",
+                                        halign: "left",
+                                    },
+                                },
+                                {
+                                    content: data.Cargo_Responsable || "",
+                                },
+                            ],
+                            [
+                                {
+                                    content: "Fecha:",
+                                    styles: {
+                                        fontStyle: "bold",
+                                        halign: "left",
+                                    },
+                                },
+                                {
+                                    content: data.Fecha_Reporte || "",
+                                },
+                            ],
+                            [
+                                {
+                                    content: "Firma:",
+                                    styles: {
+                                        fontStyle: "bold",
+                                        halign: "left",
+                                        minCellHeight: 17,
+                                    },
+                                },
+                                {
+                                    content: "",
+                                    styles: { minCellHeight: 17 },
+                                },
+                            ],
+                        ],
+                        columnStyles: {
+                            0: { cellWidth: 33 },
+                            1: { cellWidth: 152 },
+                        },
+                    });
+                };
+
+                const docConteo = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                });
+                renderContenido(docConteo, null);
+                const totalPaginas = docConteo.internal.getNumberOfPages();
+
+                const doc = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                });
+                renderContenido(doc, totalPaginas);
+
+                const d = new Date();
+                const fechaRep = `${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}_${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}_${String(d.getMinutes()).padStart(2, "0")}`;
+
+                const nombreArchivo = `REPORTE_FORMATO_${fechaRep}.pdf`;
+
+                const pdfBlob = doc.output("blob");
+
+                await this.registrarReporteEnHistorial(
+                    nombreArchivo,
+                    pdfBlob,
+                    null,
+                );
+
+                saveAs(pdfBlob, nombreArchivo);
+
+                Swal.fire("Éxito", "PDF generado correctamente.", "success");
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", "No se pudo generar el PDF.", "error");
+            } finally {
+                this.exportandoPDF = false;
+            }
+        },
+
+        async registrarReporteEnHistorial(nombreArchivo, pdfBlob, excelBlob) {
+            try {
+                const formData = new FormData();
+                formData.append("nombre_archivo", nombreArchivo);
+                formData.append("descripcion", "");
+
+                if (pdfBlob) {
+                    formData.append(
+                        "archivo_pdf",
+                        pdfBlob,
+                        nombreArchivo.replace(/\.pdf$/i, "") + ".pdf",
+                    );
+                    formData.append("tipo_archivo", "pdf");
+                }
+
+                if (excelBlob) {
+                    formData.append(
+                        "archivo_excel",
+                        excelBlob,
+                        nombreArchivo.replace(/\.xlsx$/i, "") + ".xlsx",
+                    );
+                    formData.append("tipo_archivo", "xlsx");
+                }
+
+                await axios.post(
+                    `${VITE_URL_APP}/api/capacitacion/registrar-reporte`,
+                    formData,
+                );
+
+                window.dispatchEvent(
+                    new CustomEvent("historial-reportes-actualizado"),
+                );
+            } catch (error) {
+                console.error(
+                    "Error al registrar reporte en historial:",
+                    error,
+                );
+                Swal.fire(
+                    "Error",
+                    error.response?.data?.message ||
+                        "No se pudo guardar en el historial de reportes.",
+                    "warning",
+                );
+            }
+        },
+
+        sortKey: null,
+        sortDir: "asc",
+
+        get personalOrdenado() {
+            const lista = this.reporteData?.Personal || [];
+            if (!this.sortKey) return lista;
+            const dir = this.sortDir === "asc" ? 1 : -1;
+            return [...lista].sort((a, b) => {
+                const va = String(a[this.sortKey] || "").toLowerCase();
+                const vb = String(b[this.sortKey] || "").toLowerCase();
+                return va.localeCompare(vb, "es", { numeric: true }) * dir;
+            });
+        },
+
+        ordenarPersonal(key) {
+            if (this.sortKey === key) {
+                this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+            } else {
+                this.sortKey = key;
+                this.sortDir = "asc";
+            }
+        },
+
+        sortIcon(key) {
+            if (this.sortKey !== key) return "";
+            return this.sortDir === "asc"
+                ? "ti ti-sort-ascending"
+                : "ti ti-sort-descending";
+        },
+
+        cerrar() {
+            this.open = false;
+            this.view = "filtros";
+            this.generando = false;
+            this.exportandoPDF = false;
+            this.reporteData = null;
+            this.fechaCreacionDesde = "";
+            this.fechaCreacionHasta = "";
+            this.selectedAnio = "";
+            this.searchCurso = "";
+            this.selectedSucursal = "";
+            this.selectedVigencia = "1";
+            this.selectedCargo = "";
+            this.selectedTipoTrabajador = "";
+            this.selectedCliente = "";
+            this.searchPersonal = "";
+            this.selectedCursoId = null;
+            this.selectedPersonalDnis = [];
+            this.selectAllPersonal = false;
+            this.cursosPage = 1;
+            this.personalPage = 1;
+            this.sortKey = null;
+            this.sortDir = "asc";
+            this.todosLosPersonales = [];
+            this.personales = [];
         },
     }));
 });

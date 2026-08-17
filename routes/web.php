@@ -207,6 +207,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-personal-todas-empresas', [CapacitacionController::class, 'obtenerPersonalTodasEmpresas']);
         Route::post('/obtener-personal-record', [CapacitacionController::class, 'obtenerPersonalParaRecord']);
         Route::post('/obtener-reporte-general', [CapacitacionController::class, 'obtenerReporteGeneral']);
+        Route::post('/obtener-reporte-formato', [CapacitacionController::class, 'obtenerReporteFormato']);
         Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
         Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
         Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);

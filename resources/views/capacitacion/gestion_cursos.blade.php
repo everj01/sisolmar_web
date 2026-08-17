@@ -381,12 +381,14 @@
                     soloEliminados: false,
                     filtroArea: '',
                     filtroTipoCurso: '',
+                    filtroCategoria: '',
                     filtroFechaDesde: '',
                     filtroFechaHasta: '',
                     tipos: []
-                }" x-init="$nextTick(() => listarCursos(1, '', '', '', ''))" @tipo-curso-loaded.window="tipos = $event.detail"
-                    @update-filtro-area="filtroArea = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
-                    @update-filtro-tipo-curso="filtroTipoCurso = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
+                }" x-init="$nextTick(() => listarCursos(1, '', '', '', '', ''))" @tipo-curso-loaded.window="tipos = $event.detail"
+                    @update-filtro-area="filtroArea = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
+                    @update-filtro-tipo-curso="filtroTipoCurso = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
+                    @update-filtro-categoria="filtroCategoria = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
                     class="flex flex-wrap items-center justify-between gap-6">
                     <div class="flex items-center">
                         {{-- <input 
@@ -397,7 +399,7 @@
                     x-model="soloEliminados"
                 > --}}
                         <input class="form-switch" type="checkbox" role="switch" id="chkEliminados" x-model="soloEliminados"
-                            @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)">
+                            @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)">
                         <label class="ms-1.5 font-medium text-sm text-gray-700" for="chkEliminados">
                             Solo eliminados
                         </label>
@@ -603,15 +605,29 @@
                         </div>
 
                         <div class="flex flex-col">
+                            <label class="text-sm font-medium text-gray-700 mb-1">Tipo de curso</label>
+                            <select x-model="filtroCategoria"
+                                @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
+                                class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Todas --</option>
+                                <option value="INDUCCIÓN">Inducción</option>
+                                <option value="CHARLA">Charla</option>
+                                <option value="CAPACITACIÓN">Capacitación</option>
+                                <option value="ENTRENAMIENTO">Entrenamiento</option>
+                                <option value="SIMULACROS DE EMERGENCIA">Simulacros de emergencia</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col">
                             <label class="text-sm font-medium text-gray-700 mb-1">Fecha creación</label>
                             <div class="flex items-center gap-2">
                                 <input type="date" x-model="filtroFechaDesde"
-                                    @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
+                                    @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
                                     class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                     placeholder="Desde">
                                 <span class="text-gray-400 text-xs font-semibold">—</span>
                                 <input type="date" x-model="filtroFechaHasta"
-                                    @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroFechaDesde, filtroFechaHasta)"
+                                    @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
                                     class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                     placeholder="Hasta">
                             </div>
@@ -697,6 +713,24 @@
                                                 <textarea rows="2" x-model="descripcion"
                                                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-shadow"
                                                     placeholder="Describa el contenido, objetivos y temática del curso..."></textarea>
+                                            </div>
+
+                                            <!-- Tipo de curso -->
+                                            <div>
+                                                <label for="slcTipoCursoCategoria"
+                                                    class="text-gray-800 text-sm font-medium inline-block mb-1">
+                                                    Tipo de curso <span class="text-danger">*</span>
+                                                </label>
+                                                <select id="slcTipoCursoCategoria" x-model="categoria"
+                                                    :disabled="tieneVigente"
+                                                    :class="tieneVigente ? 'w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100 cursor-not-allowed' : 'w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white'">
+                                                    <option value="">Seleccione el tipo de curso</option>
+                                                    <option value="1">Inducción</option>
+                                                    <option value="2">Charla</option>
+                                                    <option value="3">Capacitación</option>
+                                                    <option value="4">Entrenamiento</option>
+                                                    <option value="5">Simulacros de emergencia</option>
+                                                </select>
                                             </div>
 
                                             <!-- Responsable del curso -->
@@ -1109,6 +1143,7 @@
                                                     open: false,
                                                     searchTerm: '',
                                                     dropdownStyle: {},
+                                                    _closeHandler: null,
                                                     options: window.opcionesArea || [],
                                                     get filteredOptions() {
                                                         if (this.searchTerm === '') return this.options;
@@ -1218,6 +1253,7 @@
                                                     open: false,
                                                     searchTerm: '',
                                                     dropdownStyle: {},
+                                                    _closeHandler: null,
                                                     get options() { return areasResponsables; },
                                                     selectOption(option) {
                                                         areaResponsable = option ? option.codArea : '';
@@ -1318,6 +1354,7 @@
                                                     open: false,
                                                     searchTerm: '',
                                                     dropdownStyle: {},
+                                                    _closeHandler: null,
                                                     get options() {
                                                         const todas = { Codigo: 'TODAS', Sucursal: 'Todas las sucursales' };
                                                         return [todas, ...sucursalesOpciones];
@@ -1418,6 +1455,7 @@
                                                     open: false,
                                                     searchTerm: '',
                                                     dropdownStyle: {},
+                                                    _closeHandler: null,
                                                     _fullOptions: {{ Js::from($dirigidos->map(fn($d) => ['codigo' => $d->codigo, 'texto' => $d->texto])->values()->toArray()) }},
                                                     get options() {
                                                         const tc = this.tipoCurso;
@@ -2725,6 +2763,7 @@
                     clientes: [],
                     areas: []
                 },
+                _combosPromise: null,
 
                 get fechaMinima() {
                     const today = new Date();
@@ -2757,16 +2796,19 @@
                 },
 
                 async fetchCombos() {
-
-                    try {
-                        const response = await fetch(`${VITE_URL_APP}/api/capacitacion/combos-apertura`);
-                        const data = await response.json();
-                        if (data.success) {
-                            this.combosApertura = data;
+                    if (this._combosPromise) return this._combosPromise;
+                    this._combosPromise = (async () => {
+                        try {
+                            const response = await fetch(`${VITE_URL_APP}/api/capacitacion/combos-apertura`);
+                            const data = await response.json();
+                            if (data.success) {
+                                this.combosApertura = data;
+                            }
+                        } catch (e) {
+                            console.error("Error cargando combos de apertura:", e);
                         }
-                    } catch (e) {
-                        console.error("Error cargando combos de apertura:", e);
-                    }
+                    })();
+                    return this._combosPromise;
                 },
 
                 openModal(data) {

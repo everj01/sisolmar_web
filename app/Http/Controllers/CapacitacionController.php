@@ -2,32 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\MatriculaMasivaJob;
 use App\Mail\MemoMail;
-use Illuminate\Support\Facades\Mail;
 use App\Models\CapacitacionAreas;
+use App\Models\CapacitacionReporteHistorial;
 use App\Models\CapacitacionTipoCurso;
+use App\Models\Consulta;
 use App\Models\CursoProgramacion;
 use App\Models\Cursos;
+use App\Models\ExamenCurso;
+use App\Models\ExamenPregunta2026;
+use App\Models\Matricula;
+use App\Models\Personal;
+use App\Services\FirmaService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Http\JsonResponse;
-use Illuminate\View\View;
-use App\Models\ExamenCurso;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
-use App\Jobs\MatriculaMasivaJob;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Matricula;
-use App\Models\Consulta;
-use App\Models\ExamenPregunta2026;
-use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Support\Facades\Http;
-use App\Models\Personal;
-use App\Models\CapacitacionReporteHistorial;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
+use PhpOffice\PhpWord\IOFactory;
 
 class CapacitacionController extends Controller
 {
@@ -82,6 +83,7 @@ class CapacitacionController extends Controller
                 "cod_cliente" => $curso->cod_cliente,
                 "dirigido_a" => $curso->dirigido_a,
                 "tipo_curso" => $curso->tipoCurso?->descripcion,
+                "categoria" => $this->mapearCategoriaCurso($curso->categoria, $curso->codigo_moodle),
             ];
         });
 
@@ -137,6 +139,7 @@ class CapacitacionController extends Controller
             "nombre" => "required|string|max:100",
             "tipo_curso" =>
             "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
+            "categoria" => "nullable|integer|in:1,2,3,4,5",
             "area_conocimiento" =>
             "nullable|exists:sw_capacitacion_areas,codigo",
             "area_responsable" => "required|integer",
@@ -198,6 +201,7 @@ class CapacitacionController extends Controller
             $curso->update([
                 "nombre" => $request->nombre,
                 "tipo_curso" => $request->tipo_curso,
+                "categoria" => $request->input("categoria"),
                 "area_conocimiento" => $request->area_conocimiento,
                 "area" => $request->area_responsable,
                 "periodicidad" => $periodicidadVal,
@@ -570,6 +574,10 @@ class CapacitacionController extends Controller
                 $updateData['cod_cliente'] = $request->input('cod_cliente');
             }
 
+            if ($request->filled('categoria')) {
+                $updateData['categoria'] = $request->input('categoria');
+            }
+
             $curso->update($updateData);
 
             if ($codigoMoodle && !empty($moodleData)) {
@@ -681,6 +689,7 @@ class CapacitacionController extends Controller
                 "nombre" => "required|string|max:100",
                 "tipo_curso" =>
                 "required|integer|exists:sw_capacitacion_tipo_curso,codigo",
+                "categoria" => "required|integer|in:1,2,3,4,5",
                 "area_conocimiento" =>
                 "nullable|exists:sw_capacitacion_areas,codigo",
                 "area_responsable" => "required|integer",
@@ -751,6 +760,7 @@ class CapacitacionController extends Controller
                 "codigo_curso" => $this->generateCourseCode(),
                 "tipo_curso" => $request->tipo_curso,
                 "cod_cliente" => $codClienteLegacy,
+                "categoria" => $request->categoria,
                 "area_conocimiento" => $request->area_conocimiento,
                 "area" => $request->area_responsable,
                 "periodicidad" => $this->calculatePeriodicidad(
@@ -2939,18 +2949,18 @@ class CapacitacionController extends Controller
     public function obtenerPersonal(Request $request): JsonResponse
     {
         try {
-            $dni = $request->input('dni');
+            $vigente = $request->input('vigente', 1);
 
-            $sql = "EXEC SP_OBTENER_PERSONAL_BETA";
-
-            $params = [];
-
-            if (!empty($dni)) {
-                $sql .= " @DNI = ?";
-                $params[] = $dni;
+            if ($vigente === "2") {
+                $rawPersonal = DB::connection('sqlsrv')->select(
+                    "EXEC SP_OBTENER_PERSONAL_BETA @VIGENTE = NULL"
+                );
+            } else {
+                $rawPersonal = DB::connection('sqlsrv')->select(
+                    "EXEC SP_OBTENER_PERSONAL_BETA @VIGENTE = ?",
+                    [$vigente]
+                );
             }
-
-            $rawPersonal = DB::connection('sqlsrv')->select($sql, $params);
 
             $personal = array_map(function ($p) {
                 return [
@@ -2961,6 +2971,11 @@ class CapacitacionController extends Controller
                     'cliente'         => $p->CLIENTE ?? null,
                     'sucursal' => trim($p->SUCURSAL ?? ''),
                     'codigo' => trim($p->CODIGO_PERSONAL ?? ''),
+                    'vigente' => match ($p->VIGENTE ?? null) {
+                        'SI' => true,
+                        'NO' => false,
+                        default => null,
+                    },
                     'email' => trim($p->CORREO ?? 'Sin correo'),
                     'num_tel' => trim($p->TELEFONO ?? 'Sin teléfono'),
                 ];
@@ -3728,26 +3743,44 @@ class CapacitacionController extends Controller
             ")
             )->keyBy('codigo');
 
+            $responsables = collect(
+                DB::select("
+                SELECT
+                    R.MOODLE_COURSE_ID,
+                    R.AVPR_ID,
+                    P.APEL_1 + ' ' + P.APEL_2 + ' ' +
+                    P.NOMB_1 + ' ' + ISNULL(P.NOMB_2,'') AS RESPONSABLE
+                FROM AV_WEB_CURSO_RELACION R
+                INNER JOIN si_solm.dbo.AV_PROGRAMA AV
+                    ON AV.AVPR_ID = R.AVPR_ID
+                INNER JOIN si_solm.dbo.PERSONAL P
+                    ON P.CODI_PERS = AV.CODI_PERS
+            ")
+                    )->keyBy('MOODLE_COURSE_ID');
+
             $cursos = collect($cursosRaw)
-                ->map(function ($c) use ($categories, $bdLocal, $sistemas) {
+                ->map(function ($c) use ($categories, $bdLocal, $sistemas, $responsables) {
                     $cursoLocal = $bdLocal->get($c->course_id);
                     $sistema    = $cursoLocal ? $sistemas->get($cursoLocal->area_conocimiento) : null;
                     $area       = $categories->get($c->category_id);
+                    $responsable = $responsables->get($c->course_id);
 
                     return [
                         'Id'                 => $c->course_id,
+                        'Avpr_Id'            => $responsable?->AVPR_ID,
                         'LocalId'            => $c->course_idnumber ?? $cursoLocal->codigo ?? null,
                         'AreaId'             => $area->codModdle                ?? null,
                         'SistemaId'          => $cursoLocal?->area_conocimiento ?? null,
                         'Nombre'             => $c->course_name,
                         'Area'               => $area->nombre                  ?? 'Sin área',
                         'Sistema'            => $sistema?->descripcion          ?? 'Sin sistema',
-                        'Responsable'        => $c->responsable                 ?? 'Sin responsable',
+                        'Responsable'        => $responsable?->RESPONSABLE ?? $c->responsable ?? 'Sin responsable',
                         'Descripcion'        => $c->course_summary                     ?? 'Sin descripción',
                         'Total_Matriculados' => (int) ($c->total_matriculados   ?? 0),
                         'Fecha_Inicio'       => strtotime($c->startdate)        ?? null,
                         'Fecha_Fin'          => strtotime($c->enddate)          ?? null,
                         'Fecha_Creacion'     => strtotime($c->created_at)       ?? null,
+                        'Anio_Curso'         => $c->course_year
                     ];
                 })
                 ->when($areaId,   fn($col) => $col->where('AreaId',    $areaId))
@@ -4485,25 +4518,25 @@ class CapacitacionController extends Controller
         $cursosHabilitados = collect(
             DB::connection('sqlsrv')->select(
                 "SELECT [habilitado], [tipo_curso], [codigo_moodle], [codigo_curso], [codigo]
-         FROM [sisolm_web].[dbo].[sw_cursos]
-         WHERE [habilitado] = 1"
+                FROM [sisolm_web].[dbo].[sw_cursos]
+                WHERE [habilitado] = 1"
             )
         )->keyBy('codigo_moodle');
 
         $tiposCurso = collect(
             DB::connection('sqlsrv')->select(
                 "SELECT [codigo], [descripcion]
-         FROM [sisolm_web].[dbo].[sw_capacitacion_tipo_curso]
-         WHERE [habilitado] = 1"
+                 FROM [sisolm_web].[dbo].[sw_capacitacion_tipo_curso]
+                 WHERE [habilitado] = 1"
             )
         )->pluck('descripcion', 'codigo');
 
         $cursosConProgramacionVigente = collect(
             DB::connection('sqlsrv')->select(
                 "SELECT DISTINCT [cod_curso]
-         FROM [sisolm_web].[dbo].[sw_cursos_programacion]
-         WHERE [habilitado] = 1
-           AND [estado_periodo] = 'VIGENTE'"
+                 FROM [sisolm_web].[dbo].[sw_cursos_programacion]
+                 WHERE [habilitado] = 1
+                 AND [estado_periodo] = 'VIGENTE'"
             )
         )->pluck('cod_curso')->map(fn($v) => (int) $v)->flip();
 
@@ -4934,17 +4967,6 @@ class CapacitacionController extends Controller
             "archivo_pdf" => "nullable|file|mimes:pdf|max:51200",
             "archivo_excel" => "nullable|file|mimes:xlsx,xls|max:51200",
         ]);
-
-        if ($validator->fails()) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" => "Errores de validación.",
-                    "errors" => $validator->errors(),
-                ],
-                422,
-            );
-        }
 
         try {
             $data = [
@@ -5850,6 +5872,169 @@ class CapacitacionController extends Controller
         }
     }
 
+    private function mapearCategoriaCurso(?int $categoria, $courseId): string
+    {
+        return match ($categoria) {
+            1 => 'INDUCCIÓN',
+            2 => 'CHARLA',
+            3 => 'CAPACITACIÓN',
+            4 => 'ENTRENAMIENTO',
+            5 => 'SIMULACROS DE EMERGENCIA',
+            default => in_array($courseId, [77, 120]) ? 'INDUCCIÓN' : 'CAPACITACIÓN',
+        };
+    }
+
+    public function obtenerReporteFormato(Request $request): JsonResponse
+    {
+        try {
+            $courseId = $request->input('courseId');
+            $persDnis = array_values(array_filter((array) $request->input('persDnis', [])));
+
+            $curso = DB::connection('mysql_grupoihb')->select('CALL SP_OBTENER_DATOS_CURSO(?)', [$courseId])[0] ?? null;
+
+            $cursoLocal = Cursos::where('codigo_moodle', $courseId)->where('habilitado', 1)->first();
+
+            $nombreCurso = $this->obtenerValorColumna($curso, ['course_name']);
+            $responsableDni = $this->obtenerValorColumna($curso, ['username']);
+
+            if (empty($responsableDni)) {
+                $responsable = DB::selectOne(
+                    "SELECT LTRIM(RTRIM(P.NRO_DOCU_IDEN)) AS NRO_DOCU_IDEN
+                     FROM AV_WEB_CURSO_RELACION R
+                     INNER JOIN si_solm.dbo.AV_PROGRAMA AV ON AV.AVPR_ID = R.AVPR_ID
+                     INNER JOIN si_solm.dbo.PERSONAL P ON P.CODI_PERS = AV.CODI_PERS
+                     WHERE R.MOODLE_COURSE_ID = ?",
+                    [$courseId]
+                );
+                $responsableDni = $this->obtenerValorColumna($responsable, ['NRO_DOCU_IDEN']);
+            }
+
+            $dnisCsv = implode(',', $persDnis);
+            $aprobados = collect(
+                DB::connection('mysql_grupoihb')->select('CALL SP_OBTENER_APROBADOS_CURSO(?, ?)', [$courseId, $dnisCsv])
+            );
+
+            $aprobados = $this->filtrarAprobados($aprobados);
+            $dnisPersonal = $aprobados
+                ->map(fn($row) => $this->obtenerDniColumna($row))
+                ->filter()
+                ->unique();
+
+            $dnisFirma = $dnisPersonal
+                ->push($responsableDni)
+                ->filter()
+                ->unique()
+                ->values();
+
+            $firmas = collect(
+                DB::select('EXEC SP_OBTENER_FIRMA_PERSONAL ?', [implode(',', $dnisFirma->all())])
+            )->keyBy(fn($row) => $this->obtenerDniColumna($row));
+
+            $firmaResponsable = $firmas->get($responsableDni);
+
+            $personal = $aprobados
+                ->map(function ($row) use ($firmas) {
+                    $dni = $this->obtenerDniColumna($row);
+                    $firma = $firmas->get($dni);
+
+                    return [
+                        'Nombre_Personal' => mb_strtoupper($this->obtenerValorColumna($firma, ['NOMBRES'])),
+                        'DNI_Personal'    => $dni,
+                        'Cargo_Personal'  => mb_strtoupper($this->obtenerValorColumna($firma, ['CARGO'])),
+                        'Firma_Personal'  => FirmaService::toBase64($this->obtenerValorColumna($firma, ['RUTA_FIRMA'])),
+                    ];
+                })
+                ->sortBy('Nombre_Personal', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+
+            $fechaReporte = date('t/m/Y');
+
+            return response()->json([
+                'success'            => true,
+                'Moodle_Id'          => $curso->course_id,
+                'Nombre_Curso'       => mb_strtoupper($nombreCurso),
+                'Nombre_Responsable' => mb_strtoupper($this->obtenerValorColumna($firmaResponsable, ['NOMBRES'])),
+                'Cargo_Responsable'  => mb_strtoupper($this->obtenerValorColumna($firmaResponsable, ['CARGO'])),
+                'Firma_Responsable'  => FirmaService::toBase64($this->obtenerValorColumna($firmaResponsable, ['RUTA_FIRMA'])),
+                'Personal'           => $personal,
+                'Tipo_Curso'         => $this->mapearCategoriaCurso($cursoLocal?->categoria, $curso->course_id),
+                'Total_Aprobados'    => count($personal),
+                'Fecha_Reporte'      => $fechaReporte,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en obtener datos para reporte.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Error al obtener los datos para el reporte.',
+                ],
+                500,
+            );
+        }
+    }
+
+    private function obtenerValorColumna($row, array $claves, string $default = ''): string
+    {
+        if (!$row) {
+            return $default;
+        }
+
+        foreach ($claves as $clave) {
+            if (isset($row->{$clave}) && trim((string) $row->{$clave}) !== '') {
+                return trim((string) $row->{$clave});
+            }
+        }
+
+        return $default;
+    }
+
+    private function obtenerDniColumna($row): string
+    {
+        return $this->obtenerValorColumna($row, [
+            'username', 'USERNAME', 'Username',
+            'DNI', 'dni', 'Dni',
+            'NRO_DOCU_IDEN', 'nro_docu_iden', 'NroDocuIden',
+            'NRO_DOC', 'nro_doc', 'NroDoc',
+            'DOCUMENTO', 'documento',
+        ]);
+    }
+
+    private function filtrarAprobados(Collection $aprobados): Collection
+    {
+        if ($aprobados->isEmpty()) {
+            return $aprobados;
+        }
+
+        $first = $aprobados->first();
+
+        // SP_OBTENER_APROBADOS_CURSO retorna username (DNI) y aprobado (0 = no, 1 = sí)
+        if (property_exists($first, 'aprobado')) {
+            return $aprobados->filter(fn($row) => (int) $row->aprobado === 1)->values();
+        }
+
+        // Respaldo genérico por columna de estado
+        $clavesEstado = ['ESTADO', 'estado', 'Estado', 'APROBADO', 'aprobado', 'Aprobado'];
+
+        // Si el SP ya devuelve solo aprobados (sin columna de estado), no filtrar
+        $tieneEstado = collect($clavesEstado)->contains(fn($clave) => property_exists($first, $clave));
+        if (!$tieneEstado) {
+            return $aprobados;
+        }
+
+        return $aprobados->filter(function ($row) use ($clavesEstado) {
+            $estado = strtoupper($this->obtenerValorColumna($row, $clavesEstado));
+
+            if (in_array($estado, ['APROBADO', 'APROBADA'], true)) {
+                return true;
+            }
+
+            return in_array($estado, ['S', 'SI', 'TRUE', 'YES', '1'], true);
+        })->values();
+    }
+
     public function listarSucursales(): JsonResponse
     {
         try {
@@ -5923,9 +6108,13 @@ class CapacitacionController extends Controller
                         ];
                     }
 
-                    $dirigidoTexto = match (true) {
-                        $curso->dirigido_a == 0 || $curso->dirigido_a === '0' => 'OTROS',
-                        default => $dirigidos->get($curso->dirigido_a) ?? strtoupper((string) $curso->dirigido_a),
+                    $dirigidoTexto = match ((string) $curso->dirigido_a) {
+                        '0' => 'OTROS',
+                        '2' => 'PERSONAL ADMINISTRATIVO',
+                        '3' => 'PERSONAL OPERATIVO',
+                        default => strtoupper(
+                            $dirigidos->get($curso->dirigido_a) ?? (string) $curso->dirigido_a
+                        ),
                     };
 
                     $cursosData[] = [

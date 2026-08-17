@@ -21,7 +21,6 @@ if (btnSeleccionar) {
     });
 }
 
-
 if (archivoInput) {
     archivoInput.addEventListener("change", (e) => {
         const archivo = e.target.files[0]; // Solo el primero
@@ -191,16 +190,22 @@ function actualizarLista() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await listarCursos()
+    await listarCursos();
     await Promise.all([
-        listarTipoCurso("slcTipoCurso"),
-        listarTipoCurso("slcFiltroTipoCurso", true),
+        listarTipoCurso(),
         listarAreas()
-    ])
+    ]);
 });
 
-
 window.cursosDataAll = [];
+let cursosLoadPromise = (async () => {
+    try {
+        const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`);
+        window.cursosDataAll = res.data || [];
+    } catch (err) {
+        console.error("Error al obtener cursos", err);
+    }
+})();
 
 function mostrarLoader() {
     const loader = document.getElementById('tblCursosLoader');
@@ -212,30 +217,60 @@ function ocultarLoader() {
     if (loader) loader.classList.add('hidden');
 }
 
-window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '', fechaDesde = '', fechaHasta = '') {
+window.listarCursos = async function (
+    habilitado = 1,
+    area = "",
+    tipoCurso = "",
+    categoria = "",
+    fechaDesde = "",
+    fechaHasta = "",
+) {
     mostrarLoader();
 
     try {
-        if (window.cursosDataAll.length === 0) {
-            const [res1, res0] = await Promise.all([
-                axios.get(`${VITE_URL_APP}/api/get-cursos/1`),
-                axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
-            ]);
-            window.cursosDataAll = [...(res1.data || []), ...(res0.data || [])];
-        }
-        await aplicarFiltros(habilitado, area, tipoCurso, fechaDesde, fechaHasta);
+        await cursosLoadPromise;
+        await aplicarFiltros(
+            habilitado,
+            area,
+            tipoCurso,
+            categoria,
+            fechaDesde,
+            fechaHasta,
+        );
     } catch (err) {
         console.error("Error al obtener cursos", err);
         Swal.fire("Error", "No se pudieron cargar los cursos", "error");
     }
-}
+};
 
-window.recargarCursos = async function (habilitado = 1, area = '', tipoCurso = '', fechaDesde = '', fechaHasta = '') {
+window.recargarCursos = async function (
+    habilitado = 1,
+    area = "",
+    tipoCurso = "",
+    categoria = "",
+    fechaDesde = "",
+    fechaHasta = "",
+) {
     window.cursosDataAll = [];
-    await window.listarCursos(habilitado, area, tipoCurso, fechaDesde, fechaHasta);
-}
+    cursosLoadPromise = (async () => {
+        try {
+            const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`);
+            window.cursosDataAll = res.data || [];
+        } catch (err) {
+            console.error("Error al obtener cursos", err);
+        }
+    })();
+    await window.listarCursos(
+        habilitado,
+        area,
+        tipoCurso,
+        categoria,
+        fechaDesde,
+        fechaHasta,
+    );
+};
 
-async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', fechaDesde = '', fechaHasta = '') {
+async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', categoria = '', fechaDesde = '', fechaHasta = '') {
     const data = window.cursosDataAll || [];
 
     if (!window.tablaCursos) {
@@ -264,6 +299,10 @@ async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', fechaDe
         }
     }
 
+    if (categoria) {
+        filters.push({ field: "categoria", type: "=", value: categoria });
+    }
+
     if (fechaDesde || fechaHasta) {
         filters.push({ field: "fecha_creacion", type: function (value, filterParams) {
             const cellDate = new Date(value);
@@ -280,42 +319,22 @@ async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', fechaDe
     window.tablaCursos.setFilter(filters);
 }
 
+window.opcionesTipoCurso = [];
 
-window.opcionesTipoCurso = []; // Global
-
-async function listarTipoCurso(selectId, esFiltro = false) {
+async function listarTipoCurso() {
     try {
         const res = await axios.get(`${VITE_URL_APP}/api/get-capacitacion-tipo-cursos`);
         const tipoCursosData = res.data;
 
-        // Update global state for Alpine
         window.opcionesTipoCurso = Array.isArray(tipoCursosData) ? tipoCursosData : [];
         window.dispatchEvent(new CustomEvent('tipo-curso-loaded', { detail: window.opcionesTipoCurso }));
-
-        // Legacy DOM manipulation: Only for elements NOT controlled by Alpine loop (or filters)
-        // 'slcTipoCurso' and 'slcFiltroTipoCurso' are migrated to Alpine x-for.
-        if (selectId !== 'slcTipoCurso' && selectId !== 'slcFiltroTipoCurso') {
-            const select = document.getElementById(selectId);
-            if (select) {
-                select.innerHTML = esFiltro
-                    ? '<option value="">-- Todos --</option>'
-                    : '<option value="">-- Seleccione --</option>';
-
-                window.opcionesTipoCurso.forEach(curso => {
-                    const option = document.createElement("option");
-                    option.value = curso.codigo;
-                    option.textContent = curso.descripcion;
-                    select.appendChild(option);
-                });
-            }
-        }
     } catch (err) {
         console.error("Error al obtener tipos de cursos", err);
         Swal.fire("Error", "No se pudieron cargar los tipos de cursos", "error");
     }
 }
 
-window.opcionesArea = []; // Global initialization
+window.opcionesArea = [];
 
 async function listarAreas(selectId = null, esFiltro = false) {
     try {
@@ -324,17 +343,13 @@ async function listarAreas(selectId = null, esFiltro = false) {
         );
         const areasData = Array.isArray(res.data) ? res.data : [];
 
-        // Populate global array for Alpine.js
         window.opcionesArea = areasData.map((area) => ({
             codigo: area.codigo,
             descripcion: area.abreviatura,
         }));
 
-        // Dispatch event for Alpine components
         window.dispatchEvent(new CustomEvent('areas-loaded', { detail: window.opcionesArea }));
 
-        // Legacy support (optional, can be removed if specific selects are fully replaced)
-        // Only try to update older selects if selectId is provided AND element exists
         if (selectId) {
             const select = document.getElementById(selectId);
             if (select) {
@@ -358,17 +373,6 @@ async function listarAreas(selectId = null, esFiltro = false) {
         Swal.fire("Error", "No se pudieron cargar las áreas", "error");
     }
 }
-
-// async function listarCursosFiltro() {
-//     try {
-//         const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
-//         window.cursosData = res.data
-//         window.renderTablaCursos(window.cursosData)
-//     } catch (err) {
-//         console.error("Error al obtener cursos", err)
-//         Swal.fire("Error", "No se pudieron cargar los cursos", "error")
-//     }
-// }
 
 async function obtenerCursoXId(id) {
     try {
@@ -441,9 +445,15 @@ function generarBotonesAccion(curso) {
             <i class="bx bxs-file-import text-base"></i></button>`;
     }
 
-    html += `<button type="button" onclick="window.abrirModalAplazarCurso('${cod}', '${nom}')"
-        class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
-        <i class="bx bx-time-five text-base"></i></button>`;
+    if (tieneVig) {
+        html += `<button type="button" onclick="window.abrirModalAplazarCurso('${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
+            <i class="bx bx-time-five text-base"></i></button>`;
+    } else {
+        html += `<button type="button" disabled
+            class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Aplazamiento bloqueado: el curso "${nom}" no tiene un periodo VIGENTE activo">
+            <i class="bx bx-time-five text-base"></i></button>`;
+    }
 
     if (hab) {
         html += `<button type="button" onclick="window.gestionCurso('DEL', '${cod}', '${nom}')"
@@ -536,6 +546,24 @@ window.initTablaCursos = function (data) {
                 }
             },
             {
+                title: "TIPO DE CURSO",
+                field: "categoria",
+                width: 160,
+                headerSort: true,
+                formatter: function (cell) {
+                    const value = cell.getValue();
+                    const estilos = {
+                        'INDUCCIÓN': 'bg-sky-500/10 text-sky-600',
+                        'CHARLA': 'bg-amber-500/10 text-amber-600',
+                        'CAPACITACIÓN': 'bg-primary/10 text-primary',
+                        'ENTRENAMIENTO': 'bg-emerald-500/10 text-emerald-600',
+                        'SIMULACROS DE EMERGENCIA': 'bg-rose-500/10 text-rose-600',
+                    };
+                    const cls = estilos[value] || 'bg-gray-500/10 text-gray-600';
+                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls}">${value || '—'}</span>`;
+                }
+            },
+            {
                 title: "FECHA CREACIÓN",
                 field: "fecha_creacion",
                 width: 170,
@@ -556,7 +584,6 @@ window.initTablaCursos = function (data) {
         ]
     });
 }
-
 
 window.gestionCurso = async (op, cod, nombre = '') => {
     if (op === 'EDIT') {
@@ -593,6 +620,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.tieneVigente = curso.tiene_vigente ?? false;
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
+                alpineData.categoria = curso.categoria ?? "";
 
                 // IMPORTANTE: Sincronizar Area de Conocimiento
                 // Usar tarea asincrónica para cargar las áreas y luego asignar el área responsable
@@ -672,6 +700,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData._original = {
                     nombre: alpineData.nombre,
                     tipoCurso: alpineData.tipoCurso,
+                    categoria: alpineData.categoria,
                     areaConocimiento: alpineData.areaConocimiento,
                     frecuencia: alpineData.frecuencia,
                     codResponsable: alpineData.codResponsable,
@@ -775,14 +804,6 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
 }
 
-// window.gestionListarCursos = (op) => {
-//     if (op === 1) {
-//         listarCursos();
-//     } else {
-//         listarCursosFiltro(0);
-//     }
-// }
-
 window.gestionListarCursos = (op) => {
     if (op === 1) {
         window.recargarCursos(1);
@@ -815,8 +836,8 @@ window.editarFormGestionCurso = async (e) => {
 
     // Validación de campos obligatorios antes de actualizar
     const camposObligatorios = alpineData.tipoCurso == '6'
-        ? ['nombre', 'tipoCurso']
-        : ['nombre', 'tipoCurso', 'areaConocimiento'];
+        ? ['nombre', 'tipoCurso', 'categoria']
+        : ['nombre', 'tipoCurso', 'categoria', 'areaConocimiento'];
     const vacio = camposObligatorios.some(campo => !alpineData[campo]);
 
     if (vacio) {
@@ -848,6 +869,7 @@ window.editarFormGestionCurso = async (e) => {
 
     if (isChanged('nombre')) formData.append('nombre', alpineData.nombre);
     if (isChanged('tipoCurso')) formData.append('tipo_curso', alpineData.tipoCurso);
+    if (isChanged('categoria')) formData.append('categoria', alpineData.categoria);
     if (isChanged('areaConocimiento')) formData.append('area_conocimiento', alpineData.areaConocimiento);
     if (isChanged('frecuencia')) formData.append('frecuencia', alpineData.frecuencia);
     formData.append('es_periodico', alpineData.esPeriodico ? 1 : 0);
@@ -994,7 +1016,6 @@ window.restaurarFormCurso = (abrir = true) => {
 window.formCursoGestion = function () {
     return {
         codigo: '',
-        // Información de Sistema
         sys_codigo: '-',
         sys_creado_por: '-',
         sys_fecha_creacion: '-',
@@ -1004,6 +1025,7 @@ window.formCursoGestion = function () {
         tieneVigente: false,
         nombre: '',
         tipoCurso: '5',
+        categoria: '',
         areaConocimiento: '',
         area: '',
         areaResponsable: '',
@@ -1320,56 +1342,35 @@ window.formCursoGestion = function () {
                     this.lastSistemaId = null;
                 }
             });
-            // Cargar sucursales dinámicamente al iniciar
-            axios.get(`${VITE_URL_APP}/api/get-sucursales`)
-                .then(res => {
-                    if (res.data.success) {
-                        // Extraer solo el nombre/abreviatura de la sucursal
-                        this.sucursalesDisponibles = res.data.sucursales.map(s => s.sucursal);
-                    }
-                })
-                .catch(err => {
-                    console.error("Error al cargar sucursales para gestión", err);
-                });
 
-            // Cargar áreas encargadas (AV_AREA)
-            axios.get(`${VITE_URL_APP}/api/get-areas-encargadas`)
-                .then(res => {
-                    this.areasEncargadas = res.data;
-                    window.dispatchEvent(new CustomEvent('areas-encargadas-loaded', { detail: res.data }));
-                })
-                .catch(err => {
-                    console.error("Error al cargar áreas encargadas", err);
-                });
+            const cargarDatosFormulario = async () => {
+                if (cursosLoadPromise) await cursosLoadPromise;
 
-            // Cargar Clientes para PCU
-            axios.get(`${VITE_URL_APP}/api/get-clientes-pac`)
-                .then(res => {
-                    this.clientesDisponibles = res.data || [];
-                });
+                await Promise.all([
+                    axios.get(`${VITE_URL_APP}/api/get-areas-encargadas`)
+                        .then(res => {
+                            this.areasEncargadas = res.data;
+                            window.dispatchEvent(new CustomEvent('areas-encargadas-loaded', { detail: res.data }));
+                        })
+                        .catch(err => console.error("Error al cargar áreas encargadas", err)),
+                    axios.get(`${VITE_URL_APP}/api/get-clientes-pac`)
+                        .then(res => { this.clientesDisponibles = res.data || []; }),
+                    axios.get(`${VITE_URL_APP}/api/get-empresas`)
+                        .then(res => { this.empresasDisponibles = res.data || []; }),
+                    axios.get(`${VITE_URL_APP}/api/obtener-sucursales`)
+                        .then(res => {
+                            if (res.data.success) {
+                                this.sucursalesOpciones = res.data.data || [];
+                                this.sucursalesDisponibles = (res.data.data || []).map(s => s.Sucursal);
+                            }
+                        })
+                        .catch(err => console.error("Error al cargar sucursales", err))
+                ]);
+            };
 
-            // Cargar Empresas para PCI
-            axios.get(`${VITE_URL_APP}/api/get-empresas`)
-                .then(res => {
-                    this.empresasDisponibles = res.data || [];
-                });
-
-            // Cargar sucursales para el dropdown principal
-            axios.get(`${VITE_URL_APP}/api/obtener-sucursales`)
-                .then(res => {
-                    if (res.data.success) {
-                        this.sucursalesOpciones = res.data.data || [];
-                    }
-                })
-                .catch(err => {
-                    console.error("Error al cargar sucursales", err);
-                });
-
-            // Eliminado el bloque de exclusión mutua ($watch) entre obligatorioAlta y esDemanda,
-            // ya que ahora obligatorioAlta siempre es true y esDemanda siempre es false por requerimiento.
+            cargarDatosFormulario();
 
             this.$watch('frecuencia', (val) => {
-                // Mantenemos otras lógicas de frecuencia si existen
             });
         },
 
@@ -1380,6 +1381,7 @@ window.formCursoGestion = function () {
         get formularioCompleto() {
             const nombreOk = this.nombre?.trim().length > 0;
             const tipoOk = this.tipoCurso !== undefined && this.tipoCurso !== null && this.tipoCurso !== '';
+            const categoriaOk = this.categoria !== undefined && this.categoria !== null && this.categoria !== '';
             const responsableOk = this.codResponsable?.length > 0;
             const areaResponsableOk = this.areaResponsable !== undefined && this.areaResponsable !== null && this.areaResponsable !== '';
             const dirigidoOk = this.dirigido?.length > 0;
@@ -1396,7 +1398,7 @@ window.formCursoGestion = function () {
                     && this.archivoWord && this.preguntasExamen.length > 0;
             }
 
-            return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && sucursalOk && examenOk;
+            return nombreOk && tipoOk && categoriaOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && sucursalOk && examenOk;
         },
 
         get tituloCamposFaltantes() {
@@ -1405,6 +1407,7 @@ window.formCursoGestion = function () {
             if (!this.nombre?.trim()) faltantes.push('Nombre del curso');
             if (!this.codResponsable) faltantes.push('Responsable');
             if (this.tipoCurso === undefined || this.tipoCurso === null || this.tipoCurso === '') faltantes.push('Plan de capacitación');
+            if (this.categoria === undefined || this.categoria === null || this.categoria === '') faltantes.push('Tipo de curso');
             if (this.areaResponsable === undefined || this.areaResponsable === null || this.areaResponsable === '') faltantes.push('Área responsable');
             if (!this.dirigido) faltantes.push('Dirigido a');
             if (this.tipoCurso != '6' && (this.areaConocimiento === undefined || this.areaConocimiento === null || this.areaConocimiento === '')) faltantes.push('Área de conocimiento');
@@ -1437,6 +1440,7 @@ window.formCursoGestion = function () {
             this.tieneVigente = false;
             this.nombre = '';
             this.tipoCurso = '5';
+            this.categoria = '';
             this.areaConocimiento = '';
             this.area = '';
             this.areaResponsable = '';
@@ -1534,8 +1538,8 @@ window.formCursoGestion = function () {
             }
 
             const camposObligatorios = this.tipoCurso == '6'
-                ? ['nombre', 'tipoCurso']
-                : ['nombre', 'tipoCurso', 'areaConocimiento'];
+                ? ['nombre', 'tipoCurso', 'categoria']
+                : ['nombre', 'tipoCurso', 'categoria', 'areaConocimiento'];
 
             const vacio = camposObligatorios.some(campo => {
                 const valor = this[campo];
@@ -1568,6 +1572,7 @@ window.formCursoGestion = function () {
             const formData = new FormData();
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
+            formData.append('categoria', this.categoria);
             formData.append('area_conocimiento', this.areaConocimiento);
             formData.append('area', this.area);
             formData.append('frecuencia', this.frecuencia);
@@ -1686,7 +1691,6 @@ window.formCursoGestion = function () {
     }
 }
 
-// Helper Generator Func
 window.generarFechasProyectadas = function (frecuencia, mesInicioStr, anios) {
     if (!mesInicioStr || !frecuencia || frecuencia === 'PERSONALIZADO') return [];
 
@@ -1721,13 +1725,10 @@ window.generarFechasProyectadas = function (frecuencia, mesInicioStr, anios) {
     return arrayFechas;
 }
 
-
-// --- Lógica del Panel de Programación ---
-
 window.activarPanelProgramacion = function (codigoCurso, nombreCurso, frecuenciaStr) {
     let mostrarBtn = true;
     if (frecuenciaStr && frecuenciaStr !== 'PERSONALIZADO' && frecuenciaStr !== 'null' && frecuenciaStr !== 'undefined') {
-        mostrarBtn = false; // Bloquea si es generado estructurado
+        mostrarBtn = false;
     }
 
     window.dispatchEvent(new CustomEvent('cambiar-panel', {
@@ -1737,22 +1738,19 @@ window.activarPanelProgramacion = function (codigoCurso, nombreCurso, frecuencia
             mostrarBtn: mostrarBtn
         }
     }));
-    // Wait a bit for Alpine transition or just setData
+
     setTimeout(() => {
-        // Find input hidden in Programacion form and set val
         const inputCod = document.getElementById('codigoCursoInput');
         if (inputCod) {
             inputCod.value = codigoCurso;
-            inputCod.dispatchEvent(new Event('input')); // Notify Alpine
+            inputCod.dispatchEvent(new Event('input'));
         }
-        // Also update Alpine data directly if possible?
-        // Better: Dispatch event to the form component
+
         window.dispatchEvent(new CustomEvent('set-curso-programacion', {
             detail: { codigo: codigoCurso, nombre: nombreCurso }
         }));
     }, 100);
 
-    // Cargar historial de programaciones
     listarProgramaciones(codigoCurso);
 }
 
@@ -1763,17 +1761,12 @@ window.listarProgramaciones = async function (codigoCurso) {
 
         tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Cargando...</td></tr>';
 
-        // Endpoint corregido
         const res = await axios.get(`${VITE_URL_APP}/api/get-curso-programacion/${codigoCurso}`);
 
         let html = '';
-        // La respuesta del backend es { success: true, programaciones: [...] }
         const programaciones = res.data.programaciones || [];
 
         if (res.data.success && programaciones.length > 0) {
-
-            // Helper para formatear fecha (YYYY-MM-DD -> DD/MM/YYYY)
-            // Helper para formatear fecha (YYYY-MM-DD -> DD/MM/YYYY)
             const formatDate = (dateString) => {
                 if (!dateString) return '';
                 try {
@@ -1788,7 +1781,6 @@ window.listarProgramaciones = async function (codigoCurso) {
                 const fInicio = formatDate(prog.fecha_inicio);
                 const fFin = formatDate(prog.fecha_final);
 
-                // Validar si la fecha ha pasado
                 let esPasada = false;
                 if (prog.fecha_final) {
                     const fechaFinal = new Date(prog.fecha_final);
@@ -1862,9 +1854,6 @@ window.eliminarProgramacion = function (idProg, codigoCurso) {
     })
 }
 
-
-// Formulario Programacion Alpine
-// Helper para editar
 window.editarProgramacion = function (codigo, tipo, periodo, fechaInicio, fechaFinal) {
     const event = new CustomEvent('edit-programacion', {
         detail: { codigo, tipo, periodo, fechaInicio, fechaFinal }
@@ -1873,7 +1862,6 @@ window.editarProgramacion = function (codigo, tipo, periodo, fechaInicio, fechaF
     abrirModalRegistro();
 }
 
-// Formulario Programacion Alpine
 window.formProgramacionGestion = function () {
     return {
         codigo: '',
@@ -1886,7 +1874,6 @@ window.formProgramacionGestion = function () {
         isEdit: false,
 
         init() {
-            // Helper interno para parsear fecha desde ISO o datetime SQL a formato datetime-local
             const parseDateISO = (dateStr) => {
                 if (!dateStr) return '';
                 if (dateStr.includes('T')) return dateStr.substring(0, 16);
@@ -1901,17 +1888,14 @@ window.formProgramacionGestion = function () {
                 this.codigoCurso = e.detail.codigo;
                 this.nombreCurso = e.detail.nombre;
 
-                // Inicializar con mes actual
                 this.periodo = new Date().toISOString().slice(0, 7);
                 this.tipo = 'REGULAR';
                 this.actualizarFechasPorPeriodo();
             });
 
-            // Evento para EDITAR programación
             window.addEventListener('edit-programacion', (e) => {
                 this.isEdit = true;
                 this.codigo = e.detail.codigo;
-                // Asumimos que estamos en el contexto del mismo curso
                 this.codigoCurso = document.getElementById('codigoCursoInput') ? document.getElementById('codigoCursoInput').value : '';
                 this.nombreCurso = document.getElementById('nombreCurso') ? document.getElementById('nombreCurso').value : '';
 
@@ -1922,20 +1906,17 @@ window.formProgramacionGestion = function () {
                     this.actualizarFechasPorPeriodo();
                 } else {
                     this.periodo = '';
-                    // Usar helper robusto para fecha
                     this.fechaInicio = parseDateISO(e.detail.fechaInicio);
                     this.fechaFinal = parseDateISO(e.detail.fechaFinal);
                 }
             });
 
-            // Watcher para periodo
             this.$watch('periodo', (val) => {
                 if (val && this.tipo === 'REGULAR') {
                     this.actualizarFechasPorPeriodo();
                 }
             });
 
-            // Watcher para tipo
             this.$watch('tipo', (val) => {
                 if (val === 'REGULAR') {
                     if (!this.periodo) {
@@ -1943,8 +1924,6 @@ window.formProgramacionGestion = function () {
                     }
                     this.actualizarFechasPorPeriodo();
                 }
-                // Si cambia a EXTEMPORANEO, mantenemos las fechas actuales (si existen) 
-                // para que el usuario no empiece de cero.
             });
         },
 
@@ -1957,10 +1936,8 @@ window.formProgramacionGestion = function () {
             const y = parseInt(year);
             const m = parseInt(month);
 
-            // Primer día
             this.fechaInicio = `${year}-${month}-01`;
 
-            // Último día
             const lastDayDate = new Date(y, m, 0);
             const lastDay = lastDayDate.getDate();
 
@@ -1968,7 +1945,6 @@ window.formProgramacionGestion = function () {
         },
 
         submit() {
-            // Validación de fechas obligatorias para TODOS los tipos
             if (!this.fechaInicio || !this.fechaFinal) {
                 Swal.fire('Error', 'Debe indicar fecha de inicio y fin', 'warning');
                 return;
@@ -1990,7 +1966,6 @@ window.formProgramacionGestion = function () {
             let promise;
             if (this.isEdit && this.codigo) {
                 formData.codigo = this.codigo;
-                // La ruta es definida como POST en api.php
                 promise = axios.post(`${VITE_URL_APP}/api/update-programacion`, formData);
             } else {
                 promise = axios.post(`${VITE_URL_APP}/api/save-programacion`, formData);
@@ -2001,7 +1976,6 @@ window.formProgramacionGestion = function () {
                     if (res.data.success) {
                         Swal.fire('Éxito', res.data.message || 'Operación exitosa', 'success');
 
-                        // Cerrar modal
                         const closeBtn = document.getElementById('btn-modal-docs-close');
                         if (closeBtn) closeBtn.click();
 
@@ -2019,18 +1993,14 @@ window.formProgramacionGestion = function () {
     }
 }
 
-// Helper para abrir modal (usado en el onclick del boton html)
 window.abrirModalRegistro = function () {
     const modal = document.querySelector('#modal-registro');
     if (modal) {
-        // Logic to open modal (Preline UI or similar)
-        // If using HSOverlay global
         if (typeof HSOverlay !== 'undefined') {
             HSOverlay.open(modal);
         } else {
-            // Fallback simplistic
             modal.classList.remove('hidden');
-            modal.classList.add('open'); // check css
+            modal.classList.add('open');
         }
     }
 }
@@ -2044,6 +2014,7 @@ window.searchablePersonnel = function () {
         loading: false,
         error: null,
         dropdownStyle: {},
+        _closeHandler: null,
         toggle() {
             this.open = !this.open;
             if (this.open) {
