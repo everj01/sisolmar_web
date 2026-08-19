@@ -135,6 +135,25 @@ class NotificacionController extends Controller{
             'data'    => $conteosPorSucursal
         ]);
     }
+
+public function getDemandasAdmin()
+    {
+        $demandas = NotificacionModel::obtenerDemandasNuevas();
+        
+        return response()->json([
+            'success' => true,
+            'data'    => $demandas
+        ]);
+    }
+
+    public function deleteDemandaAdmin(Request $request)
+    {
+        $id = $request->input('id');
+        $deleted = NotificacionModel::borrarDemanda($id);
+
+        return response()->json(['success' => $deleted > 0]);
+    }
+
 }
 
 

@@ -134,6 +134,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
         Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer'])->name('notificaciones.foliosPorVencer');
         Route::get('/notificaciones/pendientes-etapa2', [NotificacionController::class, 'pendientesEtapa2']);
+        Route::get('/notificaciones/demandas-admin', [NotificacionController::class, 'getDemandasAdmin']);
+        Route::post('/notificaciones/demandas-admin/borrar', [NotificacionController::class, 'deleteDemandaAdmin']);
 
         // Solicitudes y otros
         Route::post('/save-solicitud', [FileController::class, 'saveSolicitud']);

@@ -15,21 +15,34 @@ async function loadNotifications() {
         const modalList = document.getElementById('modal-etapa2-list');
         const modalTotal = document.getElementById('modal-etapa2-total');
 
+        // ====================================================
+        // PREVENIR BORRADO DE ALERTAS SIP DEMANDA
+        // ====================================================
+        const demandasVivas = Array.from(list.querySelectorAll('[id^="campana-demanda-"]')).map(el => el.outerHTML).join('');
+        const cantidadDemandas = list.querySelectorAll('[id^="campana-demanda-"]').length;
+
         if (!result.success || result.total === 0) {
-            list.innerHTML = `
-                <div class="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
-                    <i class="bx bx-check-shield text-4xl text-green-500"></i>
-                    <span class="font-bold text-gray-700">¡Todo al día!</span>
-                    <span class="text-xs text-gray-400">No hay notificaciones pendientes.</span>
-                </div>`;
-            badge.classList.add('hidden');
+            // Si Etapa 2 es cero, pero SÍ hay Demandas, no borramos nada
+            if (demandasVivas === '') {
+                list.innerHTML = `
+                    <div class="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
+                        <i class="bx bx-check-shield text-4xl text-green-500"></i>
+                        <span class="font-bold text-gray-700">¡Todo al día!</span>
+                        <span class="text-xs text-gray-400">No hay notificaciones pendientes.</span>
+                    </div>`;
+                badge.classList.add('hidden');
+            } else {
+                list.innerHTML = demandasVivas; // Pintamos las demandas
+                badge.textContent = cantidadDemandas;
+                badge.classList.remove('hidden');
+            }
             return;
         }
 
         // ====================================================
         // 1. UI DE LA CAMPANITA (Solo el resumen)
         // ====================================================
-        list.innerHTML = `
+        list.innerHTML = demandasVivas + `
             <button type="button" onclick="document.getElementById('btn-open-modal-etapa2').click()" class="w-full text-left flex items-center justify-between px-4 py-4 hover:bg-slate-50 transition-colors border-b border-gray-100 group">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors border border-orange-200 shadow-sm">
@@ -69,8 +82,9 @@ async function loadNotifications() {
         }
         if(modalList) modalList.innerHTML = modalHtml.join('');
 
-        // Globito rojo de la campana
-        badge.textContent = result.total > 99 ? '99+' : result.total;
+        // Globito rojo de la campana (Sumamos Etapa 2 + Demandas)
+        let totalFinal = result.total + cantidadDemandas;
+        badge.textContent = totalFinal > 99 ? '99+' : totalFinal;
         badge.classList.remove('hidden');
 
     } catch (error) {

@@ -27,32 +27,18 @@
 
     @include("layouts.shared/page-title", ["subtitle" => "DJ", "title" => "Actualizar DJ"])
 
-    <div class="mt-6 mb-6 overflow-x-auto">
-        <nav class="flex items-center justify-center space-x-3 border-b border-gray-200 pb-3 min-w-max" aria-label="Tabs" id="dj-timeline-tabs">
-            <button data-target="etapa1" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'active bg-blue-900 text-white shadow-lg' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap">
-                <span class="tab-circle">1</span> ETAPA: Actualización por SIP
+    <!-- 🔥 NUEVO CONTROLES MACRO: ANUAL / DEMANDA -->
+    <div class="mt-4 mb-8 flex justify-center">
+        <div class="inline-flex bg-gray-100 p-1 rounded-full border border-gray-200 shadow-inner">
+            <button id="btnModoAnual" class="active bg-white text-blue-900 shadow-md rounded-full px-8 py-2 text-sm font-bold uppercase transition-all">
+                Anual
             </button>
-            <button data-target="etapa2" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
-                <span class="tab-circle">2</span> ETAPA: Verificación
+            <button id="btnModoDemanda" class="text-gray-500 hover:text-blue-700 rounded-full px-8 py-2 text-sm font-bold uppercase transition-all">
+                Demanda
             </button>
-            <button data-target="etapa3" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn hidden" style="display: none !important;">
-                <span class="tab-circle">3</span> ETAPA: Generación DJ en PDF
-            </button>
-
-            <button data-target="etapa_carga" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn hidden" style="display: none !important;">
-                <span class="tab-circle">4</span> ETAPA: Carga de DJ
-            </button>
-
-            <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
-                class="tab-btn hidden" style="display: none !important;">
-                <span class="tab-circle">5</span> ETAPA: Validación de Imágenes
-            </button>
-        </nav>
+        </div>
     </div>
+
 
     <div id="tabs-container">
 
@@ -61,13 +47,40 @@
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
                     <div class="w-full px-5 py-4">
 
-                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                            <div>
+                        <!-- CONTENEDOR UNIFICADO (JS controlará si son 1 o 2 filas) -->
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4 w-full">
+                            <!-- IZQUIERDA: Título y Año -->
+                            <div class="flex items-center gap-4 flex-1 min-w-[250px]">
                                 <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">1</span> Actualización por SIP</h4>
-                                {{-- <p class="text-sm text-gray-500">Generador de reporte</p> --}}
+                                <div id="contenedorFiltroAnio" class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                                    <label class="text-sm font-medium text-gray-700">Año:</label>
+                                    <select id="filtroAnio" class="form-select text-sm w-28 px-3 py-1 border border-gray-300 rounded-lg focus:ring-primary">
+                                        <option value="">Todos</option>
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2025">2025</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="flex gap-2">
+                            <!-- CENTRO: Pestañas (Nace en 2 filas) -->
+                            <div id="nav-dest-etapa1" class="flex justify-center transition-all w-full order-last mt-4">
+                                <nav class="flex flex-nowrap items-center justify-center gap-3 whitespace-nowrap" aria-label="Tabs" id="dj-timeline-tabs">
+                                    <button data-target="etapa1" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
+                                        class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'active bg-blue-900 text-white shadow-lg' }} rounded-full px-5 py-2 text-sm font-medium transition-all whitespace-nowrap">
+                                        <span class="tab-circle">1</span> ETAPA: Actualización por SIP
+                                    </button>
+                                    <button data-target="etapa2" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200"
+                                        class="tab-btn {{ $esRrhhMigracion ? 'hidden' : 'bg-white text-gray-500 border border-gray-200' }} rounded-full px-5 py-2 text-sm font-medium transition-all whitespace-nowrap hover:border-blue-300 hover:text-blue-700">
+                                        <span class="tab-circle">2</span> ETAPA: Verificación
+                                    </button>
+                                    <button data-target="etapa3" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200" class="tab-btn hidden" style="display: none !important;"><span class="tab-circle">3</span> ETAPA: Generación DJ en PDF</button>
+                                    <button data-target="etapa_carga" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200" class="tab-btn hidden" style="display: none !important;"><span class="tab-circle">4</span> ETAPA: Carga de DJ</button>
+                                    <button data-target="etapa4" data-active="bg-blue-900 text-white shadow-lg" data-inactive="bg-white text-gray-500 border border-gray-200" class="tab-btn hidden" style="display: none !important;"><span class="tab-circle">5</span> ETAPA: Validación de Imágenes</button>
+                                </nav>
+                            </div>
+
+                            <!-- DERECHA: Contadores -->
+                            <div class="flex-1 flex justify-end gap-2 min-w-[250px]">
                                 <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
                                     <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
                                     <span id="countTotalE1" class="text-lg font-bold text-blue-700">0</span>
@@ -155,13 +168,16 @@
                 <div class="card overflow-hidden border border-gray-100 shadow-sm">
                     <div class="w-full px-5 py-4">
 
-                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                            <div>
+                        <!-- CONTENEDOR UNIFICADO ETAPA 2 -->
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-4 w-full">
+                            <div class="flex items-center gap-4 flex-1 min-w-[250px]">
                                 <h4 class="text-lg font-bold text-primary uppercase flex items-center"><span class="stage-circle">2</span> VERIFICACIÓN DE DATOS</h4>
-                                {{-- <p class="text-sm text-gray-500">Verificación de datos</p> --}}
                             </div>
 
-                            <div class="flex gap-2">
+                            <!-- CENTRO: Pestañas (Nace en 2 filas) -->
+                            <div id="nav-dest-etapa2" class="flex justify-center transition-all w-full order-last mt-4"></div>
+
+                            <div class="flex-1 flex justify-end gap-2 min-w-[250px]">
                                 <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
                                     <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
                                     <span id="contadorTotalE2" class="text-lg font-bold text-blue-700">0</span>

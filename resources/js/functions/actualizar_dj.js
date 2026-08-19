@@ -164,6 +164,71 @@ document.addEventListener('DOMContentLoaded', function () {
     cargarGeneradosCache();
 
     // ============================================================
+    // MACRO TABS: ANUAL VS DEMANDA
+    // ============================================================
+    window.modoDJ = 'anual'; // Estado global
+    const btnModoAnual = document.getElementById('btnModoAnual');
+    const btnModoDemanda = document.getElementById('btnModoDemanda');
+    const tabBtnEtapa1 = document.querySelector('.tab-btn[data-target="etapa1"]');
+    const tabBtnEtapa2 = document.querySelector('.tab-btn[data-target="etapa2"]');
+
+    function toggleModoDJ(modo) {
+        window.modoDJ = modo;
+        
+        const divAnio = document.getElementById('contenedorFiltroAnio');
+        const navDest1 = document.getElementById('nav-dest-etapa1');
+        const navDest2 = document.getElementById('nav-dest-etapa2');
+        
+        if (modo === 'anual') {
+            // MOSTRAR Año y FORZAR PESTAÑAS ABAJO (w-full order-last mt-4)
+            if (divAnio) divAnio.style.display = 'flex';
+            if (navDest1) navDest1.className = 'flex justify-center transition-all w-full order-last mt-4';
+            if (navDest2) navDest2.className = 'flex justify-center transition-all w-full order-last mt-4';
+
+            // Estilos de botones
+            btnModoAnual.classList.add('active', 'bg-white', 'text-blue-900', 'shadow-md');
+            btnModoAnual.classList.remove('text-gray-500', 'hover:text-blue-700');
+            btnModoDemanda.classList.remove('active', 'bg-white', 'text-blue-900', 'shadow-md');
+            btnModoDemanda.classList.add('text-gray-500', 'hover:text-blue-700');
+            
+            // Mostrar Etapa 1
+            if(tabBtnEtapa1) tabBtnEtapa1.style.display = 'inline-flex';
+            
+            // Ir a Etapa 1 por defecto al cambiar a Anual
+            if(tabBtnEtapa1 && !tabBtnEtapa1.classList.contains('active')) {
+                tabBtnEtapa1.click();
+            }
+        } else {
+            // OCULTAR Año y MANTENER PESTAÑAS AL CENTRO (flex-1)
+            if (divAnio) divAnio.style.display = 'none';
+            if (navDest1) navDest1.className = 'flex-1 flex justify-center transition-all';
+            if (navDest2) navDest2.className = 'flex-1 flex justify-center transition-all';
+
+            // Estilos de botones
+            btnModoDemanda.classList.add('active', 'bg-white', 'text-blue-900', 'shadow-md');
+            btnModoDemanda.classList.remove('text-gray-500', 'hover:text-blue-700');
+            btnModoAnual.classList.remove('active', 'bg-white', 'text-blue-900', 'shadow-md');
+            btnModoAnual.classList.add('text-gray-500', 'hover:text-blue-700');
+            
+            // Ocultar Etapa 1
+            if(tabBtnEtapa1) tabBtnEtapa1.style.display = 'none';
+            
+            // Forzar navegación a Etapa 2
+            if(tabBtnEtapa2 && !tabBtnEtapa2.classList.contains('active')) {
+                tabBtnEtapa2.click();
+            }
+        }
+        
+        // Refrescar las tablas si ya están instanciadas para aplicar el filtro
+        if (typeof tblPersonasVerificado !== 'undefined') aplicarFiltrosE2(); 
+    }
+
+    if (btnModoAnual && btnModoDemanda) {
+        btnModoAnual.addEventListener('click', () => toggleModoDJ('anual'));
+        btnModoDemanda.addEventListener('click', () => toggleModoDJ('demanda'));
+    }
+
+    // ============================================================
     // TIMELINE TABS (NUEVO)
     // ============================================================
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -189,6 +254,14 @@ document.addEventListener('DOMContentLoaded', function () {
             const targetId = btn.getAttribute('data-target');
             document.getElementById(targetId).classList.remove('hidden');
             document.getElementById(targetId).classList.add('active');
+
+            // --- TELETRANSPORTACIÓN DEL DOM DE LAS PESTAÑAS ---
+            const navTabs = document.getElementById('dj-timeline-tabs');
+            const destContainer = document.getElementById(`nav-dest-${targetId}`);
+            if (navTabs && destContainer) {
+                destContainer.appendChild(navTabs);
+            }
+            // ----------------------------------------------------
 
             if (targetId === 'etapa1' && typeof tblEtapa1 !== 'undefined') cargarDatosEtapa1();
             if (targetId === 'etapa2' && typeof tblPersonasVerificado !== 'undefined') cargarDatosEtapa2();
@@ -225,6 +298,15 @@ document.addEventListener('DOMContentLoaded', function () {
             rf();
         });
     }
+
+    // NUEVO EVENTO PARA RECARGAR DATOS CUANDO CAMBIE EL AÑO
+    document.getElementById('filtroAnio')?.addEventListener('change', () => {
+        if (document.getElementById('etapa1').classList.contains('active')) {
+            cargarDatosEtapa1();
+        } else if (document.getElementById('etapa2').classList.contains('active')) {
+            cargarDatosEtapa2();
+        }
+    });
 
     const tblEtapa1 = new Tabulator("#tblEtapa1", {
         height: "550px",
@@ -384,9 +466,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function cargarDatosEtapa1() {
         const codSucursal = document.getElementById('filtroSucursalE1')?.value || '00';
         const codTipoPer = document.getElementById('filtroTipoE1')?.value || '00';
+        const anio = (window.modoDJ === 'anual') ? (document.getElementById('filtroAnio')?.value || '') : '';
 
         // Ya no enviamos el filtro del radio button a la BD (mandamos null) para traer SIEMPRE todo
-        axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, { params: { codSucursal, codTipoPer, tipo: null } })
+        axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion-v2`, { params: { codSucursal, codTipoPer, tipo: null, anio: anio } })
             .then(response => {
                 if (!response.data.success) return;
 
@@ -806,6 +889,16 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             { title: "DNI", field: "dni", hozAlign: "center", width: 110 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 1 },
+            {
+                title: "Tipo Act.", field: "tipo_actualizacion", hozAlign: "center", widthGrow: 1.5,
+                formatter: cell => {
+                    const d = cell.getData();
+                    // Busca las posibles llaves que retorne tu SP
+                    const valor = d.tipo_actualizacion || d.TIPO_ACTUALIZACION || d.tipoActualizacion || 'ANUAL';
+                    let color = valor.toUpperCase().includes('DEMANDA') ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-blue-100 text-blue-800 border-blue-300';
+                    return `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${color}">${valor}</span>`;
+                }
+            },
             { 
                 title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
                 formatter: cell => {
@@ -1108,7 +1201,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function cargarDatosEtapa2() {
-        axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`)
+        const anio = (window.modoDJ === 'anual') ? (document.getElementById('filtroAnio')?.value || '') : '';
+
+        axios.get(`${VITE_URL_APP}/api/reporte-personal-sin-migracion`, { params: { anio: anio } })
             .then(response => {
                 if (!response.data.success) return;
 
@@ -1139,65 +1234,80 @@ document.addEventListener('DOMContentLoaded', function () {
         const texto = document.getElementById('buscarPersonalE2')?.value.toLowerCase().trim() || '';
         const radioVal = document.getElementById('filtroEstadoE2')?.value || 'null';
 
-        let filtros = [];
-        let tipoTxt = ''; // 🔥 Lo sacamos afuera para poder usarlo en el cálculo de abajo
-
-        if (codSucursal !== '00') filtros.push({ field: "codSucursal", type: "=", value: codSucursal });
-
+        let tipoTxt = '';
         if (codTipoPer !== '00') {
-            if (codTipoPer === '01') tipoTxt = 'OPERATIVO 4°';
-            if (codTipoPer === '03') tipoTxt = 'OPERATIVO 5°';
-            if (codTipoPer === '02') tipoTxt = 'ADMINISTRATIVO 4°';
-            if (codTipoPer === '05') tipoTxt = 'ADMINISTRATIVO 5°';
-            // (Ya no incluimos el 06 de ESPECIAL por la regla que pusimos antes)
-
-            if (tipoTxt) filtros.push({ field: "tipoPer", type: "=", value: tipoTxt });
+            if (codTipoPer === '01') tipoTxt = 'OPERATIVO 4';
+            if (codTipoPer === '03') tipoTxt = 'OPERATIVO 5';
+            if (codTipoPer === '02') tipoTxt = 'ADMINISTRATIVO 4';
+            if (codTipoPer === '05') tipoTxt = 'ADMINISTRATIVO 5';
         }
 
-        if (texto) {
-            filtros.push([
-                { field: "nombres", type: "like", value: texto },
-                { field: "apellido1", type: "like", value: texto },
-                { field: "apellido2", type: "like", value: texto },
-                { field: "dni", type: "like", value: texto }
-            ]);
-        }
+        tblPersonasVerificado.clearFilter();
 
-        // Filtramos localmente por el Radio Button para la tabla visual
-        if (radioVal === '0') {
-            filtros.push({ field: "migrado", type: "=", value: "SI" });
-        } else if (radioVal === '1') {
-            filtros.push({ field: "migrado", type: "!=", value: "SI" });
-        }
+        // 🔥 FILTRO UNIFICADO Y FLEXIBLE
+        tblPersonasVerificado.setFilter(function (data) {
+            let matchSucursal = true;
+            let matchTipo = true;
+            let matchTexto = true;
+            let matchRadio = true;
 
-        // Aplicamos el filtro visual a Tabulator
-        tblPersonasVerificado.setFilter(filtros);
+            // Filtro Sucursal
+            if (codSucursal !== '00') matchSucursal = (data.codSucursal === codSucursal);
+            
+            // Filtro Tipo
+            if (tipoTxt !== '') {
+                const valTipo = String(data.tipoPer || data.TIPO_PER || '').toUpperCase();
+                matchTipo = valTipo.includes(tipoTxt);
+            }
+
+            // Filtro Búsqueda (simplificado para buscar en todo el string a la vez)
+            if (texto) {
+                const searchStr = `${data.nombres || data.NOMB_1 || ''} ${data.apellido1 || data.APEL_1 || ''} ${data.apellido2 || data.APEL_2 || ''} ${data.dni || data.NRO_DOCU_IDEN || ''}`.toLowerCase();
+                matchTexto = searchStr.includes(texto);
+            }
+
+            // Filtro Verificado
+            if (radioVal !== 'null') {
+                const estado = String(data.migrado || '').toUpperCase().trim();
+                const esVerificado = (estado === 'SI');
+                if (radioVal === '0') matchRadio = esVerificado;
+                if (radioVal === '1') matchRadio = !esVerificado;
+            }
+
+            // 🔥 LA CLAVE ESTÁ AQUÍ: Usamos .includes() para atrapar variaciones como "A Demanda"
+            const valAct = String(data.tipo_actualizacion || data.TIPO_ACTUALIZACION || data.tipoActualizacion || '').toLowerCase();
+            const esDemanda = valAct.includes('demanda'); 
+            
+            const matchModo = (window.modoDJ === 'demanda') ? esDemanda : !esDemanda;
+
+            return matchSucursal && matchTipo && matchTexto && matchRadio && matchModo;
+        });
+
         tblPersonasVerificado.setPage(1);
 
         // =========================================================================
-        // 🔥 LÓGICA DE INDICADORES: Calculamos SOLO en base a Sucursal y Tipo
+        // 🔥 LÓGICA DE INDICADORES (Sincronizada con el nuevo includes)
         // =========================================================================
-
-        // .getData() nos trae TODA la data base original, ignorando si hay texto o radio buttons aplicados
         const todaLaData = tblPersonasVerificado.getData();
 
         const dataParaTarjetas = todaLaData.filter(d => {
             const cumpleSucursal = (codSucursal === '00') || (d.codSucursal === codSucursal);
-            const cumpleTipo = (codTipoPer === '00') || (d.tipoPer === tipoTxt);
+            const valTipo = String(d.tipoPer || d.TIPO_PER || '').toUpperCase();
+            const cumpleTipo = (codTipoPer === '00') || (tipoTxt !== '' && valTipo.includes(tipoTxt));
+            
+            const valAct = String(d.tipo_actualizacion || d.TIPO_ACTUALIZACION || d.tipoActualizacion || '').toLowerCase();
+            const esDemanda = valAct.includes('demanda');
+            const cumpleModo = (window.modoDJ === 'demanda') ? esDemanda : !esDemanda;
 
-            return cumpleSucursal && cumpleTipo;
+            return cumpleSucursal && cumpleTipo && cumpleModo;
         });
 
-        // Calculamos la matemática
         const total = dataParaTarjetas.length;
-        const verificados = dataParaTarjetas.filter(d => d.migrado === 'SI').length;
+        const verificados = dataParaTarjetas.filter(d => String(d.migrado).toUpperCase().trim() === 'SI').length;
         const sinVerificar = total - verificados;
 
-        // Mandamos los números a las tarjetas
         document.getElementById('contadorTotalE2').textContent = total;
         document.getElementById('contadorFiltradoE2').textContent = verificados;
-
-        // Asegúrate de tener este ID en tu HTML para la tercera tarjeta (Sin Verificar)
         const elSinVerificar = document.getElementById('contadorSinVerificarE2');
         if (elSinVerificar) elSinVerificar.textContent = sinVerificar;
     }

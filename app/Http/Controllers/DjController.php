@@ -2819,10 +2819,32 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             $usuario = session('usuario') ?? '0';
             $codEmpresa = $request->get('codEmpresa', '01');
 
-            $data = DB::select(
-                'EXEC sisolm_web.dbo.SW_LISTAR_PERSONAL_DJ_MIGRACION_ETAPA2_VIGENTES_DNI ?, ?',
+            // 1. Ejecutamos Campaña Anual (Sintaxis 100% segura para SQL Server)
+            $queryAnual = DB::select(
+                "EXEC sisolm_web.dbo.SW_LISTAR_PERSONAL_DJ_MIGRACION_ETAPA2_VIGENTES_DNI ?, ?, '00', '00', NULL, 'anual'",
                 [$usuario, $codEmpresa]
             );
+
+            // Inyectamos la columna faltante a la fuerza
+            $dataAnual = array_map(function($item) {
+                $item->tipo_actualizacion = 'anual';
+                return $item;
+            }, $queryAnual);
+
+            // 2. Ejecutamos A Demanda
+            $queryDemanda = DB::select(
+                "EXEC sisolm_web.dbo.SW_LISTAR_PERSONAL_DJ_MIGRACION_ETAPA2_VIGENTES_DNI ?, ?, '00', '00', NULL, 'demanda'",
+                [$usuario, $codEmpresa]
+            );
+
+            // Inyectamos la columna faltante a la fuerza
+            $dataDemanda = array_map(function($item) {
+                $item->tipo_actualizacion = 'demanda';
+                return $item;
+            }, $queryDemanda);
+
+            // 3. Juntamos y enviamos
+            $data = array_merge($dataAnual, $dataDemanda);
 
             return response()->json([
                 'success' => true,
@@ -2838,6 +2860,33 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             ], 500);
         }
     }
+
+    // public function reportePersonalSinMigracion(Request $request)
+    // {
+    //     try {
+    //         $usuario = session('usuario') ?? '0';
+    //         $codEmpresa = $request->get('codEmpresa', '01');
+
+    //         // 🔥 Mandamos la estructura completa con el 'TODOS' al final 🔥
+    //         $data = DB::select(
+    //             "EXEC sisolm_web.dbo.prueba ?, ?, '00', '00', NULL, 'TODOS'",
+    //             [$usuario, $codEmpresa]
+    //         );
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $data,
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Error en reportePersonalSinMigracion: ' . $e->getMessage());
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
 
     public function reportePersonalSinMigracionV2(Request $request)
     {

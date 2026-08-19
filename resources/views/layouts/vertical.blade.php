@@ -27,6 +27,9 @@
 
     </div>
 
+<!-- Contenedor Popups Superior Derecho (SIP Demandas) SIN BLOQUEO TEMPORAL -->
+    <div id="demandas-toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;">
+    </div>
 
     <!-- Popup notificación folios por vencer -->
     <div id="folio-toast"
@@ -218,6 +221,136 @@
                     }
                 })
                 .catch(error => console.error(error));
+        });
+    </script>
+
+<script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let notificacionesMostradas = new Set();
+
+            function checkDemandasAdmin() {
+                fetch("{{ url('/api/notificaciones/demandas-admin') }}")
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data.length > 0) {
+                            const container = document.getElementById("demandas-toast-container");
+                            const notifList = document.getElementById("notif-list");
+                            const badge = document.getElementById("notif-count");
+                            
+                            if (notifList && notifList.innerHTML.includes('¡Todo al día!')) {
+                                notifList.innerHTML = '';
+                            }
+
+                            result.data.forEach(demanda => {
+                                // --- 1. POP-UP SUPERIOR DERECHA ---
+                                if (!notificacionesMostradas.has(demanda.id)) {
+                                    notificacionesMostradas.add(demanda.id);
+
+                                    const toast = document.createElement("div");
+                                    toast.id = `demanda-toast-${demanda.id}`;
+                                    toast.style.cssText = "background: white; border-left: 5px solid #3b82f6; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 320px; position: relative; opacity: 0; transform: translateX(100%); transition: all 0.4s ease;";
+                                    
+                                    toast.innerHTML = `
+                                        <button onclick="cerrarToastSip('${demanda.id}')" style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #9ca3af; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
+                                            <i class="bx bx-x"></i>
+                                        </button>
+                                        <div style="font-weight:600; margin-bottom:5px; color: #1e3a8a; padding-right: 15px;">
+                                            <i class="bx bx-info-circle"></i> DJ Registrada por SIP
+                                        </div>
+                                        <div style="font-size:13px; color: #4b5563; line-height: 1.4;">
+                                            El personal <b>${demanda.personal}</b> ha registrado su DJ por demanda.
+                                        </div>
+                                    `;
+
+                                    if(container) {
+                                        container.appendChild(toast);
+                                        setTimeout(() => {
+                                            toast.style.opacity = "1";
+                                            toast.style.transform = "translateX(0)";
+                                        }, 100);
+                                    }
+                                }
+
+                                // --- 2. CAMPANITA INTERNA ---
+                                if (notifList && !document.getElementById(`campana-demanda-${demanda.id}`)) {
+                                    const itemCampana = document.createElement("div");
+                                    itemCampana.id = `campana-demanda-${demanda.id}`;
+                                    itemCampana.className = "flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors border-b border-gray-100";
+                                    itemCampana.innerHTML = `
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                                                <i class="bx bx-info-circle text-lg"></i>
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm font-bold text-gray-700">DJ por SIP</span>
+                                                <span class="text-[11px] text-gray-500"><b>${demanda.personal}</b> Actualizó DJ (Demanda)</span>
+                                            </div>
+                                        </div>
+                                        <button onclick="event.stopPropagation(); borrarDemandaSip('${demanda.id}')" class="text-gray-400 hover:text-red-500 px-2" title="Descartar">
+                                            <i class="bx bx-x text-lg"></i>
+                                        </button>
+                                    `;
+                                    notifList.prepend(itemCampana); 
+                                    
+                                    if(badge) {
+                                        let currentCount = parseInt(badge.textContent) || 0;
+                                        badge.textContent = currentCount + 1;
+                                        badge.classList.remove('hidden');
+                                    }
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => console.error('Error revisando demandas del SIP:', error));
+            }
+
+            // Función para ELIMINAR definitivamente de la base de datos (Desde la Campanita)
+            window.borrarDemandaSip = function(id) {
+                fetch("{{ url('/api/notificaciones/demandas-admin/borrar') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ id: id })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        const toast = document.getElementById(`demanda-toast-${id}`);
+                        if (toast) {
+                            toast.style.opacity = "0";
+                            toast.style.transform = "translateX(100%)";
+                            setTimeout(() => toast.remove(), 400);
+                        }
+                        
+                        const itemCampana = document.getElementById(`campana-demanda-${id}`);
+                        if (itemCampana) {
+                            itemCampana.remove();
+                            const badge = document.getElementById("notif-count");
+                            if(badge) {
+                                let currentCount = parseInt(badge.textContent) || 0;
+                                if (currentCount > 0) badge.textContent = currentCount - 1;
+                            }
+                        }
+                        notificacionesMostradas.delete(id);
+                    }
+                })
+                .catch(err => console.error('Error al borrar la notificación', err));
+            };
+
+            // Función para OCULTAR el pop-up visualmente sin afectar la base de datos
+            window.cerrarToastSip = function(id) {
+                const toast = document.getElementById(`demanda-toast-${id}`);
+                if (toast) {
+                    toast.style.opacity = "0";
+                    toast.style.transform = "translateX(100%)";
+                    setTimeout(() => toast.remove(), 400); 
+                }
+            };
+
+            setInterval(checkDemandasAdmin, 5000); 
+            checkDemandasAdmin();
         });
     </script>
 

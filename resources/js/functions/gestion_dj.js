@@ -531,13 +531,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             {
-                title: "Acciones", field: "acciones", hozAlign: "left", headerSort: false, minWidth: 160, widthGrow: 0, responsive: false,
+                title: "Acciones", field: "acciones", hozAlign: "left", headerSort: false, width: 120, minWidth: 120, maxWidth: 120, widthGrow: 0, responsive: false,
                 formatter: cell => {
-                const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white px-3 py-1 text-xs whitespace-nowrap flex items-center justify-center">DJ</button>`;
+                const btnDJ = `<button type="button" class="btn rounded-full form-btn border border-emerald-400 bg-success/25 text-success hover:bg-success hover:text-white hover:border-emerald-600 px-3 py-1 text-xs whitespace-nowrap flex items-center justify-center">DJ</button>`;
 
                 let html = `<div class="flex items-center gap-2 flex-nowrap">
                     ${btnDJ}
-                    <button type="button" class="btn rounded-full bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-600 w-8 h-8 flex items-center justify-center border border-slate-200 shadow-sm transition-colors folder-menu-btn" title="Opciones de Archivo">
+                    <button type="button" class="btn rounded-full bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 text-xs flex items-center justify-center border border-blue-500 hover:border-blue-700 shadow-sm transition-colors folder-menu-btn" title="Opciones de Archivo">
                         <i class="bx bx-folder-open text-lg pointer-events-none"></i>
                     </button>
                 </div>`;

@@ -29,7 +29,7 @@
                                     @foreach($menu['submenus'] ?? [] as $submenu)
                                         @if(($submenu['vista'] ?? '') === 'gestion_curs_matricula') @continue @endif
                                         @if(($submenu['nombre'] ?? '') === 'Planes de Capacitaciones') @continue @endif
-                                        <li class="menu-item">
+                                        <li class="menu-item {{ (($submenu['nombre'] ?? '') === 'Gestionar Actualizaciones DJ' || ($submenu['vista'] ?? '') === 'gestionar_actualizaciones_dj') ? 'hidden' : '' }}">
                                             <a class="flex items-center gap-x-3.5 rounded-md px-3 py-1.5 text-sm font-medium text-default-100 transition-all hover:bg-default-100/5"
                                                 href="{{ route('second', [$menu['modulo'], $submenu['vista']]) }}">
                                                 <i class="menu-dot"></i>
