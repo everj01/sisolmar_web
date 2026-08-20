@@ -27,6 +27,7 @@
                             <div class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300">
                                 <ul class="mt-1 space-y-1">
                                     @foreach($menu['submenus'] ?? [] as $submenu)
+                                        @if(($submenu['vista'] ?? '') === 'cargos') @continue @endif
                                         @if(($submenu['vista'] ?? '') === 'gestion_curs_matricula') @continue @endif
                                         @if(($submenu['nombre'] ?? '') === 'Planes de Capacitaciones') @continue @endif
                                         <li class="menu-item {{ (($submenu['nombre'] ?? '') === 'Gestionar Actualizaciones DJ' || ($submenu['vista'] ?? '') === 'gestionar_actualizaciones_dj') ? 'hidden' : '' }}">

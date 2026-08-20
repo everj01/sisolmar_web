@@ -60,7 +60,7 @@
                             <option value="TODOS" selected>Todos</option>
                             <option value="OPERATIVO">Operativos</option>
                             <option value="ADMINISTRATIVO">Administrativos</option>
-                            <option value="ESPECIAL">Especiales</option>
+                            <option value="ESPECIAL" hidden>Especiales</option>
                         </select>
                     </div>
 

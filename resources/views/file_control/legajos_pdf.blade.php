@@ -122,7 +122,7 @@
                             <option value="OPERATIVO 5°">Operativo 5°</option>
                             <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
                             <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
-                            <option value="ESPECIALES">Especiales</option>
+                            <option value="ESPECIALES" hidden>Especiales</option>
                         </select>
                     </div>
 

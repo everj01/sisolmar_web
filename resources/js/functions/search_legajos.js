@@ -274,13 +274,35 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     paginationSize: 10,
     rowHeader:{formatter:"responsiveCollapse", width:30, minWidth:30, hozAlign:"center", resizable:false, headerSort:false},
     columns:[
-        {title:"Código", field:"CODI_PERS", hozAlign:"center", width: '10%'},
-        {title:"Personal", field:"personal", hozAlign:"left", width: '20%'},
-        {title:"Nro Doc", field:"nroDoc", hozAlign:"center", width: '10%'},
+        {title:"Código", field:"CODI_PERS", hozAlign:"center", width: '8%'},
+        {title:"Personal", field:"personal", hozAlign:"left", width: '18%'},
+        {title:"Nro Doc", field:"nroDoc", hozAlign:"center", width: '9%'},
         {title:"Sucursal", field:"sucursal", hozAlign:"center", width: '10%'},
-        {title:"Cliente", field:"cliente", hozAlign:"center", width: '15%'},
-        {title:"Cargo", field:"cargo", hozAlign:"center", width: '20%'},
-        {title:"Acciones", field: "acciones", width: '12%', hozAlign: "center", 
+        {title:"Cliente", field:"cliente", hozAlign:"center", width: '14%'},
+        
+        {title:"Cargo", field:"cargo", hozAlign:"center", width: '15%',
+            formatter: function(cell) {
+                let val = cell.getValue();
+                if (!val) return "-";
+                
+                return String(val).toUpperCase()
+                    .replace(/ADMINISTRATIVO|ADMINISTRATIVA/g, "ADMIN")
+                    .replace(/OPERATIVO|OPERATIVA/g, "OPER");
+            }
+        },
+        
+        {title:"Tipo Personal", field:"tipoPersonal", hozAlign:"center", width: '14%',
+            formatter: function(cell) {
+                let val = cell.getValue();
+                if (!val) return "-";
+                
+                return String(val).toUpperCase()
+                    .replace(/ADMINISTRATIVO|ADMINISTRATIVA/g, "ADMIN")
+                    .replace(/OPERATIVO|OPERATIVA/g, "OPER");
+            }
+        },
+        
+        {title:"Acciones", field: "acciones", width: '12%', hozAlign: "center",
             formatter: function(cell, formatterParams, onRendered) {
                 var docsBtn = `<button type="button" class="btn rounded-full docs-btn bg-success/25 text-success hover:bg-success hover:text-white" title="Ver folios">
                 <i class="fa-solid fa-book docs-btn"></i></button>`;
@@ -340,18 +362,81 @@ document.addEventListener('change', function (e) {
 });
 
 
-document.getElementById("buscar").addEventListener("keyup", function () {
-    let valor = this.value.toLowerCase().trim();
-    tblPersonas.setFilter([
-        [
-            { field: "CODI_PERS", type: 'like',  value: valor },
-            { field: "personal", type: 'like',  value: valor },
-            { field: "nroDoc", type: 'like', value: valor },
-            { field: "sucursal", type: 'like', value: valor },
-            { field: "cliente", type: 'like', value: valor },
-        ]
-    ]);
+// 1. Llenamos los selects automáticamente cuando la tabla carga sus datos
+tblPersonas.on("dataLoaded", function(data){
+    const sucursales = new Set();
+    const clientes = new Set();
+    const tipos = new Set();
+    const cargos = new Set();
+
+    data.forEach(row => {
+        if (row.sucursal) sucursales.add(row.sucursal);
+        if (row.cliente) clientes.add(row.cliente);
+        if (row.tipoPersonal) tipos.add(row.tipoPersonal);
+        if (row.cargo) cargos.add(row.cargo);
+    });
+
+    const poblarSelect = (idSelect, setValues, textoDefault) => {
+        const select = document.getElementById(idSelect);
+        if (!select) return;
+        
+        const valorActual = select.value; // Guardamos el valor por si se está recargando la tabla
+        select.innerHTML = `<option value="">${textoDefault}</option>`;
+        
+        Array.from(setValues).sort().forEach(val => {
+            const option = document.createElement("option");
+            option.value = val;
+            option.textContent = val;
+            select.appendChild(option);
+        });
+        
+        if (setValues.has(valorActual)) select.value = valorActual;
+    };
+
+    poblarSelect("filtroSucursal", sucursales, "Todas las Sucursales");
+    poblarSelect("filtroCliente", clientes, "Todos los Clientes");
+    poblarSelect("filtroTipoPersonal", tipos, "Todos los Tipos");
+    poblarSelect("filtroCargo", cargos, "Todos los Cargos");
 });
+
+// 2. Filtro maestro que combina el texto del input (OR) con los dropdowns (AND)
+function filtroAvanzado(data) {
+    let buscar = document.getElementById("buscar").value.toLowerCase().trim();
+    let sucursal = document.getElementById("filtroSucursal").value;
+    let cliente = document.getElementById("filtroCliente").value;
+    let tipoPersonal = document.getElementById("filtroTipoPersonal").value;
+    let cargo = document.getElementById("filtroCargo").value;
+
+    let matchGlobal = false;
+    if (buscar === "") {
+        matchGlobal = true;
+    } else {
+        matchGlobal = (
+            (data.CODI_PERS && String(data.CODI_PERS).toLowerCase().includes(buscar)) ||
+            (data.personal && String(data.personal).toLowerCase().includes(buscar)) ||
+            (data.nroDoc && String(data.nroDoc).toLowerCase().includes(buscar)) ||
+            (data.sucursal && String(data.sucursal).toLowerCase().includes(buscar)) ||
+            (data.cliente && String(data.cliente).toLowerCase().includes(buscar)) ||
+            (data.tipoPersonal && String(data.tipoPersonal).toLowerCase().includes(buscar))
+        );
+    }
+
+    let matchSucursal = sucursal === "" || data.sucursal === sucursal;
+    let matchCliente = cliente === "" || data.cliente === cliente;
+    let matchTipo = tipoPersonal === "" || data.tipoPersonal === tipoPersonal;
+    let matchCargo = cargo === "" || data.cargo === cargo;
+
+    return matchGlobal && matchSucursal && matchCliente && matchTipo && matchCargo;
+}
+
+// 3. Asignamos los eventos para que disparen el filtro maestro
+const aplicarFiltros = () => tblPersonas.setFilter(filtroAvanzado);
+
+document.getElementById("buscar").addEventListener("keyup", aplicarFiltros);
+document.getElementById("filtroSucursal").addEventListener("change", aplicarFiltros);
+document.getElementById("filtroCliente").addEventListener("change", aplicarFiltros);
+document.getElementById("filtroTipoPersonal").addEventListener("change", aplicarFiltros);
+document.getElementById("filtroCargo").addEventListener("change", aplicarFiltros);
 document.getElementById("buscarCliente").addEventListener("keyup", function () {
     let valor = this.value.toLowerCase().trim();
     tblCliente.setFilter([
