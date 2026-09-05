@@ -45,15 +45,24 @@ async function loadNotifications() {
         list.innerHTML = demandasVivas + `
             <button type="button" onclick="document.getElementById('btn-open-modal-etapa2').click()" class="w-full text-left flex items-center justify-between px-4 py-4 hover:bg-slate-50 transition-colors border-b border-gray-100 group">
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors border border-orange-200 shadow-sm">
+                    <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors border border-orange-200 shadow-sm">
                         <i class="bx bx-task text-xl"></i>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-sm font-bold text-gray-800 group-hover:text-primary transition-colors">Pendientes Etapa 2</span>
-                        <span class="text-[11px] text-gray-500">Haz clic para ver el detalle</span>
+                        
+                        <!-- Contenedor de Etiquetas (Submódulos) -->
+                        <div class="flex flex-wrap items-center gap-1.5 mt-1 mb-0.5">
+                            <span class="whitespace-nowrap bg-blue-100 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">MÓDULO DJ</span>
+                            <span class="whitespace-nowrap bg-teal-100 text-teal-700 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">ACTUALIZACIÓN</span>
+                        </div>
+                        
+                        <!-- Texto de ayuda en su propia línea -->
+                        <span class="text-[11px] text-gray-500 leading-none mt-0.5">Haz clic para ver el detalle</span>
                     </div>
                 </div>
-                <div class="flex items-center justify-center min-w-[28px] h-7 bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-2 rounded-full shadow-sm">
+                
+                <div class="flex-shrink-0 flex items-center justify-center min-w-[28px] h-7 bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-2 rounded-full shadow-sm">
                     ${result.total}
                 </div>
             </button>

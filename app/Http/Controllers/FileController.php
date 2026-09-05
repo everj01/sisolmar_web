@@ -209,13 +209,77 @@ class FileController extends Controller
         try {
             $codSucursal = $request->input('codSucursal', '0');
             $vigencia    = $request->input('vigencia', 'SI');
+            $clienteWeb  = $request->input('cliente', 'T');
+            $cargoErp    = $request->input('cargo', 'T'); 
 
-            $allPersonal = FileControl::getPersonalLegajosPdf($codSucursal, $vigencia);
+            $clienteErp = 'T';
+            if ($clienteWeb !== 'T') {
+                $clientesWeb = FileControl::getClientes();
+                $abreviatura = '';
+                foreach ($clientesWeb as $c) {
+                    if ($c->codigo == $clienteWeb) {
+                        $abreviatura = $c->abreviatura;
+                        break;
+                    }
+                }
+                if ($abreviatura !== '') {
+                    $erpData = DB::table('si_solm.dbo.CLIENTE_PROVEEDOR')
+                        ->where('ABREVIATURA', $abreviatura)
+                        ->first();
+                    if ($erpData) {
+                        $clienteErp = $erpData->CODI_CLIE_PROV;
+                    }
+                }
+            }
+
+            $allPersonal = FileControl::getPersonalLegajosPdf($codSucursal, $vigencia, $clienteErp, $cargoErp);
             return response()->json(array_values($allPersonal));
         } catch (\Exception $e) {
             Log::error('Error en getPersonalLegajosPdf: ' . $e->getMessage());
             return response()->json([], 500);
         }
+    }
+
+    public function getCargosErp(Request $request)
+    {
+        $clienteWeb = $request->input('cliente', 'T');
+        $clienteErp = 'T';
+
+        if ($clienteWeb !== 'T') {
+            $clientesWeb = FileControl::getClientes();
+            $abreviatura = '';
+            foreach ($clientesWeb as $c) {
+                if ($c->codigo == $clienteWeb) {
+                    $abreviatura = $c->abreviatura;
+                    break;
+                }
+            }
+            if ($abreviatura !== '') {
+                $erpData = DB::table('si_solm.dbo.CLIENTE_PROVEEDOR')->where('ABREVIATURA', $abreviatura)->first();
+                if ($erpData) { $clienteErp = $erpData->CODI_CLIE_PROV; }
+            }
+        }
+
+        if ($clienteErp !== 'T') {
+            $cargos = DB::select("
+                SELECT DISTINCT C.CODI_CARG AS codigo, C.DESC_CARGO AS nombre
+                FROM si_solm.dbo.PERSONAL P WITH (NOLOCK)
+                INNER JOIN si_solm.dbo.CARGOS C WITH (NOLOCK) ON C.CODI_CARG = P.CODI_CARG
+                INNER JOIN (
+                    SELECT DET.CODI_PERS, CAB.CODI_CLIE_PROV,
+                           ROW_NUMBER() OVER (PARTITION BY DET.CODI_PERS ORDER BY CAB.ASCA_FECHA DESC) rn
+                    FROM si_solm.dbo.OPER_ASITENCIA_DET DET WITH (NOLOCK)
+                    INNER JOIN si_solm.dbo.OPER_ASISTENCIA_CAB CAB WITH (NOLOCK) ON CAB.ASCA_CODIGO = DET.ASCA_CODIGO
+                ) U ON U.CODI_PERS COLLATE DATABASE_DEFAULT = P.CODI_PERS COLLATE DATABASE_DEFAULT AND U.rn = 1
+                WHERE U.CODI_CLIE_PROV COLLATE DATABASE_DEFAULT = ?
+                  AND C.DESC_CARGO IS NOT NULL
+                ORDER BY C.DESC_CARGO
+            ", [$clienteErp]);
+        } else {
+            $cargos = DB::select("SELECT CODI_CARG AS codigo, DESC_CARGO AS nombre FROM si_solm.dbo.CARGOS WITH (NOLOCK) WHERE DESC_CARGO IS NOT NULL ORDER BY DESC_CARGO");
+        }
+
+        return response()->json($cargos);
     }
 
 
@@ -1157,8 +1221,9 @@ class FileController extends Controller
     public function ViewLegajoPdf()
     {
         $sucursales = FileControl::getSucursales();
-        $cargos = FileControl::getCargos();
-        $clientes = FileControl::getClientes();
+        $clientes = FileControl::getClientes(); 
+        
+        $cargos = DB::select("SELECT CODI_CARG AS codigo, DESC_CARGO AS nombre FROM si_solm.dbo.CARGOS WITH (NOLOCK) WHERE DESC_CARGO IS NOT NULL ORDER BY DESC_CARGO");
 
         return view('file_control.legajos_pdf', compact('sucursales', 'cargos', 'clientes'));
     }

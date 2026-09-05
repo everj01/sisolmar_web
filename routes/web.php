@@ -92,6 +92,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-personal-legajos-pdf', [FileController::class, 'getPersonalLegajosPdf']);
 
         // File Control
+        Route::get('/get-cargos-erp', [FileController::class, 'getCargosErp']);
         Route::get('/get-coincidencias', [FileController::class, 'getCoincidencias']);
         Route::get('/get-documentos/{personalId}', [FileController::class, 'getDocumentosXPersonal']);
         Route::get('/get-legajos', [FileController::class, 'getLegajos']);

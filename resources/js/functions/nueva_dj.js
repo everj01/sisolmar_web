@@ -190,7 +190,8 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_celular_emergencia',    data.PERS_NROEMERGENCIA?.trim()  || '');
             ndj_setVal('ndj_parentesco_emergencia', data.PERS_EMERC_FAMILIAR?.trim() || '');
             ndj_setVal('ndj_ocupacion_principal',   data.dj2026_ocupacion_principal?.trim() || '');
-            ndj_setVal('ndj_experiencia_anios',     data.dj2026_experiencia_anios ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g,'') : '');
+            ndj_setVal('ndj_experiencia_anios',     data.dj2026_experiencia_anios !== null && data.dj2026_experiencia_anios !== undefined ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g,'') : '');
+            ndj_setVal('ndj_experiencia_meses',     data.dj2026_experiencia_meses !== null && data.dj2026_experiencia_meses !== undefined ? String(data.dj2026_experiencia_meses).replace(/[^0-9]/g,'') : '');
             ndj_setVal('ndj_familiar_empresa',      data.dj2026_familiar_empresa?.trim()    || '');
             ndj_setVal('ndj_familiar_nombre',       data.dj2026_familiar_nombre?.trim()     || '');
             ndj_setVal('ndj_familiar_parentesco',   data.dj2026_familiar_parentesco?.trim() || '');
@@ -887,6 +888,7 @@ import Swal from 'sweetalert2';
             parentesco_emergencia: payload.ndj_parentesco_emergencia,
             ocupacion_principal:   payload.ndj_ocupacion_principal,
             experiencia_anios:     payload.ndj_experiencia_anios,
+            experiencia_meses:     payload.ndj_experiencia_meses,
             familiar_empresa:      payload.ndj_familiar_empresa,
             familiar_nombre:       payload.ndj_familiar_nombre,
             familiar_parentesco:   payload.ndj_familiar_parentesco,
@@ -934,12 +936,14 @@ import Swal from 'sweetalert2';
                 const resFoto  = await ndj_subirFoto(codiPers);
 
                 if (!resFoto.sinFoto && !resFoto.ok) {
-                    // DJ guardado OK pero foto falló
+                    // DJ guardado OK pero foto falló, mostrar alerta clara
                     Swal.fire({
                         icon:  'warning',
-                        title: modoRecontratacion ? '¡Recontratación exitosa!' : '¡Guardado!',
-                        html:  (json.message || 'Declaración Jurada guardada correctamente.') +
-                               `<br><small style="color:#b45309;">⚠️ La foto no se pudo subir: ${resFoto.message || 'Error desconocido'}</small>`,
+                        title: 'Datos guardados, pero falló la foto',
+                        html:  `<p style="color:#4b5563; font-size: 14px;">La Declaración Jurada se guardó correctamente, pero ocurrió un problema con el archivo de la foto.</p>
+                               <div style="background: #fff7ed; border: 1px solid #fdba74; padding: 10px; border-radius: 6px; margin-top: 10px;">
+                                   <span style="color:#b45309; font-weight: 600;">⚠️ ${resFoto.message || 'Error al conectar con el servidor de imágenes'}</span>
+                               </div>`,
                     });
                 } else {
                     Swal.fire({
@@ -981,15 +985,11 @@ import Swal from 'sweetalert2';
         // ── Validaciones de campos ────────────────────────────
 
         // Caduca: desde mañana
-        $('ndj_caduca')?.addEventListener('change', function () {
-            console.log('Fecha caduca AQUI');
+        $('ndj_caduca')?.addEventListener('blur', function () {
             if (!this.value) return;
             const hoy = new Date(); hoy.setHours(0,0,0,0);
             const man = new Date(hoy); man.setDate(hoy.getDate() + 1);
-            console.log(new Date(this.value + 'T00:00:00') < man);
-            console.log(this.value);
-            console.log(man);
-            console.log(new Date(this.value + 'T00:00:00'));
+            
             if (new Date(this.value + 'T00:00:00') < man) {
                 Swal.fire({ icon:'warning', title:'Fecha inválida', text:'La fecha de caducidad debe ser desde mañana en adelante.', confirmButtonText:'Entendido' });
                 this.value = '';
@@ -997,9 +997,10 @@ import Swal from 'sweetalert2';
         });
 
         // Fecha nacimiento: anterior a hoy
-        $('ndj_fecha_nacimiento')?.addEventListener('change', function () {
+        $('ndj_fecha_nacimiento')?.addEventListener('blur', function () {
             if (!this.value) return;
             const hoy = new Date(); hoy.setHours(0,0,0,0);
+            
             if (new Date(this.value + 'T00:00:00') >= hoy) {
                 Swal.fire({ icon:'warning', title:'Fecha inválida', text:'La fecha de nacimiento debe ser anterior a hoy.', confirmButtonText:'Entendido' });
                 this.value = '';

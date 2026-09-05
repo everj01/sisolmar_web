@@ -8,8 +8,8 @@ let currentAbortController = null;
 
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-new TomSelect('#cargos');
-new TomSelect('#clientes');
+// new TomSelect('#cargos'); // Comentado porque ya no existen en la vista derecha
+// new TomSelect('#clientes');
 
 getPersonal();
 getFolios();
@@ -84,14 +84,19 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                 });
                 return checkbox;
             },
-        }
+        },
+        { title: "Cliente", field: "cliente", hozAlign: "center", widthGrow: 1.5 },
+        { title: "Cargo", field: "cargo", hozAlign: "center", widthGrow: 2 },
     ],
     rowFormatter: function (row) {
+        const el = row.getElement();
+        if (!el || !el.style) return; // FIX: Si la fila no está en el DOM aún, no hace nada para evitar el crash
+
         const data = row.getData();
         if (data.PERS_VIGENCIA && data.PERS_VIGENCIA.toString().trim().toUpperCase() === 'NO') {
-            row.getElement().style.setProperty("background-color", "#fef2f2", "important");
+            el.style.setProperty("background-color", "#fef2f2", "important");
         } else {
-            row.getElement().style.removeProperty("background-color");
+            el.style.removeProperty("background-color");
         }
     },
 });
@@ -442,22 +447,25 @@ document.getElementById("legajo2").addEventListener("click", function () {
 
 // });
 
-// Llenado de la tabla de legajos
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('clientes').addEventListener('change', function () {
-        document.getElementById('divCargos').classList.remove("hidden");
-    });
-
-    document.getElementById('cargos').addEventListener('change', function () {
+// Llenado de la tabla de legajos (NUEVA LÓGICA IZQUIERDA)
+function verificarYTraerLegajos() {
+    const cliente = document.getElementById('filtroClientePer').value;
+    const cargo = document.getElementById('filtroCargoPer').value;
+    
+    if (cliente !== 'T' && cargo !== 'T') {
         getLegajosConFolios();
-    });
-});
+    } else {
+        tblLegajos.clearData();
+        document.getElementById('tblLegajos').classList.add('hidden');
+        document.getElementById('legajosSelectAllDiv').classList.add('hidden');
+    }
+}
 
 // Carga los folios del cliente/cargo en tblLegajos con todos seleccionados por defecto
 function getLegajosConFolios() {
-    const cliente = document.getElementById('clientes').value;
-    const cargo   = document.getElementById('cargos').value;
-    if (!cliente || !cargo) return;
+    const cliente = document.getElementById('filtroClientePer').value;
+    const cargo   = document.getElementById('filtroCargoPer').value;
+    if (!cliente || !cargo || cliente === 'T' || cargo === 'T') return;
 
     axios.get(`${VITE_URL_APP}/api/get-folios-cliente-cargo`, {
         params: { cliente, cargo }
@@ -507,6 +515,31 @@ function aplicarFiltrosPersonal() {
 document.getElementById('sucursal').addEventListener('change', aplicarFiltrosPersonal);
 document.getElementById('tipoPerFiltro').addEventListener('change', aplicarFiltrosPersonal);
 document.getElementById('filtroVigenciaLeg').addEventListener('change', getPersonal);
+document.getElementById('filtroCargoPer').addEventListener('change', function() { getPersonal(); verificarYTraerLegajos(); });
+
+document.getElementById('filtroClientePer').addEventListener('change', function() { 
+    const clienteVal = this.value;
+    const selectCargo = document.getElementById('filtroCargoPer');
+    
+    selectCargo.innerHTML = '<option value="T">Cargando...</option>';
+    
+    axios.get(`${VITE_URL_APP}/api/get-cargos-erp`, { params: { cliente: clienteVal } })
+        .then(response => {
+            selectCargo.innerHTML = '<option value="T">TODOS</option>';
+            response.data.forEach(c => {
+                selectCargo.innerHTML += `<option value="${c.codigo}">${c.nombre}</option>`;
+            });
+            
+            getPersonal(); 
+            verificarYTraerLegajos();
+        })
+        .catch(error => {
+            console.error("Error al cargar cargos ERP:", error);
+            selectCargo.innerHTML = '<option value="T">TODOS</option>';
+            getPersonal();
+            verificarYTraerLegajos();
+        });
+});
 
 // Función para actualizar la tabla de folios por TIPO
 function filterTableByTipoFolio() {
@@ -606,11 +639,11 @@ document.getElementById("btnLeg2").addEventListener("click", async function () {
         return;
     }
 
-    const cliente = document.getElementById('clientes').value;
-    const cargo = document.getElementById('cargos').value;
+    const cliente = document.getElementById('filtroClientePer').value;
+    const cargo = document.getElementById('filtroCargoPer').value;
 
-    if (!cliente || !cargo) {
-        Swal.fire('Atención', 'Seleccione cliente y cargo.', 'warning');
+    if (!cliente || !cargo || cliente === 'T' || cargo === 'T') {
+        Swal.fire('Atención', 'Seleccione un cliente y cargo específico en los filtros de la izquierda.', 'warning');
         return;
     }
 
@@ -792,14 +825,25 @@ function getPersonal() {
     const vigenciaEl = document.getElementById('filtroVigenciaLeg');
     const vigencia = vigenciaEl ? vigenciaEl.value : 'SI';
 
+    const clienteEl = document.getElementById('filtroClientePer');
+    const cliente = clienteEl ? clienteEl.value : 'T';
+
+    const cargoEl = document.getElementById('filtroCargoPer');
+    const cargo = cargoEl ? cargoEl.value : 'T';
+
+    console.log("1. JS Enviando a Laravel -> Cliente:", cliente, "Cargo:", cargo);
+
     axios.get(`${VITE_URL_APP}/api/get-personal-legajos-pdf`, {
-        params: { vigencia }
+        params: { vigencia: vigencia, cliente: cliente, cargo: cargo }
     })
         .then(response => {
+            console.log("2. Laravel respondió con:", response.data);
             tblPersonas.setData(response.data);
+            
+            // aplicarFiltrosPersonal(); // LO COMENTAMOS TEMPORALMENTE
         })
         .catch(error => {
-            console.error("Hubo un error:", error);
+            console.error("Hubo un error de Axios:", error);
         });
 }
 // Función para obtener los folios

@@ -338,8 +338,13 @@
                                         <div class="bk-field" data-bk="ocupacion_principal"><label>Profesión / Ocupación
                                                 Principal</label><span class="bk-val"
                                                 data-field="PERS_PROFESION"></span></div>
-                                        <div class="bk-field"><label>Experiencia (años)</label><span class="bk-val"
-                                                data-field="dj2026_experiencia_anios"></span></div>
+                                        <div class="bk-field" data-bk="experiencia_anios">
+                                            <label>Experiencia</label>
+                                            <div style="font-size: 12px; margin-top: 2px;">
+                                                <span class="bk-val" data-field="dj2026_experiencia_anios"></span> Años y 
+                                                <span class="bk-val" data-field="dj2026_experiencia_meses"></span> Meses
+                                            </div>
+                                        </div>
                                         <div class="bk-field"><label>¿Familiar en la empresa?</label><span
                                                 class="bk-val" data-field="dj2026_familiar_empresa"></span></div>
                                     </div>
@@ -456,7 +461,7 @@
                                         </div>
                                         <div class="bk-field" data-bk="cargo_anterior"><label>Cargo</label><span
                                                 class="bk-val" data-field="PERS_CARGOTRABANT"></span></div>
-                                        <div class="bk-field"><label>Duración (años)</label><span class="bk-val"
+                                        <div class="bk-field"><label>Duración</label><span class="bk-val"
                                                 data-field="PERS_DURACIONANT"></span></div>
                                     </div>
                                 </div>
@@ -1010,9 +1015,16 @@
                                                     class="dj-input" placeholder="Ej. Agente de Seguridad"
                                                     style="text-transform:uppercase;"
                                                     data-compare="ocupacion_principal"></div>
-                                            <div><label class="dj-label">Experiencia (años)</label><input type="number"
-                                                    id="experiencia_anios" name="experiencia_anios" class="dj-input"
-                                                    placeholder="0"></div>
+                                            <div>
+                                                <label class="dj-label">EXPERIENCIA</label>
+                                                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                                    <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Años:</span>
+                                                    <input type="number" id="experiencia_anios" name="experiencia_anios" class="dj-input" placeholder="0" min="0" style="width: 70px;">
+                                                    
+                                                    <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Meses:</span>
+                                                    <input type="number" id="experiencia_meses" name="experiencia_meses" class="dj-input" placeholder="0" min="0" max="11" style="width: 70px;">
+                                                </div>
+                                            </div>
                                             <div>
                                                 <label class="dj-label">¿Familiar en la empresa?</label>
                                                 <select id="familiar_empresa" name="familiar_empresa" class="dj-select">
@@ -1222,9 +1234,9 @@
                                             <div><label class="dj-label">Cargo</label><input type="text"
                                                     id="cargo_anterior" name="cargo_anterior" class="dj-input"
                                                     placeholder="Cargo" data-compare="cargo_anterior"></div>
-                                            <div><label class="dj-label">Duración (años)</label><input type="text"
-                                                    id="duracion_anterior" name="duracion_anterior" step="0.5"
-                                                    class="dj-input" placeholder=""></div>
+                                            <div><label class="dj-label">Duración</label><input type="text"
+        id="duracion_anterior" name="duracion_anterior"
+        class="dj-input" placeholder="Ej. 1 año 7 meses" data-compare="duracion_anterior"></div>
                                         </div>
                                     </div>
                                 </div>

@@ -502,9 +502,14 @@
                                                 style="text-transform:uppercase;">
                                         </div>
                                         <div>
-                                            <label class="dj-label">Experiencia (años)</label>
-                                            <input type="number" id="ndj_experiencia_anios" name="ndj_experiencia_anios"
-                                                class="dj-input" placeholder="0">
+                                            <label class="dj-label">EXPERIENCIA</label>
+                                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                                <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Años:</span>
+                                                <input type="number" id="ndj_experiencia_anios" name="ndj_experiencia_anios" class="dj-input" placeholder="0" min="0" style="width: 70px;">
+                                                
+                                                <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Meses:</span>
+                                                <input type="number" id="ndj_experiencia_meses" name="ndj_experiencia_meses" class="dj-input" placeholder="0" min="0" max="11" style="width: 70px;">
+                                            </div>
                                         </div>
                                         <div>
                                             <label class="dj-label">¿Familiar en la empresa?</label>

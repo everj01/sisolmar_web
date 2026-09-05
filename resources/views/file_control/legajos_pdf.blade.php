@@ -139,6 +139,33 @@
                 </div>
             </div>
 
+            <!-- NUEVA FILA DE FILTROS DE TAREAJE -->
+            <div class="w-full px-5 pb-3">
+                <div class="flex flex-wrap items-center gap-5 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    {{-- Cliente Tareaje --}}
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-700">Cliente (Tareaje):</label>
+                        <select id="filtroClientePer" class="form-select text-sm w-56 px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
+                            <option value="T">TODOS</option>
+                            @foreach($clientes as $cliente)
+                                <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Cargo Tareaje --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label class="text-sm font-medium text-gray-700">Cargo:</label>
+                        <select id="filtroCargoPer" class="form-select text-sm w-56 px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
+                            <option value="T">TODOS</option>
+                            @foreach($cargos as $cargo)
+                                <option value="{{ $cargo->codigo }}">{{ $cargo->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="w-full px-5 py-2 mt-3">
                 <div class="flex justify-end items-center space-x-2">
                     <label for="select-all">TODOS</label>
@@ -179,27 +206,12 @@
             </div>
 
             <div class="w-full px-5 py-3 mt-2">
+                <!-- Selects de Cliente y Cargo del lado derecho eliminados a petición de Jefatura. 
+                     Ahora se filtra desde los combos de tareaje del lado izquierdo. -->
                 <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="clientes" class="text-sm font-medium text-gray-700 block mb-1.5">Cliente</label>
-                            <select id="clientes" class="tom-select w-full">
-                                <option disabled selected>-Seleccionar-</option>
-                                @foreach($clientes as $cliente)
-                                    <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div id="divCargos" class="hidden">
-                            <label for="cargos" class="text-sm font-medium text-gray-700 block mb-1.5">Cargo</label>
-                            <select id="cargos" class="tom-select w-full">
-                                <option value="">Seleccionar...</option>
-                                @foreach($cargos as $cargo)
-                                    <option value="{{ $cargo->codigo }}">{{ $cargo->nombre }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
+                    <p class="text-sm text-default-500 text-center">
+                        Seleccione un <b>Cliente</b> y <b>Cargo</b> en la lista de Personas (izquierda) para ver los legajos disponibles.
+                    </p>
                 </div>
             </div>
 

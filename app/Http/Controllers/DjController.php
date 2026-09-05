@@ -179,6 +179,7 @@ class DjController extends Controller
             $talla            = is_numeric($data['talla']            ?? null) ? $data['talla']            : null;
             $anioEgreso       = is_numeric($data['anio_egreso']      ?? null) ? (int)$data['anio_egreso'] : null;
             $experienciaAnios = is_numeric($data['experiencia_anios']?? null) ? (int)$data['experiencia_anios'] : null;
+            $experienciaMeses = is_numeric($data['experiencia_meses']?? null) ? (int)$data['experiencia_meses'] : null;
  
             // Laborales
             $laboral1      = !empty(trim($data['dj2026_laboral_1'] ?? '')) ? strtoupper(trim($data['dj2026_laboral_1'])) : null;
@@ -219,7 +220,7 @@ class DjController extends Controller
                     PERS_NOMCONTACTO, PERS_NROEMERGENCIA, PERS_EMERC_FAMILIAR,
                     PERS_CTRABANT, PERS_CARGOTRABANT, PERS_DURACIONANT,
                     dj2026_banco, dj2026_ciudad_naci, dj2026_ocupacion_principal,
-                    dj2026_experiencia_anios, dj2026_familiar_empresa,
+                    dj2026_experiencia_anios, dj2026_experiencia_meses, dj2026_familiar_empresa,
                     dj2026_familiar_nombre, dj2026_familiar_parentesco,
                     dj2026_laboral_1, dj2026_laboral_2, dj2026_cantprofesion,
                     PERS_TIPOTRAB, PERS_VIGENCIA,
@@ -307,6 +308,7 @@ class DjController extends Controller
                     $ciudadNaci,                              // ✅ ciudad_nacimiento → dj2026_ciudad_naci
                     $data['ocupacion_principal'] ?? null,
                     $experienciaAnios,
+                    $experienciaMeses,
                     $familiarEmpresa,
                     $data['familiar_nombre']     ?? null,
                     $data['familiar_parentesco'] ?? null,
@@ -366,10 +368,10 @@ class DjController extends Controller
             // Nombre fijo: CODI_PERS.jpg
             $nameFile = $codiPers . '.jpg';
     
-            // Ruta dentro de Biblioteca_Grafica (sin el prefijo del servidor)
+            // SOLO 'Fotos'. El script charge_file.php ya le concatena la IP y 'Biblioteca_Grafica'
             $ruta = 'Fotos';
     
-            // Enviar al proxy externo (mismo mecanismo que saveFolioPersona)
+            // Enviar la petición usando el formato nativo de Laravel para Multipart Form-Data
             $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
                 ->attach('archivo', file_get_contents($archivo->getRealPath()), $nameFile)
                 ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
@@ -377,7 +379,10 @@ class DjController extends Controller
                     'ruta'     => $ruta,
                 ]);
     
-            if ($response->failed()) {
+            // Validar la respuesta JSON del proxy
+            $proxyData = $response->json();
+    
+            if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
                 Log::error('uploadFotoPersonal: fallo en proxy', [
                     'codi_pers' => $codiPers,
                     'status'    => $response->status(),
@@ -385,7 +390,7 @@ class DjController extends Controller
                 ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'No se pudo guardar la foto en el servidor remoto.',
+                    'message' => 'El servidor de archivos rechazó la imagen.',
                     'detalle' => $response->body(),
                 ], 500);
             }
@@ -1195,6 +1200,7 @@ class DjController extends Controller
             'EGRESO_EDUCATIVO',
             'dj2026_cantprofesion',
             'dj2026_experiencia_anios',
+            'dj2026_experiencia_meses',
             'fotocheck',
             'horario',
             'CODI_CATE_TRAB',
@@ -1506,6 +1512,7 @@ class DjController extends Controller
             'dj2026_ciudad_naci' => $getValue('ciudad_nacimiento', 'dj2026_ciudad_naci'),
             'dj2026_ocupacion_principal' => $getValue('ocupacion_principal', 'dj2026_ocupacion_principal'),
             'dj2026_experiencia_anios' => $getValue('experiencia_anios', 'dj2026_experiencia_anios'),
+            'dj2026_experiencia_meses' => $getValue('experiencia_meses', 'dj2026_experiencia_meses'),
             'dj2026_familiar_empresa' => $getValue('familiar_empresa', 'dj2026_familiar_empresa'),
             'dj2026_familiar_nombre' => $getValue('familiar_nombre', 'dj2026_familiar_nombre'),
             'dj2026_familiar_parentesco' => $getValue('familiar_parentesco', 'dj2026_familiar_parentesco'),
@@ -1968,6 +1975,7 @@ class DjController extends Controller
             'dj2026_ciudad_naci',
             'dj2026_ocupacion_principal',
             'dj2026_experiencia_anios',
+            'dj2026_experiencia_meses',
             'dj2026_familiar_nombre',
             'dj2026_familiar_parentesco',
             'dj2026_laboral_1',
@@ -3243,6 +3251,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
              $sucursal = !empty(trim($data['sucursal'] ?? '')) ? strtoupper(trim($data['sucursal'])) : null;
             $usuario = !empty(trim($data['usuario'] ?? '')) ? strtoupper(trim($data['usuario'])) : null;
+            $experienciaMeses = $intv($data['experiencia_meses'] ?? null);
  
             DB::update(
                 "UPDATE si_solm.dbo.PERSONAL SET
@@ -3263,7 +3272,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     PERS_NOMCONTACTO=?, PERS_NROEMERGENCIA=?, PERS_EMERC_FAMILIAR=?,
                     PERS_CTRABANT=?, PERS_CARGOTRABANT=?, PERS_DURACIONANT=?,
                     dj2026_banco=?, dj2026_ciudad_naci=?, dj2026_ocupacion_principal=?,
-                    dj2026_experiencia_anios=?, dj2026_familiar_empresa=?,
+                    dj2026_experiencia_anios=?, dj2026_experiencia_meses=?, dj2026_familiar_empresa=?,
                     dj2026_familiar_nombre=?, dj2026_familiar_parentesco=?,
                     dj2026_laboral_1=?, dj2026_laboral_2=?, dj2026_cantprofesion=?,
                     PERS_TIPOTRAB=?, USUA_FECHA_MOD=GETDATE(), SUCU_CODIGO = ?, USUA_CODIGO_REG = ?, EMPR_CODIGO = '01'
@@ -3288,7 +3297,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     $trim($data['cuenta_banco'] ?? null),
                     !empty(trim($data['ciudad_nacimiento'] ?? '')) ? strtoupper(trim($data['ciudad_nacimiento'])) : null,
                     $trim($data['ocupacion_principal'] ?? null),
-                    $intv($data['experiencia_anios'] ?? null), $famEmpresa,
+                    $intv($data['experiencia_anios'] ?? null), $experienciaMeses, $famEmpresa,
                     $trim($data['familiar_nombre'] ?? null), $trim($data['familiar_parentesco'] ?? null),
                     $laboral1, $laboral2, $cantProfesion,
                     //$tipotrab,

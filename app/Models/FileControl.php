@@ -16,12 +16,14 @@ class FileControl extends Model
         return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL ?', [$sucursal]);
     }
 
-    public static function getPersonalLegajosPdf($codSucursal = '0', $vigencia = 'SI')
+    public static function getPersonalLegajosPdf($codSucursal = '0', $vigencia = 'SI', $cliente = 'T', $cargo = 'T')
     {
-        return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_LEGAJO_PDF ?, ?, ?', [
+        return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_LEGAJO_PDF ?, ?, ?, ?, ?', [
             $codSucursal,
-            '01',
-            $vigencia,
+            '01',         // @empresa
+            $vigencia,    // @vigencia
+            $cliente,     // @cliente
+            $cargo        // @cargo
         ]);
     }
 
@@ -579,6 +581,41 @@ class FileControl extends Model
             ->get() : DB::table('sw_roles')
             ->where('habilitado', 1)
             ->get();
+    }
+    public static function getCargosOperativos()
+    {
+        return DB::select("
+            SELECT 
+                CODI_CARG AS codigo, 
+                DESC_CARGO AS nombre 
+            FROM si_solm.dbo.CARGOS WITH (NOLOCK) 
+            WHERE DESC_CARGO IS NOT NULL
+            ORDER BY DESC_CARGO
+        ");
+    }
+    // NUEVA FUNCIÓN: Traer clientes directamente del ERP
+    public static function getClientesOperativos()
+    {
+        return DB::select("
+            SELECT 
+                CODI_CLIE_PROV AS codigo, 
+                ABREVIATURA AS abreviatura 
+            FROM si_solm.dbo.CLIENTE_PROVEEDOR WITH (NOLOCK)
+            WHERE ESTA_CLIE_PROV = '1' -- Solo activos (opcional)
+            ORDER BY ABREVIATURA
+        ");
+    }
+    
+    // NUEVA FUNCIÓN: Traer clientes directamente del ERP (A prueba de balas)
+    public static function getClientesERP()
+    {
+        return DB::select("
+            SELECT DISTINCT 
+                CODI_CLIE_PROV AS codigo, 
+                ABREVIATURA AS abreviatura 
+            FROM si_solm.dbo.CLIENTE_PROVEEDOR WITH (NOLOCK)
+            ORDER BY ABREVIATURA
+        ");
     }
 
     

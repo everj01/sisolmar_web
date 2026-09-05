@@ -1955,7 +1955,8 @@ async function llenarFormulario(data) {
 
 
     setValue('#ocupacion_principal', data.dj2026_ocupacion_principal);
-    setValue('#experiencia_anios', data.dj2026_experiencia_anios ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
+    setValue('#experiencia_anios', data.dj2026_experiencia_anios !== null && data.dj2026_experiencia_anios !== undefined ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
+    setValue('#experiencia_meses', data.dj2026_experiencia_meses !== null && data.dj2026_experiencia_meses !== undefined ? String(data.dj2026_experiencia_meses).replace(/[^0-9]/g, '') : '');
     setValue('#familiar_empresa', data.dj2026_familiar_empresa ? data.dj2026_familiar_empresa.trim() : '');
     setValue('#familiar_nombre', data.dj2026_familiar_nombre ? data.dj2026_familiar_nombre.trim() : '');
     setValue('#familiar_parentesco', data.dj2026_familiar_parentesco ? data.dj2026_familiar_parentesco.trim() : '');
@@ -2179,6 +2180,7 @@ const CAMPO_MAP = {
     'direccion_actual': 'DIRECCION', 'direccion_dni': 'PERS_DIREC_DNI',
     'contacto_emergencia': 'PERS_NOMCONTACTO', 'celular_emergencia': 'PERS_NROEMERGENCIA',
     'parentesco_emergencia': 'PERS_EMERC_FAMILIAR', 'ocupacion_principal': 'PERS_PROFESION',
+    'experiencia_anios': 'dj2026_experiencia_anios', 'experiencia_meses': 'dj2026_experiencia_meses',
     'curso_sucamec': 'PERS_CONDISCAMEC', 'licencia_arma': 'PERS_NROLICENCIA',
     'tipo_arma': 'PERS_TIPOARMA', 'arma_propia': 'PERS_CONARMAS',
     'brevete': 'PERS_BREVETE', 'clase_brevete': 'CLASE_BREVETE',
