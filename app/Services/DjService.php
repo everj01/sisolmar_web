@@ -92,7 +92,7 @@ class DjService
                 'PERS_FECHCADUCADNI'    => $fechaCaducaDni, 
                 'PERS_PENSIONISTA'      => strtoupper(substr($data['pensionista'] ?? 'NO', 0, 2)),
                 'CODI_SIST_PENS'        => substr($data['sistema_previsional'] ?? '', 0, 2),
-                'PERS_CONTRATADO'       => 'S',
+                'PERS_CONTRATADO'       => 0,
                 'PERS_VIGENCIA'         => '1',
                 'PERS_FECHAREG'         => now()->format('Ymd'), 
                 'JUBILADO'              => 0,

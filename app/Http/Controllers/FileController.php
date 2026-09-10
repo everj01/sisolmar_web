@@ -12,6 +12,7 @@ use App\Models\Reporte;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -36,16 +37,152 @@ class FileController extends Controller
         $grados = FileControl::getGradosInstruccionDJ();
         $carreras = FileControl::getCarrerasDJ();
         $instituciones = FileControl::getInstitucionesDJ();
+        $bancos = FileControl::getBancosDJ();
         $sucursales = FileControl::getSucursales();
+        $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
+        $restringirSucursalesGestionDj = $this->usuarioTieneSucursalLimitada();
+
+        // Cuando el usuario tiene asignaciones activas, el filtro solo debe
+        // exponer esas sucursales. Los usuarios sin asignaciones mantienen
+        // el comportamiento actual (todas las sucursales).
+        if ($restringirSucursalesGestionDj) {
+            $normalizarCodigoSucursal = static function ($codigo): string {
+                $codigo = trim((string) $codigo);
+
+                return ctype_digit($codigo) ? (string) ((int) $codigo) : strtoupper($codigo);
+            };
+            $sucursalesAsignadasNormalizadas = array_map($normalizarCodigoSucursal, $sucursalesAsignadas);
+
+            $sucursales = array_values(array_filter($sucursales, function ($sucursal) use ($normalizarCodigoSucursal, $sucursalesAsignadasNormalizadas) {
+                $codigo = trim((string) ($sucursal->codigo ?? ''));
+
+                return in_array($normalizarCodigoSucursal($codigo), $sucursalesAsignadasNormalizadas, true);
+            }));
+        }
+
+        $sucursalesGestionDj = array_values(array_filter($sucursales, function ($sucursal) {
+            return ! in_array(trim((string) ($sucursal->codigo ?? '')), ['', '0', '00'], true);
+        }));
+
+        // Los usuarios con acceso global inician en Chimbote. Para los
+        // usuarios limitados, el predeterminado solo aplica si Chimbote está
+        // entre sus sucursales permitidas.
+        $filtrosInicialesGestionDj = [
+            'sucursal' => '',
+            'tipo' => '',
+            'vigencia' => '',
+        ];
+
+        foreach ($sucursalesGestionDj as $sucursal) {
+            $datosSucursal = implode(' ', array_filter([
+                $sucursal->codigo ?? null,
+                $sucursal->abreviatura ?? null,
+                $sucursal->nombre ?? null,
+                $sucursal->descripcion ?? null,
+            ]));
+
+            if (str_contains(strtoupper(trim($datosSucursal)), 'CHIMBOTE')) {
+                $filtrosInicialesGestionDj = [
+                    'sucursal' => trim((string) $sucursal->codigo),
+                    'tipo' => 'OPERATIVO 5°',
+                    'vigencia' => 'SI',
+                ];
+                break;
+            }
+        }
+
+        $mostrarTodosTiposGestionDj = $filtrosInicialesGestionDj['sucursal'] !== '';
 
         // 1. Obtener cargos
-        $cargos = FileControl::getCargos();
+        $cargos = FileControl::getCargosDj();
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
 
         // 2. Añadir 'cargos' al compact
-        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'cargos', 'tipoPerLimitar', 'tipoUsuario'));
+        return view('file_control.gestion_dj', compact(
+            'grados',
+            'carreras',
+            'instituciones',
+            'bancos',
+            'sucursales',
+            'sucursalesGestionDj',
+            'restringirSucursalesGestionDj',
+            'filtrosInicialesGestionDj',
+            'mostrarTodosTiposGestionDj',
+            'cargos',
+            'tipoPerLimitar',
+            'tipoUsuario'
+        ));
+    }
+
+    /**
+     * Obtiene las sucursales activas asignadas al usuario autenticado.
+     * Una lista vacía mantiene el acceso global actual.
+     */
+    private function obtenerSucursalesAsignadasUsuario(): array
+    {
+        $codUsuario = Auth::id();
+
+        if (! $codUsuario) {
+            return [];
+        }
+
+        return DB::table('sw_permisos_usuario_sucursal')
+            ->where('codUsuario', $codUsuario)
+            ->where('habilitado', 1)
+            ->pluck('codSucursal')
+            ->map(fn ($codigo) => trim((string) $codigo))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * La asignación de sucursales solo se aplica cuando el usuario tiene
+     * la bandera limitarSucursal activada. Con valor 0 conserva acceso global.
+     */
+    private function usuarioTieneSucursalLimitada(): bool
+    {
+        return (int) (Auth::user()?->limitarSucursal ?? 0) === 1;
+    }
+
+    /**
+     * Limita los datos de Gestión DJ a las sucursales activas del usuario.
+     */
+    private function filtrarDjPorSucursalesAsignadas(array $personal): array
+    {
+        if (! $this->usuarioTieneSucursalLimitada()) {
+            return $personal;
+        }
+
+        $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
+
+        if (empty($sucursalesAsignadas)) {
+            return $personal;
+        }
+
+        // Los permisos se guardan como CHAR(2), por ejemplo "04", mientras
+        // algunos procedimientos devuelven el código sin cero inicial ("4").
+        // Se normalizan para mantener el filtro estricto sin perder registros.
+        $normalizarCodigoSucursal = static function ($codigo): string {
+            $codigo = trim((string) $codigo);
+
+            return ctype_digit($codigo) ? (string) ((int) $codigo) : strtoupper($codigo);
+        };
+
+        $sucursalesPermitidas = array_map($normalizarCodigoSucursal, $sucursalesAsignadas);
+
+        return array_values(array_filter($personal, function ($persona) use ($sucursalesPermitidas, $normalizarCodigoSucursal) {
+            $codSucursal = $persona->codSucursal
+                ?? $persona->COD_SUCURSAL
+                ?? $persona->SUCU_CODIGO
+                ?? $persona->sucursalCodigo
+                ?? '';
+
+            return in_array($normalizarCodigoSucursal($codSucursal), $sucursalesPermitidas, true);
+        }));
     }
 
     public function indexActualizarDj()
@@ -53,6 +190,7 @@ class FileController extends Controller
         $grados = FileControl::getGradosInstruccionDJ();
         $carreras = FileControl::getCarrerasDJ();
         $instituciones = FileControl::getInstitucionesDJ();
+        $bancos = FileControl::getBancosDJ();
         $sucursales = FileControl::getSucursales();
 
         $tipoPerLimitar = session('limitarTipoPer');
@@ -60,7 +198,7 @@ class FileController extends Controller
         $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
         $esAdmin = in_array($tipoUsuario, [5, 11]);
 
-        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin'));
+        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'bancos', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin'));
     }
 
 
@@ -1146,12 +1284,12 @@ class FileController extends Controller
         $vigencia = $request->input('vigencia', 'SI');
         $usuario = session('usuario') ?? '0';
 
-        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_2026] @usuario = ?, @vigencia = ?', [
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_2026_GESTION] @usuario = ?, @vigencia = ?', [
             $usuario,
             $vigencia
         ]);
 
-        return response()->json($DJ);
+        return response()->json($this->filtrarDjPorSucursalesAsignadas($DJ));
     }
 
     public function getListaDJMigracion()

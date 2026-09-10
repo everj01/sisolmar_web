@@ -563,13 +563,10 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         y += educRowH;
 
         // Fila 9 — Embargos / Cuentas
-        const embW       = boxWidth * 0.30;
-        const bcpW       = boxWidth * 0.35;
-        const interbankW = boxWidth * 0.35;
-        const cuentaBanco = getValue("cuenta_banco").toUpperCase().trim();
+        const embW    = boxWidth * 0.30;
+        const cuentaW = boxWidth * 0.70;
         drawField("Embargos en instituciones financieras", getValue("embargos"), boxX, embW, y, rowH, 0.75);
-        drawField("Cuenta sueldo BCP",       cuentaBanco === "BCP"       ? "X" : "", boxX + embW,        bcpW,       y, rowH, 0.55, "center");
-        drawField("Cuenta sueldo INTERBANK", cuentaBanco === "INTERBANK" ? "X" : "", boxX + embW + bcpW, interbankW, y, rowH, 0.55, "center");
+        drawField("Cuenta sueldo", getCleanSelectText("cuenta_banco"), boxX + embW, cuentaW, y, rowH, 0.35);
         y += rowH;
 
         drawField("Dirección Actual", getValue("direccion_actual"), boxX, boxWidth, y, rowH, 0.15, "left", false, false, false, true); y += rowH;

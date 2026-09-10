@@ -573,6 +573,16 @@ class FileControl extends Model
                 ORDER BY IEDU_DESCRIPCION"
             );
     }
+
+    public static function getBancosDJ()
+    {
+        return DB::select(
+            "SELECT CODI_BANC AS id, DESC_BANC AS text
+            FROM si_solm.dbo.BANCOS
+            WHERE CODI_BANC NOT IN ('07', '08')
+            ORDER BY CODI_BANC"
+        );
+    }
     public static function getRoles($test = 0)
     {
         return $test !== 1 ? DB::table('sw_roles')
@@ -590,6 +600,19 @@ class FileControl extends Model
                 DESC_CARGO AS nombre 
             FROM si_solm.dbo.CARGOS WITH (NOLOCK) 
             WHERE DESC_CARGO IS NOT NULL
+            ORDER BY DESC_CARGO
+        ");
+    }
+
+    public static function getCargosDj()
+    {
+        return DB::select("
+            SELECT 
+                CODI_CARG AS codigo, 
+                DESC_CARGO AS nombre,
+                CARGO_TIPO AS tipo
+            FROM si_solm.dbo.CARGOS WITH (NOLOCK)
+            WHERE CARG_VIGENCIA = 'SI' AND DESC_CARGO IS NOT NULL
             ORDER BY DESC_CARGO
         ");
     }

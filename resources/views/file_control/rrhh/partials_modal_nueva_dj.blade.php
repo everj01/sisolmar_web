@@ -54,6 +54,12 @@
                                     </select>
                                 </div>
                                 <div>
+                                    <label class="dj-label">Cargo</label>
+                                    <select id="ndj_sel_cargo" name="ndj_cargo" class="dj-select">
+                                        <option value="">— Seleccionar —</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label class="dj-label">Tipo de Documento <span style="color:#ef4444">*</span></label>
                                     <select id="ndj_tipo_documento" name="ndj_tipo_documento" class="dj-select">
                                         <option value="">cargando...</option>
@@ -70,11 +76,11 @@
 
                                     <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
 
-                                        @foreach ($sucursalesFiltradas as $sucursal)
+                                        @foreach ($sucursalesGestionDj as $sucursal)
                                             <option value="{{ $sucursal->codigo }}">
                                                 {{ $sucursal->abreviatura }}
                                             </option>
-                                        @endforeach
+                                        @endforeach 
 
                                     </select>
                                 </div>
@@ -226,7 +232,8 @@
                                         <div>
                                             <label class="dj-label">Celular</label>
                                             <input type="text" id="ndj_celular" name="ndj_celular"
-                                                class="dj-input" placeholder="999 999 999">
+                                                class="dj-input" placeholder="999 999 999" inputmode="numeric"
+                                                maxlength="9" pattern="[0-9]{9}">
                                         </div>
                                         <div>
                                             <label class="dj-label">Correo electrónico</label>
@@ -236,7 +243,8 @@
                                         <div>
                                             <label class="dj-label">WhatsApp</label>
                                             <input type="text" id="ndj_whatsapp" name="ndj_whatsapp"
-                                                class="dj-input" placeholder="999 999 999">
+                                                class="dj-input" placeholder="999 999 999" inputmode="numeric"
+                                                maxlength="9" pattern="[0-9]{9}">
                                         </div>
                                     </div>
                                 </div>
@@ -263,13 +271,15 @@
                                         </div>
                                         <div>
                                             <label class="dj-label">Peso (kg)</label>
-                                            <input type="number" id="ndj_peso" name="ndj_peso"
-                                                step="0.01" class="dj-input" placeholder="70">
+                                            <input type="text" id="ndj_peso" name="ndj_peso"
+                                                class="dj-input" placeholder="70" inputmode="numeric"
+                                                maxlength="3" pattern="[0-9]{1,3}">
                                         </div>
                                         <div>
                                             <label class="dj-label">Talla (m)</label>
-                                            <input type="number" id="ndj_talla" name="ndj_talla"
-                                                step="0.01" class="dj-input" placeholder="1.75">
+                                            <input type="text" id="ndj_talla" name="ndj_talla"
+                                                class="dj-input" placeholder="1.75" inputmode="decimal"
+                                                maxlength="4" pattern="[0-9]\.[0-9]{2}">
                                         </div>
                                     </div>
                                 </div>
@@ -288,6 +298,13 @@
                                             <select id="ndj_sistema_previsional" name="ndj_sistema_previsional" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
+                                            <a href="https://servicios.sbs.gob.pe/ReporteSituacionPrevisional/Afil_Consulta.aspx"
+                                                target="_blank" rel="noopener noreferrer"
+                                                class="dj-btn-sm dj-btn-primary"
+                                                style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;text-decoration:none;">
+                                                <i class='bx bx-search-alt-2'></i>
+                                                Revisión SBS
+                                            </a>
                                         </div>
                                         <div>
                                             <label class="dj-label">ESSALUD Vida</label>
@@ -346,8 +363,9 @@
                                         </div>
                                         <div>
                                             <label class="dj-label">Año de egreso</label>
-                                            <input type="number" id="ndj_anio_egreso" name="ndj_anio_egreso"
-                                                class="dj-input" placeholder="2020">
+                                            <input type="text" id="ndj_anio_egreso" name="ndj_anio_egreso"
+                                                class="dj-input" placeholder="2020" inputmode="numeric"
+                                                maxlength="4" pattern="[0-9]{4}">
                                         </div>
                                     </div>
                                 </div>
@@ -373,8 +391,9 @@
                                             <label class="dj-label">Cuenta de Sueldo</label>
                                             <select id="ndj_cuenta_banco" name="ndj_cuenta_banco" class="dj-select">
                                                 <option value="" disabled selected>—</option>
-                                                <option value="BCP">BCP</option>
-                                                <option value="INTERBANK">INTERBANK</option>
+                                                @foreach ($bancos as $banco)
+                                                    <option value="{{ $banco->id }}">{{ $banco->text }}</option>
+                                                @endforeach
                                             </select>
                                         </div>
                                     </div>
@@ -456,12 +475,14 @@
                                         <div>
                                             <label class="dj-label">Llamar a</label>
                                             <input type="text" id="ndj_contacto_emergencia" name="ndj_contacto_emergencia"
-                                                class="dj-input" placeholder="Juan Pérez García">
+                                                class="dj-input" placeholder="Juan Pérez García" autocomplete="name"
+                                                pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+">
                                         </div>
                                         <div>
                                             <label class="dj-label">Celular</label>
                                             <input type="text" id="ndj_celular_emergencia" name="ndj_celular_emergencia"
-                                                class="dj-input" placeholder="999 999 999">
+                                                class="dj-input" placeholder="999 999 999" inputmode="numeric"
+                                                maxlength="9" pattern="[0-9]{9}">
                                         </div>
                                         <div>
                                             <label class="dj-label">Parentesco</label>
@@ -499,16 +520,16 @@
                                             <label class="dj-label">Profesión / Ocupación Principal</label>
                                             <input type="text" id="ndj_ocupacion_principal" name="ndj_ocupacion_principal"
                                                 class="dj-input" placeholder="Ej. Administrador"
-                                                style="text-transform:uppercase;">
+                                                style="text-transform:uppercase;" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+">
                                         </div>
                                         <div>
                                             <label class="dj-label">EXPERIENCIA</label>
                                             <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                                                 <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Años:</span>
-                                                <input type="number" id="ndj_experiencia_anios" name="ndj_experiencia_anios" class="dj-input" placeholder="0" min="0" style="width: 70px;">
+                                                <input type="text" id="ndj_experiencia_anios" name="ndj_experiencia_anios" class="dj-input" placeholder="0" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" style="width: 70px;">
                                                 
                                                 <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Meses:</span>
-                                                <input type="number" id="ndj_experiencia_meses" name="ndj_experiencia_meses" class="dj-input" placeholder="0" min="0" max="11" style="width: 70px;">
+                                                <input type="text" id="ndj_experiencia_meses" name="ndj_experiencia_meses" class="dj-input" placeholder="0" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" style="width: 70px;">
                                             </div>
                                         </div>
                                         <div>
@@ -736,9 +757,10 @@
                                             <div>
                                                 <label class="dj-label">Apellidos y Nombres</label>
                                                 <input type="text" name="ndj_apellidosNombres[]" class="dj-input"
-                                                    placeholder="Apellidos y nombres completos">
+                                                    placeholder="Apellidos y nombres completos"
+                                                    pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+">
                                             </div>
-                                            <div>
+                                            <div class="ndj-family-date">
                                                 <label class="dj-label">Fecha de Nacimiento</label>
                                                 <input type="date" name="ndj_fechaNacimiento[]" class="dj-input">
                                             </div>
@@ -776,6 +798,57 @@
                 @endif
             </div>
 
+        </div>
+    </div>
+</div>
+
+{{-- Modal de autorización para excepción de edad. La validación de permisos se conecta desde nueva_dj.js. --}}
+<div id="modalExcepcionEdad"
+    class="hs-overlay hidden fixed inset-0 z-[80] overflow-y-auto transition-all duration-500 pointer-events-none"
+    data-hs-overlay-options='{"isClosePrev": false}'
+    role="dialog" tabindex="-1" aria-labelledby="tituloModalExcepcionEdad">
+    <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 translate-y-10 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto border border-gray-200">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+            <div>
+                <h3 id="tituloModalExcepcionEdad" class="text-lg font-bold text-gray-900">
+                    Registrar excepción de edad
+                </h3>
+                <p class="text-sm text-gray-500 font-medium mt-0.5">Autorización de usuario especial</p>
+            </div>
+            <button type="button" id="ndj_btnCerrarExcepcionEdad"
+                class="text-gray-500 hover:text-gray-700 transition-colors" aria-label="Cerrar">
+                <i class='bx bx-x text-2xl'></i>
+            </button>
+        </div>
+
+        <div class="px-5 py-5 space-y-5">
+            <p class="text-sm text-center text-gray-500 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                Esta operación requiere las credenciales de un usuario autorizado para registrar excepciones de edad.
+            </p>
+
+            <div>
+                <label for="ndj_usuario_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Usuario</label>
+                <input type="text" id="ndj_usuario_excepcion" autocomplete="username"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                    placeholder="Usuario autorizado">
+            </div>
+            <div>
+                <label for="ndj_clave_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
+                <input type="password" id="ndj_clave_excepcion" autocomplete="current-password"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                    placeholder="Contraseña">
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-slate-50 rounded-b-lg">
+            <button type="button" id="ndj_btnValidarExcepcionEdad"
+                class="btn bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                <i class='bx bx-check-shield text-lg'></i> Validar credenciales
+            </button>
+            <button type="button" id="ndj_btnCancelarExcepcionEdad"
+                class="btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium">
+                Cancelar
+            </button>
         </div>
     </div>
 </div>

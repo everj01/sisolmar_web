@@ -11,6 +11,10 @@ import Swal from 'sweetalert2';
     let dniValido = false;
     let coincidenciasValidadas = false;
     let hayCoincidencias = false;
+    let reglasEdad = { minima: 18, maxima: 55 };
+    let fechaEdadAlertada = '';
+    let excepcionEdadValidada = false;
+    let fechaExcepcionAutorizada = '';
 
     // ── Estado de recontratación ─────────────────────────────
     let modoRecontratacion = false;
@@ -23,16 +27,213 @@ import Swal from 'sweetalert2';
     let coincidenciasDiv = document.createElement('div');
     coincidenciasDiv.style.fontSize = '12px';
     coincidenciasDiv.style.marginTop = '4px';
-    apellido2.parentNode.appendChild(coincidenciasDiv);
+    if (apellido2?.parentNode) apellido2.parentNode.appendChild(coincidenciasDiv);
 
     let docErrorMsg = document.createElement('div');
     docErrorMsg.style.color = '#ef4444';
     docErrorMsg.style.fontSize = '12px';
     docErrorMsg.style.marginTop = '2px';
-    docInput.parentNode.appendChild(docErrorMsg);
+    if (docInput?.parentNode) docInput.parentNode.appendChild(docErrorMsg);
 
     const alertTipoPersonal = $('ndj_alert_tipo_personal');
     const tipoPersonalSelect = $('ndj_sel_tipo_personal');
+
+    async function ndj_cargarReglasEdad() {
+        try {
+            const res = await fetch(`${VITE_URL_APP}/api/dj/reglas-edad/`);
+            const json = await res.json();
+            if (json.success) reglasEdad = json.data;
+        } catch (error) {
+            console.warn('[NuevaDJ] No se pudieron cargar las reglas de edad:', error);
+        }
+    }
+
+    function ndj_calcularEdad(fecha) {
+        const nacimiento = new Date(`${fecha}T00:00:00`);
+        const hoy = new Date();
+        let edad = hoy.getFullYear() - nacimiento.getFullYear();
+        const aniversario = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
+        if (hoy < aniversario) edad--;
+        return edad;
+    }
+
+    function ndj_fechaCompleta(fecha) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
+        const anio = Number(fecha.slice(0, 4));
+        const anioActual = new Date().getFullYear();
+        if (anio < 1900 || anio > anioActual) return false;
+        const nacimiento = new Date(`${fecha}T00:00:00`);
+        return !Number.isNaN(nacimiento.getTime()) && nacimiento.toISOString().slice(0, 10) === fecha;
+    }
+
+    function ndj_abrirModalExcepcionEdad() {
+        const fechaNacimiento = $('ndj_fecha_nacimiento')?.value;
+        const edad = fechaNacimiento && ndj_fechaCompleta(fechaNacimiento)
+            ? ndj_calcularEdad(fechaNacimiento)
+            : null;
+
+        if (edad === null || (edad >= reglasEdad.minima && edad <= reglasEdad.maxima)) return;
+
+        const modal = $('modalExcepcionEdad');
+        if (!modal) return;
+
+        $('ndj_usuario_excepcion').value = $('ndj_usuario')?.value || '';
+        $('ndj_clave_excepcion').value = '';
+
+        if (window.HSOverlay) HSOverlay.open(modal);
+        else modal.classList.remove('hidden');
+
+        setTimeout(() => $('ndj_usuario_excepcion')?.focus(), 100);
+    }
+
+    function ndj_cerrarModalExcepcionEdad() {
+        const modal = $('modalExcepcionEdad');
+        if (!modal) return;
+
+        if (window.HSOverlay) {
+            try { HSOverlay.close(modal); } catch (e) { /* cierre manual de respaldo */ }
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('open', 'opened', 'hs-overlay-open');
+            document.getElementById(`${modal.id}-backdrop`)?.remove();
+        }
+
+        $('ndj_usuario_excepcion').value = '';
+        $('ndj_clave_excepcion').value = '';
+    }
+
+    function ndj_limpiarEstadoEdad() {
+        fechaEdadAlertada = '';
+        excepcionEdadValidada = false;
+        fechaExcepcionAutorizada = '';
+
+        const fechaNacimiento = $('ndj_fecha_nacimiento');
+        fechaNacimiento?.classList.remove(
+            'border-red-500', 'bg-red-50', 'ring-red-500',
+            'border-green-500', 'bg-green-50', 'ring-green-500', 'ring-1'
+        );
+        fechaNacimiento?.style.removeProperty('border-color');
+        fechaNacimiento?.style.removeProperty('box-shadow');
+
+        $('ndj_alerta_edad')?.remove();
+        $('ndj_usuario_excepcion').value = '';
+        $('ndj_clave_excepcion').value = '';
+    }
+
+    function ndj_marcarEdadInvalida(input, invalida) {
+        if (input && !document.getElementById('ndj_alerta_edad')) {
+            const alerta = document.createElement('div');
+            alerta.id = 'ndj_alerta_edad';
+            alerta.style.cssText = 'display:none;align-items:center;gap:8px;margin-top:4px;';
+
+            const mensaje = document.createElement('small');
+            mensaje.id = 'ndj_mensaje_edad';
+            mensaje.textContent = 'Fecha fuera de rango permitido';
+            mensaje.style.cssText = 'color:#ef4444;font-size:12px;';
+
+            const boton = document.createElement('button');
+            boton.id = 'ndj_btnRegistrarExcepcionEdad';
+            boton.type = 'button';
+            boton.textContent = 'Registrar Excepción';
+            boton.style.cssText = 'padding:3px 8px;border:1px solid #f59e0b;border-radius:4px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:600;cursor:pointer;';
+            boton.addEventListener('click', ndj_abrirModalExcepcionEdad);
+
+            alerta.append(mensaje, boton);
+            input.insertAdjacentElement('afterend', alerta);
+        }
+
+        input?.classList.toggle('border-red-500', invalida);
+        input?.classList.toggle('bg-red-50', invalida);
+        input?.classList.toggle('ring-1', invalida);
+        input?.classList.toggle('ring-red-500', invalida);
+        input?.classList.remove('border-green-500', 'bg-green-50', 'ring-green-500');
+        const alerta = document.getElementById('ndj_alerta_edad');
+        if (alerta) alerta.style.display = invalida ? 'flex' : 'none';
+
+        const mensaje = $('ndj_mensaje_edad');
+        const boton = $('ndj_btnRegistrarExcepcionEdad');
+        if (mensaje) {
+            mensaje.textContent = 'Fecha fuera de rango permitido';
+            mensaje.style.color = '#ef4444';
+        }
+        if (boton) boton.style.display = '';
+
+        if (input) {
+            if (invalida) {
+                input.style.setProperty('border-color', '#ef4444', 'important');
+                input.style.setProperty('box-shadow', '0 0 0 1px #ef4444', 'important');
+            } else {
+                input.style.removeProperty('border-color');
+                input.style.removeProperty('box-shadow');
+            }
+        }
+    }
+
+    function ndj_marcarEdadAutorizada(input) {
+        if (!input) return;
+
+        // Reutiliza el contenedor de alerta y cambia su estado visual a aprobado.
+        ndj_marcarEdadInvalida(input, true);
+
+        input.classList.remove('border-red-500', 'bg-red-50', 'ring-red-500');
+        input.classList.add('border-green-500', 'bg-green-50', 'ring-1', 'ring-green-500');
+        input.style.setProperty('border-color', '#22c55e', 'important');
+        input.style.setProperty('box-shadow', '0 0 0 1px #22c55e', 'important');
+
+        const mensaje = $('ndj_mensaje_edad');
+        if (mensaje) {
+            mensaje.textContent = 'Excepción de edad autorizada';
+            mensaje.style.color = '#16a34a';
+        }
+
+        const boton = $('ndj_btnRegistrarExcepcionEdad');
+        if (boton) boton.style.display = 'none';
+    }
+
+    async function ndj_validarEdadNacimiento(input) {
+        if (!input?.value) return true;
+        if (!ndj_fechaCompleta(input.value)) return true;
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const nacimiento = new Date(`${input.value}T00:00:00`);
+        if (nacimiento >= hoy) return true;
+
+        if (!reglasEdad) await ndj_cargarReglasEdad();
+        if (!reglasEdad) return true;
+
+        const edad = ndj_calcularEdad(input.value);
+        if (edad >= reglasEdad.minima && edad <= reglasEdad.maxima) {
+            fechaEdadAlertada = '';
+            excepcionEdadValidada = false;
+            fechaExcepcionAutorizada = '';
+            ndj_marcarEdadInvalida(input, false);
+            return true;
+        }
+
+        if (excepcionEdadValidada && fechaExcepcionAutorizada === input.value) {
+            ndj_marcarEdadAutorizada(input);
+            return true;
+        }
+
+        if (fechaExcepcionAutorizada !== input.value) {
+            excepcionEdadValidada = false;
+            fechaExcepcionAutorizada = '';
+        }
+
+        ndj_marcarEdadInvalida(input, true);
+        if (fechaEdadAlertada === input.value) return false;
+        fechaEdadAlertada = input.value;
+
+        await Swal.fire({
+            icon: 'warning',
+            title: 'Edad fuera del rango permitido',
+            text: `La edad calculada es ${edad} años. El rango permitido es de ${reglasEdad.minima} a ${reglasEdad.maxima} años.`,
+            confirmButtonText: 'Entendido',
+        });
+        input.focus();
+        return false;
+    }
 
     // ── Categorías brevete ───────────────────────────────────
     const NDJ_CAT = {
@@ -54,6 +255,7 @@ import Swal from 'sweetalert2';
     let ndj_allGrados        = [];
     let ndj_allInstituciones = [];
     let ndj_allCarreras      = [];
+    let ndj_allCargos        = [];
     let ndj_catalogoListo    = false;
     let ndj_abriendo         = false;
 
@@ -146,6 +348,7 @@ import Swal from 'sweetalert2';
                     ndj_cargarTipoDoc(), ndj_cargarTipoPer(),
                     ndj_cargarEstadoCivil(), ndj_cargarSistemaPrev(),
                     ndj_cargarDepartamentos(), ndj_cargarEducacion(),
+                    ndj_cargarCargos(),
                 ]);
             }
 
@@ -300,6 +503,7 @@ import Swal from 'sweetalert2';
         if (selPar) selPar.value = f.TIPO_RELA || '';
         if (inpNom) inpNom.value = f.Nombres   || '';
         if (inpFec) inpFec.value = fechaFormateada;
+        ndj_actualizarFechaFamiliar(div);
         return div;
     }
 
@@ -389,6 +593,7 @@ import Swal from 'sweetalert2';
                     ndj_cargarTipoDoc(), ndj_cargarTipoPer(),
                     ndj_cargarEstadoCivil(), ndj_cargarSistemaPrev(),
                     ndj_cargarDepartamentos(), ndj_cargarEducacion(),
+                    ndj_cargarCargos(),
                 ]);
             }
         } catch (e) {
@@ -493,6 +698,7 @@ import Swal from 'sweetalert2';
     // ============================================================
     function ndj_reset() {
         $('formNuevaDJ')?.reset();
+        ndj_limpiarEstadoEdad();
         desactivarModoRecontratacion();
         dniValido = false; coincidenciasValidadas = false; hayCoincidencias = false;
         docErrorMsg.innerHTML = ''; coincidenciasDiv.innerHTML = '';
@@ -505,6 +711,17 @@ import Swal from 'sweetalert2';
         $('ndj_div_sucamec_obs')?.classList.add('hidden');
 
         ndj_limpiarFoto();
+
+        const cargoSel = $('ndj_sel_cargo');
+        if (cargoSel) cargoSel.innerHTML = '<option value="">— Seleccionar —</option>';
+
+        const tipoUi = $('ndj_sel_tipo_personal');
+        if (tipoUi) {
+            tipoUi.value = '';
+            tipoUi.disabled = false;
+            tipoUi.style.background = '';
+            tipoUi.style.color = '';
+        }
 
         ['ndj_provincia_actual','ndj_distrito_actual','ndj_provincia_dni','ndj_distrito_dni','ndj_provincia_nac','ndj_distrito_nac']
             .forEach(id => { const s = $(id); if (s) s.innerHTML = '<option value="">—</option>'; });
@@ -537,6 +754,36 @@ import Swal from 'sweetalert2';
     function ndj_cargarTipoPer()    { return ndj_fetchSelect('ndj_sel_tipo_personal',   `${VITE_URL_APP}/api/dj/get-tipo-per/`,     'codigo','nombre'); }
     function ndj_cargarEstadoCivil(){ return ndj_fetchSelect('ndj_estado_civil',        `${VITE_URL_APP}/api/dj/get-estado-civil/`, 'codigo','nombre'); }
     function ndj_cargarSistemaPrev(){ return ndj_fetchSelect('ndj_sistema_previsional', `${VITE_URL_APP}/api/dj/get-sistema-prev/`, 'codigo','nombre'); }
+
+    async function ndj_cargarCargos() {
+        try {
+            const res  = await fetch(`${VITE_URL_APP}/api/dj/get-cargos-dj`);
+            const json = await res.json();
+            ndj_allCargos = Array.isArray(json) ? json : (json.data ?? []);
+        } catch (e) {
+            console.error('[NuevaDJ] Error cargando cargos:', e);
+        }
+    }
+
+    function ndj_filtrarCargos(tipoPersonal) {
+        const sel = $('ndj_sel_cargo');
+        if (!sel) return;
+        const operativos = ['01', '03', '06'];
+        const admin      = ['02', '05'];
+        const cargoTipo = operativos.includes(tipoPersonal) ? '01'
+                        : admin.includes(tipoPersonal)      ? '02'
+                        : null;
+        sel.innerHTML = '<option value="">— Seleccionar —</option>';
+        if (!cargoTipo) return;
+        ndj_allCargos
+            .filter(c => String(c.tipo ?? '').trim() === cargoTipo)
+            .forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.codigo;
+                o.textContent = c.nombre;
+                sel.appendChild(o);
+            });
+    }
 
     // ============================================================
     // EDUCACIÓN
@@ -650,6 +897,19 @@ import Swal from 'sweetalert2';
     // ============================================================
     // FILAS FAMILIAR
     // ============================================================
+    function ndj_actualizarFechaFamiliar(fila) {
+        const parentesco = fila.querySelector('select[name="ndj_parentesco[]"]')?.value;
+        const contenedorFecha = fila.querySelector('.ndj-family-date');
+        const inputFecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]');
+        const esHijo = parentesco === 'HIJO';
+
+        if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
+        if (inputFecha) {
+            inputFecha.required = esHijo;
+            if (!esHijo) inputFecha.value = '';
+        }
+    }
+
     function ndj_crearFila() {
         const div = document.createElement('div');
         div.className  = 'ndj-family-row';
@@ -662,11 +922,12 @@ import Swal from 'sweetalert2';
                     <option value="CONYUGE">Cónyuge</option><option value="HIJO">Hijo(a)</option>
                 </select></div>
             <div><label class="dj-label">Apellidos y Nombres</label>
-                <input type="text" name="ndj_apellidosNombres[]" class="dj-input" placeholder="Apellidos y nombres completos"></div>
-            <div><label class="dj-label">Fecha de Nacimiento</label>
+                <input type="text" name="ndj_apellidosNombres[]" class="dj-input" placeholder="Apellidos y nombres completos" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+"></div>
+            <div class="ndj-family-date"><label class="dj-label">Fecha de Nacimiento</label>
                 <input type="date" name="ndj_fechaNacimiento[]" class="dj-input"></div>
             <div><button type="button" class="ndj-remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button></div>`;
         div.querySelector('.ndj-remove-family').addEventListener('click', () => div.remove());
+        ndj_actualizarFechaFamiliar(div);
         return div;
     }
 
@@ -784,29 +1045,83 @@ import Swal from 'sweetalert2';
             $('ndj_caduca')?.focus(); return;
         }
         const fechaNac = $('ndj_fecha_nacimiento')?.value;
-        if (fechaNac && new Date(fechaNac + 'T00:00:00') >= hoy) {
+        if (fechaNac && ndj_fechaCompleta(fechaNac) && new Date(fechaNac + 'T00:00:00') >= hoy) {
             Swal.fire({ icon:'warning', title:'Fecha inválida', text:'La fecha de nacimiento debe ser anterior a hoy.', confirmButtonText:'Entendido' });
             $('ndj_fecha_nacimiento')?.focus(); return;
         }
+        if (fechaNac && ndj_fechaCompleta(fechaNac) && reglasEdad) {
+            const edad = ndj_calcularEdad(fechaNac);
+            if (edad < reglasEdad.minima || edad > reglasEdad.maxima) {
+                if (excepcionEdadValidada && fechaExcepcionAutorizada === fechaNac) {
+                    ndj_marcarEdadAutorizada($('ndj_fecha_nacimiento'));
+                } else {
+                ndj_marcarEdadInvalida($('ndj_fecha_nacimiento'), true);
+                if (fechaEdadAlertada !== fechaNac) {
+                    fechaEdadAlertada = fechaNac;
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Edad fuera del rango permitido',
+                        text: `La edad calculada es ${edad} años. El rango permitido es de ${reglasEdad.minima} a ${reglasEdad.maxima} años.`,
+                        confirmButtonText: 'Entendido',
+                    });
+                }
+                $('ndj_fecha_nacimiento')?.focus();
+                return;
+                }
+            } else {
+                ndj_marcarEdadInvalida($('ndj_fecha_nacimiento'), false);
+            }
+        }
         const celular = $('ndj_celular')?.value?.trim();
-        if (celular && (!/^\d+$/.test(celular) || celular.length < 7 || celular.length > 11)) {
-            Swal.fire({ icon:'warning', title:'Celular inválido', text:'El celular debe tener entre 7 y 11 dígitos.', confirmButtonText:'Entendido' });
+        if (celular && !/^\d{9}$/.test(celular)) {
+            Swal.fire({ icon:'warning', title:'Celular inválido', text:'El celular debe tener exactamente 9 dígitos.', confirmButtonText:'Entendido' });
             $('ndj_celular')?.focus(); return;
         }
         const wsp = $('ndj_whatsapp')?.value?.trim();
-        if (wsp && (!/^\d+$/.test(wsp) || wsp.length < 7 || wsp.length > 11)) {
-            Swal.fire({ icon:'warning', title:'WhatsApp inválido', text:'El WhatsApp debe tener entre 7 y 11 dígitos.', confirmButtonText:'Entendido' });
+        if (wsp && !/^\d{9}$/.test(wsp)) {
+            Swal.fire({ icon:'warning', title:'WhatsApp inválido', text:'El WhatsApp debe tener exactamente 9 dígitos.', confirmButtonText:'Entendido' });
             $('ndj_whatsapp')?.focus(); return;
         }
+        const contactoEmergencia = $('ndj_contacto_emergencia')?.value?.trim();
+        if (contactoEmergencia && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/.test(contactoEmergencia)) {
+            Swal.fire({ icon:'warning', title:'Contacto inválido', text:'El campo Llamar a solo admite letras y espacios.', confirmButtonText:'Entendido' });
+            $('ndj_contacto_emergencia')?.focus(); return;
+        }
         const celEmer = $('ndj_celular_emergencia')?.value?.trim();
-        if (celEmer && (!/^\d+$/.test(celEmer) || celEmer.length < 7 || celEmer.length > 11)) {
-            Swal.fire({ icon:'warning', title:'Celular emergencia inválido', text:'Debe tener entre 7 y 11 dígitos.', confirmButtonText:'Entendido' });
+        if (celEmer && !/^\d{9}$/.test(celEmer)) {
+            Swal.fire({ icon:'warning', title:'Celular emergencia inválido', text:'Debe tener exactamente 9 dígitos.', confirmButtonText:'Entendido' });
             $('ndj_celular_emergencia')?.focus(); return;
         }
         const correo = $('ndj_correo')?.value?.trim();
         if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
             Swal.fire({ icon:'warning', title:'Correo inválido', text:'Ingrese un correo válido (ejemplo@dominio.com).', confirmButtonText:'Entendido' });
             $('ndj_correo')?.focus(); return;
+        }
+        const peso = $('ndj_peso')?.value?.trim();
+        if (peso && !/^\d{1,3}$/.test(peso)) {
+            Swal.fire({ icon:'warning', title:'Peso inválido', text:'El peso debe contener como máximo 3 dígitos.', confirmButtonText:'Entendido' });
+            $('ndj_peso')?.focus(); return;
+        }
+        const talla = $('ndj_talla')?.value?.trim();
+        if (talla && !/^\d\.\d{2}$/.test(talla)) {
+            Swal.fire({ icon:'warning', title:'Talla inválida', text:'Ingrese la talla con el formato M.cm, por ejemplo: 1.70.', confirmButtonText:'Entendido' });
+            $('ndj_talla')?.focus(); return;
+        }
+        const anioEgreso = $('ndj_anio_egreso')?.value?.trim();
+        if (anioEgreso && !/^\d{4}$/.test(anioEgreso)) {
+            Swal.fire({ icon:'warning', title:'Año de egreso inválido', text:'El año de egreso debe tener exactamente 4 dígitos.', confirmButtonText:'Entendido' });
+            $('ndj_anio_egreso')?.focus(); return;
+        }
+        const ocupacionPrincipal = $('ndj_ocupacion_principal')?.value?.trim();
+        if (ocupacionPrincipal && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/.test(ocupacionPrincipal)) {
+            Swal.fire({ icon:'warning', title:'Profesión inválida', text:'Profesión / Ocupación Principal solo admite letras y espacios.', confirmButtonText:'Entendido' });
+            $('ndj_ocupacion_principal')?.focus(); return;
+        }
+        const experienciaAnios = $('ndj_experiencia_anios')?.value?.trim();
+        const experienciaMeses = $('ndj_experiencia_meses')?.value?.trim();
+        if ((experienciaAnios && !/^\d{1,2}$/.test(experienciaAnios)) || (experienciaMeses && !/^\d{1,2}$/.test(experienciaMeses))) {
+            Swal.fire({ icon:'warning', title:'Experiencia inválida', text:'Los años y meses de experiencia admiten como máximo 2 dígitos.', confirmButtonText:'Entendido' });
+            (experienciaAnios ? $('ndj_experiencia_anios') : $('ndj_experiencia_meses'))?.focus(); return;
         }
 
         // Campos obligatorios
@@ -820,6 +1135,36 @@ import Swal from 'sweetalert2';
         if (faltante) {
             Swal.fire({ icon:'warning', title:'Campo obligatorio', text:`El campo "${faltante.nombre}" es requerido.`, confirmButtonText:'Entendido' });
             $(faltante.id)?.focus(); return;
+        }
+
+        const hijoSinFecha = [...document.querySelectorAll('#ndj_familyContainer .ndj-family-row')]
+            .find(fila => {
+                const parentesco = fila.querySelector('select[name="ndj_parentesco[]"]')?.value;
+                const fecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]')?.value;
+                return parentesco === 'HIJO' && !fecha;
+            });
+        if (hijoSinFecha) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Fecha obligatoria',
+                text: 'Ingrese la fecha de nacimiento para el familiar Hijo(a).',
+                confirmButtonText: 'Entendido',
+            });
+            hijoSinFecha.querySelector('input[name="ndj_fechaNacimiento[]"]')?.focus();
+            return;
+        }
+
+        const familiarConNombreInvalido = [...document.querySelectorAll('#ndj_familyContainer input[name="ndj_apellidosNombres[]"]')]
+            .find(input => input.value.trim() && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/.test(input.value.trim()));
+        if (familiarConNombreInvalido) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Nombre de familiar inválido',
+                text: 'Apellidos y Nombres solo admite letras y espacios.',
+                confirmButtonText: 'Entendido',
+            });
+            familiarConNombreInvalido.focus();
+            return;
         }
 
         // Pregunta si no hay foto
@@ -911,6 +1256,7 @@ import Swal from 'sweetalert2';
             FAM_FECHA_NACI:        payload.ndj_fechaNacimiento,
             sucursal:              payload.ndj_filtroSucursal,
             usuario:               payload.ndj_usuario,
+            PERS_CONTRATADO:       0,
         };
 
         let url;
@@ -973,6 +1319,7 @@ import Swal from 'sweetalert2';
     // ============================================================
     document.addEventListener('DOMContentLoaded', function () {
 
+        ndj_cargarReglasEdad();
         ndj_bloquearCampos(true);
         if (alertTipoPersonal) alertTipoPersonal.style.display = 'block';
 
@@ -997,8 +1344,26 @@ import Swal from 'sweetalert2';
         });
 
         // Fecha nacimiento: anterior a hoy
+        $('ndj_fecha_nacimiento')?.setAttribute('maxlength', '10');
+        $('ndj_fecha_nacimiento')?.addEventListener('input', function () {
+            const anioExcedido = this.value.match(/^(\d{5,})(-\d{2}-\d{2})$/);
+            if (anioExcedido) {
+                this.value = `${anioExcedido[1].slice(0, 4)}${anioExcedido[2]}`;
+            }
+        });
+
+        const validarEdadAlIngresar = function () {
+            if (this.value && !ndj_fechaCompleta(this.value)) {
+                return;
+            }
+            ndj_validarEdadNacimiento(this);
+        };
+
+        $('ndj_fecha_nacimiento')?.addEventListener('blur', validarEdadAlIngresar);
+        $('ndj_fecha_nacimiento')?.addEventListener('change', validarEdadAlIngresar);
+
         $('ndj_fecha_nacimiento')?.addEventListener('blur', function () {
-            if (!this.value) return;
+            if (!this.value || !ndj_fechaCompleta(this.value)) return;
             const hoy = new Date(); hoy.setHours(0,0,0,0);
             
             if (new Date(this.value + 'T00:00:00') >= hoy) {
@@ -1008,28 +1373,67 @@ import Swal from 'sweetalert2';
         });
 
         // Celular
-        $('ndj_celular')?.addEventListener('input', function () { this.value = this.value.replace(/\D/g,'').slice(0,11); });
+        $('ndj_celular')?.addEventListener('input', function () { this.value = this.value.replace(/\D/g,'').slice(0,9); });
         $('ndj_celular')?.addEventListener('blur',  function () {
-            if (this.value && this.value.length < 7) {
-                Swal.fire({ icon:'warning', title:'Celular inválido', text:'Debe tener al menos 7 dígitos.', confirmButtonText:'Entendido' });
+            if (this.value && this.value.length !== 9) {
+                Swal.fire({ icon:'warning', title:'Celular inválido', text:'Debe tener exactamente 9 dígitos.', confirmButtonText:'Entendido' });
                 this.value = '';
             }
         });
 
         // WhatsApp
-        $('ndj_whatsapp')?.addEventListener('input', function () { this.value = this.value.replace(/\D/g,'').slice(0,11); });
+        $('ndj_whatsapp')?.addEventListener('input', function () { this.value = this.value.replace(/\D/g,'').slice(0,9); });
         $('ndj_whatsapp')?.addEventListener('blur',  function () {
-            if (this.value && this.value.length < 7) {
-                Swal.fire({ icon:'warning', title:'WhatsApp inválido', text:'Debe tener al menos 7 dígitos.', confirmButtonText:'Entendido' });
+            if (this.value && this.value.length !== 9) {
+                Swal.fire({ icon:'warning', title:'WhatsApp inválido', text:'Debe tener exactamente 9 dígitos.', confirmButtonText:'Entendido' });
                 this.value = '';
             }
         });
 
-        // Celular emergencia
-        $('ndj_celular_emergencia')?.addEventListener('input', function () { this.value = this.value.replace(/\D/g,'').slice(0,11); });
+        // Peso: solamente números enteros, máximo tres dígitos.
+        $('ndj_peso')?.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 3);
+        });
+
+        // Talla: formato M.cm (un dígito, punto y dos decimales), por ejemplo 1.70.
+        $('ndj_talla')?.addEventListener('input', function () {
+            const partes = this.value.replace(/[^0-9.]/g, '').split('.');
+            const metros = partes.shift().slice(0, 1);
+            const centimetros = partes.join('').slice(0, 2);
+            this.value = metros ? `${metros}${this.value.includes('.') ? `.${centimetros}` : ''}` : '';
+        });
+        $('ndj_talla')?.addEventListener('blur', function () {
+            if (this.value && !/^\d\.\d{2}$/.test(this.value)) {
+                Swal.fire({ icon:'warning', title:'Talla inválida', text:'Use el formato M.cm, por ejemplo: 1.70.', confirmButtonText:'Entendido' });
+                this.value = '';
+            }
+        });
+
+        // Año de egreso: solo cuatro dígitos.
+        $('ndj_anio_egreso')?.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+
+        // Profesión y experiencia: letras para profesión; dos dígitos para cada periodo.
+        $('ndj_ocupacion_principal')?.addEventListener('input', function () {
+            this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/g, '');
+        });
+        ['ndj_experiencia_anios', 'ndj_experiencia_meses'].forEach(id => {
+            $(id)?.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 2);
+            });
+        });
+
+        // Contacto de emergencia: solo letras y espacios.
+        $('ndj_contacto_emergencia')?.addEventListener('input', function () {
+            this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/g, '');
+        });
+
+        // Celular emergencia: solo números, máximo nueve dígitos.
+        $('ndj_celular_emergencia')?.addEventListener('input', function () { this.value = this.value.replace(/\D/g,'').slice(0,9); });
         $('ndj_celular_emergencia')?.addEventListener('blur',  function () {
-            if (this.value && this.value.length < 7) {
-                Swal.fire({ icon:'warning', title:'Celular emergencia inválido', text:'Debe tener al menos 7 dígitos.', confirmButtonText:'Entendido' });
+            if (this.value && this.value.length !== 9) {
+                Swal.fire({ icon:'warning', title:'Celular emergencia inválido', text:'Debe tener exactamente 9 dígitos.', confirmButtonText:'Entendido' });
                 this.value = '';
             }
         });
@@ -1085,7 +1489,59 @@ import Swal from 'sweetalert2';
         // Cerrar
         $('ndj_btnCerrar')?.addEventListener('click',  ndj_cerrar);
         $('ndj_btnCerrarX')?.addEventListener('click', ndj_cerrar);
+        $('ndj_btnCerrarExcepcionEdad')?.addEventListener('click', ndj_cerrarModalExcepcionEdad);
+        $('ndj_btnCancelarExcepcionEdad')?.addEventListener('click', ndj_cerrarModalExcepcionEdad);
+        $('ndj_btnValidarExcepcionEdad')?.addEventListener('click', async function () {
+            const usuario = $('ndj_usuario_excepcion')?.value?.trim();
+            const clave = $('ndj_clave_excepcion')?.value || '';
+            const fechaNacimiento = $('ndj_fecha_nacimiento')?.value || '';
+            const boton = this;
+
+            if (!usuario || !clave) {
+                Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Ingrese usuario y contraseña.', confirmButtonText: 'Entendido' });
+                return;
+            }
+
+            boton.disabled = true;
+            try {
+                const response = await fetch(`${VITE_URL_APP}/api/dj/validar-excepcion-edad`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('[name=_token]')?.value || '',
+                    },
+                    body: JSON.stringify({ usuario, clave, fecha_nacimiento: fechaNacimiento }),
+                });
+                const json = await response.json();
+
+                if (!json.success) {
+                    const titulosError = {
+                        fecha_nacimiento_invalida: 'Fecha inválida',
+                        reglas_edad_no_disponibles: 'Configuración de edad',
+                        excepcion_no_requerida: 'No requiere excepción',
+                    };
+                    Swal.fire({
+                        icon: 'error',
+                        title: titulosError[json.code] || 'No autorizado',
+                        text: json.message || 'No se pudieron validar las credenciales.',
+                        confirmButtonText: 'Entendido',
+                    });
+                    return;
+                }
+
+                excepcionEdadValidada = true;
+                fechaExcepcionAutorizada = fechaNacimiento;
+                ndj_marcarEdadAutorizada($('ndj_fecha_nacimiento'));
+                ndj_cerrarModalExcepcionEdad();
+                await Swal.fire({ icon: 'success', title: 'Credenciales validadas', text: 'Ahora puede guardar la DJ con la excepción de edad.', timer: 1800, showConfirmButton: false });
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo validar la autorización.', confirmButtonText: 'Entendido' });
+            } finally {
+                boton.disabled = false;
+            }
+        });
         document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !$('modalExcepcionEdad')?.classList.contains('hidden')) return;
             if (e.key === 'Escape' && !$('modalNuevaDJ')?.classList.contains('hidden')) ndj_cerrar();
         });
 
@@ -1111,7 +1567,7 @@ import Swal from 'sweetalert2';
         });
 
         // Tipo personal
-        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_aplicarTipo(this.value); });
+        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_aplicarTipo(this.value); ndj_filtrarCargos(this.value); });
 
         // Institución → carrera
         $('ndj_institucion')?.addEventListener('change', function () { ndj_poblarCarreras(this.value); });
@@ -1139,6 +1595,18 @@ import Swal from 'sweetalert2';
             const btn = e.target.closest('.ndj-remove-family');
             if (btn) btn.closest('.ndj-family-row')?.remove();
         });
+        $('ndj_familyContainer')?.addEventListener('change', e => {
+            if (e.target.matches('select[name="ndj_parentesco[]"]')) {
+                ndj_actualizarFechaFamiliar(e.target.closest('.ndj-family-row'));
+            }
+        });
+        $('ndj_familyContainer')?.addEventListener('input', e => {
+            if (e.target.matches('input[name="ndj_apellidosNombres[]"]')) {
+                e.target.value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/g, '');
+            }
+        });
+        document.querySelectorAll('#ndj_familyContainer .ndj-family-row')
+            .forEach(ndj_actualizarFechaFamiliar);
 
         // DNI y coincidencias
         tipoDocInput?.addEventListener('change', validarDocumento);

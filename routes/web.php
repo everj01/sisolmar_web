@@ -287,7 +287,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/get-check-pdf', [DjController::class, 'getCheckPdf']);
             Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
             Route::get('/validar-documento', [DjController::class, 'validarDocumentoDj']);
+            Route::get('/verificar-vacaciones', [DjController::class, 'verificarVacaciones']);
+            Route::get('/get-cargos-dj', [DjController::class, 'getCargosDj']);
+            Route::get('/verificar-contrato', [DjController::class, 'verificarContrato']);
             Route::post('/save-nueva-dj', [DjController::class, 'saveNuevaDj']);
+            Route::post('/validar-excepcion-edad', [DjController::class, 'validarExcepcionEdad']);
             Route::get('/buscar-coincidencias', [DjController::class, 'buscarCoincidencias']);
             Route::get('/reporte-personal-datos-generales', [ReportePersonalController::class, 'datosGenerales']);
             Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);
@@ -295,6 +299,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/upload-foto-personal', [DjController::class, 'uploadFotoPersonal']);
             Route::get('get-tipo-doc/', [DjController::class, 'getTipoDoc']);
             Route::get('get-tipo-per/', [DjController::class, 'getTipoPer']);
+            Route::get('reglas-edad/', [DjController::class, 'reglasEdad']);
             Route::get('get-estado-civil/', [DjController::class, 'getEstadoCivil']);
             Route::get('get-sistema-prev/', [DjController::class, 'getSistemaPrev']);
         });

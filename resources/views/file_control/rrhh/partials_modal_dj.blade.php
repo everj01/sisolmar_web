@@ -555,6 +555,32 @@
                         @csrf
                         <input type="hidden" name="cod_postulante" id="cod_postulante">
                         <input type="hidden" id="tipo_personal" name="tipo_personal">
+                        <input type="hidden" id="cargo" name="cargo">
+
+                        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:14px;">
+                            <div style="flex:1;min-width:240px;">
+                                <label class="dj-label">Tipo de Personal</label>
+                                <select id="tipo_personal_ui" class="dj-select" disabled style="background:#f3f4f6;color:#9ca3af;">
+                                    <option value="">— Seleccionar —</option>
+                                </select>
+                            </div>
+                            <div style="flex:1;min-width:240px;">
+                                <label class="dj-label">Cargo</label>
+                                <select id="cargo_ui" class="dj-select" disabled style="background:#f3f4f6;color:#9ca3af;">
+                                    <option value="">— Seleccionar —</option>
+                                </select>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:flex-end;">
+                                <button type="button" id="btnVerificarVacaciones" class="dj-btn-sm"
+                                    style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:6px;padding:6px 14px;font-weight:600;white-space:nowrap;">
+                                    Verificar si está de vacaciones
+                                </button>
+                                <button type="button" id="btnVerificarContrato" class="dj-btn-sm"
+                                    style="background:#fff7ed;color:#b45309;border:1px solid #fdba74;border-radius:6px;padding:6px 14px;font-weight:600;white-space:nowrap;">
+                                    Verificar Contrato
+                                </button>
+                            </div>
+                        </div>
 
                         {{-- ① DATOS PERSONALES --}}
                         <div class="dj-group">
@@ -869,6 +895,19 @@
                                     <div class="dj-section-body">
                                         <div class="dj-grid-3">
                                             <div>
+                                                <label class="dj-label">Sucursal</label>
+                                                <select id="sucursal" name="sucursal" class="dj-select"
+                                                    data-compare="sucursal">
+                                                    <option value="">—</option>
+                                                    @foreach ($sucursales ?? [] as $sucursal)
+                                                        @if (!in_array(trim((string) $sucursal->codigo), ['', '0', '00'], true))
+                                                            <option value="{{ trim((string) $sucursal->codigo) }}">{{ $sucursal->abreviatura }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div>
                                                 <label class="dj-label">Embargos financieros</label>
                                                 <select id="embargos" name="embargos" class="dj-select"
                                                     data-compare="embargos">
@@ -882,9 +921,9 @@
                                                 <label class="dj-label">Cuenta de Sueldo</label>
                                                 <select id="cuenta_banco" name="cuenta_banco" class="dj-select">
                                                     <option value="" disabled>—</option>
-            
-                                                    <option value="BCP">BCP</option>
-                                                    <option value="INTERBANK">INTERBANK</option>
+                                                    @foreach ($bancos as $banco)
+                                                        <option value="{{ $banco->id }}">{{ $banco->text }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>

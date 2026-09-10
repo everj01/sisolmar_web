@@ -3294,19 +3294,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ── Tabla coincidencias ──────────────────────────────────
-    const tblPersonasCN = new Tabulator("#tblPersonasCN", {
-        height: "100%",
-        layout: "fitDataFill",
-        responsiveLayout: "collapse",
-        columns: [
-            { title: "Código", field: "CODI_PERS", hozAlign: "center", width: '10%' },
-            { title: "Personal", field: "personal", hozAlign: "left", width: '30%' },
-            { title: "Nro Documento", field: "nroDoc", hozAlign: "center", width: '15%' },
-            { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '18%' },
-        ],
-    });
-
     // ============================================================
     // HELPERS INTERNOS
     // ============================================================
@@ -3700,6 +3687,57 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         generarDeclaracionJuradaPDF();
+    });
+
+    // ============================================================
+    // TIPO DE TRABAJADOR + VERIFICACIÓN DE VACACIONES
+    // ============================================================
+    const tipoTrabajadorUi = document.getElementById('tipo_personal_ui');
+    const btnVerificarVacaciones = document.getElementById('btnVerificarVacaciones');
+
+    (function cargarTiposPersonal() {
+        axios.get(`${VITE_URL_APP}/api/dj/get-tipo-per/`)
+            .then(r => {
+                const items = Array.isArray(r.data) ? r.data : (r.data?.data ?? []);
+                if (tipoTrabajadorUi) {
+                    items.forEach(t => {
+                        const o = document.createElement('option');
+                        o.value = t.codigo;
+                        o.textContent = t.nombre;
+                        tipoTrabajadorUi.appendChild(o);
+                    });
+                }
+            })
+            .catch(() => { });
+    })();
+
+    tipoTrabajadorUi?.addEventListener('change', function () {
+        const hidden = document.getElementById('tipo_personal');
+        if (hidden) hidden.value = this.value;
+        aplicarVisibilidadPorTipo(this.value);
+    });
+
+    btnVerificarVacaciones?.addEventListener('click', async function () {
+        const codiPers = (document.getElementById('cod_postulante')?.value || '').trim();
+        if (!codiPers) {
+            Swal.fire({ icon: 'warning', title: 'Sin personal', text: 'No hay un personal seleccionado para verificar.' });
+            return;
+        }
+        btnVerificarVacaciones.disabled = true;
+        try {
+            const resp = await axios.get(`${VITE_URL_APP}/api/dj/verificar-vacaciones`, { params: { codi_pers: codiPers } });
+            const enVacaciones = resp.data?.en_vacaciones === true;
+            setBloqueoTipoTrabajador(enVacaciones);
+            if (enVacaciones) {
+                await Swal.fire({ icon: 'warning', title: 'Está de vacaciones', text: 'El personal se encuentra de vacaciones, no se puede modificar el tipo de trabajador.', confirmButtonText: 'Entendido' });
+            } else {
+                await Swal.fire({ icon: 'success', title: 'Disponible', text: 'El personal no está de vacaciones, puede modificar el tipo de trabajador.', timer: 1800, showConfirmButton: false });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar el estado de vacaciones.' });
+        } finally {
+            btnVerificarVacaciones.disabled = false;
+        }
     });
 
     // ============================================================
@@ -4594,11 +4632,101 @@ document.addEventListener('DOMContentLoaded', function () {
         resizer.addEventListener('dblclick', () => { panelBk.style.width = '38%'; panelBk.style.flexBasis = '38%'; });
     })();
 
+    // ============================================================
+    // TIPO DE TRABAJADOR + CARGO + VERIFICACIÓN CONTRATO
+    // ============================================================
+    const cargoUi = document.getElementById('cargo_ui');
+
+    // Cargar cargos al abrir modal
+    async function cargarCargosDj() {
+        try {
+            const response = await axios.get(`${VITE_URL_APP}/api/dj/get-cargos-dj`);
+            if (response.data?.success && response.data.data) {
+                window.allCargosDj = response.data.data;
+            }
+        } catch (err) {
+            console.error('[ActualizarDJ] Error cargando cargos:', err);
+            window.allCargosDj = [];
+        }
+    }
+
+    // Cargar cargos al cargar catálogos
+    (async () => {
+        await cargarCargosDj();
+    })();
+
+    // Filtrar cargos al cambiar tipo de personal
+    tipoTrabajadorUi?.addEventListener('change', function () {
+        filtrarCargos(this.value);
+        setBloqueoCargo(true);
+    });
+
+    // Sincronizar valor del select cargo_ui con el campo oculto cargo
+    cargoUi?.addEventListener('change', function () {
+        const hiddenCargo = document.getElementById('cargo');
+        if (hiddenCargo) hiddenCargo.value = this.value;
+    });
+
+    // Botón Verificar Contrato
+    const btnVerificarContrato = document.getElementById('btnVerificarContrato');
+    btnVerificarContrato?.addEventListener('click', async function () {
+        const codiPers = (document.getElementById('cod_postulante')?.value || '').trim();
+        if (!codiPers) {
+            Swal.fire({ icon: 'warning', title: 'Sin personal', text: 'No hay un personal seleccionado para verificar.' });
+            return;
+        }
+        const btn = this;
+        btn.disabled = true;
+        try {
+            const resp = await axios.get(`${VITE_URL_APP}/api/dj/verificar-contrato`, { params: { codi_pers: codiPers } });
+            const tieneContrato = resp.data?.tiene_contrato === true;
+            setBloqueoCargo(tieneContrato);
+            if (tieneContrato) {
+                await Swal.fire({ icon: 'warning', title: 'Contrato Activo', text: 'El personal tiene un contrato activo, no se puede modificar el cargo.', confirmButtonText: 'Entendido' });
+            } else {
+                await Swal.fire({ icon: 'success', title: 'Sin Contrato', text: 'El personal no tiene contrato activo, puede modificar el cargo.', timer: 1800, showConfirmButton: false });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar el contrato.' });
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
 }); // fin DOMContentLoaded
 
 // ============================================================
 // FUNCIONES GLOBALES (fuera del DOMContentLoaded)
 // ============================================================
+
+// ── Filtrar cargos según tipo de personal ──────────────────
+function filtrarCargos(tipoPersonal) {
+    const sel = document.getElementById('cargo_ui');
+    if (!sel) return;
+    const operativos = ['01', '03', '06'];
+    const admin = ['02', '05'];
+    const cargoTipo = operativos.includes(tipoPersonal) ? '01'
+                    : admin.includes(tipoPersonal) ? '02'
+                    : null;
+    sel.innerHTML = '<option value="">— Seleccionar —</option>';
+    if (!cargoTipo || !window.allCargosDj) return;
+    window.allCargosDj
+        .filter(c => String(c.tipo ?? '').trim() === cargoTipo)
+        .forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.codigo;
+            o.textContent = c.nombre;
+            sel.appendChild(o);
+        });
+}
+
+function setBloqueoCargo(bloqueado) {
+    const ui = document.getElementById('cargo_ui');
+    if (!ui) return;
+    ui.disabled = bloqueado;
+    ui.style.background = bloqueado ? '#f3f4f6' : '';
+    ui.style.color = bloqueado ? '#9ca3af' : '';
+}
 
 // ── Abrir modal DJ ──────────────────────────────────────────
 async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
@@ -4612,6 +4740,8 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             limpiarSplitView();
             setValue('cod_postulante', '');
             setValue('tipo_personal', '');
+            setValue('#tipo_personal_ui', '');
+            setBloqueoTipoTrabajador(true);
 
             await cargarCatalogos();
 
@@ -4738,6 +4868,8 @@ async function llenarFormulario(data) {
     console.log('TIPO TRAB:', tipotrab); // ← agregar esto
 
     setValue('tipo_personal', tipotrab);
+    setValue('#tipo_personal_ui', tipotrab);
+    setBloqueoTipoTrabajador(true);
     aplicarVisibilidadPorTipo(tipotrab);
 
     setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
@@ -4816,6 +4948,11 @@ async function llenarFormulario(data) {
     setValue('#embargos', data.PERS_EMBARGO ? data.PERS_EMBARGO.trim() : '');
     setValue('#consumo_sustancias', data.PERS_SMO ? data.PERS_SMO.trim() : '');
     setValue('#cuenta_banco', data.dj2026_banco ? data.dj2026_banco.trim() : '');
+    setValue('#sucursal', data.SUCU_CODIGO ? data.SUCU_CODIGO.trim() : '');
+    filtrarCargos(data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '');
+    setValue('#cargo_ui', data.CODI_CARG ? data.CODI_CARG.trim() : '');
+    setValue('#cargo', data.CODI_CARG ? data.CODI_CARG.trim() : '');
+    setBloqueoCargo(true);
 
     setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
     setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
@@ -5005,6 +5142,14 @@ function setValue(selector, value) {
     const id = selector.startsWith('#') ? selector : `#${selector}`;
     const el = document.querySelector(id);
     if (el) el.value = value || '';
+}
+
+function setBloqueoTipoTrabajador(bloqueado) {
+    const ui = document.getElementById('tipo_personal_ui');
+    if (!ui) return;
+    ui.disabled = bloqueado;
+    ui.style.background = bloqueado ? '#f3f4f6' : '';
+    ui.style.color = bloqueado ? '#9ca3af' : '';
 }
 
 function formatDateForInput(dateValue) {
@@ -5390,6 +5535,13 @@ function limpiarSplitView() {
 
     const badge = document.getElementById('bkFechaModBadge');
     if (badge) badge.textContent = '';
+
+    // Reset cargo
+    const cargoUi = document.getElementById('cargo_ui');
+    if (cargoUi) {
+        cargoUi.innerHTML = '<option value="">— Seleccionar —</option>';
+        setBloqueoCargo(true);
+    }
 }
 
 // ============================================================
@@ -5631,6 +5783,18 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         modal.classList.add('hidden');
         document.body.style.overflow = '';
         resetModal();
+        
+        // Reset Cargo y Tipo de Personal selects
+        const cargoUi = document.getElementById('cargo_ui');
+        if (cargoUi) {
+            cargoUi.innerHTML = '<option value="">— Seleccionar —</option>';
+            setBloqueoCargo(true);
+        }
+        const tipoUi = document.getElementById('tipo_personal_ui');
+        if (tipoUi) {
+            tipoUi.value = '';
+            setBloqueoTipoTrabajador(true);
+        }
     }
 
     // ── Cargar y validar PDF ──────────────────────────────────

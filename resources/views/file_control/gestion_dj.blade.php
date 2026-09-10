@@ -115,14 +115,16 @@
                         {{-- Sucursal --}}
                         <div class="flex items-center gap-2">
                             <label class="text-sm font-medium text-gray-700">Sucursal:</label>
-                            @php $sucursalesFiltradas = array_slice($sucursales, 1); @endphp
                             <select id="filtroSucursalPEN"
                                 class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                @if(count($sucursalesFiltradas) > 1)
+                                @if(! $restringirSucursalesGestionDj && count($sucursalesGestionDj) > 1)
                                     <option value="">Todas</option>
                                 @endif
-                                @foreach ($sucursalesFiltradas as $sucursal)
-                                    <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                                @foreach ($sucursalesGestionDj as $sucursal)
+                                    <option value="{{ $sucursal->codigo }}"
+                                        @selected($filtrosInicialesGestionDj['sucursal'] === trim((string) $sucursal->codigo))>
+                                        {{ $sucursal->abreviatura }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -131,22 +133,12 @@
                         <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
                             <label class="text-sm font-medium text-gray-700">Tipo:</label>
                             <select id="filtroTipoPerPEN" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                @if($tipoPerLimitar == 0)
-                                    <option value="">Todos</option>
-                                    <option value="OPERATIVO 4°">Operativo 4°</option>
-                                    <option value="OPERATIVO 5°">Operativo 5°</option>
-                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
-                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
-                                    <option value="ESPECIAL">Especial</option>
-                                @elseif($tipoPerLimitar == 1)
-                                    <option value="">Todos</option>
-                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
-                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
-                                @elseif($tipoPerLimitar == 2)
-                                    <option value="">Todos</option>
-                                    <option value="OPERATIVO 4°">Operativo 4°</option>
-                                    <option value="OPERATIVO 5°">Operativo 5°</option>
-                                @endif
+                                <option value="" @selected($filtrosInicialesGestionDj['tipo'] === '')>Todos</option>
+                                <option value="OPERATIVO 4°">Operativo 4°</option>
+                                <option value="OPERATIVO 5°" @selected($filtrosInicialesGestionDj['tipo'] === 'OPERATIVO 5°')>Operativo 5°</option>
+                                <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                                <option value="ESPECIAL">Especial</option>
                             </select>
                         </div>
 
@@ -173,8 +165,8 @@
                         <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
                             <label class="text-sm font-medium text-gray-700">Estado:</label>
                             <select id="filtroVigenciaPEN" class="form-select text-sm w-36 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                                <option value="" selected>Todos</option>
-                                <option value="SI">Activos</option>
+                                <option value="" @selected($filtrosInicialesGestionDj['vigencia'] === '')>Todos</option>
+                                <option value="SI" @selected($filtrosInicialesGestionDj['vigencia'] === 'SI')>Activos</option>
                                 <option value="NO">Cesados</option>
                             </select>
                         </div>
@@ -271,17 +263,13 @@
                     <option value="">Todas</option>
                 </select> -->
                 
-                @php
-                    $sucursalesFiltradas = array_slice($sucursales, 1);
-                @endphp
-
                 <select id="filtroSucursal" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     
-                    @if(count($sucursalesFiltradas) > 1)
+                    @if(! $restringirSucursalesGestionDj && count($sucursalesGestionDj) > 1)
                         <option value="">Todas</option>
                     @endif
 
-                    @foreach ($sucursalesFiltradas as $sucursal)
+                    @foreach ($sucursalesGestionDj as $sucursal)
                         <option value="{{ $sucursal->codigo }}">
                             {{ $sucursal->abreviatura }}
                         </option>
@@ -451,5 +439,3 @@
        'resources/js/functions/nueva_dj.js', 
        'resources/js/functions/modal_reporte.js'
     ])
-
-
