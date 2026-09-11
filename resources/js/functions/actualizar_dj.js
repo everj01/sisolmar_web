@@ -3981,6 +3981,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     ...data,
                     cambios: cambios,
                     source: tabActiva,
+                    no_caduca_dni: data.no_caduca_dni === 'on' ? '1' : '0',
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
                     FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
@@ -4667,6 +4668,33 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hiddenCargo) hiddenCargo.value = this.value;
     });
 
+    // No Caduca checkbox: bloquear/desbloquear caduca
+    const noCaducaDni = document.getElementById('no_caduca_dni');
+    const caducaInput = document.getElementById('caduca');
+    noCaducaDni?.addEventListener('change', function () {
+        if (!caducaInput) return;
+        if (this.checked) {
+            caducaInput.disabled = true;
+            caducaInput.value = '0000-00-00';
+            caducaInput.style.background = '#f3f4f6';
+            caducaInput.style.color = '#9ca3af';
+        } else {
+            caducaInput.disabled = false;
+            caducaInput.value = '';
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+    });
+
+    // Caduca: limitar año a 4 dígitos
+    caducaInput?.setAttribute('maxlength', '10');
+    caducaInput?.addEventListener('input', function () {
+        const anioExcedido = this.value.match(/^(\d{5,})(-\d{2}-\d{2})$/);
+        if (anioExcedido) {
+            this.value = `${anioExcedido[1].slice(0, 4)}${anioExcedido[2]}`;
+        }
+    });
+
     // Botón Verificar Contrato
     const btnVerificarContrato = document.getElementById('btnVerificarContrato');
     btnVerificarContrato?.addEventListener('click', async function () {
@@ -4879,6 +4907,25 @@ async function llenarFormulario(data) {
     setValue('#apellido_materno', data.APEL_2 || '');
     setValue('#dni', data.NRO_DOCU_IDEN ? data.NRO_DOCU_IDEN.trim() : '');
     setValue('#caduca', formatDateForInput(data.PERS_FECHCADUCADNI) ? formatDateForInput(data.PERS_FECHCADUCADNI) : '');
+
+    // No Caduca checkbox
+    const noCaduca = document.getElementById('no_caduca_dni');
+    const caducaInput = document.getElementById('caduca');
+    const noCaducaVal = data.NO_CADUCA_DNI;
+    if (noCaduca) {
+        noCaduca.checked = (noCaducaVal == 1 || noCaducaVal === '1' || noCaducaVal === true);
+        if (noCaduca.checked && caducaInput) {
+            caducaInput.disabled = true;
+            caducaInput.value = '0000-00-00';
+            caducaInput.style.background = '#f3f4f6';
+            caducaInput.style.color = '#9ca3af';
+        } else if (caducaInput) {
+            caducaInput.disabled = false;
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+    }
+
     setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
     setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
@@ -5542,6 +5589,7 @@ function limpiarSplitView() {
         cargoUi.innerHTML = '<option value="">— Seleccionar —</option>';
         setBloqueoCargo(true);
     }
+
 }
 
 // ============================================================
@@ -5794,6 +5842,17 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         if (tipoUi) {
             tipoUi.value = '';
             setBloqueoTipoTrabajador(true);
+        }
+
+        // Reset No Caduca checkbox y restore caduca
+        const noCaducaReset = document.getElementById('no_caduca_dni');
+        const caducaReset = document.getElementById('caduca');
+        if (noCaducaReset) noCaducaReset.checked = false;
+        if (caducaReset) {
+            caducaReset.disabled = false;
+            caducaReset.value = '';
+            caducaReset.style.background = '';
+            caducaReset.style.color = '';
         }
     }
 

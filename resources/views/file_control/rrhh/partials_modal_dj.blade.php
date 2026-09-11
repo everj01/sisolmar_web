@@ -660,7 +660,12 @@
                                                     name="dni" class="dj-input" placeholder="12345678"
                                                     data-compare="dni"></div>
                                             <div><label class="dj-label">Caduca</label><input type="date" id="caduca"
-                                                    name="caduca" class="dj-input" data-compare="caduca"></div>
+                                                    name="caduca" class="dj-input" data-compare="caduca">
+                                                <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;cursor:pointer;">
+                                                    <input type="checkbox" id="no_caduca_dni" name="no_caduca_dni" style="width:16px;height:16px;cursor:pointer;">
+                                                    No Caduca
+                                                </label>
+                                            </div>
                                             <div>
                                                 <label class="dj-label">Estado Civil</label>
                                                 <select id="estado_civil" name="estado_civil" class="dj-select"

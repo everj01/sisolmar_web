@@ -703,6 +703,17 @@ import Swal from 'sweetalert2';
         dniValido = false; coincidenciasValidadas = false; hayCoincidencias = false;
         docErrorMsg.innerHTML = ''; coincidenciasDiv.innerHTML = '';
 
+        // Reset No Caduca checkbox y restore caduca
+        const caducaInput = $('ndj_caduca');
+        const noCaduca = $('ndj_no_caduca');
+        if (noCaduca) noCaduca.checked = false;
+        if (caducaInput) {
+            caducaInput.disabled = false;
+            caducaInput.value = '';
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+
         const badge = $('ndj_tipo_badge');
         if (badge) badge.style.display = 'none';
 
@@ -1198,6 +1209,7 @@ import Swal from 'sweetalert2';
             apellido_paterno:    payload.ndj_apellido_paterno,
             apellido_materno:    payload.ndj_apellido_materno,
             caduca:              payload.ndj_caduca,
+            no_caduca_dni:       payload.ndj_no_caduca === 'on' ? '1' : '0',
             estado_civil:        payload.ndj_estado_civil,
             sexo:                payload.ndj_sexo,
             fecha_nacimiento:    payload.ndj_fecha_nacimiento,
@@ -1331,15 +1343,41 @@ import Swal from 'sweetalert2';
 
         // ── Validaciones de campos ────────────────────────────
 
+        // Caduca: limitar año a 4 dígitos
+        $('ndj_caduca')?.setAttribute('maxlength', '10');
+        $('ndj_caduca')?.addEventListener('input', function () {
+            const anioExcedido = this.value.match(/^(\d{5,})(-\d{2}-\d{2})$/);
+            if (anioExcedido) {
+                this.value = `${anioExcedido[1].slice(0, 4)}${anioExcedido[2]}`;
+            }
+        });
+
         // Caduca: desde mañana
         $('ndj_caduca')?.addEventListener('blur', function () {
             if (!this.value) return;
             const hoy = new Date(); hoy.setHours(0,0,0,0);
             const man = new Date(hoy); man.setDate(hoy.getDate() + 1);
-            
+
             if (new Date(this.value + 'T00:00:00') < man) {
                 Swal.fire({ icon:'warning', title:'Fecha inválida', text:'La fecha de caducidad debe ser desde mañana en adelante.', confirmButtonText:'Entendido' });
                 this.value = '';
+            }
+        });
+
+        // No Caduca checkbox: bloquear/desbloquear caduca
+        $('ndj_no_caduca')?.addEventListener('change', function () {
+            const caducaInput = $('ndj_caduca');
+            if (!caducaInput) return;
+            if (this.checked) {
+                caducaInput.disabled = true;
+                caducaInput.value = '0000-00-00';
+                caducaInput.style.background = '#f3f4f6';
+                caducaInput.style.color = '#9ca3af';
+            } else {
+                caducaInput.disabled = false;
+                caducaInput.value = '';
+                caducaInput.style.background = '';
+                caducaInput.style.color = '';
             }
         });
 

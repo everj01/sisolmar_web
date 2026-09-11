@@ -1203,6 +1203,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const payload = {
                     ...data,
                     source: tabActiva,
+                    no_caduca_dni: data.no_caduca_dni === 'on' ? '1' : '0',
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
                     FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
@@ -1756,6 +1757,40 @@ document.addEventListener('DOMContentLoaded', function () {
         aplicarVisibilidadPorTipo(this.value);
     });
 
+    // Sincronizar valor del select cargo_ui con el campo oculto cargo
+    const cargoUi = document.getElementById('cargo_ui');
+    cargoUi?.addEventListener('change', function () {
+        const hiddenCargo = document.getElementById('cargo');
+        if (hiddenCargo) hiddenCargo.value = this.value;
+    });
+
+    // No Caduca checkbox: bloquear/desbloquear caduca
+    const noCaducaDni = document.getElementById('no_caduca_dni');
+    const caducaInput = document.getElementById('caduca');
+    noCaducaDni?.addEventListener('change', function () {
+        if (!caducaInput) return;
+        if (this.checked) {
+            caducaInput.disabled = true;
+            caducaInput.value = '0000-00-00';
+            caducaInput.style.background = '#f3f4f6';
+            caducaInput.style.color = '#9ca3af';
+        } else {
+            caducaInput.disabled = false;
+            caducaInput.value = '';
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+    });
+
+    // Caduca: limitar año a 4 dígitos
+    caducaInput?.setAttribute('maxlength', '10');
+    caducaInput?.addEventListener('input', function () {
+        const anioExcedido = this.value.match(/^(\d{5,})(-\d{2}-\d{2})$/);
+        if (anioExcedido) {
+            this.value = `${anioExcedido[1].slice(0, 4)}${anioExcedido[2]}`;
+        }
+    });
+
     // Botón Verificar Vacaciones
     btnVerificarVacaciones?.addEventListener('click', async function () {
         const codiPers = (document.getElementById('cod_postulante')?.value || '').trim();
@@ -1990,6 +2025,8 @@ async function llenarFormulario(data) {
     console.log('TIPO TRAB:', tipotrab); // ← agregar esto
 
     setValue('tipo_personal', tipotrab);
+    setValue('#tipo_personal_ui', tipotrab);
+    setBloqueoTipoTrabajador(true);
     aplicarVisibilidadPorTipo(tipotrab);
 
     setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
@@ -1999,6 +2036,25 @@ async function llenarFormulario(data) {
     setValue('#apellido_materno', data.APEL_2 || '');
     setValue('#dni', data.NRO_DOCU_IDEN ? data.NRO_DOCU_IDEN.trim() : '');
     setValue('#caduca', formatDateForInput(data.PERS_FECHCADUCADNI) ? formatDateForInput(data.PERS_FECHCADUCADNI) : '');
+
+    // No Caduca checkbox
+    const noCaduca = document.getElementById('no_caduca_dni');
+    const caducaInput = document.getElementById('caduca');
+    const noCaducaVal = data.NO_CADUCA_DNI;
+    if (noCaduca) {
+        noCaduca.checked = (noCaducaVal == 1 || noCaducaVal === '1' || noCaducaVal === true);
+        if (noCaduca.checked && caducaInput) {
+            caducaInput.disabled = true;
+            caducaInput.value = '0000-00-00';
+            caducaInput.style.background = '#f3f4f6';
+            caducaInput.style.color = '#9ca3af';
+        } else if (caducaInput) {
+            caducaInput.disabled = false;
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+    }
+
     setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
     setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
@@ -2068,6 +2124,11 @@ async function llenarFormulario(data) {
     setValue('#embargos', data.PERS_EMBARGO ? data.PERS_EMBARGO.trim() : '');
     setValue('#consumo_sustancias', data.PERS_SMO ? data.PERS_SMO.trim() : '');
     setValue('#cuenta_banco', data.dj2026_banco ? data.dj2026_banco.trim() : '');
+    setValue('#sucursal', data.SUCU_CODIGO ? data.SUCU_CODIGO.trim() : '');
+    filtrarCargos(data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '');
+    setValue('#cargo_ui', data.CODI_CARG ? data.CODI_CARG.trim() : '');
+    setValue('#cargo', data.CODI_CARG ? data.CODI_CARG.trim() : '');
+    setBloqueoCargo(true);
 
     setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
     setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
@@ -2618,17 +2679,6 @@ function limpiarSplitView() {
     const badge = document.getElementById('bkFechaModBadge');
     if (badge) badge.textContent = '';
 
-    // Reset Cargo y Tipo de Personal selects
-    const cargoUi = document.getElementById('cargo_ui');
-    if (cargoUi) {
-        cargoUi.innerHTML = '<option value="">— Seleccionar —</option>';
-        setBloqueoCargo(true);
-    }
-    const tipoUi = document.getElementById('tipo_personal_ui');
-    if (tipoUi) {
-        tipoUi.value = '';
-        setBloqueoTipoTrabajador(true);
-    }
 }
 
 // ============================================================
@@ -2900,6 +2950,17 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         if (tipoUi) {
             tipoUi.value = '';
             setBloqueoTipoTrabajador(true);
+        }
+
+        // Reset No Caduca checkbox y restore caduca
+        const noCaducaReset = document.getElementById('no_caduca_dni');
+        const caducaReset = document.getElementById('caduca');
+        if (noCaducaReset) noCaducaReset.checked = false;
+        if (caducaReset) {
+            caducaReset.disabled = false;
+            caducaReset.value = '';
+            caducaReset.style.background = '';
+            caducaReset.style.color = '';
         }
     }
 

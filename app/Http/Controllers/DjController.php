@@ -222,7 +222,8 @@ class DjController extends Controller
  
             // Fechas
             $fechaNaci   = $this->sanitizeDatetimeForPersonal($data['fecha_nacimiento'] ?? null);
-            $fechaCaduca = $this->sanitizeDatetimeForPersonal($data['caduca'] ?? null);
+            $noCaducaDni = ($data['no_caduca_dni'] ?? '0') === '1' ? 1 : 0;
+            $fechaCaduca = $noCaducaDni ? null : $this->sanitizeDatetimeForPersonal($data['caduca'] ?? null);
  
             // Numéricos
             $pesoIngresado = trim((string) ($data['peso'] ?? ''));
@@ -309,8 +310,12 @@ class DjController extends Controller
             $provincia_nac = !empty(trim($data['provincia_nac'] ?? '')) ? strtoupper(trim($data['provincia_nac'])) : null;
             $departamento_nac = !empty(trim($data['departamento_nac'] ?? '')) ? strtoupper(trim($data['departamento_nac'])) : null;
 
+            // TIPO_CONT: O = Operativo/Especial, A = Administrativo
+            $tipoContMap = ['01' => 'O', '02' => 'A', '03' => 'O', '05' => 'A', '06' => 'O'];
+            $tipoCont = $tipoContMap[$tipoPer] ?? 'O';
+
             $personalPlaceholders = implode(',', array_fill(0, 66, '?'));
-            $personalLocationPlaceholders = "?,?,?,'01',?,?,?,?,?";
+            $personalLocationPlaceholders = "?,?,?,'01',?,?,?,?,?,?";
  
             // ── INSERT EN PERSONAL ──────────────────────────────────────────────
             DB::insert(
@@ -341,8 +346,9 @@ class DjController extends Controller
                     PERS_SNADAR, SIP_migrado, SIP_activo, SIP_habilitado,
                     USUA_FECHA_REG, USUA_FECHA_MOD
                     , SUCU_CODIGO, CODI_UNID_OPER, USUA_CODIGO_REG, EMPR_CODIGO,
-                    DEPA_CODIGO_NACI, PROVI_CODIGO_NACI, DIST_NACI, CODI_CARG, PERS_CONTRATADO
-                ) VALUES (" . $personalPlaceholders . ", 1,1,0, GETDATE(), NULL, " . $personalLocationPlaceholders . ")",
+                    DEPA_CODIGO_NACI, PROVI_CODIGO_NACI, DIST_NACI, CODI_CARG, PERS_CONTRATADO, TIPO_CONT,
+                    NO_CADUCA_DNI
+                ) VALUES (" . $personalPlaceholders . ", 1,1,0, GETDATE(), NULL, " . $personalLocationPlaceholders . ", ?)",
                 [
                     $nuevoCod, $codiTipoDocu, $dni,
                     strtoupper(trim($data['nombre1'] ?? '')),
@@ -406,7 +412,9 @@ class DjController extends Controller
                     $provincia_nac,
                     $distrito_nac,
                     $codiCarg,
-                    0
+                    0,
+                    $tipoCont,
+                    $noCaducaDni
                 ]
             );
 
@@ -438,6 +446,9 @@ class DjController extends Controller
             $this->migrarFamiliares_solo_nuevo($nuevoCod);
             $this->saveTelefonosTemp($nuevoCod, $data);
             $this->migrarTelefonos($nuevoCod);
+
+            // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
+            $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
  
             DB::commit();
  
@@ -1805,8 +1816,13 @@ class DjController extends Controller
             'SIP_migrado' => 1, // ✅ Siempre 1
             'SIP_activo' => $getValue('SIP_activo', 'SIP_activo'),
             'SIP_fechaModifcacion' => $getValue('SIP_fechaModifcacion', 'SIP_fechaModifcacion'),
-            'NO_CADUCA_DNI' => $getValue('NO_CADUCA_DNI', 'NO_CADUCA_DNI'),
+            'NO_CADUCA_DNI' => ($data['no_caduca_dni'] ?? '0') === '1' ? 1 : 0,
         ];
+
+        // Si No Caduca está marcado, limpiar PERS_FECHCADUCADNI
+        if (($data['no_caduca_dni'] ?? '0') === '1') {
+            $updates['PERS_FECHCADUCADNI'] = null;
+        }
 
         foreach ($updates as $field => $value) {
             $updates[$field] = $sanitizeFinalValue($field, $value);
@@ -3377,8 +3393,12 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             $estadoCivil      = $data['estado_civil'] ?? null;
             $estadoCivilCorto = $estadoCivilMap[$estadoCivil] ?? null;
  
-            $tipotrab    = $tipoPer;
- 
+$tipotrab    = $tipoPer;
+
+            // TIPO_CONT: O = Operativo/Especial, A = Administrativo
+            $tipoContMap = ['01' => 'O', '02' => 'A', '03' => 'O', '05' => 'A', '06' => 'O'];
+            $tipoCont = $tipoContMap[$tipoPer] ?? 'O';
+  
             $carrCodigo = null;
             $ieduCodigo = null;
             if (!empty($data['carrera']) && $data['carrera'] !== '999999') {
@@ -3427,7 +3447,8 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     dj2026_experiencia_anios=?, dj2026_experiencia_meses=?, dj2026_familiar_empresa=?,
                     dj2026_familiar_nombre=?, dj2026_familiar_parentesco=?,
                     dj2026_laboral_1=?, dj2026_laboral_2=?, dj2026_cantprofesion=?,
-                    PERS_TIPOTRAB=?, USUA_FECHA_MOD=GETDATE(), SUCU_CODIGO = ?, CODI_UNID_OPER = ?, USUA_CODIGO_REG = ?, EMPR_CODIGO = '01'
+                    PERS_TIPOTRAB=?, USUA_FECHA_MOD=GETDATE(), SUCU_CODIGO = ?, CODI_UNID_OPER = ?, USUA_CODIGO_REG = ?, EMPR_CODIGO = '01',
+                    TIPO_CONT=?
                 WHERE CODI_PERS=?",
                 [
                     $sexo, $sexo,
@@ -3457,6 +3478,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     $sucursal,
                     $codiUnidOper,
                     $usuario,
+                    $tipoCont,
                     $codiPers
                 ]
             );

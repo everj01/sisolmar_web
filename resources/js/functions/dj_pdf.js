@@ -8,6 +8,17 @@ import Swal from 'sweetalert2';
 const API_URL_PDF = `${VITE_URL_APP}/api`;
 const FONT_FAMILY = "helvetica";
 
+async function fetchBiometrico(codiPers) {
+    if (!codiPers) return {};
+    try {
+        const resp = await axios.get(`${API_URL_PDF}/get-biometrico/${codiPers}`, { timeout: 8000 });
+        return resp.data || {};
+    } catch (e) {
+        console.warn('No se pudo obtener datos biométricos:', e.message);
+        return {};
+    }
+}
+
 async function fetchFotoConRetry(codiPers, maxReintentos = 3) {
     for (let intento = 0; intento <= maxReintentos; intento++) {
         try {
@@ -758,13 +769,47 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         pdf.setLineWidth(0.20);
         pdf.line(boxX + firmaW, y, boxX + firmaW, y + firmaH);
         pdf.line(boxX, y + firmaH, boxX + boxWidth, y + firmaH);
- 
+
+        // ── Obtener firma y huella desde Biométrico ──
+        const codiPersDJ = (document.getElementById('cod_postulante')?.value || '').trim();
+        const bioData = await fetchBiometrico(codiPersDJ);
+
+        function drawImageInBox(b64, x, boxY, w, h) {
+            if (!b64 || b64.error) return false;
+            try {
+                const padding = 2;
+                const maxW = w - padding * 2;
+                const maxH = h - 12;
+                const props = pdf.getImageProperties(b64);
+                const ratio = Math.min(maxW / props.width, maxH / props.height);
+                const finalW = props.width * ratio;
+                const finalH = props.height * ratio;
+                const offsetX = x + padding + (maxW - finalW) / 2;
+                const offsetY = boxY + padding + (maxH - finalH) / 2;
+                let format = "JPEG";
+                if (b64.startsWith("data:image/png")) format = "PNG";
+                if (b64.startsWith("data:image/webp")) format = "WEBP";
+                pdf.addImage(b64, format, offsetX, offsetY, finalW, finalH);
+                return true;
+            } catch (err) {
+                console.warn('Error dibujando imagen biométrica:', err);
+                return false;
+            }
+        }
+
+        const tieneFirma  = drawImageInBox(bioData.firma_nueva || bioData.firma_antigua, boxX, y, firmaW, firmaH);
+        const tieneHuella = drawImageInBox(bioData.huella_nueva || bioData.huella_antigua, boxX + firmaW, y, huellaW, firmaH);
+
         const firmaLabelY = y + firmaH - 6;
         pdf.setFont(FONT_FAMILY, "bold"); pdf.setFontSize(7.5); pdf.setTextColor(0);
-        pdf.text("Firma Registrada",              boxX + firmaW / 2,          firmaLabelY,     { align: "center" });
-        pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,          firmaLabelY + 3, { align: "center" });
-        pdf.text("Huella Registrada",              boxX + firmaW + huellaW / 2, firmaLabelY,   { align: "center" });
-        pdf.text("INDICE DERECHO",                 boxX + firmaW + huellaW / 2, firmaLabelY + 3, { align: "center" });
+        if (!tieneFirma) {
+            pdf.text("Firma Registrada",              boxX + firmaW / 2,          firmaLabelY,     { align: "center" });
+            pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,          firmaLabelY + 3, { align: "center" });
+        }
+        if (!tieneHuella) {
+            pdf.text("Huella Registrada",              boxX + firmaW + huellaW / 2, firmaLabelY,   { align: "center" });
+            pdf.text("INDICE DERECHO",                 boxX + firmaW + huellaW / 2, firmaLabelY + 3, { align: "center" });
+        }
  
         const footerY          = y + firmaH;
         const fechaW           = boxWidth * 0.25;

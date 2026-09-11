@@ -161,6 +161,10 @@
                                         <div>
                                             <label class="dj-label">Caduca Documento</label>
                                             <input type="date" id="ndj_caduca" name="ndj_caduca" class="dj-input">
+                                            <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;cursor:pointer;">
+                                                <input type="checkbox" id="ndj_no_caduca" name="ndj_no_caduca" style="width:16px;height:16px;cursor:pointer;">
+                                                No Caduca
+                                            </label>
                                         </div>
                                         <div>
                                             <label class="dj-label">Estado Civil</label>
