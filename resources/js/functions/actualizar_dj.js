@@ -3070,11 +3070,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnSubir = document.getElementById("btnSubirFoto");
     const btnEliminar = document.getElementById("btnEliminarFoto");
 
-    // SUCAMEC
-    const cursoSucamec = document.getElementById("curso_sucamec");
-    const institucionContainer = document.getElementById("institucion_container");
-    const institucionInput = document.getElementById("institucion_laboral");
-
     // Ubigeos
     const departamentoSelect = document.getElementById("departamento_actual");
     const provinciaSelect = document.getElementById("provincia_actual");
@@ -3319,16 +3314,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (preview) { preview.src = ""; preview.classList.add("hidden"); }
         if (placeholder) placeholder.classList.remove("hidden");
         if (btnEliminar) btnEliminar.classList.add("hidden");
-    }
-
-    function actualizarInstitucionVisibility() {
-        if (!cursoSucamec || !institucionContainer || !institucionInput) return;
-        if (cursoSucamec.value === "SI") {
-            institucionContainer.classList.remove("hidden");
-        } else {
-            institucionContainer.classList.add("hidden");
-            institucionInput.value = "";
-        }
     }
 
     function makeFamilyRow() {
@@ -3651,9 +3636,6 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault(); e.stopPropagation();
         btn.closest('.family-row')?.remove();
     });
-
-    // SUCAMEC
-    cursoSucamec?.addEventListener("change", () => actualizarInstitucionVisibility());
 
     // Foto
     btnSubir?.addEventListener("click", () => inputFoto?.click());
@@ -4695,6 +4677,22 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Prestó S.M.O.: habilitar/deshabilitar Lugar de S.M.O.
+    const prestoSmoEl = document.getElementById('presto_smo');
+    const lugarSmoEl = document.getElementById('lugar_smo');
+    if (lugarSmoEl && (!prestoSmoEl || prestoSmoEl.value !== 'SI')) {
+        lugarSmoEl.disabled = true;
+    }
+    prestoSmoEl?.addEventListener('change', function () {
+        if (!lugarSmoEl) return;
+        if (this.value === 'SI') {
+            lugarSmoEl.disabled = false;
+        } else {
+            lugarSmoEl.disabled = true;
+            lugarSmoEl.value = '';
+        }
+    });
+
     // Botón Verificar Contrato
     const btnVerificarContrato = document.getElementById('btnVerificarContrato');
     btnVerificarContrato?.addEventListener('click', async function () {
@@ -4789,6 +4787,11 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             setTimeout(() => {
                 const tipo = document.getElementById('tipo_personal')?.value?.trim() ?? '';
                 aplicarVisibilidadPorTipo(tipo);
+                const _presto = document.getElementById('presto_smo');
+                const _lugar = document.getElementById('lugar_smo');
+                if (_lugar && (!_presto || _presto.value !== 'SI')) {
+                    _lugar.disabled = true;
+                }
             }, 80);
 
         } else {
@@ -4804,6 +4807,14 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
                 if (window.HSOverlay) HSOverlay.open(modal);
                 else modal.classList.remove('hidden');
             }
+
+            setTimeout(() => {
+                const _presto = document.getElementById('presto_smo');
+                const _lugar = document.getElementById('lugar_smo');
+                if (_lugar && (!_presto || _presto.value !== 'SI')) {
+                    _lugar.disabled = true;
+                }
+            }, 80);
 
             if (source === 'migracion' || source === 'pendiente') await cargarDatosBackup(codiPers);
             else limpiarSplitView();
@@ -4993,7 +5004,14 @@ async function llenarFormulario(data) {
     setValue('#anio_egreso', data.EGRESO_EDUCATIVO ? data.EGRESO_EDUCATIVO.trim() : '');
 
     setValue('#embargos', data.PERS_EMBARGO ? data.PERS_EMBARGO.trim() : '');
-    setValue('#consumo_sustancias', data.PERS_SMO ? data.PERS_SMO.trim() : '');
+    setValue('#presto_smo', data.PERS_CONSMO ? data.PERS_CONSMO.trim() : '');
+    setValue('#lugar_smo', data.PERS_LUGARSMO ? data.PERS_LUGARSMO.trim() : '');
+    const prestoSmoEl = document.getElementById('presto_smo');
+    const lugarSmoEl = document.getElementById('lugar_smo');
+    if (prestoSmoEl && lugarSmoEl) {
+        lugarSmoEl.disabled = prestoSmoEl.value !== 'SI';
+        if (lugarSmoEl.disabled) lugarSmoEl.value = '';
+    }
     setValue('#cuenta_banco', data.dj2026_banco ? data.dj2026_banco.trim() : '');
     setValue('#sucursal', data.SUCU_CODIGO ? data.SUCU_CODIGO.trim() : '');
     filtrarCargos(data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '');
@@ -5016,8 +5034,7 @@ async function llenarFormulario(data) {
     setValue('#familiar_parentesco', data.dj2026_familiar_parentesco ? data.dj2026_familiar_parentesco.trim() : '');
 
     setValue('#curso_sucamec', data.PERS_CONDISCAMEC ? data.PERS_CONDISCAMEC.trim() : '');
-    setValue('#sucamec_obs', data.PERS_NRODISCAMEC ? data.PERS_NRODISCAMEC.trim() : '');
-    setValue('#smo', data.PERS_SMO ? data.PERS_SMO.trim() : '');
+    // setValue('#smo', data.PERS_SMO ? data.PERS_SMO.trim() : '');
     setValue('#licencia_arma', data.PERS_NROLICENCIA ? data.PERS_NROLICENCIA.trim() : '');
     setValue('#tipo_arma', data.PERS_TIPOARMA ? data.PERS_TIPOARMA.trim() : '');
     setValue('#arma_propia', data.PERS_CONARMAS ? data.PERS_CONARMAS.trim() : '');
@@ -5245,7 +5262,7 @@ const CAMPO_MAP = {
     'talla': 'tall_metr', 'sistema_previsional': 'DESC_SIST_PENS',
     'essalud': 'ESSALUD', 'pensionista': 'PERS_PENSIONISTA',
     'grado_instruccion': 'NIED_ABREVIADO', 'anio_egreso': 'EGRESO_EDUCATIVO',
-    'embargos': 'PERS_EMBARGO', 'consumo_sustancias': 'PERS_SMO',
+    'embargos': 'PERS_EMBARGO', 'presto_smo': 'PERS_CONSMO', 'lugar_smo': 'PERS_LUGARSMO',
     'direccion_actual': 'DIRECCION', 'direccion_dni': 'PERS_DIREC_DNI',
     'contacto_emergencia': 'PERS_NOMCONTACTO', 'celular_emergencia': 'PERS_NROEMERGENCIA',
     'parentesco_emergencia': 'PERS_EMERC_FAMILIAR', 'ocupacion_principal': 'PERS_PROFESION',
@@ -5253,7 +5270,6 @@ const CAMPO_MAP = {
     'tipo_arma': 'PERS_TIPOARMA', 'arma_propia': 'PERS_CONARMAS',
     'brevete': 'PERS_BREVETE', 'clase_brevete': 'CLASE_BREVETE',
     'empresa_anterior': 'PERS_CTRABANT', 'cargo_anterior': 'PERS_CARGOTRABANT',
-    'smo': 'PERS_CONSMO',
 };
 
 const FECHA_FIELDS_BK = ['FECH_NACI', 'PERS_FECHCADUCADNI', 'FECH_INGRE', 'FECH_CESE'];
@@ -5853,6 +5869,15 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             caducaReset.value = '';
             caducaReset.style.background = '';
             caducaReset.style.color = '';
+        }
+
+        // Reset S.M.O. selects
+        const prestoSmoReset = document.getElementById('presto_smo');
+        const lugarSmoReset = document.getElementById('lugar_smo');
+        if (prestoSmoReset) prestoSmoReset.value = '';
+        if (lugarSmoReset) {
+            lugarSmoReset.disabled = true;
+            lugarSmoReset.value = '';
         }
     }
 

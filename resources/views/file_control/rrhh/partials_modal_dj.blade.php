@@ -1126,16 +1126,6 @@
                                                     <option value="NO">No</option>
                                                     <option value="SI">Sí</option>
                                                 </select>
-                                                <div id="div_sucamec_obs" class="hidden" style="margin-top:6px;">
-                                                    <label class="dj-label">Observación</label>
-                                                    <input type="text" id="sucamec_obs" name="sucamec_obs"
-                                                        class="dj-input" placeholder="Institución o curso...">
-                                                </div>
-                                            </div>
-                                            <div id="institucion_container" class="hidden">
-                                                <label class="dj-label">Institución</label>
-                                                <input type="text" id="institucion_laboral" name="institucion_laboral"
-                                                    class="dj-input" placeholder="Institución donde realizó el curso">
                                             </div>
                                         </div>
                                     </div>
@@ -1163,14 +1153,22 @@
                                                 </select>
                                             </div> --}}
                                             <div>
-                                                <label class="dj-label">S.M.O.</label>
-                                                <select id="consumo_sustancias" name="consumo_sustancias"
-                                                    class="dj-select" data-compare="consumo_sustancias">
+                                                <label class="dj-label">Prestó S.M.O.</label>
+                                                <select id="presto_smo" name="presto_smo"
+                                                    class="dj-select" data-compare="presto_smo">
                                                     <option value="" disabled>Seleccionar...</option>
+                                                    <option value="SI">SI</option>
                                                     <option value="NO">NO</option>
-                                                    <option value="MG">MGP - MARINA DE GUERRA DEL PERU</option>
-                                                    <option value="EP">EP - EJERCITO DEL PERU</option>
-                                                    <option value="FA">FAP - FUERZA AEREA DEL PERU</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Lugar de S.M.O.</label>
+                                                <select id="lugar_smo" name="lugar_smo"
+                                                    class="dj-select" data-compare="lugar_smo" disabled>
+                                                    <option value="" disabled selected>Seleccionar...</option>
+                                                    <option value="MG">MGP</option>
+                                                    <option value="EP">EP</option>
+                                                    <option value="FA">FAP</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1401,9 +1399,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('familiar_empresa')?.addEventListener('change', function () {
             document.getElementById('div_familiar_interno').classList.toggle('hidden', this.value !== 'SI');
-        });
-        document.getElementById('curso_sucamec')?.addEventListener('change', function () {
-            document.getElementById('div_sucamec_obs').classList.toggle('hidden', this.value !== 'SI');
         });
     });
 </script>

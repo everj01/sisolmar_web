@@ -581,11 +581,6 @@
                                                 <option value="NO">No</option>
                                                 <option value="SI">Sí</option>
                                             </select>
-                                            <div id="ndj_div_sucamec_obs" class="hidden" style="margin-top:6px;">
-                                                <label class="dj-label">Observación / N° Certificado</label>
-                                                <input type="text" id="ndj_sucamec_obs" name="ndj_sucamec_obs"
-                                                    class="dj-input" placeholder="Institución o certificado...">
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -600,14 +595,20 @@
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
                                         <div>
-                                            <label class="dj-label">S.M.O.</label>
-                                            {{-- name=ndj_consumo_sustancias para compatibilidad con backend --}}
-                                            <select id="ndj_smo" name="ndj_consumo_sustancias" class="dj-select">
+                                            <label class="dj-label">Prestó S.M.O.</label>
+                                            <select id="ndj_presto_smo" name="ndj_presto_smo" class="dj-select">
                                                 <option value="" disabled selected>Seleccionar...</option>
+                                                <option value="SI">SI</option>
                                                 <option value="NO">NO</option>
-                                                <option value="MG">MGP - MARINA DE GUERRA DEL PERU</option>
-                                                <option value="EP">EP - EJERCITO DEL PERU</option>
-                                                <option value="FA">FAP - FUERZA AEREA DEL PERU</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="dj-label">Lugar de S.M.O.</label>
+                                            <select id="ndj_lugar_smo" name="ndj_lugar_smo" class="dj-select" disabled>
+                                                <option value="" disabled selected>Seleccionar...</option>
+                                                <option value="MG">MGP</option>
+                                                <option value="EP">EP</option>
+                                                <option value="FA">FAP</option>
                                             </select>
                                         </div>
                                     </div>

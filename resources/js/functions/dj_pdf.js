@@ -596,8 +596,8 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
 
         const wLab3 = boxWidth / 6;
         if (esOper || (!esOper && !esAdmin)) {
-            drawField("Carne SUCAMEC", getValue('sucamec_obs') || (getValue('curso_sucamec') === 'SI' ? 'SÍ' : 'NO'), boxX, boxWidth * 0.285, y, rowH, 0.42);
-            drawField("S.M.O.",      getValue('smo'),               boxX + boxWidth * 0.285, boxWidth * 0.381, y, rowH, 0.3);
+            drawField("Carne SUCAMEC", getValue('curso_sucamec') === 'SI' ? 'SÍ' : 'NO', boxX, boxWidth * 0.285, y, rowH, 0.42);
+            drawField("S.M.O.",      getValue('presto_smo'),               boxX + boxWidth * 0.285, boxWidth * 0.381, y, rowH, 0.3);
             drawField("Institución", getValue('institucion_laboral'),boxX + boxWidth * 0.666, boxWidth * 0.334, y, rowH, 0.35);
             y += rowH;
             drawField("N° Licencia L4", getValue('licencia_arma'), boxX,                     boxWidth * 0.5264, y, rowH, 0.35);
@@ -630,15 +630,15 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             const wClas  = boxWidth * 0.12;
             const wTipo  = boxWidth * 0.12;
             const wVeh   = boxWidth * 0.30;
-            drawField("SMO",             getValue('consumo_sustancias') != 'NO' ? 'SI' : 'NO',               boxX,                              wSMO,  y, rowH, 0.4);
+            drawField("SMO",             getValue('presto_smo') === 'SI' ? 'SI' : 'NO',               boxX,                              wSMO,  y, rowH, 0.4);
             let instEjer = '';
-            if( getValue('consumo_sustancias') == 'EP'){
+            if( getValue('lugar_smo') == 'EP'){
                 instEjer = 'EJERCITO DEL PERU'
             }
-            if( getValue('consumo_sustancias') == 'MG'){
+            if( getValue('lugar_smo') == 'MG'){
                 instEjer = 'MARINA DE GUERRA DEL PERU'
             }
-            if( getValue('consumo_sustancias') == 'FA'){
+            if( getValue('lugar_smo') == 'FA'){
                 instEjer = 'FUERZA AEREA DEL PERU'
             }
             drawField("Institución",     instEjer ,boxX + wSMO,                      wInst, y, rowH, 0.35);

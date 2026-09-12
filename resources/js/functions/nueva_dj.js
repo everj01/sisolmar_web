@@ -399,8 +399,14 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_familiar_nombre',       data.dj2026_familiar_nombre?.trim()     || '');
             ndj_setVal('ndj_familiar_parentesco',   data.dj2026_familiar_parentesco?.trim() || '');
             ndj_setVal('ndj_curso_sucamec',         data.PERS_CONDISCAMEC?.trim() || '');
-            ndj_setVal('ndj_sucamec_obs',           data.PERS_NRODISCAMEC?.trim() || '');
-            ndj_setVal('ndj_smo',                   data.PERS_SMO?.trim()         || '');
+            ndj_setVal('ndj_presto_smo',            data.PERS_CONSMO?.trim()     || '');
+            ndj_setVal('ndj_lugar_smo',             data.PERS_LUGARSMO?.trim()   || '');
+            const ndjPrestoSmo = document.getElementById('ndj_presto_smo');
+            const ndjLugarSmo = document.getElementById('ndj_lugar_smo');
+            if (ndjPrestoSmo && ndjLugarSmo) {
+                ndjLugarSmo.disabled = ndjPrestoSmo.value !== 'SI';
+                if (ndjLugarSmo.disabled) ndjLugarSmo.value = '';
+            }
             ndj_setVal('ndj_licencia_arma',         data.PERS_NROLICENCIA?.trim() || '');
             ndj_setVal('ndj_arma_propia',           data.PERS_CONARMAS?.trim()    || '');
             ndj_setVal('ndj_brevete',               data.PERS_BREVETE?.trim()     || '');
@@ -440,7 +446,6 @@ import Swal from 'sweetalert2';
             }
 
             if (data.dj2026_familiar_empresa === 'SI') $('ndj_div_familiar_interno')?.classList.remove('hidden');
-            if (data.PERS_CONDISCAMEC === 'SI')         $('ndj_div_sucamec_obs')?.classList.remove('hidden');
 
             await ndj_cargarUbigeosCascada('ndj_departamento_actual','ndj_provincia_actual','ndj_distrito_actual', data.PERS_DEPT_ACT?.trim(),   data.PERS_PROV_ACT?.trim(),    data.PERS_DIST_ACT?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_dni',   'ndj_provincia_dni',   'ndj_distrito_dni',    data.PERS_DPTO_DIRDNI?.trim(), data.PERS_PROV_DIRDNI?.trim(), data.PERS_DIST_DIRDNI?.trim());
@@ -673,6 +678,11 @@ import Swal from 'sweetalert2';
             .forEach(el => el.disabled = bloquear);
         btnGuardar.disabled = bloquear;
         if (bloquear) btnGuardar.style.display = 'none';
+        const _lugar = $('ndj_lugar_smo');
+        const _presto = $('ndj_presto_smo');
+        if (!bloquear && _lugar && _presto) {
+            _lugar.disabled = _presto.value !== 'SI';
+        }
     }
 
     // ============================================================
@@ -714,12 +724,20 @@ import Swal from 'sweetalert2';
             caducaInput.style.color = '';
         }
 
+        // Reset S.M.O. selects
+        const ndjPrestoSmo = $('ndj_presto_smo');
+        const ndjLugarSmo = $('ndj_lugar_smo');
+        if (ndjPrestoSmo) ndjPrestoSmo.value = '';
+        if (ndjLugarSmo) {
+            ndjLugarSmo.disabled = true;
+            ndjLugarSmo.value = '';
+        }
+
         const badge = $('ndj_tipo_badge');
         if (badge) badge.style.display = 'none';
 
         document.querySelectorAll('#modalNuevaDJ [data-ndj-tipo]').forEach(el => { el.style.display = ''; });
         $('ndj_div_familiar_interno')?.classList.add('hidden');
-        $('ndj_div_sucamec_obs')?.classList.add('hidden');
 
         ndj_limpiarFoto();
 
@@ -1250,8 +1268,8 @@ import Swal from 'sweetalert2';
             familiar_nombre:       payload.ndj_familiar_nombre,
             familiar_parentesco:   payload.ndj_familiar_parentesco,
             curso_sucamec:         payload.ndj_curso_sucamec,
-            sucamec_obs:           payload.ndj_sucamec_obs,
-            consumo_sustancias:    payload.ndj_consumo_sustancias,
+            presto_smo:            payload.ndj_presto_smo,
+            lugar_smo:             payload.ndj_lugar_smo,
             licencia_arma:         payload.ndj_licencia_arma,
             arma_propia:           payload.ndj_arma_propia,
             brevete:               payload.ndj_brevete,
@@ -1378,6 +1396,23 @@ import Swal from 'sweetalert2';
                 caducaInput.value = '';
                 caducaInput.style.background = '';
                 caducaInput.style.color = '';
+            }
+        });
+
+        // Prestó S.M.O.: habilitar/deshabilitar Lugar de S.M.O.
+        const ndjLugarSmoInit = $('ndj_lugar_smo');
+        const ndjPrestoSmoInit = $('ndj_presto_smo');
+        if (ndjLugarSmoInit && (!ndjPrestoSmoInit || ndjPrestoSmoInit.value !== 'SI')) {
+            ndjLugarSmoInit.disabled = true;
+        }
+        $('ndj_presto_smo')?.addEventListener('change', function () {
+            const lugarSmo = $('ndj_lugar_smo');
+            if (!lugarSmo) return;
+            if (this.value === 'SI') {
+                lugarSmo.disabled = false;
+            } else {
+                lugarSmo.disabled = true;
+                lugarSmo.value = '';
             }
         });
 
@@ -1620,7 +1655,6 @@ import Swal from 'sweetalert2';
 
         // Familiar empresa / SUCAMEC / Clase brevete
         $('ndj_familiar_empresa')?.addEventListener('change', function () { $('ndj_div_familiar_interno')?.classList.toggle('hidden', this.value !== 'SI'); });
-        $('ndj_curso_sucamec')?.addEventListener('change',    function () { $('ndj_div_sucamec_obs')?.classList.toggle('hidden', this.value !== 'SI'); });
         $('ndj_clase_brevete')?.addEventListener('change', function () {
             const sel = $('ndj_tipo_vehiculo'); if (!sel) return;
             sel.innerHTML = '<option value="">-- Seleccione --</option>';

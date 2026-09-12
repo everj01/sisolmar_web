@@ -46,7 +46,8 @@ class SaveDeclaracionJuradaRequest extends FormRequest
 
             // ===== ANTECEDENTES =====
             'embargos'              => ['nullable', 'in:SI,NO'],
-            'consumo_sustancias'    => ['nullable', 'in:SI,NO'],
+            'presto_smo'            => ['nullable', 'in:SI,NO'],
+            'lugar_smo'             => ['nullable', 'in:MG,EP,FA'],
 
             // ===== DIRECCIONES =====
             'departamento_actual'   => ['nullable', 'string'],

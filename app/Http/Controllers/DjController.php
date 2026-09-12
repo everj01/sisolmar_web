@@ -196,10 +196,9 @@ class DjController extends Controller
             $snadar      = 'NO';
             $condiscamec = strtoupper(substr($data['curso_sucamec']  ?? 'NO', 0, 2));
             $conarmas    = strtoupper(substr($data['arma_propia']    ?? 'NO', 0, 2));
-            $consmo      = ($data['consumo_sustancias'] ?? 'NO') !== 'NO' ? 'SI' : 'NO';
-            $smo         = strtoupper(substr($data['consumo_sustancias'] ?? 'NO', 0, 2));
-            $lugarsmo    = ($data['consumo_sustancias'] ?? 'NO') !== 'NO'
-                ? substr($data['consumo_sustancias'], 0, 50) : null;
+            $consmo      = strtoupper(trim($data['presto_smo'] ?? 'NO'));
+            $lugarsmo    = ($consmo === 'SI' && !empty($data['lugar_smo']))
+                ? strtoupper(trim($data['lugar_smo'])) : null;
             $vehiculoPropio  = strtoupper(substr($data['vehiculo_propio']  ?? 'NO', 0, 2));
             $familiarEmpresa = strtoupper(substr($data['familiar_empresa'] ?? 'NO', 0, 2));
             $vigencia        = 'SI';
@@ -333,7 +332,7 @@ class DjController extends Controller
                     CODI_SIST_PENS, ESSALUD, PERS_PENSIONISTA, PERS_EMBARGO,
                     PERS_GRADO_INSTRUCCION, CARR_CODIGO, IEDU_CODIGO, EGRESO_EDUCATIVO,
                     PERS_CONDISCAMEC, PERS_NRODISCAMEC,
-                    PERS_SMO, PERS_LUGARSMO, PERS_CONSMO,
+                    PERS_LUGARSMO, PERS_CONSMO,
                     PERS_NROLICENCIA, PERS_CONARMAS,
                     PERS_BREVETE, CLASE_BREVETE, CATEGORIA_BREVETE, PERS_VEHICULO_PROPIO,
                     PERS_NOMCONTACTO, PERS_NROEMERGENCIA, PERS_EMERC_FAMILIAR,
@@ -376,7 +375,6 @@ class DjController extends Controller
                     $data['grado_instruccion'] ?? null,
                     $carrCodigo, $ieduCodigo, $anioEgreso,
                     $condiscamec, $data['sucamec_obs'] ?? null,
-                    $smo,
                     $lugarsmo,
                     $consmo,
                     $data['licencia_arma'] ?? null,
@@ -1618,7 +1616,7 @@ class DjController extends Controller
             'ESSALUD' => $getValue('essalud', 'ESSALUD'),
             'PERS_PENSIONISTA' => $getValue('pensionista', 'PERS_PENSIONISTA'),
             'PERS_EMBARGO' => $getValue('embargos', 'PERS_EMBARGO'),
-            'PERS_CONSMO' => $getValue('consumo_sustancias', 'PERS_CONSMO'),
+            'PERS_CONSMO' => $getValue('presto_smo', 'PERS_CONSMO'),
             'PERS_DEPT_ACT' => $getValue('departamento_actual', 'PERS_DEPT_ACT'),
             'PERS_PROV_ACT' => $getValue('provincia_actual', 'PERS_PROV_ACT'),
             'PERS_DIST_ACT' => $getValue('distrito_actual', 'PERS_DIST_ACT'),
@@ -1641,8 +1639,7 @@ class DjController extends Controller
             'EGRESO_EDUCATIVO' => $getValue('anio_egreso', 'EGRESO_EDUCATIVO'),
             'PERS_CONDISCAMEC' => $getValue('curso_sucamec', 'PERS_CONDISCAMEC'),
             'PERS_NRODISCAMEC' => $getValue('sucamec_obs', 'PERS_NRODISCAMEC'),
-            'PERS_SMO' => $getValue('consumo_sustancias', 'PERS_SMO'),
-            'PERS_LUGARSMO' => $getValue('consumo_sustancias', 'PERS_LUGARSMO'),
+            'PERS_LUGARSMO' => $getValue('lugar_smo', 'PERS_LUGARSMO'),
             //'PERS_CONLICARMAS' => $getValue('licencia_arma', 'PERS_CONLICARMAS'),
             //'PERS_CONLICARMAS' => 'SI', // o extraer el valor del JSON
             'PERS_NROLICENCIA' => $getValue('licencia_arma', 'PERS_NROLICENCIA'),
@@ -1726,7 +1723,7 @@ class DjController extends Controller
             'UBIGEO' => $getValue('UBIGEO', 'UBIGEO'),
             'FOTO_SI_NO' => $getValue('FOTO_SI_NO', 'FOTO_SI_NO'),
             'FECH_INIC_AFIL' => $getValue('FECH_INIC_AFIL', 'FECH_INIC_AFIL'),
-            'DIST_NACI' => $getValue('DIST_NACI', 'DIST_NACI'),
+            'DIST_NACI' => $getValue('distrito_nac', 'DIST_NACI'),
             'PROV_NACI' => $getValue('PROV_NACI', 'PROV_NACI'),
             'UTIL03' => $getValue('UTIL03', 'UTIL03'),
             'CODI_AREA_GRUP' => $getValue('CODI_AREA_GRUP', 'CODI_AREA_GRUP'),
@@ -1739,8 +1736,8 @@ class DjController extends Controller
             'fotocheck' => $getValue('fotocheck', 'fotocheck'),
             'horario' => $getValue('horario', 'horario'),
             'CODI_CATE_TRAB' => $getValue('CODI_CATE_TRAB', 'CODI_CATE_TRAB'),
-            'DEPA_CODIGO_NACI' => $getValue('DEPA_CODIGO_NACI', 'DEPA_CODIGO_NACI'),
-            'PROVI_CODIGO_NACI' => $getValue('PROVI_CODIGO_NACI', 'PROVI_CODIGO_NACI'),
+            'DEPA_CODIGO_NACI' => $getValue('departamento_nac', 'DEPA_CODIGO_NACI'),
+            'PROVI_CODIGO_NACI' => $getValue('provincia_nac', 'PROVI_CODIGO_NACI'),
             'DEPA_CODIGO_DOMI' => $getValue('DEPA_CODIGO_DOMI', 'DEPA_CODIGO_DOMI'),
             'PROVI_CODIGO_DOMI' => $getValue('PROVI_CODIGO_DOMI', 'PROVI_CODIGO_DOMI'),
             'apor_essa' => $getValue('apor_essa', 'apor_essa'),
@@ -2266,8 +2263,7 @@ class DjController extends Controller
             'ESSALUD' => $data['essalud'] ?? 'NO',
             'PERS_PENSIONISTA' => $data['pensionista'] ?? 'NO',
             'PERS_EMBARGO' => $data['embargos'] ?? 'NO',
-            'PERS_CONSMO' => $data['consumo_sustancias'] != 'NO' ? 'SI' : 'NO',
-            'PERS_SMO' => $data['consumo_sustancias'] ?? 'NO',
+            'PERS_CONSMO' => strtoupper(trim($data['presto_smo'] ?? 'NO')),
             'PERS_DEPT_ACT' => $data['departamento_actual'] ?? null,
             'PERS_PROV_ACT' => $data['provincia_actual'] ?? null,
             'PERS_DIST_ACT' => $data['distrito_actual'] ?? null,
@@ -2282,7 +2278,7 @@ class DjController extends Controller
             'PERS_CONDISCAMEC' => $data['curso_sucamec'] ?? 'NO',
             'PERS_NRODISCAMEC' => $data['sucamec_obs'] ?? null,
             //'PERS_SMO' => $data['smo'] ?? 'NO',
-            'PERS_LUGARSMO' => ($data['consumo_sustancias'] ?? 'NO') !== 'NO' ? $data['consumo_sustancias'] : null,
+            'PERS_LUGARSMO' => strtoupper(trim($data['lugar_smo'] ?? '')) ?: null,
             'PERS_NROLICENCIA' => $data['licencia_arma'] ?? null,
             'PERS_TIPOARMA' => $data['tipo_arma'] ?? null,
             'PERS_CONARMAS' => $data['arma_propia'] ?? 'NO',
@@ -2386,7 +2382,7 @@ class DjController extends Controller
                     PERS_DIREC_DNI = s.PERS_DIREC_DNI, PERS_GRADO_INSTRUCCION = s.PERS_GRADO_INSTRUCCION,
                     CARR_CODIGO = s.CARR_CODIGO, IEDU_CODIGO = s.IEDU_CODIGO, EGRESO_EDUCATIVO = s.EGRESO_EDUCATIVO,
                     PERS_CONDISCAMEC = s.PERS_CONDISCAMEC, PERS_NRODISCAMEC = s.PERS_NRODISCAMEC,
-                    PERS_SMO = s.PERS_SMO, PERS_LUGARSMO = s.PERS_LUGARSMO,
+                    PERS_LUGARSMO = s.PERS_LUGARSMO,
                     PERS_CONLICARMAS = s.PERS_CONLICARMAS, PERS_TIPOARMA = s.PERS_TIPOARMA, PERS_CONARMAS = s.PERS_CONARMAS,
                     PERS_BREVETE = s.PERS_BREVETE, CLASE_BREVETE = s.CLASE_BREVETE,
                     PERS_TIPO_VEHICULO = s.PERS_TIPO_VEHICULO, PERS_VEHICULO_PROPIO = s.PERS_VEHICULO_PROPIO,
@@ -3440,7 +3436,7 @@ $tipotrab    = $tipoPer;
                     CODI_SIST_PENS=?, ESSALUD=?, PERS_PENSIONISTA=?, PERS_EMBARGO=?,
                     PERS_GRADO_INSTRUCCION=?, CARR_CODIGO=?, IEDU_CODIGO=?, EGRESO_EDUCATIVO=?,
                     PERS_CONDISCAMEC=?, PERS_NRODISCAMEC=?,
-                    PERS_SMO=?, PERS_CONARMAS=?, PERS_NROLICENCIA=?,
+                    PERS_LUGARSMO=?, PERS_CONARMAS=?, PERS_NROLICENCIA=?,
                     PERS_BREVETE=?, CLASE_BREVETE=?, CATEGORIA_BREVETE=?, PERS_VEHICULO_PROPIO=?,
                     PERS_NOMCONTACTO=?, PERS_NROEMERGENCIA=?, PERS_EMERC_FAMILIAR=?,
                     PERS_CTRABANT=?, PERS_CARGOTRABANT=?, PERS_DURACIONANT=?,
@@ -3464,7 +3460,7 @@ $tipotrab    = $tipoPer;
                     $trim($data['sistema_previsional'] ?? null), $essalud, $pensionista, $embargo,
                     $trim($data['grado_instruccion'] ?? null), $carrCodigo, $ieduCodigo, $intv($data['anio_egreso'] ?? null),
                     $condiscamec, $trim($data['sucamec_obs'] ?? null),
-                    $trim($data['consumo_sustancias'] ?? null), $conarmas, $trim($data['licencia_arma'] ?? null),
+                    strtoupper(trim($data['lugar_smo'] ?? '')) ?: null, $conarmas, $trim($data['licencia_arma'] ?? null),
                     $trim($data['brevete'] ?? null), $claseBrev, $trim($data['tipo_vehiculo'] ?? null), $vehiculoP,
                     $trim($data['contacto_emergencia'] ?? null), $trim($data['celular_emergencia'] ?? null), $trim($data['parentesco_emergencia'] ?? null),
                     $trim($data['empresa_anterior'] ?? null), $trim($data['cargo_anterior'] ?? null), $trim($data['duracion_anterior'] ?? null),
