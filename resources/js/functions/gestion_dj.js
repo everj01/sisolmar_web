@@ -1137,11 +1137,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Page size
     pageSizeSelect?.addEventListener("change", function () { tblPersonas.setPageSize(parseInt(this.value)); });
 
-    // ============================================================
-    // PREVISUALIZAR PDF
-    // ============================================================
-    btnPrevisualizar?.addEventListener("click", function (e) {
+    btnPrevisualizar?.addEventListener("click", async function (e) {
         e.preventDefault();
+        e.stopPropagation();
         const camposObligatorios = [{ input: nombreDJtxt, nombre: 'Nombre' }, { input: dniDJtxt, nombre: 'DNI' }];
         const campoFaltante = camposObligatorios.find(c => !c.input || !String(c.input.value ?? '').trim());
         if (campoFaltante) {
@@ -1149,8 +1147,23 @@ document.addEventListener('DOMContentLoaded', function () {
             campoFaltante.input?.focus();
             return;
         }
-        generarDeclaracionJuradaPDF();
+        try {
+            Swal.fire({
+                title: 'Generando PDF…',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            const ok = await generarDeclaracionJuradaPDF();
+            // Solo cerrar el loading si fue éxito (si hubo error, su popup ya reemplazó al loading)
+            if (ok) Swal.close();
+        } catch (err) {
+            console.error('[Previsualizar] Error generando PDF:', err);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar el PDF: ' + (err?.message || err) });
+        }
     });
+
+    // País de nacimiento: sincronizar el hidden al escribir en el input
+    document.getElementById('aj_pais')?.addEventListener('input', syncPaisCodigoGest);
 
     // ============================================================
     // GUARDAR FORMULARIO
@@ -1925,6 +1938,53 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 let catalogosCache = null;
 let catalogosPromise = null;
 
+// ── Países de nacimiento (datalist) ─────────────────────────
+let paisesDataGest = [];
+let paisesPromiseGest = null;
+
+async function cargarPaisesGest() {
+    if (paisesDataGest.length) return;
+    if (paisesPromiseGest) return paisesPromiseGest;
+
+    paisesPromiseGest = axios.get(`${API_URL}/dj/get-paises/`)
+        .then(res => {
+            paisesDataGest = res.data?.paises ?? [];
+            const dl = document.getElementById('aj_paises_list');
+            if (dl) {
+                dl.innerHTML = '';
+                paisesDataGest.forEach(p => {
+                    const o = document.createElement('option');
+                    o.value = p.text;
+                    o.dataset.codigo = p.id;
+                    dl.appendChild(o);
+                });
+            }
+        })
+        .catch(err => console.error('[GestionDJ] Error cargando países:', err))
+        .finally(() => { paisesPromiseGest = null; });
+
+    return paisesPromiseGest;
+}
+
+function setPaisGest(codigo) {
+    const input  = document.getElementById('aj_pais');
+    const hidden = document.getElementById('aj_pais_codigo');
+    if (!input || !hidden) return;
+    const c = String(codigo ?? '').trim();
+    hidden.value = c;
+    const match = paisesDataGest.find(p => String(p.id) === c);
+    input.value = match ? match.text : '';
+}
+
+function syncPaisCodigoGest() {
+    const input  = document.getElementById('aj_pais');
+    const hidden = document.getElementById('aj_pais_codigo');
+    if (!input || !hidden) return;
+    const texto = input.value.toUpperCase().trim();
+    const match = paisesDataGest.find(p => String(p.text).toUpperCase() === texto);
+    hidden.value = match ? match.id : '';
+}
+
 async function cargarCatalogos(source = 'migracion') {
     if (catalogosCache) return catalogosCache;
     if (catalogosPromise) return catalogosPromise;
@@ -1948,6 +2008,7 @@ async function cargarCatalogos(source = 'migracion') {
             window.allCarreras = carreras;
             catalogosCache = response.data;
             await cargarCargosDj();
+            await cargarPaisesGest();
             return response.data;
         })
         .finally(() => {
@@ -2071,6 +2132,10 @@ async function llenarFormulario(data) {
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
     setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
     setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
+
+    // País de nacimiento (columna NACIONALIDAD de PERSONAL → datalist de países)
+    await cargarPaisesGest();
+    setPaisGest(data.NACIONALIDAD ? String(data.NACIONALIDAD).trim() : '');
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
     // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
@@ -2415,13 +2480,16 @@ async function cargarDatosBackup(codiPers) {
     const contDiffs = document.getElementById('contadorDiffs');
     if (!wrapper) return;
 
+    // ✅ Limpiar/resetear panel antes de cargar
+    wrapper.classList.remove('no-backup');
+    if (panelBk) panelBk.style.display = 'block';
+    document.querySelectorAll('#panelBackup .bk-val').forEach(el => el.textContent = '—');
+
     try {
         const response = await axios.get(`${API_URL}/dj/get-backup-data`, { params: { codi_pers: codiPers } });
 
         if (!response.data.success) {
-            wrapper.classList.add('no-backup');
-            if (panelBk) panelBk.style.display = 'none';
-            if (badgeSplit) badgeSplit.style.display = 'none';
+            console.warn('[BackupDJ] Sin backup:', response.data.message);
             _backupData = null;
             return;
         }
@@ -2506,11 +2574,11 @@ async function cargarDatosBackup(codiPers) {
         activarInteractividad();
 
     } catch (err) {
-        console.warn('Sin backup DJ:', err);
-        wrapper.classList.add('no-backup');
-        if (panelBk) panelBk.style.display = 'none';
-        if (badgeSplit) badgeSplit.style.display = 'none';
-        _backupData = null;
+        console.warn('[BackupDJ] Error:', err);
+        // No ocultar — el panel es esencial en DJ
+        _backupData = {};
+        wrapper.classList.remove('no-backup');
+        if (panelBk) panelBk.style.display = 'block';
     }
 }
 

@@ -3659,16 +3659,22 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // PREVISUALIZAR PDF
     // ============================================================
-    btnPrevisualizar?.addEventListener("click", function (e) {
+    btnPrevisualizar?.addEventListener("click", async function (e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const camposObligatorios = [{ input: nombreDJtxt, nombre: 'Nombre' }, { input: dniDJtxt, nombre: 'DNI' }];
         const campoFaltante = camposObligatorios.find(c => !c.input || !String(c.input.value ?? '').trim());
         if (campoFaltante) {
-            Swal.fire({ icon: 'warning', title: 'Campos obligatorios', text: `Falta completar: ${campoFaltante.nombre}` });
+            Swal.fire({ icon: 'warning', title: 'Campos obligatorios',  text: `Falta completar: ${campoFaltante.nombre}` });
             campoFaltante.input?.focus();
             return;
         }
-        generarDeclaracionJuradaPDF();
+        try {
+            await generarDeclaracionJuradaPDF();
+        } catch (err) {
+            console.error('[Previsualizar] Error generando PDF:', err);
+        }
     });
 
     // ============================================================
@@ -4770,6 +4776,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             setBloqueoTipoTrabajador(true);
 
             await cargarCatalogos();
+            await cargarPaises();
 
             // Cargar departamentos para los 3 ubigeos
             const depts = await getUbicacionCached({ type: 'dept' });
@@ -4799,6 +4806,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             await cargarCatalogos(source);
+            await cargarPaises();
             await cargarDatosPersonales(codiPers, source);
 
             Swal.close();
@@ -4827,6 +4835,51 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 }
 
 // ── Catálogos ────────────────────────────────────────────────
+let aj_paisesData = [];
+
+async function cargarPaises() {
+    const input = document.getElementById('aj_pais');
+    const dl = document.getElementById('aj_paises_list');
+    if (!input || !dl) return;
+    input.disabled = true;
+    try {
+        const res = await axios.get(`${API_URL}/dj/get-paises/`);
+        const items = res.data.paises ?? [];
+        aj_paisesData = items;
+        dl.innerHTML = '';
+        items.forEach(item => {
+            const o = document.createElement('option');
+            o.value = item.text;
+            o.dataset.codigo = item.id;
+            dl.appendChild(o);
+        });
+    } catch (err) {
+        console.error('[ActualizarDJ] Error cargando países:', err);
+    } finally { input.disabled = false; }
+}
+
+function syncAjPaisCodigo() {
+    const input = document.getElementById('aj_pais');
+    const hidden = document.getElementById('aj_pais_codigo');
+    if (!input || !hidden) return;
+    const texto = input.value.toUpperCase().trim();
+    const match = aj_paisesData.find(p => p.text.toUpperCase() === texto);
+    hidden.value = match ? match.id : '';
+}
+
+function setAjPais(codigo) {
+    const input = document.getElementById('aj_pais');
+    const hidden = document.getElementById('aj_pais_codigo');
+    if (!input || !hidden) return;
+    hidden.value = codigo || '';
+    const match = aj_paisesData.find(p => p.id === codigo);
+    input.value = match ? match.text : '';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('aj_pais')?.addEventListener('input', syncAjPaisCodigo);
+});
+
 let catalogosCache = null;
 let catalogosPromise = null;
 
@@ -4942,6 +4995,7 @@ async function llenarFormulario(data) {
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
     setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
     setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
+    setAjPais(data.NACIONALIDAD ? data.NACIONALIDAD.trim() : (data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : ''));
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
     // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
@@ -5283,14 +5337,17 @@ async function cargarDatosBackup(codiPers) {
     const contDiffs = document.getElementById('contadorDiffs');
     if (!wrapper) return;
 
+    // ✅ Limpiar panel antes de cargar
+    wrapper.classList.remove('no-backup');
+    if (panelBk) panelBk.style.display = 'block';
+    document.querySelectorAll('#panelBackup .bk-val').forEach(el => el.textContent = '—');
+
     try {
         const response = await axios.get(`${API_URL}/dj/get-backup-data`, { params: { codi_pers: codiPers } });
 
         if (!response.data.success) {
-            wrapper.classList.add('no-backup');
-            if (panelBk) panelBk.style.display = 'none';
-            if (badgeSplit) badgeSplit.style.display = 'none';
-            _backupData = null;
+            console.warn('[BackupDJ] Sin backup para', codiPers, response.data.message ?? '');
+            _backupData = {};
             return;
         }
 
@@ -5410,11 +5467,11 @@ async function cargarDatosBackup(codiPers) {
         activarInteractividad();
 
     } catch (err) {
-        console.warn('Sin backup DJ:', err);
-        wrapper.classList.add('no-backup');
-        if (panelBk) panelBk.style.display = 'none';
-        if (badgeSplit) badgeSplit.style.display = 'none';
-        _backupData = null;
+        console.warn('[BackupDJ] Error al cargar backup:', err);
+        // No ocultar el panel — mostrar placeholder de "sin datos" si aplica
+        _backupData = {};
+        wrapper.classList.remove('no-backup');
+        if (panelBk) panelBk.style.display = '';
     }
 }
 

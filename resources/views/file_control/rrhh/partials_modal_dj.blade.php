@@ -28,7 +28,8 @@
 @include('file_control.rrhh.modal_js_styles')
 
 <div id="modalDjGestion"
-    class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none">
+    class="hs-overlay w-full h-full fixed top-0 left-0 z-[9999] transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none"
+    data-hs-overlay-keyboard="false">
     <div class="-translate-y-5 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 sm:w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded"
         style="width:96%;max-width:1400px;">
         <div class="flex flex-col border border-default-200 shadow-sm rounded-lg pointer-events-auto">
@@ -131,7 +132,7 @@
                                         <div class="bk-field" data-bk="fecha_nacimiento"><label>Fecha de
                                                 Nacimiento</label><span class="bk-val" data-field="FECH_NACI"></span>
                                         </div>
-                                        <div class="bk-field" data-bk="ciudad_nacimiento"><label>Ciudad de
+                                        <div class="bk-field" data-bk="ciudad_nacimiento"><label>País de
                                                 Nacimiento</label><span class="bk-val"
                                                 data-field="dj2026_ciudad_naci"></span></div>
                                         <div class="bk-field" data-bk="sabe_nadar" style="visibility:hidden;">
@@ -386,7 +387,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                                     </svg>
-                                    Servicio Militar Obligatorio
+                                    Servicio Militar (S.M.O.)
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
@@ -557,7 +558,7 @@
                         <input type="hidden" id="tipo_personal" name="tipo_personal">
                         <input type="hidden" id="cargo" name="cargo">
 
-                        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:14px;">
+                        <div id="cardTipoCargo" style="display:none;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:14px;">
                             <div style="flex:1;min-width:240px;">
                                 <label class="dj-label">Tipo de Personal</label>
                                 <select id="tipo_personal_ui" class="dj-select" disabled style="background:#f3f4f6;color:#9ca3af;">
@@ -694,10 +695,7 @@
                                             <div><label class="dj-label">Fecha de Nacimiento</label><input type="date"
                                                     id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input"
                                                     data-compare="fecha_nacimiento"></div>
-                                            <div style="visibility: hidden"><label class="dj-label">Ciudad de Nacimiento</label><input type="text"
-                                                    id="ciudad_nacimiento" name="ciudad_nacimiento" class="dj-input"
-                                                    placeholder="Lima, Arequipa…" style="text-transform:uppercase;">
-                                            </div>
+                                            <input type="hidden" id="ciudad_nacimiento" name="ciudad_nacimiento">
                                             <div style="visibility:hidden;">
                                                 <label class="dj-label">¿Sabe nadar?</label>
                                                 <select id="sabe_nadar" name="sabe_nadar" class="dj-select"
@@ -712,27 +710,38 @@
                                 </div>
                                 <div class="dj-section">
                                     <div class="dj-section-header">
-                                        Ciudad de nacimiento
+                                        País de Nacimiento
                                     </div>
-                                     <div class="dj-section-body">
+                                    <div class="dj-section-body">
                                         <div style="display:flex;gap:14px;align-items:flex-start;">
                                             <div style="flex:1;">
-                                                <div class="dj-grid-3" style="margin-bottom:8px;">
-                                                    <div><label class="dj-label">Departamento</label><select
-                                                            id="departamento_nac" name="departamento_nac"
-                                                            class="dj-select">
-                                                            <option value="" disabled>—</option>
-                                                        </select></div>
-                                                    <div><label class="dj-label">Provincia</label><select
-                                                            id="provincia_nac" name="provincia_nac"
-                                                            class="dj-select">
-                                                            <option value="" disabled>—</option>
-                                                        </select></div>
-                                                    <div><label class="dj-label">Distrito</label><select
-                                                            id="distrito_nac" name="distrito_nac"
-                                                            class="dj-select">
-                                                            <option value="" disabled>—</option>
-                                                        </select></div>
+                                                <div class="dj-grid-4" style="margin-bottom:8px;">
+                                                    <div>
+                                                        <label class="dj-label">País</label>
+                                                        <input type="hidden" id="aj_pais_codigo" name="nacionalidad">
+                                                        <input type="text" id="aj_pais" class="dj-input"
+                                                            list="aj_paises_list"
+                                                            placeholder="Escriba para buscar..." autocomplete="off">
+                                                        <datalist id="aj_paises_list"></datalist>
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Departamento</label>
+                                                        <select id="departamento_nac" name="departamento_nac" class="dj-select">
+                                                            <option value="" disabled selected>—</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Provincia</label>
+                                                        <select id="provincia_nac" name="provincia_nac" class="dj-select">
+                                                            <option value="" disabled selected>—</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Distrito</label>
+                                                        <select id="distrito_nac" name="distrito_nac" class="dj-select">
+                                                            <option value="" disabled selected>—</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1138,7 +1147,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                                         </svg>
-                                        Servicio Militar Obligatorio
+                                        Servicio Militar (S.M.O.)
                                     </div>
                                     <div class="dj-section-body">
                                         <div class="dj-grid-3">

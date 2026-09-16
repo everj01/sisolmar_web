@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ExcepcionEdadMail;
 
 class DjController extends Controller
 {
@@ -300,9 +302,9 @@ class DjController extends Controller
                 $codiCarg = null;
             }
  
-            // Ciudad nacimiento (campo ndj_ciudad_naci del blade)
-            $ciudadNaci = !empty(trim($data['ciudad_nacimiento'] ?? ''))
-                ? strtoupper(trim($data['ciudad_nacimiento'])) : null;
+            // País de nacimiento (PAIS_CODIGO → NACIONALIDAD)
+            $nacionalidad = !empty(trim($data['nacionalidad'] ?? ''))
+                ? strtoupper(trim($data['nacionalidad'])) : null;
 
 
             $distrito_nac = !empty(trim($data['distrito_nac'] ?? '')) ? strtoupper(trim($data['distrito_nac'])) : null;
@@ -313,7 +315,7 @@ class DjController extends Controller
             $tipoContMap = ['01' => 'O', '02' => 'A', '03' => 'O', '05' => 'A', '06' => 'O'];
             $tipoCont = $tipoContMap[$tipoPer] ?? 'O';
 
-            $personalPlaceholders = implode(',', array_fill(0, 66, '?'));
+            $personalPlaceholders = implode(',', array_fill(0, 65, '?'));
             $personalLocationPlaceholders = "?,?,?,'01',?,?,?,?,?,?";
  
             // ── INSERT EN PERSONAL ──────────────────────────────────────────────
@@ -337,7 +339,7 @@ class DjController extends Controller
                     PERS_BREVETE, CLASE_BREVETE, CATEGORIA_BREVETE, PERS_VEHICULO_PROPIO,
                     PERS_NOMCONTACTO, PERS_NROEMERGENCIA, PERS_EMERC_FAMILIAR,
                     PERS_CTRABANT, PERS_CARGOTRABANT, PERS_DURACIONANT,
-                    dj2026_banco, dj2026_ciudad_naci, dj2026_ocupacion_principal,
+                    dj2026_banco, NACIONALIDAD, dj2026_ocupacion_principal,
                     dj2026_experiencia_anios, dj2026_experiencia_meses, dj2026_familiar_empresa,
                     dj2026_familiar_nombre, dj2026_familiar_parentesco,
                     dj2026_laboral_1, dj2026_laboral_2, dj2026_cantprofesion,
@@ -390,7 +392,7 @@ class DjController extends Controller
                     $data['cargo_anterior']    ?? null,
                     $data['duracion_anterior'] ?? null,
                     $data['cuenta_banco']        ?? null,
-                    $ciudadNaci,                              // ✅ ciudad_nacimiento → dj2026_ciudad_naci
+                    $nacionalidad,                            // ✅ país código → NACIONALIDAD
                     $data['ocupacion_principal'] ?? null,
                     $experienciaAnios,
                     $experienciaMeses,
@@ -421,22 +423,42 @@ class DjController extends Controller
                 $codigoRegla = $edad < $reglasEdad['minima'] ? 377 : 176;
                 $excepcionEdad = session('dj_excepcion_edad');
 
-                DB::connection('sqlsrv')->table('sisolm_web.dbo.sw_dj_excepciones_edad')->insert([
-                    'cod_personal' => $nuevoCod,
-                    'dni' => $dni,
-                    'fecha_nacimiento' => $fechaNacimiento,
-                    'edad_calculada' => $edad,
-                    'tipo_excepcion' => $tipoExcepcion,
-                    'codigo_valo_unitario' => $codigoRegla,
-                    'edad_minima' => $reglasEdad['minima'],
-                    'edad_maxima' => $reglasEdad['maxima'],
-                    'usuario_registro' => session('usuario') ?? '0',
-                    'usuario_autorizador' => $excepcionEdad['usuario_autorizador'],
-                    'fecha_autorizacion' => $excepcionEdad['fecha_autorizacion'],
-                    'fecha_registro' => now(),
-                ]);
+                $now = now()->format('Y-m-d H:i:s');
+                $fechaNac = \Carbon\Carbon::parse($fechaNacimiento)->format('Y-m-d');
+                $fechaAuto = \Carbon\Carbon::parse($excepcionEdad['fecha_autorizacion'])->format('Y-m-d H:i:s');
+
+                $codPersonal = addslashes((string) $nuevoCod);
+                $dniVal      = addslashes((string) $dni);
+                $tipoExc     = addslashes((string) $tipoExcepcion);
+                $usuReg      = addslashes((string) (session('usuario') ?? '0'));
+                $usuAutor    = addslashes((string) $excepcionEdad['usuario_autorizador']);
+
+                DB::connection('sqlsrv')->unprepared(
+                    "INSERT INTO sisolm_web.dbo.sw_dj_excepciones_edad 
+                        (cod_personal, dni, fecha_nacimiento, edad_calculada, tipo_excepcion, 
+                         codigo_valo_unitario, edad_minima, edad_maxima, usuario_registro, 
+                         usuario_autorizador, fecha_autorizacion, fecha_registro) 
+                     VALUES ('$codPersonal', '$dniVal', CONVERT(date,'$fechaNac',23), $edad, '$tipoExc', $codigoRegla, {$reglasEdad['minima']}, {$reglasEdad['maxima']}, '$usuReg', '$usuAutor', CONVERT(datetime,'$fechaAuto',121), CONVERT(datetime,'$now',121))"
+                );
 
                 session()->forget('dj_excepcion_edad');
+
+                $nombreCompleto = trim(($data['nombre1'] ?? '') . ' ' . ($data['nombre2'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
+
+                $datosCorreo = [
+                    'nombre'               => $nombreCompleto,
+                    'dni'                  => $dni,
+                    'fecha_nacimiento'     => $fechaNacimiento,
+                    'edad'                 => $edad,
+                    'tipo_excepcion'       => $tipoExcepcion,
+                    'edad_minima'          => $reglasEdad['minima'],
+                    'edad_maxima'          => $reglasEdad['maxima'],
+                    'usuario_registro'     => session('usuario') ?? 'N/A',
+                    'usuario_autorizador'  => $excepcionEdad['usuario_autorizador'],
+                    'fecha_autorizacion'   => $excepcionEdad['fecha_autorizacion'],
+                ];
+
+                Mail::to('jhordantapiaespinoza@gmail.com')->queue(new ExcepcionEdadMail($datosCorreo));
             }
  
             // Familiares y Teléfonos
@@ -915,6 +937,31 @@ class DjController extends Controller
     }
 
     /**
+     * Obtener países desde ADMI_PAIS
+     */
+    public function getPaises()
+    {
+        try {
+            $paises = DB::select(
+                "SELECT PAIS_CODIGO AS id, PAIS_DESCRIPCION AS text
+                FROM si_solm.dbo.ADMI_PAIS
+                ORDER BY PAIS_DESCRIPCION"
+            );
+
+            return response()->json([
+                'success' => true,
+                'paises' => $paises,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en getPaises: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar países: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Obtener ubicaciones (departamentos, provincias, distritos)
      */
     public function getUbicacion(Request $request)
@@ -1156,15 +1203,19 @@ class DjController extends Controller
             }
 
             $data = $this->formatDatesForInput((array) $backup[0]);
+            // ✅ Alias: el panel backup espera 'dj2026_ciudad_naci' pero la BD guarda en NACIONALIDAD
+            if (!empty($data) && !isset($data['dj2026_ciudad_naci'])) {
+                $data['dj2026_ciudad_naci'] = $data['NACIONALIDAD'] ?? null;
+            }
 
             // ✅ FAMILIARES DEL BACKUP
             $familiares = DB::select(
-                "SELECT 
+                "SELECT
                 TIPO_RELA,
-                ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ', ' + 
+                ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ', ' +
                 ISNULL(NOMB_1,'') + ' ' + ISNULL(NOMB_2,'') AS Nombres,
                 CONVERT(CHAR(10), FECH_NACI, 103) AS FECH_NACI
-             FROM si_solm.dbo.DERECHO_HABIENTE 
+             FROM si_solm.dbo.DERECHO_HABIENTE
              WHERE CODI_PERS = ?
              ORDER BY TIPO_RELA",
                 [$codiPers]
@@ -1657,7 +1708,7 @@ class DjController extends Controller
             'PERS_CARGOTRABANT' => $getValue('cargo_anterior', 'PERS_CARGOTRABANT'),
             'PERS_DURACIONANT' => $getValue('duracion_anterior', 'PERS_DURACIONANT'),
             'dj2026_banco' => $getValue('cuenta_banco', 'dj2026_banco'),
-            'dj2026_ciudad_naci' => $getValue('ciudad_nacimiento', 'dj2026_ciudad_naci'),
+            'NACIONALIDAD' => $getValue('nacionalidad', null, 'NACIONALIDAD') ?? $getValue('ciudad_nacimiento', null, 'NACIONALIDAD'),
             'dj2026_ocupacion_principal' => $getValue('ocupacion_principal', 'dj2026_ocupacion_principal'),
             'dj2026_experiencia_anios' => $getValue('experiencia_anios', 'dj2026_experiencia_anios'),
             'dj2026_experiencia_meses' => $getValue('experiencia_meses', 'dj2026_experiencia_meses'),
@@ -1699,7 +1750,6 @@ class DjController extends Controller
             'CODI_MONE' => $getValue('CODI_MONE', 'CODI_MONE'),
             'SUEL_NETO' => $getValue('SUEL_NETO', 'SUEL_NETO'),
             'CARG_FAMI' => $getValue('CARG_FAMI', 'CARG_FAMI'),
-            'NACIONALIDAD' => $getValue('NACIONALIDAD', 'NACIONALIDAD'),
             'TIPO_SITU_LABO' => $getValue('TIPO_SITU_LABO', 'TIPO_SITU_LABO'),
             'SEGU_VIDA_LEY' => $getValue('SEGU_VIDA_LEY', 'SEGU_VIDA_LEY'),
             'PERS_CONBREVETE' => $getValue('PERS_CONBREVETE', 'PERS_CONBREVETE'),
@@ -2124,7 +2174,7 @@ class DjController extends Controller
             'dj2026_familiar_empresa',
             'dj2026_banco',
             'dj2026_cantprofesion',
-            'dj2026_ciudad_naci',
+            'NACIONALIDAD',
             'dj2026_ocupacion_principal',
             'dj2026_experiencia_anios',
             'dj2026_experiencia_meses',
@@ -2294,7 +2344,7 @@ class DjController extends Controller
             'PERS_CARGOTRABANT' => $data['cargo_anterior'] ?? null,
             'PERS_DURACIONANT' => $data['duracion_anterior'] ?? null,
             'dj2026_banco' => $data['cuenta_banco'] ?? null,
-            'dj2026_ciudad_naci' => $data['ciudad_nacimiento'] ?? null,
+            'NACIONALIDAD' => $data['nacionalidad'] ?? null,
             'dj2026_ocupacion_principal' => $data['ocupacion_principal'] ?? null,
             'dj2026_experiencia_anios' => $data['experiencia_anios'] ?? null,
             'dj2026_familiar_empresa' => $data['familiar_empresa'] ?? 'NO',
@@ -2392,7 +2442,7 @@ class DjController extends Controller
                     
                     PERS_CTRABANT = s.PERS_CTRABANT,
                     PERS_CARGOTRABANT = s.PERS_CARGOTRABANT, PERS_DURACIONANT = s.PERS_DURACIONANT,
-                    dj2026_banco = s.dj2026_banco, dj2026_ciudad_naci = s.dj2026_ciudad_naci,
+                    dj2026_banco = s.dj2026_banco, NACIONALIDAD = s.NACIONALIDAD,
                     dj2026_ocupacion_principal = s.dj2026_ocupacion_principal, dj2026_experiencia_anios = s.dj2026_experiencia_anios,
                     dj2026_familiar_empresa = s.dj2026_familiar_empresa, dj2026_familiar_nombre = s.dj2026_familiar_nombre,
                     dj2026_familiar_parentesco = s.dj2026_familiar_parentesco, dj2026_cantprofesion = s.dj2026_cantprofesion
@@ -3440,7 +3490,7 @@ $tipotrab    = $tipoPer;
                     PERS_BREVETE=?, CLASE_BREVETE=?, CATEGORIA_BREVETE=?, PERS_VEHICULO_PROPIO=?,
                     PERS_NOMCONTACTO=?, PERS_NROEMERGENCIA=?, PERS_EMERC_FAMILIAR=?,
                     PERS_CTRABANT=?, PERS_CARGOTRABANT=?, PERS_DURACIONANT=?,
-                    dj2026_banco=?, dj2026_ciudad_naci=?, dj2026_ocupacion_principal=?,
+                    dj2026_banco=?, NACIONALIDAD=?, dj2026_ocupacion_principal=?,
                     dj2026_experiencia_anios=?, dj2026_experiencia_meses=?, dj2026_familiar_empresa=?,
                     dj2026_familiar_nombre=?, dj2026_familiar_parentesco=?,
                     dj2026_laboral_1=?, dj2026_laboral_2=?, dj2026_cantprofesion=?,
@@ -3465,7 +3515,7 @@ $tipotrab    = $tipoPer;
                     $trim($data['contacto_emergencia'] ?? null), $trim($data['celular_emergencia'] ?? null), $trim($data['parentesco_emergencia'] ?? null),
                     $trim($data['empresa_anterior'] ?? null), $trim($data['cargo_anterior'] ?? null), $trim($data['duracion_anterior'] ?? null),
                     $trim($data['cuenta_banco'] ?? null),
-                    !empty(trim($data['ciudad_nacimiento'] ?? '')) ? strtoupper(trim($data['ciudad_nacimiento'])) : null,
+                    !empty(trim($data['nacionalidad'] ?? '')) ? strtoupper(trim($data['nacionalidad'])) : null,
                     $trim($data['ocupacion_principal'] ?? null),
                     $intv($data['experiencia_anios'] ?? null), $experienciaMeses, $famEmpresa,
                     $trim($data['familiar_nombre'] ?? null), $trim($data['familiar_parentesco'] ?? null),

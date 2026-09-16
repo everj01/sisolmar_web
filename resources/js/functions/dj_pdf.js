@@ -598,7 +598,7 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         if (esOper || (!esOper && !esAdmin)) {
             drawField("Carne SUCAMEC", getValue('curso_sucamec') === 'SI' ? 'SÍ' : 'NO', boxX, boxWidth * 0.285, y, rowH, 0.42);
             drawField("S.M.O.",      getValue('presto_smo'),               boxX + boxWidth * 0.285, boxWidth * 0.381, y, rowH, 0.3);
-            drawField("Institución", getValue('institucion_laboral'),boxX + boxWidth * 0.666, boxWidth * 0.334, y, rowH, 0.35);
+            drawField("Lugar S.M.O.",  getValue('lugar_smo'),                boxX + boxWidth * 0.666, boxWidth * 0.334, y, rowH, 0.35);
             y += rowH;
             drawField("N° Licencia L4", getValue('licencia_arma'), boxX,                     boxWidth * 0.5264, y, rowH, 0.35);
             drawField("Arma Propia",    getValue('arma_propia'),    boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.35);
@@ -841,12 +841,27 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             + '_' + String(f.getHours()).padStart(2,'0') + String(f.getMinutes()).padStart(2,'0');
         const nombreArchivo = `DJ_${dni}_${nombres.replace(/ /g, "-")}_${fechaHora}.pdf`;
         if (returnBlob) return { blob: pdf.output('blob'), filename: nombreArchivo };
-        pdf.save(nombreArchivo);
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nombreArchivo;
+        link.style.cssText = 'position:fixed;left:-9999px;pointer-events:none;';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
+        return nombreArchivo;
 
     } catch (error) {
         console.error("Error al generar PDF:", error);
         if (returnBlob) return null;
-        Swal.fire({ icon: 'error', title: 'Error de PDF', text: 'Hubo un error al generar el documento: ' + error.message });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de PDF',
+            text: 'Hubo un error al generar el documento: ' + error.message,
+            didOpen: (popup) => { popup.addEventListener('click', e => e.stopPropagation()); }
+        });
+        return null;
     }
 }
 
@@ -953,5 +968,15 @@ export async function generarReporteFaltantesPDF(data, todosLosDatos = null) {
     }
 
     const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-    pdf.save(`Reporte_Faltantes_DJ_${ts}.pdf`);
+    const nombreArchivo = `Reporte_Faltantes_DJ_${ts}.pdf`;
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nombreArchivo;
+    link.style.display = 'none';
+    link.addEventListener('click', e => e.stopPropagation(), true);
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
 }

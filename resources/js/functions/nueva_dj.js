@@ -256,6 +256,7 @@ import Swal from 'sweetalert2';
     let ndj_allInstituciones = [];
     let ndj_allCarreras      = [];
     let ndj_allCargos        = [];
+    let ndj_paisesData       = [];
     let ndj_catalogoListo    = false;
     let ndj_abriendo         = false;
 
@@ -450,7 +451,8 @@ import Swal from 'sweetalert2';
             await ndj_cargarUbigeosCascada('ndj_departamento_actual','ndj_provincia_actual','ndj_distrito_actual', data.PERS_DEPT_ACT?.trim(),   data.PERS_PROV_ACT?.trim(),    data.PERS_DIST_ACT?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_dni',   'ndj_provincia_dni',   'ndj_distrito_dni',    data.PERS_DPTO_DIRDNI?.trim(), data.PERS_PROV_DIRDNI?.trim(), data.PERS_DIST_DIRDNI?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_nac',   'ndj_provincia_nac',   'ndj_distrito_nac',    data.DEPA_CODIGO_NACI?.trim(), data.PROVI_CODIGO_NACI?.trim(),data.DIST_NACI?.trim());
-            ndj_setVal('ndj_ciudad_naci', data.dj2026_ciudad_naci?.trim() || '');
+            ndj_setPais(data.NACIONALIDAD?.trim() || '');
+            ndj_toggleUbigeoNacimiento(false);
 
             const fc = $('ndj_familyContainer');
             if (fc) {
@@ -598,7 +600,7 @@ import Swal from 'sweetalert2';
                     ndj_cargarTipoDoc(), ndj_cargarTipoPer(),
                     ndj_cargarEstadoCivil(), ndj_cargarSistemaPrev(),
                     ndj_cargarDepartamentos(), ndj_cargarEducacion(),
-                    ndj_cargarCargos(),
+                    ndj_cargarCargos(), ndj_cargarPaises(),
                 ]);
             }
         } catch (e) {
@@ -739,6 +741,12 @@ import Swal from 'sweetalert2';
         document.querySelectorAll('#modalNuevaDJ [data-ndj-tipo]').forEach(el => { el.style.display = ''; });
         $('ndj_div_familiar_interno')?.classList.add('hidden');
 
+        // Reset búsqueda país
+        const paisInput = $('ndj_pais');
+        const paisCodigo = $('ndj_pais_codigo');
+        if (paisInput) paisInput.value = '';
+        if (paisCodigo) paisCodigo.value = '';
+
         ndj_limpiarFoto();
 
         const cargoSel = $('ndj_sel_cargo');
@@ -754,6 +762,10 @@ import Swal from 'sweetalert2';
 
         ['ndj_provincia_actual','ndj_distrito_actual','ndj_provincia_dni','ndj_distrito_dni','ndj_provincia_nac','ndj_distrito_nac']
             .forEach(id => { const s = $(id); if (s) s.innerHTML = '<option value="">—</option>'; });
+
+        // Restaurar visibilidad de ubigeo de nacimiento
+        ['ndj_wrap_departamento_nac', 'ndj_wrap_provincia_nac', 'ndj_wrap_distrito_nac']
+            .forEach(id => { const w = $(id); if (w) w.style.display = ''; });
 
         const fc = $('ndj_familyContainer');
         if (fc) { fc.innerHTML = ''; fc.appendChild(ndj_crearFila()); }
@@ -783,6 +795,68 @@ import Swal from 'sweetalert2';
     function ndj_cargarTipoPer()    { return ndj_fetchSelect('ndj_sel_tipo_personal',   `${VITE_URL_APP}/api/dj/get-tipo-per/`,     'codigo','nombre'); }
     function ndj_cargarEstadoCivil(){ return ndj_fetchSelect('ndj_estado_civil',        `${VITE_URL_APP}/api/dj/get-estado-civil/`, 'codigo','nombre'); }
     function ndj_cargarSistemaPrev(){ return ndj_fetchSelect('ndj_sistema_previsional', `${VITE_URL_APP}/api/dj/get-sistema-prev/`, 'codigo','nombre'); }
+
+    async function ndj_cargarPaises() {
+        const input = $('ndj_pais');
+        const dl = document.getElementById('ndj_paises_list');
+        if (!input || !dl) return;
+        input.disabled = true;
+        try {
+            const res = await fetch(`${VITE_URL_APP}/api/dj/get-paises/`);
+            const json = await res.json();
+            const items = json.paises ?? [];
+            ndj_paisesData = items;
+            dl.innerHTML = '';
+            items.forEach(item => {
+                const o = document.createElement('option');
+                o.value = item.text;
+                o.dataset.codigo = item.id;
+                dl.appendChild(o);
+            });
+            input.dataset.loaded = 'true';
+        } catch (err) {
+            console.error('[NuevaDJ] Error cargando países:', err);
+        } finally { input.disabled = false; }
+    }
+
+    function ndj_syncPaisCodigo() {
+        const input = $('ndj_pais');
+        const hidden = $('ndj_pais_codigo');
+        if (!input || !hidden) return;
+        const texto = input.value.toUpperCase().trim();
+        const match = ndj_paisesData.find(p => p.text.toUpperCase() === texto);
+        hidden.value = match ? match.id : '';
+    }
+
+    function ndj_setPais(codigo) {
+        const input = $('ndj_pais');
+        const hidden = $('ndj_pais_codigo');
+        if (!input || !hidden) return;
+        hidden.value = codigo || '';
+        const match = ndj_paisesData.find(p => p.id === codigo);
+        input.value = match ? match.text : '';
+    }
+
+    // Regla: si TIPO DE DOCUMENTO es CARNET DE EXTRANJERÍA, se ocultan
+    // Departamento / Provincia / Distrito de la sección País de Nacimiento.
+    // limpiarCampos = true solo cuando el usuario cambia el select manualmente
+    // (no limpiar al cargar datos existentes para no perder info guardada).
+    function ndj_toggleUbigeoNacimiento(limpiarCampos = false) {
+        const sel = $('ndj_tipo_documento');
+        if (!sel) return;
+        const txt = (sel.options[sel.selectedIndex]?.text || '').toUpperCase();
+        const esCarnetExtranjeria = txt.includes('EXTRANJERIA') || txt.includes('EXTRANJERÍA');
+        ['ndj_wrap_departamento_nac', 'ndj_wrap_provincia_nac', 'ndj_wrap_distrito_nac'].forEach(id => {
+            const wrap = $(id);
+            if (wrap) wrap.style.display = esCarnetExtranjeria ? 'none' : '';
+        });
+        if (esCarnetExtranjeria && limpiarCampos) {
+            ['ndj_departamento_nac', 'ndj_provincia_nac', 'ndj_distrito_nac'].forEach(id => {
+                const s = $(id);
+                if (s) s.value = '';
+            });
+        }
+    }
 
     async function ndj_cargarCargos() {
         try {
@@ -1219,6 +1293,7 @@ import Swal from 'sweetalert2';
         const body = {
             ...payload,
             tipo_personal:       payload.ndj_tipo_personal        || payload.ndj_sel_tipo_personal,
+            cargo:               payload.ndj_cargo                 || '',
             cod_postulante:      payload.ndj_cod_postulante        || '',
             tipo_documento:      payload.ndj_tipo_documento        || '0034',
             dni:                 payload.ndj_nro_documento,
@@ -1257,7 +1332,7 @@ import Swal from 'sweetalert2';
             departamento_nac:    payload.ndj_departamento_nac,
             provincia_nac:       payload.ndj_provincia_nac,
             distrito_nac:        payload.ndj_distrito_nac,
-            ciudad_nacimiento:   payload.ndj_ciudad_naci           || '',
+            nacionalidad:          payload.ndj_pais_codigo         || '',
             contacto_emergencia:   payload.ndj_contacto_emergencia,
             celular_emergencia:    payload.ndj_celular_emergencia,
             parentesco_emergencia: payload.ndj_parentesco_emergencia,
@@ -1632,6 +1707,7 @@ import Swal from 'sweetalert2';
             };
             const c = map[this.value] ?? { max:20, ph:'Ingrese el número', mode:'text' };
             inp.maxLength = c.max; inp.placeholder = c.ph; inp.inputMode = c.mode;
+            ndj_toggleUbigeoNacimiento(true);
         });
 
         $('ndj_nro_documento')?.addEventListener('input', function () {
@@ -1652,6 +1728,9 @@ import Swal from 'sweetalert2';
         $('ndj_provincia_dni')?.addEventListener('change',       function () { ndj_cargarDistritos(this.value,'ndj_distrito_dni'); });
         $('ndj_departamento_nac')?.addEventListener('change',    function () { ndj_cargarProvincias(this.value,'ndj_provincia_nac','ndj_distrito_nac'); });
         $('ndj_provincia_nac')?.addEventListener('change',       function () { ndj_cargarDistritos(this.value,'ndj_distrito_nac'); });
+
+        // País: sincronizar código al escribir/seleccionar
+        $('ndj_pais')?.addEventListener('input', ndj_syncPaisCodigo);
 
         // Familiar empresa / SUCAMEC / Clase brevete
         $('ndj_familiar_empresa')?.addEventListener('change', function () { $('ndj_div_familiar_interno')?.classList.toggle('hidden', this.value !== 'SI'); });

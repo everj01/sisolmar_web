@@ -188,38 +188,39 @@
                                 </div>
                             </div>
 
-                            {{-- Ciudad de nacimiento --}}
+                            {{-- País de nacimiento --}}
                             <div class="dj-section">
                                 <div class="dj-section-header">
                                     <i class='bx bx-map'></i>
-                                    Ciudad de Nacimiento
+                                    País de Nacimiento
                                 </div>
                                 <div class="dj-section-body">
-                                    {{-- ✅ CORREGIDO: Agregado campo ciudad_naci --}}
                                     <div class="dj-grid-4" style="margin-bottom:8px;">
                                         <div>
+                                            <label class="dj-label">País</label>
+                                            <input type="hidden" id="ndj_pais_codigo" name="ndj_pais">
+                                            <input type="text" id="ndj_pais" class="dj-input"
+                                                list="ndj_paises_list"
+                                                placeholder="Escriba para buscar..." autocomplete="off">
+                                            <datalist id="ndj_paises_list"></datalist>
+                                        </div>
+                                        <div id="ndj_wrap_departamento_nac">
                                             <label class="dj-label">Departamento</label>
                                             <select id="ndj_departamento_nac" name="ndj_departamento_nac" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
                                         </div>
-                                        <div>
+                                        <div id="ndj_wrap_provincia_nac">
                                             <label class="dj-label">Provincia</label>
                                             <select id="ndj_provincia_nac" name="ndj_provincia_nac" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
                                         </div>
-                                        <div>
+                                        <div id="ndj_wrap_distrito_nac">
                                             <label class="dj-label">Distrito</label>
                                             <select id="ndj_distrito_nac" name="ndj_distrito_nac" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">Ciudad / Localidad</label>
-                                            <input type="text" id="ndj_ciudad_naci" name="ndj_ciudad_naci"
-                                                class="dj-input" placeholder="Ej. Trujillo"
-                                                style="text-transform:uppercase;">
                                         </div>
                                     </div>
                                 </div>
@@ -590,7 +591,7 @@
                             <div class="dj-section">
                                 <div class="dj-section-header">
                                     <i class='bx bx-flag'></i>
-                                    Servicio Militar Obligatorio
+                                    Servicio Militar (S.M.O.)
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">

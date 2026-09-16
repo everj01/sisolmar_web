@@ -16,7 +16,7 @@ import { init as initCertificados } from './reportes/certificados.js';
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================================
-    // LÓGICA PARA TABS Y LIMPIEZA: CARNET Y CERTIFICADOS
+    // LÓGICA PARA TABS Y LIMPIEZA: CARNET Y CERTIFICADOS   
     // ==========================================================
     const modalUnificado = document.getElementById('modalCarnet');
     const tabCarnet = document.getElementById('tabCarnet');

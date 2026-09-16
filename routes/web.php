@@ -302,6 +302,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('reglas-edad/', [DjController::class, 'reglasEdad']);
             Route::get('get-estado-civil/', [DjController::class, 'getEstadoCivil']);
             Route::get('get-sistema-prev/', [DjController::class, 'getSistemaPrev']);
+            Route::get('get-paises/', [DjController::class, 'getPaises']);
         });
 
     }); // fin prefix('api')
