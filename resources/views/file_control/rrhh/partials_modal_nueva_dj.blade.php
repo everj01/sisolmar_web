@@ -396,9 +396,8 @@
                                             <label class="dj-label">Cuenta de Sueldo</label>
                                             <select id="ndj_cuenta_banco" name="ndj_cuenta_banco" class="dj-select">
                                                 <option value="" disabled selected>—</option>
-                                                @foreach ($bancos as $banco)
-                                                    <option value="{{ $banco->id }}">{{ $banco->text }}</option>
-                                                @endforeach
+                                                <option value="01">BANCO DE CRÉDITO DEL PERÚ</option>
+                                                <option value="03">BANCO INTERNACIONAL DEL PERÚ - INTERBANK</option>
                                             </select>
                                         </div>
                                     </div>

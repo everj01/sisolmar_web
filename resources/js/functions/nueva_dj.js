@@ -1233,6 +1233,7 @@ import Swal from 'sweetalert2';
             { id:'ndj_nombre1',          nombre:'Primer Nombre'       },
             { id:'ndj_apellido_paterno', nombre:'Apellido Paterno'    },
             { id:'ndj_apellido_materno', nombre:'Apellido Materno'    },
+            { id:'ndj_cuenta_banco',     nombre:'Cuenta de Sueldo'    },
         ];
         const faltante = camposReq.find(c => !$(c.id)?.value?.trim());
         if (faltante) {

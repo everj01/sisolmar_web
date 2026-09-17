@@ -292,6 +292,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/verificar-contrato', [DjController::class, 'verificarContrato']);
             Route::post('/save-nueva-dj', [DjController::class, 'saveNuevaDj']);
             Route::post('/validar-excepcion-edad', [DjController::class, 'validarExcepcionEdad']);
+            Route::get('/get-usuarios-excepcion-edad', [DjController::class, 'getUsuariosExcepcionEdad']);
+            Route::post('/save-usuarios-excepcion-edad', [DjController::class, 'saveUsuariosExcepcionEdad']);
             Route::get('/buscar-coincidencias', [DjController::class, 'buscarCoincidencias']);
             Route::get('/reporte-personal-datos-generales', [ReportePersonalController::class, 'datosGenerales']);
             Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);

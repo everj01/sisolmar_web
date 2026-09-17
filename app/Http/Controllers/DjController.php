@@ -445,6 +445,26 @@ class DjController extends Controller
 
                 $nombreCompleto = trim(($data['nombre1'] ?? '') . ' ' . ($data['nombre2'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
 
+                // Resolver tipo trabajador
+                $tipoTrabNombre = $tipotrab;
+                if (!empty($tipotrab)) {
+                    $tipoRow = DB::connection('sqlsrv')->selectOne(
+                        "SELECT TIPE_DESCRIPCION FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?",
+                        [$tipotrab]
+                    );
+                    $tipoTrabNombre = $tipoRow->TIPE_DESCRIPCION ?? $tipotrab;
+                }
+
+                // Resolver sucursal
+                $sucursalNombre = $sucursal;
+                if (!empty($sucursal)) {
+                    $sucRow = DB::connection('sqlsrv')->selectOne(
+                        "SELECT SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WHERE SUCU_CODIGO = ?",
+                        [$sucursal]
+                    );
+                    $sucursalNombre = $sucRow->SUCU_ABREVIATURA ?? $sucursal;
+                }
+
                 $datosCorreo = [
                     'nombre'               => $nombreCompleto,
                     'dni'                  => $dni,
@@ -453,12 +473,14 @@ class DjController extends Controller
                     'tipo_excepcion'       => $tipoExcepcion,
                     'edad_minima'          => $reglasEdad['minima'],
                     'edad_maxima'          => $reglasEdad['maxima'],
+                    'tipo_trabajador'      => $tipoTrabNombre,
+                    'sucursal'             => $sucursalNombre,
                     'usuario_registro'     => session('usuario') ?? 'N/A',
                     'usuario_autorizador'  => $excepcionEdad['usuario_autorizador'],
                     'fecha_autorizacion'   => $excepcionEdad['fecha_autorizacion'],
                 ];
 
-                Mail::to('jhordantapiaespinoza@gmail.com')->queue(new ExcepcionEdadMail($datosCorreo));
+                Mail::to('rrhh@solsecurity.pe')->send(new ExcepcionEdadMail($datosCorreo));
             }
  
             // Familiares y Teléfonos
@@ -2174,7 +2196,6 @@ class DjController extends Controller
             'dj2026_familiar_empresa',
             'dj2026_banco',
             'dj2026_cantprofesion',
-            'NACIONALIDAD',
             'dj2026_ocupacion_principal',
             'dj2026_experiencia_anios',
             'dj2026_experiencia_meses',
@@ -3864,6 +3885,17 @@ $tipotrab    = $tipoPer;
             ], 422);
         }
 
+        $tienePermiso = DB::connection('sqlsrv')->selectOne(
+            "SELECT 1 FROM sisolm_web.dbo.sw_permisos_excepcion_edad WHERE usuario = ? AND habilitado = 1",
+            [$usuario]
+        );
+        if (!$tienePermiso) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tiene permiso para registrar excepciones de edad.',
+            ], 403);
+        }
+
         $fecha = $this->parsearFechaNacimiento($fechaNacimiento);
         if (!$fecha) {
             return response()->json([
@@ -3910,6 +3942,54 @@ $tipotrab    = $tipoPer;
             'success' => true,
             'message' => 'Credenciales validadas. Puede continuar con el registro.',
         ]);
+    }
+
+    public function getUsuariosExcepcionEdad()
+    {
+        try {
+            $usuarios = DB::connection('sqlsrv')->select(
+                "SELECT u.usuario, u.nombre_1, u.apellido_1,
+                        CASE WHEN p.usuario IS NOT NULL THEN 1 ELSE 0 END AS habilitado
+                 FROM sisolm_web.dbo.sw_usuarios u
+                 LEFT JOIN sisolm_web.dbo.sw_permisos_excepcion_edad p ON u.usuario = p.usuario AND p.habilitado = 1
+                 WHERE u.habilitado = 1
+                 ORDER BY u.usuario"
+            );
+
+            return response()->json(['success' => true, 'data' => $usuarios]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener usuarios excepción edad: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function saveUsuariosExcepcionEdad(Request $request)
+    {
+        try {
+            $usuarios = $request->input('usuarios', []);
+
+            DB::connection('sqlsrv')->unprepared('DELETE FROM sisolm_web.dbo.sw_permisos_excepcion_edad');
+
+            if (!empty($usuarios)) {
+                $values = [];
+                foreach ($usuarios as $usuario) {
+                    $usuario = strtoupper(trim(addslashes($usuario)));
+                    if ($usuario !== '') {
+                        $values[] = "('$usuario')";
+                    }
+                }
+                if (!empty($values)) {
+                    DB::connection('sqlsrv')->unprepared(
+                        'INSERT INTO sisolm_web.dbo.sw_permisos_excepcion_edad (usuario) VALUES ' . implode(', ', $values)
+                    );
+                }
+            }
+
+            return response()->json(['success' => true, 'message' => 'Permisos actualizados correctamente.']);
+        } catch (\Exception $e) {
+            Log::error('Error al guardar usuarios excepción edad: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     private function parsearFechaNacimiento(string $fecha): ?\Carbon\Carbon
