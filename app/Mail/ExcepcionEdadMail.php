@@ -26,12 +26,12 @@ class ExcepcionEdadMail extends Mailable
                         ['email' => 'rrhh@solsecurity.pe', 'name' => 'RRHH'],
                     ])
                     ->cc([
-                        ['email' => 'administracion@solsecurity.pe', 'name' => 'Administración'],
+                        //['email' => 'administracion@solsecurity.pe', 'name' => 'Administración'],
                         ['email' => 'legajosok@solsecurity.pe', 'name' => 'Legajos'],
                         ['email' => 'filecontrol@solsecurity.pe', 'name' => 'File Control'],
-                        ['email' => 'giannanfaro@solsecurity.pe', 'name' => 'Gian Nanfaro'],
-                        ['email' => 'pamelaherrera@solsecurity.pe', 'name' => 'Pamela Herrera'],
-                        ['email' => 'madelinapaza@solsecurity.pe', 'name' => 'Madelin Apaza'],
+                        //['email' => 'giannanfaro@solsecurity.pe', 'name' => 'Gian Nanfaro'],
+                        //['email' => 'pamelaherrera@solsecurity.pe', 'name' => 'Pamela Herrera'],
+                        //['email' => 'madelinapaza@solsecurity.pe', 'name' => 'Madelin Apaza'],
                         ['email' => 'cesarsalazar@solsecurity.pe', 'name' => 'Cesar Salazar'],
                         ['email' => 'jhordantapiaespinoza@gmail.com', 'name' => 'Jhordan Tapia'],
                     ])
