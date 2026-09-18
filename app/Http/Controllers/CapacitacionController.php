@@ -3693,17 +3693,17 @@ class CapacitacionController extends Controller
     public function obtenerAreas(): JsonResponse
     {
         try {
-            $areas = DB::table('sw_curso_areas')
-                ->select('codigo', 'nombre', 'codModdle')
+            $areas = DB::table('sw_cursos_area')
+                ->select('codigo', 'nombre', 'codigo_moodle')
                 ->where('habilitado', 1)
-                ->whereNotNull('codModdle')
-                ->where('codModdle', '!=', '')
+                ->whereNotNull('codigo_moodle')
+                ->where('codigo_moodle', '!=', '')
                 ->orderBy('codigo')
                 ->get()
                 ->map(fn($a) => [
                     'codArea' => (string) $a->codigo,
                     'Area' => $a->nombre,
-                    'codModdle' => (string) $a->codModdle,
+                    'codModdle' => (string) $a->codigo_moodle,
                 ]);
             return response()->json([
                 'success' => true,
@@ -3907,7 +3907,7 @@ class CapacitacionController extends Controller
             $areas = collect(
                 DB::select("
                 SELECT codigo, nombre
-                FROM sisolm_web.dbo.sw_curso_areas
+                FROM sisolm_web.dbo.sw_cursos_area
                 WHERE habilitado = 1
             ")
             )->keyBy('codigo');
@@ -3997,7 +3997,7 @@ class CapacitacionController extends Controller
             $areas = collect(
                 DB::select("
                 SELECT codigo, nombre
-                FROM sisolm_web.dbo.sw_curso_areas
+                FROM sisolm_web.dbo.sw_cursos_area
                 WHERE habilitado = 1
             ")
             )->keyBy('codigo');
@@ -4913,7 +4913,7 @@ class CapacitacionController extends Controller
 
             $areaResponsable = null;
             if ($cursoBdLocal->area) {
-                $area = DB::table('sw_curso_areas')
+                $area = DB::table('sw_cursos_area')
                     ->select('nombre')
                     ->where('codigo', $cursoBdLocal->area)
                     ->first();
@@ -6074,9 +6074,9 @@ class CapacitacionController extends Controller
 
             $dirigidos = DB::table('sw_cursos_dirigido')
                 ->where('habilitado', 1)
-                ->pluck('opcion', 'codigo');
+                ->pluck('nombre', 'codigo');
 
-            $areasResp = DB::table('sw_curso_areas')
+            $areasResp = DB::table('sw_cursos_area')
                 ->where('habilitado', 1)
                 ->pluck('nombre', 'codigo');
 
