@@ -3857,6 +3857,7 @@ class CapacitacionController extends Controller
                     return [
                         'Id'                 => $c->course_id,
                         'LocalId'            => $c->course_idnumber ?? $cursoLocal->codigo ?? null,
+                        'CodigoLocal'        => (int) ($cursoLocal?->codigo ?? null),
                         'Codigo'             => $cursoLocal?->codigo_curso      ?? null,
                         'AreaId'             => $area->codModdle                ?? null,
                         'SistemaId'          => $cursoLocal?->area_conocimiento ?? null,
