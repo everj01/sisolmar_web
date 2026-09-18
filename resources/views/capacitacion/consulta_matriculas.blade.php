@@ -712,7 +712,7 @@
                 this.open = true;
                 this.isLoading = true;
 
-                this.cursoId = data.CodigoLocal ?? data.LocalId;
+                this.cursoId = data.LocalId;
                 this.nombre = data.Nombre || '';
                 this.area = data.Area || '';
                 this.sistema = data.Sistema || '';
