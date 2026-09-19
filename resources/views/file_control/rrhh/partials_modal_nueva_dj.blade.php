@@ -38,7 +38,7 @@
 
                     <div id="ndj_alert_tipo_personal"
                         style="display:block;background:#fef3c7;color:#92400e;padding:10px 16px;border-radius:6px;margin-bottom:12px;font-size:14px;font-weight:500;">
-                        ⚠️ Debe seleccionar el tipo de personal antes de completar el formulario.
+                        ⚠️ Debe seleccionar la sucursal antes de completar el formulario.
                     </div>
 
                     {{-- ══════════════════════════════════════
@@ -46,7 +46,17 @@
                          ══════════════════════════════════════ --}}
                     <div class="dj-group">
                         <div class="dj-group-body">
-                            <div class="dj-grid-4">
+                            <div class="dj-grid-3">
+                                <div>
+                                    <label class="dj-label">Sucursal <span style="color:#ef4444">*</span></label>
+                                    <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
+                                        @foreach ($sucursalesGestionDj as $sucursal)
+                                            <option value="{{ $sucursal->codigo }}">
+                                                {{ $sucursal->abreviatura }}
+                                            </option>
+                                        @endforeach 
+                                    </select>
+                                </div>
                                 <div>
                                     <label class="dj-label">Tipo de Personal <span style="color:#ef4444">*</span></label>
                                     <select id="ndj_sel_tipo_personal" name="ndj_sel_tipo_personal" class="dj-select">
@@ -59,6 +69,13 @@
                                         <option value="">— Seleccionar —</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div class="dj-grid-3" style="margin-top:10px;">
+                                <div>
+                                    <label class="dj-label">Fecha Ingreso a Solmar <span style="color:#ef4444">*</span></label>
+                                    <input type="date" id="ndj_fecha_ingreso_solmar" name="ndj_fecha_ingreso_solmar"
+                                        class="dj-input" max="{{ date('Y-m-d') }}">
+                                </div>
                                 <div>
                                     <label class="dj-label">Tipo de Documento <span style="color:#ef4444">*</span></label>
                                     <select id="ndj_tipo_documento" name="ndj_tipo_documento" class="dj-select">
@@ -68,21 +85,8 @@
                                 <div>
                                     <label class="dj-label">Número de Documento <span style="color:#ef4444">*</span></label>
                                     <input type="text" id="ndj_nro_documento" name="ndj_nro_documento"
-                                        class="dj-input" placeholder="Ingrese el número"
-                                        maxlength="20" style="text-transform:uppercase;">
-                                </div>
-                                <div>
-                                    <label class="dj-label">Sucursal <span style="color:#ef4444">*</span></label>
-
-                                    <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
-
-                                        @foreach ($sucursalesGestionDj as $sucursal)
-                                            <option value="{{ $sucursal->codigo }}">
-                                                {{ $sucursal->abreviatura }}
-                                            </option>
-                                        @endforeach 
-
-                                    </select>
+                                        class="dj-input" placeholder="Seleccione tipo de documento primero"
+                                        maxlength="20" style="text-transform:uppercase;" disabled>
                                 </div>
                             </div>
                             <div style="margin-top:6px;">

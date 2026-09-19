@@ -87,60 +87,72 @@ class DjController extends Controller
  
         try {
             $data    = $request->all();
+            $usuarioActual = strtoupper(trim((string)(session('usuario') ?? '')));
+            $esEmontéro = ($usuarioActual === 'EMONTERO');
             $dni     = trim($request->input('dni', ''));
             $tipoPer = trim($request->input('tipo_personal', ''));
  
-            if (empty($dni)) {
-                return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
-            }
+            if (!$esEmontéro) {
+                if (empty($dni)) {
+                    return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
+                }
 
-            if ($tipoPer === '') {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'Debe seleccionar el tipo de trabajador.'], 422);
-            }
-
-            $tipoValido = DB::selectOne(
-                'SELECT 1 FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?',
-                [$tipoPer]
-            );
-            if (!$tipoValido) {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'El tipo de trabajador seleccionado no es válido.'], 422);
-            }
-
-            $fechaNacimiento = trim($request->input('fecha_nacimiento', ''));
-            $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
-            if (!$fechaNacimientoCarbon) {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'La fecha de nacimiento es obligatoria y debe tener formato válido.'], 422);
-            }
-
-            $fechaNacimiento = $fechaNacimientoCarbon->format('Y-m-d');
-
-            if ($fechaNacimientoCarbon->isToday() || $fechaNacimientoCarbon->isFuture()) {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'La fecha de nacimiento debe ser anterior a hoy.'], 422);
-            }
-
-            $edad = $fechaNacimientoCarbon->age;
-            $reglasEdad = $this->obtenerReglasEdad();
-            if ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima']) {
-                $excepcionEdad = session('dj_excepcion_edad');
-                $excepcionValida = is_array($excepcionEdad)
-                    && ($excepcionEdad['fecha_nacimiento'] ?? null) === $fechaNacimiento
-                    && (int) ($excepcionEdad['edad'] ?? -1) === $edad
-                    && ($excepcionEdad['usuario_autorizador'] ?? '') !== '';
-
-                if (!$excepcionValida) {
+                if ($tipoPer === '') {
                     DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => "La edad calculada ({$edad} años) está fuera del rango permitido de {$reglasEdad['minima']} a {$reglasEdad['maxima']} años.",
-                        'edad_fuera_rango' => true,
-                        'edad' => $edad,
-                        'edad_minima' => $reglasEdad['minima'],
-                        'edad_maxima' => $reglasEdad['maxima'],
-                    ], 422);
+                    return response()->json(['success' => false, 'message' => 'Debe seleccionar el tipo de trabajador.'], 422);
+                }
+
+                $tipoValido = DB::selectOne(
+                    'SELECT 1 FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?',
+                    [$tipoPer]
+                );
+                if (!$tipoValido) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'El tipo de trabajador seleccionado no es válido.'], 422);
+                }
+
+                $fechaNacimiento = trim($request->input('fecha_nacimiento', ''));
+                $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
+                if (!$fechaNacimientoCarbon) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'La fecha de nacimiento es obligatoria y debe tener formato válido.'], 422);
+                }
+
+                $fechaNacimiento = $fechaNacimientoCarbon->format('Y-m-d');
+
+                if ($fechaNacimientoCarbon->isToday() || $fechaNacimientoCarbon->isFuture()) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'La fecha de nacimiento debe ser anterior a hoy.'], 422);
+                }
+
+                $edad = $fechaNacimientoCarbon->age;
+                $reglasEdad = $this->obtenerReglasEdad();
+                if ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima']) {
+                    $excepcionEdad = session('dj_excepcion_edad');
+                    $excepcionValida = is_array($excepcionEdad)
+                        && ($excepcionEdad['fecha_nacimiento'] ?? null) === $fechaNacimiento
+                        && (int) ($excepcionEdad['edad'] ?? -1) === $edad
+                        && ($excepcionEdad['usuario_autorizador'] ?? '') !== '';
+
+                    if (!$excepcionValida) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'message' => "La edad calculada ({$edad} años) está fuera del rango permitido de {$reglasEdad['minima']} a {$reglasEdad['maxima']} años.",
+                            'edad_fuera_rango' => true,
+                            'edad' => $edad,
+                            'edad_minima' => $reglasEdad['minima'],
+                            'edad_maxima' => $reglasEdad['maxima'],
+                        ], 422);
+                    }
+                }
+            } else {
+                $fechaNacimiento = trim($request->input('fecha_nacimiento', ''));
+                $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
+                if ($fechaNacimientoCarbon) {
+                    $fechaNacimiento = $fechaNacimientoCarbon->format('Y-m-d');
+                } else {
+                    $fechaNacimiento = null;
                 }
             }
  
@@ -225,6 +237,7 @@ class DjController extends Controller
             $fechaNaci   = $this->sanitizeDatetimeForPersonal($data['fecha_nacimiento'] ?? null);
             $noCaducaDni = ($data['no_caduca_dni'] ?? '0') === '1' ? 1 : 0;
             $fechaCaduca = $noCaducaDni ? null : $this->sanitizeDatetimeForPersonal($data['caduca'] ?? null);
+            $fechaIngre  = $this->sanitizeDatetimeForPersonal($data['fecha_ingreso_solmar'] ?? null);
  
             // Numéricos
             $pesoIngresado = trim((string) ($data['peso'] ?? ''));
@@ -315,7 +328,7 @@ class DjController extends Controller
             $tipoContMap = ['01' => 'O', '02' => 'A', '03' => 'O', '05' => 'A', '06' => 'O'];
             $tipoCont = $tipoContMap[$tipoPer] ?? 'O';
 
-            $personalPlaceholders = implode(',', array_fill(0, 65, '?'));
+            $personalPlaceholders = implode(',', array_fill(0, 66, '?'));
             $personalLocationPlaceholders = "?,?,?,'01',?,?,?,?,?,?";
  
             // ── INSERT EN PERSONAL ──────────────────────────────────────────────
@@ -324,6 +337,7 @@ class DjController extends Controller
                     CODI_PERS, CODI_TIPO_DOCU, NRO_DOCU_IDEN,
                     NOMB_1, NOMB_2, APEL_1, APEL_2,
                     FECH_NACI, PERS_FECHCADUCADNI,
+                    FECH_INGRE,
                     SEXO, PERS_SEXO,
                     ESCI_CODIGO, ESTA_CIVI,
                     PERS_EMAIL, PERS_TELEFONO, PERS_WHATSAPP,
@@ -348,15 +362,16 @@ class DjController extends Controller
                     USUA_FECHA_REG, USUA_FECHA_MOD
                     , SUCU_CODIGO, CODI_UNID_OPER, USUA_CODIGO_REG, EMPR_CODIGO,
                     DEPA_CODIGO_NACI, PROVI_CODIGO_NACI, DIST_NACI, CODI_CARG, PERS_CONTRATADO, TIPO_CONT,
-                    NO_CADUCA_DNI
-                ) VALUES (" . $personalPlaceholders . ", 1,1,0, GETDATE(), NULL, " . $personalLocationPlaceholders . ", ?)",
+                    NO_CADUCA_DNI,
+                    DEPARTAMENTO, PROVINCIA, DISTRITO
+                ) VALUES (" . $personalPlaceholders . ", 1,1,0, GETDATE(), NULL, " . $personalLocationPlaceholders . ", ?, ?, ?, ?)",
                 [
                     $nuevoCod, $codiTipoDocu, $dni,
                     strtoupper(trim($data['nombre1'] ?? '')),
                     strtoupper(trim($data['nombre2'] ?? '')),
                     strtoupper(trim($data['apellido_paterno'] ?? '')),
                     strtoupper(trim($data['apellido_materno'] ?? '')),
-                    $fechaNaci, $fechaCaduca,
+                    $fechaNaci, $fechaCaduca, $fechaIngre,
                     $sexo, $sexo,
                     $estadoCivil, $estadoCivilCorto,
                     $data['correo'] ?? null,
@@ -414,7 +429,10 @@ class DjController extends Controller
                     $codiCarg,
                     0,
                     $tipoCont,
-                    $noCaducaDni
+                    $noCaducaDni,
+                    strtoupper(trim($data['departamento_actual'] ?? '') ?: ''),
+                    strtoupper(trim($data['provincia_actual'] ?? '') ?: ''),
+                    strtoupper(trim($data['distrito_actual'] ?? '') ?: '')
                 ]
             );
 
@@ -1101,6 +1119,26 @@ class DjController extends Controller
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'El tipo de trabajador seleccionado no es válido.'], 422);
             }
+
+            // Solo usuarios autorizados pueden cambiar el tipo de personal.
+            $tipoActualRow = DB::selectOne(
+                'SELECT PERS_TIPOTRAB FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?',
+                [$codiPers]
+            );
+            $tipoActual = trim((string)($tipoActualRow->PERS_TIPOTRAB ?? ''));
+
+            if ($tipoPer !== $tipoActual) {
+                $usuarioTipoPer = strtoupper(trim((string)(session('usuario') ?? '')));
+                if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
+                }
+            }
+
+            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
+            }
             $source = $request->input('source', 'migracion');
 
             // ✅ 1. SOLO MARCAR COMO MIGRADO en sw_MIGRA_PERSONAL (NO actualizar otros campos)
@@ -1786,10 +1824,10 @@ class DjController extends Controller
             'PERS_FECHEMISIONDNI' => $getValue('PERS_FECHEMISIONDNI', 'PERS_FECHEMISIONDNI'),
             'CODI_RELA' => $getValue('CODI_RELA', 'CODI_RELA'),
             'MOTI_CESE' => $getValue('MOTI_CESE', 'MOTI_CESE'),
-            'PROVINCIA' => $getValue('PROVINCIA', 'PROVINCIA'),
-            'DISTRITO' => $getValue('DISTRITO', 'DISTRITO'),
+            'PROVINCIA' => $getValue('provincia_actual', 'PROVINCIA'),
+            'DISTRITO' => $getValue('distrito_actual', 'DISTRITO'),
             'VCMTO' => $getValue('VCMTO', 'VCMTO'),
-            'DEPARTAMENTO' => $getValue('DEPARTAMENTO', 'DEPARTAMENTO'),
+            'DEPARTAMENTO' => $getValue('departamento_actual', 'DEPARTAMENTO'),
             'OBSERVACIONES' => $getValue('OBSERVACIONES', 'OBSERVACIONES'),
             'CODI_TIPO_RIES' => $getValue('CODI_TIPO_RIES', 'CODI_TIPO_RIES'),
             'UBIGEO' => $getValue('UBIGEO', 'UBIGEO'),
@@ -3409,6 +3447,40 @@ private function migrarFamiliares_solo_nuevo($codiPers)
     }
 
 
+    /**
+     * Regla de cambio de Tipo de Personal:
+     * solo se permite cambiar de Operativo (01/03) a Administrativo (02/05) o viceversa.
+     * - Mantener el mismo tipo no se considera cambio (válido).
+     * - Si el tipo actual es Especiales (06), no se permite cambiar.
+     * - Si no hay tipo previo en BD, no se aplica la regla.
+     */
+    private function validarCambioTipoPersonal(?string $tipoActual, string $tipoNuevo): bool
+    {
+        $tipoActual = trim((string) $tipoActual);
+
+        if ($tipoActual === '') {
+            return true;
+        }
+        if ($tipoNuevo === $tipoActual) {
+            return true;
+        }
+        if ($tipoActual === '06') {
+            return false;
+        }
+
+        $operativo      = ['01', '03'];
+        $administrativo = ['02', '05'];
+
+        if (in_array($tipoActual, $operativo, true)) {
+            return in_array($tipoNuevo, $administrativo, true);
+        }
+        if (in_array($tipoActual, $administrativo, true)) {
+            return in_array($tipoNuevo, $operativo, true);
+        }
+
+        return true;
+    }
+
     public function saveRecontratacion(Request $request)
     {
         DB::beginTransaction();
@@ -3424,19 +3496,39 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             }
  
             $personal = DB::selectOne(
-                "SELECT CODI_PERS, NRO_DOCU_IDEN, PERS_VIGENCIA FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?",
+                "SELECT CODI_PERS, NRO_DOCU_IDEN, PERS_VIGENCIA, PERS_TIPOTRAB FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?",
                 [$codiPers]
             );
- 
+
             if (!$personal) {
                 return response()->json(['success' => false, 'message' => "No se encontró el personal con código {$codiPers}."], 404);
             }
- 
+
             if ($personal->PERS_VIGENCIA === 'SI') {
                 return response()->json(['success' => false, 'message' => "El personal {$codiPers} ya está VIGENTE."], 422);
             }
- 
+
             $data = $request->all();
+
+            $tipoPer = trim($data['tipo_personal'] ?? '');
+            if ($tipoPer === '') {
+                // Si no se envía tipo, se mantiene el actual del personal.
+                $tipoPer = trim((string)($personal->PERS_TIPOTRAB ?? ''));
+            }
+
+            // Solo usuarios autorizados pueden cambiar el tipo de personal.
+            $usuarioTipoPer = strtoupper(trim((string)(session('usuario') ?? '')));
+            if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
+            }
+
+            // Regla: solo se permite cambiar de Operativo a Administrativo y viceversa.
+            $tipoActual = trim((string)($personal->PERS_TIPOTRAB ?? ''));
+            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
+            }
  
             $str2 = fn($v) => strtoupper(substr(trim($v ?? ''), 0, 2));
             $str1 = fn($v) => strtoupper(substr(trim($v ?? ''), 0, 1));
@@ -3456,6 +3548,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
  
             $fechaNaci   = $this->sanitizeDatetimeForPersonal($data['fecha_nacimiento'] ?? null);
             $fechaCaduca = $this->sanitizeDatetimeForPersonal($data['caduca']           ?? null);
+            $fechaIngre  = $this->sanitizeDatetimeForPersonal($data['fecha_ingreso_solmar'] ?? null);
  
             $estadoCivilMap   = ['2007000001'=>'S','2007000002'=>'C','2007000003'=>'D','2007000004'=>'V','2007000008'=>'V'];
             $estadoCivil      = $data['estado_civil'] ?? null;
@@ -3502,6 +3595,7 @@ $tipotrab    = $tipoPer;
                     DIRECCION=?, PERS_DIREC_DNI=?,
                     PERS_DEPT_ACT=?, PERS_PROV_ACT=?, PERS_DIST_ACT=?,
                     PERS_DPTO_DIRDNI=?, PERS_PROV_DIRDNI=?, PERS_DIST_DIRDNI=?,
+                    DEPARTAMENTO=?, PROVINCIA=?, DISTRITO=?,
                     DEPA_CODIGO_NACI=?, PROVI_CODIGO_NACI=?, DIST_NACI=?,
                     tipo_sangr=?, peso_kilo=?, tall_metr=?,
                     CODI_SIST_PENS=?, ESSALUD=?, PERS_PENSIONISTA=?, PERS_EMBARGO=?,
@@ -3516,7 +3610,7 @@ $tipotrab    = $tipoPer;
                     dj2026_familiar_nombre=?, dj2026_familiar_parentesco=?,
                     dj2026_laboral_1=?, dj2026_laboral_2=?, dj2026_cantprofesion=?,
                     PERS_TIPOTRAB=?, USUA_FECHA_MOD=GETDATE(), SUCU_CODIGO = ?, CODI_UNID_OPER = ?, USUA_CODIGO_REG = ?, EMPR_CODIGO = '01',
-                    TIPO_CONT=?
+                    TIPO_CONT=?, FECH_INGRE=?
                 WHERE CODI_PERS=?",
                 [
                     $sexo, $sexo,
@@ -3526,6 +3620,7 @@ $tipotrab    = $tipoPer;
                     $trim($data['direccion_actual'] ?? null), $trim($data['direccion_dni'] ?? null),
                     $trim($data['departamento_actual'] ?? null), $trim($data['provincia_actual'] ?? null), $trim($data['distrito_actual'] ?? null),
                     $trim($data['departamento_dni']  ?? null), $trim($data['provincia_dni']    ?? null), $trim($data['distrito_dni']    ?? null),
+                    strtoupper(trim($data['departamento_actual'] ?? '') ?: ''), strtoupper(trim($data['provincia_actual'] ?? '') ?: ''), strtoupper(trim($data['distrito_actual'] ?? '') ?: ''),
                     $trim($data['departamento_nac']  ?? null), $trim($data['provincia_nac']    ?? null), $trim($data['distrito_nac']    ?? null),
                     $trim($data['tipo_sangre'] ?? null), $num($data['peso'] ?? null), $num($data['talla'] ?? null),
                     $trim($data['sistema_previsional'] ?? null), $essalud, $pensionista, $embargo,
@@ -3547,6 +3642,7 @@ $tipotrab    = $tipoPer;
                     $codiUnidOper,
                     $usuario,
                     $tipoCont,
+                    $fechaIngre,
                     $codiPers
                 ]
             );

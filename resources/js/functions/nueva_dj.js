@@ -265,10 +265,58 @@ import Swal from 'sweetalert2';
     // ============================================================
     // MODO RECONTRATACIÓN
     // ============================================================
-    const NDJ_READONLY_IDS = ['ndj_sel_tipo_personal', 'ndj_tipo_documento', 'ndj_nro_documento'];
+    const NDJ_READONLY_IDS = ['ndj_tipo_documento', 'ndj_nro_documento'];
     const NDJ_ALERT_IDS    = [];
 
-    function activarModoRecontratacion(codiPers) {
+    // Regla cambio Tipo de Personal (Operativo ↔ Administrativo)
+    const NDJ_TIPO_GRUPO_OPERATIVO      = ['01', '03'];
+    const NDJ_TIPO_GRUPO_ADMINISTRATIVO = ['02', '05'];
+    const NDJ_TIPO_CODIGO_ESPECIALES    = '06';
+    let ndj_tiposPersonalCatalogo = [];
+
+    function ndj_poblarTiposPersonal(items) {
+        const sel = $('ndj_sel_tipo_personal');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">— Seleccionar —</option>';
+        (items || []).forEach(t => {
+            const o = document.createElement('option');
+            o.value = t.codigo;
+            o.textContent = t.nombre;
+            sel.appendChild(o);
+        });
+    }
+
+    // Regla: Operativo (01/03) solo puede cambiar a Administrativo (02/05) y viceversa.
+    // Especiales (06) queda deshabilitado sin posibilidad de cambio.
+    function ndj_aplicarReglaTipoPersonal(tipotrab) {
+        const sel = $('ndj_sel_tipo_personal');
+        if (!sel) return;
+        const catalogo = ndj_tiposPersonalCatalogo || [];
+
+        if (!tipotrab) { ndj_poblarTiposPersonal(catalogo); return; }
+
+        if (tipotrab === NDJ_TIPO_CODIGO_ESPECIALES) {
+            ndj_poblarTiposPersonal(catalogo.filter(t => String(t.codigo).trim() === NDJ_TIPO_CODIGO_ESPECIALES));
+            sel.value = tipotrab;
+            sel.disabled = true;
+            sel.style.opacity = '0.5';
+            sel.style.cursor  = 'not-allowed';
+            return;
+        }
+
+        const esOperativo = NDJ_TIPO_GRUPO_OPERATIVO.includes(tipotrab);
+        const esAdmin     = NDJ_TIPO_GRUPO_ADMINISTRATIVO.includes(tipotrab);
+        if (!esOperativo && !esAdmin) { ndj_poblarTiposPersonal(catalogo); sel.value = tipotrab; return; }
+
+        const grupoOpuesto = esOperativo ? NDJ_TIPO_GRUPO_ADMINISTRATIVO : NDJ_TIPO_GRUPO_OPERATIVO;
+        ndj_poblarTiposPersonal(catalogo.filter(t => {
+            const cod = String(t.codigo).trim();
+            return cod === tipotrab || grupoOpuesto.includes(cod);
+        }));
+        sel.value = tipotrab;
+    }
+
+    function activarModoRecontratacion(codiPers, tipotrab = '') {
         modoRecontratacion     = true;
         codiPersRecontratacion = codiPers;
         if (btnGuardar) {
@@ -290,6 +338,9 @@ import Swal from 'sweetalert2';
             el.style.opacity = '0.5';
             el.style.cursor  = 'not-allowed';
         });
+
+        // El select de tipo de personal queda editable con la regla Operativo ↔ Administrativo
+        ndj_aplicarReglaTipoPersonal(tipotrab);
 
         NDJ_ALERT_IDS.forEach(id => {
             const el = $(id);
@@ -325,6 +376,15 @@ import Swal from 'sweetalert2';
             el.style.opacity = '';
             el.style.cursor  = '';
         });
+
+        // Restaurar el select de tipo de personal al catálogo completo
+        const selTipoRestaurar = $('ndj_sel_tipo_personal');
+        if (selTipoRestaurar) {
+            selTipoRestaurar.disabled = false;
+            selTipoRestaurar.style.opacity = '';
+            selTipoRestaurar.style.cursor  = '';
+        }
+        ndj_poblarTiposPersonal(ndj_tiposPersonalCatalogo);
 
         NDJ_ALERT_IDS.forEach(id => {
             const el = $(id);
@@ -367,6 +427,7 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_cod_postulante',       data.CODI_PERS            || '');
             ndj_setVal('ndj_tipo_documento',        data.CODI_TIPO_DOCU?.trim() || '0034');
             ndj_setVal('ndj_nro_documento',         data.NRO_DOCU_IDEN?.trim() || '');
+            $('ndj_nro_documento').disabled = false;
             ndj_setVal('ndj_nombre1',               data.NOMB_1?.trim()        || '');
             ndj_setVal('ndj_nombre2',               data.NOMB_2?.trim()        || '');
             ndj_setVal('ndj_apellido_paterno',      data.APEL_1?.trim()        || '');
@@ -375,6 +436,7 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_estado_civil',          data.ESCI_CODIGO?.trim()   || '');
             ndj_setVal('ndj_sexo',                  data.PERS_SEXO?.trim()     || data.SEXO?.trim() || '');
             ndj_setVal('ndj_fecha_nacimiento',      ndj_fmtDate(data.FECH_NACI));
+            ndj_setVal('ndj_fecha_ingreso_solmar',  ndj_fmtDate(data.FECH_INGRE));
             ndj_setVal('ndj_celular',               data.PERS_TELEFONO?.trim() || '');
             ndj_setVal('ndj_correo',                data.PERS_EMAIL?.trim()    || '');
             ndj_setVal('ndj_whatsapp',              data.PERS_WHATSAPP?.trim() || '');
@@ -471,7 +533,7 @@ import Swal from 'sweetalert2';
 
             Swal.close();
             ndj_mostrarCeseInfo(data.OBS_CESE, data.FECH_CESE);
-            activarModoRecontratacion(codiPers);
+            activarModoRecontratacion(codiPers, tipotrab);
             dniValido              = true;
             coincidenciasValidadas = true;
             actualizarEstadoGuardar();
@@ -676,7 +738,7 @@ import Swal from 'sweetalert2';
     }
 
     function ndj_bloquearCampos(bloquear) {
-        document.querySelectorAll('#modalNuevaDJ input:not(#ndj_sel_tipo_personal), #modalNuevaDJ select:not(#ndj_sel_tipo_personal), #modalNuevaDJ textarea')
+        document.querySelectorAll('#modalNuevaDJ input:not(#ndj_filtroSucursal):not(#ndj_tipo_personal):not(#ndj_usuario):not(#ndj_cod_postulante), #modalNuevaDJ select:not(#ndj_filtroSucursal):not(#ndj_tipo_personal), #modalNuevaDJ textarea')
             .forEach(el => el.disabled = bloquear);
         btnGuardar.disabled = bloquear;
         if (bloquear) btnGuardar.style.display = 'none';
@@ -725,6 +787,10 @@ import Swal from 'sweetalert2';
             caducaInput.style.background = '';
             caducaInput.style.color = '';
         }
+
+        // Reset Nro Documento: deshabilitado hasta que seleccione tipo doc
+        const nroDoc = $('ndj_nro_documento');
+        if (nroDoc) { nroDoc.disabled = true; nroDoc.value = ''; nroDoc.placeholder = 'Seleccione tipo de documento primero'; }
 
         // Reset S.M.O. selects
         const ndjPrestoSmo = $('ndj_presto_smo');
@@ -776,23 +842,29 @@ import Swal from 'sweetalert2';
     // ============================================================
     async function ndj_fetchSelect(selectId, url, valorKey, textoKey, placeholder = '— Seleccionar —') {
         const sel = $(selectId);
-        if (!sel) return;
+        if (!sel) return [];
         sel.innerHTML = `<option value="">Cargando...</option>`;
         sel.disabled  = true;
+        let items = [];
         try {
             const res   = await fetch(url);
             const json  = await res.json();
-            const items = Array.isArray(json) ? json : (json.data ?? []);
+            items = Array.isArray(json) ? json : (json.data ?? []);
             sel.innerHTML = `<option value="">${placeholder}</option>`;
             items.forEach(item => { const o = document.createElement('option'); o.value = item[valorKey]; o.textContent = item[textoKey]; sel.appendChild(o); });
         } catch (err) {
             console.error(`[NuevaDJ] Error cargando ${selectId}:`, err);
             sel.innerHTML = `<option value="">Error al cargar</option>`;
         } finally { sel.disabled = false; }
+        return items;
     }
 
     function ndj_cargarTipoDoc()    { return ndj_fetchSelect('ndj_tipo_documento',      `${VITE_URL_APP}/api/dj/get-tipo-doc/`,     'codigo','nombre'); }
-    function ndj_cargarTipoPer()    { return ndj_fetchSelect('ndj_sel_tipo_personal',   `${VITE_URL_APP}/api/dj/get-tipo-per/`,     'codigo','nombre'); }
+    async function ndj_cargarTipoPer() {
+        const items = await ndj_fetchSelect('ndj_sel_tipo_personal', `${VITE_URL_APP}/api/dj/get-tipo-per/`, 'codigo','nombre');
+        ndj_tiposPersonalCatalogo = items;
+        return items;
+    }
     function ndj_cargarEstadoCivil(){ return ndj_fetchSelect('ndj_estado_civil',        `${VITE_URL_APP}/api/dj/get-estado-civil/`, 'codigo','nombre'); }
     function ndj_cargarSistemaPrev(){ return ndj_fetchSelect('ndj_sistema_previsional', `${VITE_URL_APP}/api/dj/get-sistema-prev/`, 'codigo','nombre'); }
 
@@ -1227,18 +1299,73 @@ import Swal from 'sweetalert2';
             (experienciaAnios ? $('ndj_experiencia_anios') : $('ndj_experiencia_meses'))?.focus(); return;
         }
 
-        // Campos obligatorios
-        const camposReq = [
-            { id:'ndj_nro_documento',    nombre:'Número de Documento' },
-            { id:'ndj_nombre1',          nombre:'Primer Nombre'       },
-            { id:'ndj_apellido_paterno', nombre:'Apellido Paterno'    },
-            { id:'ndj_apellido_materno', nombre:'Apellido Materno'    },
-            { id:'ndj_cuenta_banco',     nombre:'Cuenta de Sueldo'    },
-        ];
-        const faltante = camposReq.find(c => !$(c.id)?.value?.trim());
-        if (faltante) {
-            Swal.fire({ icon:'warning', title:'Campo obligatorio', text:`El campo "${faltante.nombre}" es requerido.`, confirmButtonText:'Entendido' });
-            $(faltante.id)?.focus(); return;
+        // Campos obligatorios (excepto EMONTERO)
+        const currentUser = (window.currentUser || '').toString().trim().toUpperCase();
+        if (currentUser !== 'EMONTERO') {
+            const camposReq = [
+                { id:'ndj_filtroSucursal',        nombre:'Sucursal' },
+                { id:'ndj_sel_tipo_personal',     nombre:'Tipo de Personal' },
+                { id:'ndj_tipo_documento',        nombre:'Tipo de Documento' },
+                { id:'ndj_nro_documento',         nombre:'Número de Documento' },
+                { id:'ndj_fecha_ingreso_solmar',  nombre:'Fecha de Ingreso a Solmar' },
+                { id:'ndj_nombre1',               nombre:'Primer Nombre' },
+                { id:'ndj_apellido_paterno',      nombre:'Apellido Paterno' },
+                { id:'ndj_apellido_materno',      nombre:'Apellido Materno' },
+                { id:'ndj_cargo',                 nombre:'Cargo' },
+                { id:'ndj_caduca',                nombre:'Caducidad del Documento' },
+                { id:'ndj_estado_civil',          nombre:'Estado Civil' },
+                { id:'ndj_sexo',                  nombre:'Sexo' },
+                { id:'ndj_fecha_nacimiento',      nombre:'Fecha de Nacimiento' },
+                { id:'ndj_pais_codigo',           nombre:'País de Nacimiento' },
+                { id:'ndj_departamento_nac',      nombre:'Departamento (Nacimiento)' },
+                { id:'ndj_provincia_nac',         nombre:'Provincia (Nacimiento)' },
+                { id:'ndj_distrito_nac',          nombre:'Distrito (Nacimiento)' },
+                { id:'ndj_celular',               nombre:'Celular' },
+                { id:'ndj_correo',                nombre:'Correo Electrónico' },
+                { id:'ndj_whatsapp',              nombre:'WhatsApp' },
+                { id:'ndj_tipo_sangre',           nombre:'Tipo de Sangre' },
+                { id:'ndj_peso',                  nombre:'Peso' },
+                { id:'ndj_talla',                 nombre:'Talla' },
+                { id:'ndj_sistema_previsional',   nombre:'Sistema Previsional' },
+                { id:'ndj_essalud',               nombre:'Essalud' },
+                { id:'ndj_pensionista',           nombre:'Pensionista' },
+                { id:'ndj_grado_instruccion',     nombre:'Grado de Instrucción' },
+                { id:'ndj_institucion',           nombre:'Institución Educativa' },
+                { id:'ndj_carrera',               nombre:'Carrera' },
+                { id:'ndj_anio_egreso',           nombre:'Año de Egreso' },
+                { id:'ndj_embargos',              nombre:'Embargos' },
+                { id:'ndj_cuenta_banco',          nombre:'Cuenta de Sueldo' },
+                { id:'ndj_departamento_actual',   nombre:'Departamento (Dir. Actual)' },
+                { id:'ndj_provincia_actual',      nombre:'Provincia (Dir. Actual)' },
+                { id:'ndj_distrito_actual',       nombre:'Distrito (Dir. Actual)' },
+                { id:'ndj_direccion_actual',      nombre:'Dirección Actual' },
+                { id:'ndj_departamento_dni',      nombre:'Departamento (Dir. DNI)' },
+                { id:'ndj_provincia_dni',         nombre:'Provincia (Dir. DNI)' },
+                { id:'ndj_distrito_dni',          nombre:'Distrito (Dir. DNI)' },
+                { id:'ndj_direccion_dni',         nombre:'Dirección DNI' },
+                { id:'ndj_contacto_emergencia',   nombre:'Contacto de Emergencia' },
+                { id:'ndj_celular_emergencia',    nombre:'Celular de Emergencia' },
+                { id:'ndj_parentesco_emergencia', nombre:'Parentesco de Emergencia' },
+            ];
+            const faltantes = camposReq.filter(c => {
+                const el = $(c.id);
+                if (!el) return true;
+                if (el.type === 'checkbox') return !el.checked;
+                return !el.value?.trim();
+            });
+            if (faltantes.length > 0) {
+                const lista = faltantes.map(f => `• ${f.nombre}`).join('<br>');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos obligatorios',
+                    html: `Los siguientes campos son requeridos:<br><br>${lista}`,
+                    confirmButtonText: 'Entendido',
+                    width: 500,
+                });
+                const primerFaltante = $(faltantes[0].id);
+                if (primerFaltante) primerFaltante.focus();
+                return;
+            }
         }
 
         const hijoSinFecha = [...document.querySelectorAll('#ndj_familyContainer .ndj-family-row')]
@@ -1333,7 +1460,7 @@ import Swal from 'sweetalert2';
             departamento_nac:    payload.ndj_departamento_nac,
             provincia_nac:       payload.ndj_provincia_nac,
             distrito_nac:        payload.ndj_distrito_nac,
-            nacionalidad:          payload.ndj_pais_codigo         || '',
+            nacionalidad:          payload.ndj_pais                || '',
             contacto_emergencia:   payload.ndj_contacto_emergencia,
             celular_emergencia:    payload.ndj_celular_emergencia,
             parentesco_emergencia: payload.ndj_parentesco_emergencia,
@@ -1361,6 +1488,7 @@ import Swal from 'sweetalert2';
             FAM_NOMBRES:           payload.ndj_apellidosNombres,
             FAM_FECHA_NACI:        payload.ndj_fechaNacimiento,
             sucursal:              payload.ndj_filtroSucursal,
+            fecha_ingreso_solmar:  payload.ndj_fecha_ingreso_solmar,
             usuario:               payload.ndj_usuario,
             PERS_CONTRATADO:       0,
         };
@@ -1429,11 +1557,11 @@ import Swal from 'sweetalert2';
         ndj_bloquearCampos(true);
         if (alertTipoPersonal) alertTipoPersonal.style.display = 'block';
 
-        tipoPersonalSelect?.addEventListener('change', function () {
+        $('ndj_filtroSucursal')?.addEventListener('change', function () {
             if (this.value && alertTipoPersonal) alertTipoPersonal.style.display = 'none';
             else if (alertTipoPersonal)          alertTipoPersonal.style.display = 'block';
+            ndj_bloquearCampos(!this.value);
         });
-        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_bloquearCampos(!this.value); });
 
         // ── Validaciones de campos ────────────────────────────
 
@@ -1698,6 +1826,8 @@ import Swal from 'sweetalert2';
         $('ndj_tipo_documento')?.addEventListener('change', function () {
             const inp = $('ndj_nro_documento'); if (!inp) return;
             inp.value = '';
+            if (!this.value) { inp.disabled = true; inp.placeholder = 'Ingrese el número'; return; }
+            inp.disabled = false;
             const map = {
                 '0034':{ max:8,  ph:'Ej: 12345678',           mode:'numeric' },
                 '0035':{ max:12, ph:'Ej: 000123456',           mode:'text'   },

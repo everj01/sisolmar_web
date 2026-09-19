@@ -672,8 +672,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <option value="PADRE">Padre</option>    <option value="MADRE">Madre</option>
                     <option value="CONYUGE">Conyuge</option>  
                     <option value="HIJO">Hijo(a)</option>     
-                  
-                   
                 </select>
             </div>
             <div>
@@ -681,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <input type="text" name="apellidosNombres[]" class="form-input w-full" placeholder="Apellidos y nombres completos">
             </div>
             <div class="flex gap-2 items-end">
-                <div class="flex-1">
+                <div class="family-date flex-1">
                     <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
                     <input type="date" name="fechaNacimiento[]" class="form-input w-full">
                 </div>
@@ -1117,6 +1115,12 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault(); e.stopPropagation();
         btn.closest('.family-row')?.remove();
     });
+    container?.addEventListener('change', e => {
+        if (e.target.matches('select[name="parentesco[]"]')) {
+            actualizarFechaFamiliar(e.target.closest('.family-row'));
+        }
+    });
+    document.querySelectorAll('#familyContainer .family-row').forEach(actualizarFechaFamiliar);
 
     // Foto
     btnSubir?.addEventListener("click", () => inputFoto?.click());
@@ -1195,6 +1199,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('📦 data object:', data);
 
                 const tabActiva = document.querySelector('.tab-btn.border-b-white')?.dataset?.tab ?? 'pendiente';
+
+                const hijoSinFecha = [...document.querySelectorAll('#familyContainer .family-row')]
+                    .find(fila => {
+                        const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
+                        const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
+                        return parentesco === 'HIJO' && !fecha;
+                    });
+                if (hijoSinFecha) {
+                    Swal.fire({ icon: 'warning', title: 'Fecha obligatoria', text: 'Ingrese la fecha de nacimiento para el familiar Hijo(a).', confirmButtonText: 'Entendido' });
+                    hijoSinFecha.querySelector('input[name="fechaNacimiento[]"]')?.focus();
+                    if (btnGuardar) btnGuardar.disabled = false;
+                    return;
+                }
+
                 const payload = {
                     ...data,
                     source: tabActiva,
@@ -1246,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (error.response?.data?.message) msg = error.response.data.message;
                 else if (error.response?.data?.errors) msg = Object.values(error.response.data.errors).flat().join('<br>');
 
-                Swal.fire({ icon: 'error', title: 'Error', html: msg });
+                Swal.fire({ icon: 'error', title: 'Error', html: msg, zIndex: 99999 });
             } finally {
                 if (btnGuardar) btnGuardar.disabled = false;
             }
@@ -1720,17 +1738,16 @@ document.addEventListener('DOMContentLoaded', function () {
     })();
 
     // ============================================================
-    // TIPO DE TRABAJADOR + CARGO + VERIFICACIÓN VACACIONES/CONTRATO
+    // TIPO DE TRABAJADOR
     // ============================================================
     const tipoTrabajadorUi = document.getElementById('tipo_personal_ui');
-    const btnVerificarVacaciones = document.getElementById('btnVerificarVacaciones');
-    const btnVerificarContrato = document.getElementById('btnVerificarContrato');
 
     // Cargar tipos de personal
     (function cargarTiposPersonal() {
         axios.get(`${VITE_URL_APP}/api/dj/get-tipo-per/`)
             .then(r => {
                 const items = Array.isArray(r.data) ? r.data : (r.data?.data ?? []);
+                window.allTiposPersonalDj = items;
                 if (tipoTrabajadorUi) {
                     items.forEach(t => {
                         const o = document.createElement('option');
@@ -1743,20 +1760,11 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(() => { });
     })();
 
-    // Cambio de tipo de personal → filtra cargos y bloquea
+    // Cambio de tipo de personal → sincroniza hidden y visibilidad
     tipoTrabajadorUi?.addEventListener('change', function () {
         const hidden = document.getElementById('tipo_personal');
         if (hidden) hidden.value = this.value;
-        filtrarCargos(this.value);
-        setBloqueoCargo(true);
         aplicarVisibilidadPorTipo(this.value);
-    });
-
-    // Sincronizar valor del select cargo_ui con el campo oculto cargo
-    const cargoUi = document.getElementById('cargo_ui');
-    cargoUi?.addEventListener('change', function () {
-        const hiddenCargo = document.getElementById('cargo');
-        if (hiddenCargo) hiddenCargo.value = this.value;
     });
 
     // No Caduca checkbox: bloquear/desbloquear caduca
@@ -1802,55 +1810,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Botón Verificar Vacaciones
-    btnVerificarVacaciones?.addEventListener('click', async function () {
-        const codiPers = (document.getElementById('cod_postulante')?.value || '').trim();
-        if (!codiPers) {
-            Swal.fire({ icon: 'warning', title: 'Sin personal', text: 'No hay un personal seleccionado para verificar.' });
-            return;
-        }
-        this.disabled = true;
-        try {
-            const resp = await axios.get(`${VITE_URL_APP}/api/dj/verificar-vacaciones`, { params: { codi_pers: codiPers } });
-            const enVacaciones = resp.data?.en_vacaciones === true;
-            setBloqueoTipoTrabajador(enVacaciones);
-            if (enVacaciones) {
-                await Swal.fire({ icon: 'warning', title: 'Está de vacaciones', text: 'El personal se encuentra de vacaciones, no se puede modificar el tipo de trabajador.', confirmButtonText: 'Entendido' });
-            } else {
-                await Swal.fire({ icon: 'success', title: 'Disponible', text: 'El personal no está de vacaciones, puede modificar el tipo de trabajador.', timer: 1800, showConfirmButton: false });
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar el estado de vacaciones.' });
-        } finally {
-            this.disabled = false;
-        }
-    });
-
-    // Botón Verificar Contrato
-    btnVerificarContrato?.addEventListener('click', async function () {
-        const codiPers = (document.getElementById('cod_postulante')?.value || '').trim();
-        if (!codiPers) {
-            Swal.fire({ icon: 'warning', title: 'Sin personal', text: 'No hay un personal seleccionado para verificar.' });
-            return;
-        }
-        this.disabled = true;
-        try {
-            const resp = await axios.get(`${VITE_URL_APP}/api/dj/verificar-contrato`, { params: { codi_pers: codiPers } });
-            const tieneContrato = resp.data?.tiene_contrato === true;
-            setBloqueoCargo(tieneContrato);
-            if (tieneContrato) {
-                await Swal.fire({ icon: 'warning', title: 'Contrato Activo', text: 'El personal tiene un contrato activo, no se puede modificar el cargo.', confirmButtonText: 'Entendido' });
-            } else {
-                await Swal.fire({ icon: 'success', title: 'Sin Contrato', text: 'El personal no tiene contrato activo, puede modificar el cargo.', timer: 1800, showConfirmButton: false });
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar el contrato.' });
-        } finally {
-            this.disabled = false;
-        }
-    });
-
-}); // fin DOMContentLoaded
+    }); // fin DOMContentLoaded
 
 // ============================================================
 // FUNCIONES GLOBALES (fuera del DOMContentLoaded)
@@ -1868,14 +1828,9 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             limpiarSplitView();
             setValue('cod_postulante', '');
             setValue('tipo_personal', '');
+            tipoPersonalEsEspecial = false;
+            poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
-            setBloqueoTipoTrabajador(true);
-
-            const cargoUi = document.getElementById('cargo_ui');
-            if (cargoUi) {
-                cargoUi.innerHTML = '<option value="">— Seleccionar —</option>';
-                setBloqueoCargo(true);
-            }
 
             await cargarCatalogos();
 
@@ -2094,12 +2049,15 @@ async function llenarFormulario(data) {
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
-    console.log('TIPO TRAB:', tipotrab); // ← agregar esto
 
     setValue('tipo_personal', tipotrab);
+    aplicarReglaTipoPersonal(tipotrab);
     setValue('#tipo_personal_ui', tipotrab);
-    setBloqueoTipoTrabajador(true);
     aplicarVisibilidadPorTipo(tipotrab);
+
+    // Mostrar la sección Tipo de Personal / Cargo
+    const cardTC = document.getElementById('cardTipoCargo');
+    if (cardTC) cardTC.style.display = 'flex';
 
     setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
     setValue('#nombre1', data.NOMB_1 || '');
@@ -2211,7 +2169,6 @@ async function llenarFormulario(data) {
     filtrarCargos(data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '');
     setValue('#cargo_ui', data.CODI_CARG ? data.CODI_CARG.trim() : '');
     setValue('#cargo', data.CODI_CARG ? data.CODI_CARG.trim() : '');
-    setBloqueoCargo(true);
 
     setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
     setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
@@ -2261,6 +2218,19 @@ async function llenarFormulario(data) {
 }
 
 // ── Familiares ───────────────────────────────────────────────
+function actualizarFechaFamiliar(fila) {
+    const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
+    const contenedorFecha = fila.querySelector('.family-date');
+    const inputFecha = fila.querySelector('input[name="fechaNacimiento[]"]');
+    const esHijo = parentesco === 'HIJO';
+
+    if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
+    if (inputFecha) {
+        inputFecha.required = esHijo;
+        if (!esHijo) inputFecha.value = '';
+    }
+}
+
 function renderFamiliares(familiares) {
     const container = document.getElementById('familyContainer');
     if (!container) return;
@@ -2305,36 +2275,17 @@ function addFamiliarRow(data = {}, container = null) {
             <label class="dj-label">Apellidos y Nombres</label>
             <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres || ''}" placeholder="Apellidos y nombres completos">
         </div>
-        <div>
+        <div class="family-date">
             <label class="dj-label">Fecha de Nacimiento</label>
             <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
         </div>
         <div>
             <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
         </div>`;
-    // row.innerHTML = `
-    // <div>
-    //     <label class="dj-label">Parentesco</label>
-    //     <select name="parentesco[]" class="dj-select">
-    //         <option value="">—</option>
-    //         ${['PADRE','MADRE','ESPOSO','ESPOSA','CONYUGE','HIJO','HIJA','HERMANO','HERMANA','ABUELO','ABUELA']
-    //             .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
-    //     </select>
-    // </div>
-    // <div>
-    //     <label class="dj-label">Apellidos y Nombres</label>
-    //     <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres||''}" placeholder="Apellidos y nombres completos">
-    // </div>
-    // <div>
-    //     <label class="dj-label">Fecha de Nacimiento</label>
-    //     <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
-    // </div>
-    // <div>
-    //     <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
-    // </div>`;
 
     container.appendChild(row);
     row.querySelector('.remove-family')?.addEventListener('click', () => row.remove());
+    actualizarFechaFamiliar(row);
 }
 
 // ── Ubicaciones cascada ──────────────────────────────────────
@@ -2396,20 +2347,59 @@ function setValue(selector, value) {
     if (el) el.value = value || '';
 }
 
-function setBloqueoTipoTrabajador(bloqueado) {
-    const ui = document.getElementById('tipo_personal_ui');
-    if (!ui) return;
-    ui.disabled = bloqueado;
-    ui.style.background = bloqueado ? '#f3f4f6' : '';
-    ui.style.color = bloqueado ? '#9ca3af' : '';
+// ── Regla cambio Tipo de Personal (Operativo ↔ Administrativo) ─────────────
+const TIPO_GRUPO_OPERATIVO = ['01', '03'];
+const TIPO_GRUPO_ADMINISTRATIVO = ['02', '05'];
+const TIPO_CODIGO_ESPECIALES = '06';
+let tipoPersonalEsEspecial = false;
+
+function userPuedeCambiarTipoPersonal() {
+    const user = (window.currentUser || '').toString().trim().toUpperCase();
+    return ['RBURGOS', 'MPAREDES'].includes(user);
 }
 
-function setBloqueoCargo(bloqueado) {
-    const ui = document.getElementById('cargo_ui');
+function poblarSelectTiposPersonal(items) {
+    const ui = document.getElementById('tipo_personal_ui');
     if (!ui) return;
-    ui.disabled = bloqueado;
-    ui.style.background = bloqueado ? '#f3f4f6' : '';
-    ui.style.color = bloqueado ? '#9ca3af' : '';
+    ui.innerHTML = '<option value="">— Seleccionar —</option>';
+    (items || []).forEach(t => {
+        const o = document.createElement('option');
+        o.value = t.codigo;
+        o.textContent = t.nombre;
+        ui.appendChild(o);
+    });
+    if (!userPuedeCambiarTipoPersonal()) {
+        ui.disabled = true;
+        ui.style.background = '#f3f4f6';
+        ui.style.color = '#9ca3af';
+    }
+}
+
+// Regla: Operativo (01/03) solo puede cambiar a Administrativo (02/05) y viceversa.
+// Especiales (06) queda deshabilitado sin posibilidad de cambio.
+function aplicarReglaTipoPersonal(tipotrab) {
+    const catalogo = window.allTiposPersonalDj || [];
+    tipoPersonalEsEspecial = false;
+
+    if (!tipotrab) { poblarSelectTiposPersonal(catalogo); return; }
+
+    if (tipotrab === TIPO_CODIGO_ESPECIALES) {
+        poblarSelectTiposPersonal(catalogo.filter(t => String(t.codigo).trim() === TIPO_CODIGO_ESPECIALES));
+        tipoPersonalEsEspecial = true;
+        const ui = document.getElementById('tipo_personal_ui');
+        if (ui) { ui.disabled = true; ui.style.background = '#f3f4f6'; ui.style.color = '#9ca3af'; }
+        return;
+    }
+
+    const esOperativo = TIPO_GRUPO_OPERATIVO.includes(tipotrab);
+    const esAdmin = TIPO_GRUPO_ADMINISTRATIVO.includes(tipotrab);
+    if (!esOperativo && !esAdmin) { poblarSelectTiposPersonal(catalogo); return; }
+
+    const grupoOpuesto = esOperativo ? TIPO_GRUPO_ADMINISTRATIVO : TIPO_GRUPO_OPERATIVO;
+    poblarSelectTiposPersonal(catalogo.filter(t => {
+        const cod = String(t.codigo).trim();
+        return cod === tipotrab || grupoOpuesto.includes(cod);
+    }));
 }
 
 function formatDateForInput(dateValue) {
@@ -3025,15 +3015,11 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         resetModal();
         
         // Reset Cargo and Tipo de Personal selects
-        const cargoUi = document.getElementById('cargo_ui');
-        if (cargoUi) {
-            cargoUi.innerHTML = '<option value="">— Seleccionar —</option>';
-            setBloqueoCargo(true);
-        }
         const tipoUi = document.getElementById('tipo_personal_ui');
         if (tipoUi) {
             tipoUi.value = '';
-            setBloqueoTipoTrabajador(true);
+            tipoPersonalEsEspecial = false;
+            poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
         }
 
         // Reset No Caduca checkbox y restore caduca
