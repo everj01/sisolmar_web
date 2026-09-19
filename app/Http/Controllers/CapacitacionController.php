@@ -3812,7 +3812,7 @@ class CapacitacionController extends Controller
 
             $bdLocal = collect(
                 DB::select("
-                SELECT codigo_curso, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable, cod_cliente
+                SELECT codigo, codigo_curso, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable, cod_cliente
                 FROM sisolm_web.dbo.sw_cursos
                 WHERE habilitado = 1
             ")
@@ -3856,7 +3856,7 @@ class CapacitacionController extends Controller
 
                     return [
                         'Id'                 => $c->course_id,
-                        'LocalId'            => $c->course_idnumber ?? $cursoLocal->codigo ?? null,
+                        'LocalId'            => $cursoLocal->codigo ?? $c->course_idnumber ?? null,
                         'Codigo'             => $cursoLocal?->codigo_curso      ?? null,
                         'AreaId'             => $area->codModdle                ?? null,
                         'SistemaId'          => $cursoLocal?->area_conocimiento ?? null,

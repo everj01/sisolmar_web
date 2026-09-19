@@ -426,7 +426,7 @@ function generarBotonesAccion(curso) {
                 <i class="bx bx-calendar-star text-base"></i></button>`;
         } else {
             html += `<button type="button"
-                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual"
+                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar curso"
                 onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${cod}', nombre: '${nom}', tipo_curso: '${safeStr(curso.tipo_curso)}', dirigido_a: '${safeStr(curso.dirigido_a)}', frecuencia: '${safeStr(curso.frecuencia)}', es_periodico: '${curso.es_periodico ?? 1}' } }))">
                 <i class="bx bx-calendar-star text-base"></i></button>`;
         }
