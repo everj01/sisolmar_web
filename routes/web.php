@@ -1,7 +1,8 @@
  <?php
 
-  use App\Http\Controllers\BiometricoController;
+use App\Http\Controllers\BiometricoController;
 use App\Http\Controllers\CapacitacionController;
+use App\Http\Controllers\ExamenesController;
 use App\Http\Controllers\ConsultaController;
 use App\Http\Controllers\DjController;
 use App\Http\Controllers\FileController;
@@ -163,6 +164,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
         Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
+
+        Route::get('/obtener-cursos-av', [ExamenesController::class, 'obtenerCursosAV']);
+        Route::get('/obtener-datos-reporte-av', [ExamenesController::class, 'obtenerDatosReporteAV']);
+
+
 
         // ── Nuevas rutas de Capacitación (Rodrigo) ───────────────────────
         Route::post('/obtener-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
