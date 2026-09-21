@@ -166,7 +166,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 
         Route::get('/obtener-cursos-av', [ExamenesController::class, 'obtenerCursosAV']);
-        Route::get('/obtener-datos-reporte-av', [ExamenesController::class, 'obtenerDatosReporteAV']);
+        Route::post('/obtener-datos-reporte-av', [ExamenesController::class, 'obtenerDatosReporteAV']);
 
 
 

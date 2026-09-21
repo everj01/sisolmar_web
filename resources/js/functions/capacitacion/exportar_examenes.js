@@ -128,10 +128,7 @@ export default document.addEventListener("alpine:init", () => {
 
         get cursosPaginados() {
             const inicio = (this.page - 1) * this.perPage;
-            return this.cursosFiltrados.slice(
-                inicio,
-                inicio + this.perPage,
-            );
+            return this.cursosFiltrados.slice(inicio, inicio + this.perPage);
         },
 
         get totalPaginas() {
@@ -279,7 +276,9 @@ export default document.addEventListener("alpine:init", () => {
             }
 
             const idxSeleccionados = new Map();
-            lista.forEach((p, i) => idxSeleccionados.set(this.clavePersonal(p), i));
+            lista.forEach((p, i) =>
+                idxSeleccionados.set(this.clavePersonal(p), i),
+            );
 
             return lista.slice().sort((a, b) => {
                 const aSel = this.estaSeleccionado(a) ? 0 : 1;
@@ -390,16 +389,18 @@ export default document.addEventListener("alpine:init", () => {
         async exportar() {
             if (!this.puedeExportar || this.exportandoPDF) return;
 
-            // Por ahora se genera el reporte para la primera persona seleccionada
-            const persona = this.personalSeleccionadoDetalle[0];
+            const personas = this.personalSeleccionadoDetalle;
             const quizId = this.seleccionado.split(":")[1];
-            if (!persona || !quizId) return;
+            if (!personas.length || !quizId) return;
 
             this.exportandoPDF = true;
             try {
-                const { data } = await axios.get(
+                const { data } = await axios.post(
                     `${VITE_URL_APP}/api/obtener-datos-reporte-av`,
-                    { params: { dni: persona.dni, quizId } },
+                    {
+                        dnis: personas.map((p) => p.dni),
+                        quizId,
+                    },
                 );
 
                 if (!data.success) {
@@ -412,7 +413,33 @@ export default document.addEventListener("alpine:init", () => {
                     return;
                 }
 
-                await this.generarPdfReporte(data.data);
+                const resultados = Array.isArray(data.data?.resultados)
+                    ? data.data.resultados
+                    : [];
+
+                const fallidos = [];
+                const exitos = [];
+                for (const resultado of resultados) {
+                    if (resultado.success && resultado.data) {
+                        exitos.push(resultado.data);
+                    } else {
+                        fallidos.push(
+                            resultado.dni || resultado.message || "desconocido",
+                        );
+                    }
+                }
+
+                if (exitos.length > 0) {
+                    await this.generarPdfReporte(exitos);
+                }
+
+                if (fallidos.length > 0) {
+                    Swal.fire(
+                        "Reporte parcial",
+                        `${fallidos.length} personal(es) no tienen intentos registrados en este examen.`,
+                        "warning",
+                    );
+                }
             } catch (e) {
                 console.error(e);
                 const msg = e.response?.data?.message;
@@ -430,7 +457,7 @@ export default document.addEventListener("alpine:init", () => {
             }
         },
 
-        async generarPdfReporte(detalle) {
+        async generarPdfReporte(detalles) {
             const { jsPDF } = window.jspdf;
 
             if (!jsPDF) {
@@ -449,192 +476,401 @@ export default document.addEventListener("alpine:init", () => {
             });
             const pageWidth = doc.internal.pageSize.getWidth();
             const margen = 14;
-            let y = 16;
 
             const logoSol = await _cargarImagen("/images/logo_sol.png");
+            const logoAV = await _cargarImagen("/images/AV.png");
 
-            if (logoSol) {
-                const logoWidth = 55;
-                const logoHeight = logoWidth * (logoSol.height / logoSol.width);
-                doc.addImage(logoSol, "PNG", margen, y, logoWidth, logoHeight);
-            }
+            detalles.forEach((detalle, index) => {
+                if (index > 0) doc.addPage();
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(11);
-            doc.setTextColor(20, 40, 80);
-            doc.text(
-                "SOLMAR SEGURIDAD INTEGRAL S.R.L.",
-                pageWidth - margen,
-                y + 4,
-                { align: "right" },
-            );
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.setTextColor(90, 90, 90);
-            doc.text("RUC: 20445414833", pageWidth - margen, y + 9, {
-                align: "right",
-            });
-            doc.text(
-                "Chimbote: Calle Los Laureles Nº206 Urb. La Caleta",
-                pageWidth - margen,
-                y + 13,
-                { align: "right" },
-            );
+                let y = 16;
 
-            y = logoSol ? y + 24 : y + 20;
+                const logoAVWidth = 22;
+                const logoSolWidth = 36;
+                const gapTitulo = 6;
 
-            doc.setDrawColor(180, 180, 180);
-            doc.setLineWidth(0.3);
-            doc.line(margen, y, pageWidth - margen, y);
-            y += 10;
+                if (logoAV) {
+                    const logoHeight =
+                        logoAVWidth * (logoAV.height / logoAV.width);
+                    const offsetAV = 5;
+                    doc.addImage(
+                        logoAV,
+                        "PNG",
+                        margen,
+                        y - offsetAV,
+                        logoAVWidth,
+                        logoHeight,
+                    );
+                }
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(20, 40, 80);
-            doc.text("REPORTE DE EVALUACIÓN", pageWidth / 2, y, {
-                align: "center",
-            });
-            y += 6;
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.setTextColor(60, 60, 60);
-            doc.text((detalle.course_name || "CURSO").toUpperCase(), pageWidth / 2, y, {
-                align: "center",
-            });
-            y += 8;
+                if (logoSol) {
+                    const logoHeight =
+                        logoSolWidth * (logoSol.height / logoSol.width);
+                    doc.addImage(
+                        logoSol,
+                        "PNG",
+                        pageWidth - margen - logoSolWidth,
+                        y,
+                        logoSolWidth,
+                        logoHeight,
+                    );
+                }
 
-            doc.setFillColor(242, 245, 250);
-            doc.roundedRect(margen, y, pageWidth - margen * 2, 34, 2, 2, "F");
+                const anchoDisponible =
+                    pageWidth -
+                    margen * 2 -
+                    logoAVWidth -
+                    logoSolWidth -
+                    gapTitulo * 2;
 
-            const colMitad = (pageWidth - margen * 2) / 2;
-
-            const pintarDato = (x, yBas, label, value) => {
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(7.5);
-                doc.setTextColor(120, 130, 145);
-                doc.text(label.toUpperCase(), x, yBas);
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(9.5);
-                doc.setTextColor(30, 30, 30);
-                doc.text(String(value || "—"), x, yBas + 5);
-            };
+                doc.setFontSize(14);
+                doc.setTextColor(20, 40, 80);
+                doc.text(
+                    (detalle.course_name || "CURSO").toUpperCase(),
+                    pageWidth / 2,
+                    y + 10,
+                    { align: "center", maxWidth: anchoDisponible },
+                );
 
-            pintarDato(
-                margen + 4,
-                y + 8,
-                "Trabajador",
-                detalle.full_name,
-            );
-            pintarDato(
-                margen + 4,
-                y + 20,
-                "Fecha de examen",
-                detalle.attempt_date,
-            );
-            pintarDato(
-                margen + colMitad + 4,
-                y + 8,
-                "Intento",
-                detalle.attempt_number != null
-                    ? `${detalle.attempt_number}° (ID ${detalle.attempt_id})`
-                    : "—",
-            );
-            pintarDato(
-                margen + colMitad + 4,
-                y + 20,
-                "Duración",
-                detalle.duration,
-            );
+                y += 19;
 
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.setTextColor(120, 130, 145);
-            doc.text(
-                `Horario: ${detalle.start_time || "—"} a ${detalle.end_time || "—"}`,
-                margen + 4,
-                y + 31,
-            );
-
-            const nota = parseFloat(detalle.obtained_grade);
-            const minimo = parseFloat(detalle.passing_percentage);
-            const aprobado =
-                !isNaN(nota) && !isNaN(minimo) ? nota >= minimo : false;
-
-            doc.autoTable({
-                startY: y + 42,
-                head: [
-                    [
-                        "Correctas",
-                        "Incorrectas",
-                        "Nota obtenida",
-                        "Nota mínima",
-                        "Resultado",
+                // --- TABLA DE DATOS DEL ALUMNO ---
+                doc.autoTable({
+                    startY: y,
+                    theme: "grid",
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 1.3,
+                        valign: "middle",
+                        lineColor: [20, 40, 80],
+                        lineWidth: 0.2,
+                        textColor: [20, 20, 20],
+                    },
+                    body: [
+                        [
+                            {
+                                content: "Alumno",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: (
+                                    detalle.full_name || "—"
+                                ).toUpperCase(),
+                                colSpan: 3,
+                                styles: { fontStyle: "bold", halign: "center" },
+                            },
+                            {
+                                content: "DNI",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: detalle.dni || "—",
+                                styles: { halign: "center" },
+                            },
+                        ],
+                        [
+                            {
+                                content: "Fecha",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: detalle.attempt_date || "—",
+                                styles: { halign: "center" },
+                            },
+                            {
+                                content: "Hora de Inicio",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: detalle.start_time || "—",
+                                styles: { halign: "center" },
+                            },
+                            {
+                                content: "Hora de Término",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: detalle.end_time || "—",
+                                styles: { halign: "center" },
+                            },
+                        ],
+                        [
+                            {
+                                content: "Duración",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: detalle.duration || "—",
+                                colSpan: 5,
+                                styles: { halign: "center" },
+                            },
+                        ],
+                        [
+                            {
+                                content: "NOTA",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content:
+                                    detalle.obtained_grade != null
+                                        ? `${detalle.obtained_grade} de 20`
+                                        : "—",
+                                styles: { fontStyle: "bold", halign: "center" },
+                            },
+                            {
+                                content: "N° Intento",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: String(detalle.attempt_number ?? "—"),
+                                styles: { halign: "center" },
+                            },
+                            {
+                                content: "% Aprobatorio",
+                                rowSpan: 2,
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                    valign: "middle",
+                                },
+                            },
+                            {
+                                content:
+                                    detalle.passing_percentage != null
+                                        ? `${detalle.passing_percentage}%`
+                                        : "—",
+                                rowSpan: 2,
+                                styles: { halign: "center", valign: "middle" },
+                            },
+                        ],
+                        [
+                            {
+                                content: "Correctas",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [225, 232, 245],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: String(detalle.correct_answers ?? "—"),
+                                styles: { halign: "center" },
+                            },
+                            {
+                                content: "Incorrectas",
+                                styles: {
+                                    fontStyle: "bold",
+                                    fillColor: [255, 225, 225],
+                                    halign: "center",
+                                },
+                            },
+                            {
+                                content: String(
+                                    detalle.incorrect_answers ?? "—",
+                                ),
+                                styles: {
+                                    halign: "center",
+                                    textColor: [180, 0, 0],
+                                    fontStyle: "bold",
+                                },
+                            },
+                            {
+                                content: "",
+                                colSpan: 2,
+                                styles: { fillColor: [255, 255, 255] },
+                            },
+                        ],
                     ],
-                ],
-                body: [
-                    [
-                        String(detalle.correct_answers ?? "—"),
-                        String(detalle.incorrect_answers ?? "—"),
-                        detalle.obtained_grade || "—",
-                        detalle.passing_percentage || "—",
-                        aprobado ? "APROBADO" : "NO APROBADO",
-                    ],
-                ],
-                theme: "grid",
-                headStyles: { fillColor: [20, 40, 80], fontStyle: "bold", fontSize: 9 },
-                styles: { fontSize: 9, halign: "center", valign: "middle" },
-                margin: { left: margen, right: margen },
+                    columnStyles: {
+                        0: { cellWidth: 26 },
+                        1: { cellWidth: 32 },
+                        2: { cellWidth: 30 },
+                        3: { cellWidth: 32 },
+                        4: { cellWidth: 30 },
+                        5: { cellWidth: "auto" },
+                    },
+                    margin: { left: margen, right: margen },
+                });
+
+                y = doc.lastAutoTable.finalY + 2;
+
+                // --- PREGUNTAS: una tabla independiente por pregunta ---
+                const preguntas = Array.isArray(detalle.questions_answers)
+                    ? detalle.questions_answers
+                    : [];
+
+                if (preguntas.length > 0) {
+                    const letras = ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+                    preguntas.forEach((q, i) => {
+                        const opciones =
+                            Array.isArray(q.options) && q.options.length
+                                ? q.options
+                                : ["—"];
+
+                        const bodyOpciones = opciones.map((opt, j) => {
+                            const letra = letras[j] || "-";
+                            const esSeleccionada = q.response === opt;
+                            return [
+                                {
+                                    content: `${letra}) ${opt}`,
+                                    styles: {
+                                        fontStyle: esSeleccionada
+                                            ? "bold"
+                                            : "normal",
+                                        textColor: [40, 40, 40],
+                                        fillColor: esSeleccionada
+                                            ? [235, 235, 235]
+                                            : [255, 255, 255],
+                                        cellPadding: {
+                                            top: 0.8,
+                                            bottom: 0.8,
+                                            left: 7,
+                                            right: 2,
+                                        },
+                                    },
+                                },
+                            ];
+                        });
+
+                        doc.autoTable({
+                            startY: y,
+                            theme: "grid",
+                            head: [
+                                [
+                                    {
+                                        content: `${i + 1}. ${q.question || "—"}`,
+                                        styles: {
+                                            fillColor: [225, 235, 250],
+                                            textColor: [20, 40, 80],
+                                            fontStyle: "bold",
+                                            fontSize: 7.5,
+                                            halign: "left",
+                                            valign: "middle",
+                                            cellPadding: {
+                                                top: 1.5,
+                                                bottom: 1.5,
+                                                left: 4,
+                                                right: 4,
+                                            },
+                                            lineColor: [180, 195, 215],
+                                            lineWidth: 0.2,
+                                        },
+                                    },
+                                ],
+                            ],
+                            body: bodyOpciones,
+                            styles: {
+                                fontSize: 7,
+                                cellPadding: 1,
+                                lineColor: [200, 210, 225],
+                                lineWidth: 0.15,
+                                valign: "middle",
+                                overflow: "linebreak",
+                            },
+                            margin: { left: margen, right: margen },
+                            rowPageBreak: "avoid",
+                        });
+
+                        y = doc.lastAutoTable.finalY + 1.5;
+                    });
+                }
             });
 
-            const preguntas = Array.isArray(detalle.questions_answers)
-                ? detalle.questions_answers
-                : [];
-
-            const startQuestions = doc.lastAutoTable.finalY + 10;
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(11);
-            doc.setTextColor(20, 40, 80);
-            doc.text("PREGUNTAS Y RESPUESTAS", margen, startQuestions);
-
-            doc.autoTable({
-                startY: startQuestions + 4,
-                head: [["N°", "Pregunta", "Respuesta"]],
-                body: preguntas.map((q, i) => [
-                    i + 1,
-                    q.question || "—",
-                    q.response || "—",
-                ]),
-                theme: "striped",
-                headStyles: { fillColor: [20, 40, 80], fontStyle: "bold", fontSize: 9 },
-                bodyStyles: { fontSize: 9 },
-                columnStyles: {
-                    0: { cellWidth: 10, halign: "center" },
-                    1: { cellWidth: 112 },
-                    2: { cellWidth: 60 },
-                },
-                margin: { left: margen, right: margen },
-            });
-
+            // --- PIE DE PÁGINA (con fecha AM/PM) ---
             const totalPaginas = doc.getNumberOfPages();
             for (let i = 1; i <= totalPaginas; i++) {
                 doc.setPage(i);
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(8);
                 doc.setTextColor(140, 140, 140);
+
+                const fechaGeneracion = new Date().toLocaleString("es-PE", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                });
+
                 doc.text(
-                    `Generado por Sisolmar Web · ${new Date().toLocaleString("es-PE")}`,
+                    `Generado por Sisolmar Web · ${fechaGeneracion}`,
                     margen,
                     290,
                 );
-                doc.text(`Página ${i} de ${totalPaginas}`, pageWidth - margen, 290, {
-                    align: "right",
-                });
+                doc.text(
+                    `Página ${i} de ${totalPaginas}`,
+                    pageWidth - margen,
+                    290,
+                    { align: "right" },
+                );
             }
 
-            const nombreArchivo = `reporte_examen_${(detalle.full_name || "personal")
-                .trim()
-                .replace(/\s+/g, "_")}.pdf`;
+            // --- NOMBRE DINÁMICO DEL ARCHIVO ---
+            const hoy = new Date();
+            const dd = String(hoy.getDate()).padStart(2, "0");
+            const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+            const yyyy = hoy.getFullYear();
+            const fechaStr = `${dd}-${mm}-${yyyy}`;
+
+            const sanitizar = (str) =>
+                (str || "")
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[\\/:*?"<>|]/g, "")
+                    .trim();
+
+            const primerDetalle = detalles[0] || {};
+            const courseName = sanitizar(primerDetalle.course_name || "CURSO");
+
+            let nombreArchivo;
+            if (detalles.length === 1) {
+                const fullName = sanitizar(
+                    primerDetalle.full_name || "PERSONAL",
+                )
+                    .toUpperCase()
+                    .replace(/\s+/g, "_");
+                nombreArchivo = `${fullName} - ${courseName} - ${fechaStr}.pdf`;
+            } else {
+                nombreArchivo = `REPORTE_EXAMENES - ${courseName} - ${fechaStr}.pdf`;
+            }
+
             doc.save(nombreArchivo);
         },
     }));
