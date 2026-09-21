@@ -3115,7 +3115,7 @@
                     .then(res => {
                         if (res.success) {
                             if (window.tabulatorMemos) {
-                                window.tabulatorMemos.setData("/api/obtener-memos-enviados");
+                                window.tabulatorMemos.setData(`${VITE_URL_APP}/api/obtener-memos-enviados`);
                             }
                             fetch(`${VITE_URL_APP}/api/obtener-info-memo/${this.personal.dni}`)
                                 .then(r => r.json())

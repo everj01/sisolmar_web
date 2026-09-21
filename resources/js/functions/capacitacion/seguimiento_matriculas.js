@@ -1297,7 +1297,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (res.data.success) {
                         if (window.tabulatorMemos) {
                             window.tabulatorMemos.setData(
-                                "/api/obtener-memos-enviados",
+                                `${VITE_URL_APP}/api/obtener-memos-enviados`,
                             );
                         }
                         limpiarSeleccionPersonal();

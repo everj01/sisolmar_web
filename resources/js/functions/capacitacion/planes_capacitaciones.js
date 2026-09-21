@@ -37,7 +37,9 @@ export default document.addEventListener("alpine:init", () => {
             });
 
             try {
-                const { data } = await axios.get("/api/obtener-plan-pce");
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/obtener-plan-pce`,
+                );
                 const anio = data.Anio;
 
                 const doc = new jsPDF({
@@ -402,7 +404,9 @@ export default document.addEventListener("alpine:init", () => {
             if (this.clientesPCA.length === 0) {
                 this.loadingClientesPCA = true;
                 try {
-                    const { data } = await axios.get("/api/get-clientes-pac");
+                    const { data } = await axios.get(
+                        `${VITE_URL_APP}/api/get-clientes-pac`,
+                    );
                     this.clientesPCA = Array.isArray(data) ? data : [];
                 } catch (e) {
                     console.error(e);
@@ -584,7 +588,9 @@ export default document.addEventListener("alpine:init", () => {
         async cargarPlanes() {
             this.loadingPlanes = true;
             try {
-                const { data } = await axios.get("/api/obtener-tipos-curso");
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/obtener-tipos-curso`,
+                );
                 this.planes = data.Tipos || [];
             } catch (e) {
                 console.error(e);
