@@ -385,6 +385,9 @@
     }
 </style>
 @endsection
+
+@include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Seguimiento AV'])
+
 @section('content')
 
 <div x-data="{ tabActivo: 'cursos' }">
@@ -415,13 +418,11 @@
 
                     <div>
                         <h1 class="text-3xl font-bold tracking-tight text-default-900 mt-4">
-                            Seguimiento de Matriculados
+                            Seguimiento AV
                         </h1>
 
                         <p class="mt-3 text-sm leading-7 text-default-600 max-w-3xl">
-                            Supervise el progreso de los participantes matriculados en los cursos de capacitación
-                            mediante indicadores informativos. Acceda rápidamente a usuarios que aún no inician,
-                            participantes en progreso, aprobados y desaprobados.
+                            Control de los participantes matriculados, aplicando medidas disciplinarias en los casos de incumplimiento de la programación.
                         </p>
                     </div>
 
@@ -482,11 +483,13 @@
                             <span>Usuarios en progreso</span>
                         </div>
 
+                        {{-- Badge Notificaciones por correo (comentado temporalmente)
                         <div @click="abrirInfo('Notificaciones por correo', mensajes.notificaciones)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-sky-50 transition-colors">
                             <i class="ti ti-mail text-xs text-sky-600"></i>
                             <span>Notificaciones por correo</span>
                         </div>
+                        --}}
 
                         <div @click="abrirInfo('MEMOs por nivel', mensajes.memos)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-default-200 text-xs text-default-600 cursor-pointer hover:bg-purple-50 transition-colors">
@@ -504,28 +507,28 @@
     <div class="px-6 pb-6">
         <div class="rounded-2xl border border-default-200/60 bg-white shadow-sm p-6">
             <!-- Tab Navigation -->
-            <div class="flex items-center gap-1 mb-4">
+            <div class="flex flex-wrap items-center gap-1 mb-4">
                 <button
                     @click="tabActivo = 'cursos'; setTimeout(() => { if (window.tabulatorCursos) window.tabulatorCursos.redraw(true) }, 100)"
                     :class="tabActivo === 'cursos'
-                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
-                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-book text-sm"></i>
                     Cursos registrados
                 </button>
                 <button
                     @click="tabActivo = 'personal'; setTimeout(() => { if (window.tabulatorPersonal) window.tabulatorPersonal.redraw(true) }, 100)"
                     :class="tabActivo === 'personal'
-                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
-                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-users text-sm"></i>
                     Lista de personal
                 </button>
                 <button
                     @click="tabActivo = 'memos'; setTimeout(() => { if (window.tabulatorMemos) window.tabulatorMemos.redraw(true) }, 100)"
                     :class="tabActivo === 'memos'
-                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-all'
-                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
+                    ? 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-primary bg-primary/10 rounded-xl transition-all'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-default-500 hover:text-default-700 hover:bg-default-100 rounded-xl transition-all'">
                     <i class="ti ti-notes text-sm"></i>
                     MEMOs enviados
                 </button>
@@ -536,18 +539,22 @@
                 x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
                     <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
-                    <div class="flex items-center gap-2">
-                        <div class="relative">
+                    <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full lg:w-auto">
+                        <div class="relative sm:flex-none sm:min-w-[220px]">
                             <i
                                 class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
                             <input id="buscarCursoSeguimiento" placeholder="Buscar por nombre o código..."
-                                class="w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                                class="w-full sm:w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
                         </div>
                         <select id="filtroResponsableCursos"
-                            class="w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                            class="w-full sm:w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                             <option value="">Todos los responsables</option>
+                        </select>
+                        <select id="filtroTipoCursos"
+                            class="w-full sm:w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                            <option value="">Todos los tipos</option>
                         </select>
                     </div>
                 </div>
@@ -562,7 +569,7 @@
                 <div class="flex flex-col gap-3 mb-4">
                     <div class="flex items-center justify-between">
                         <h2 class="text-base font-bold text-default-900">Lista de personal</h2>
-                        <div id="selectedPersonalInfo" class="hidden flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 px-2.5 py-1 rounded-full">
+                        <div id="selectedPersonalInfo" class="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 px-2.5 py-1 rounded-full">
                             <i class="ti ti-checks text-sm"></i>
                             <span><span id="selectedPersonalCount">0</span> seleccionados</span>
                         </div>
@@ -596,8 +603,6 @@
                                    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
                                         :class="{ '!cursor-not-allowed opacity-60': tabActivo !== 'personal' && tabActivo !== 'memos' }">
                                         <option value="">Todos los tipos</option>
-                                        <option value="Administrativo">Administrativo</option>
-                                        <option value="Operativo">Operativo</option>
                                     </select>
                                     <i class="ti ti-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
                                 </div>
@@ -845,6 +850,18 @@
                        hover:border-default-300
                        focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                                     <option value="">Todos los clientes</option>
+                                </select>
+                            </div>
+
+                            <div class="w-full md:w-64">
+                                <select
+                                    id="filtroTipoTrabMemos"
+                                    class="w-full h-10 px-3 text-sm text-default-700
+                       bg-white border border-default-200 rounded-lg shadow-sm
+                       outline-none transition
+                       hover:border-default-300
+                       focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                                    <option value="">Todos los tipos</option>
                                 </select>
                             </div>
 
@@ -1605,6 +1622,13 @@
                         </button>
                     </div>
                     <div class="flex-1"></div>
+                    <select x-model="filtroTipoCurso"
+                        class="w-36 py-1.5 text-xs border border-default-200 rounded-lg !bg-white !text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                        <option value="">Todos los tipos</option>
+                        <template x-for="t in tiposCurso" :key="t">
+                            <option x-text="t" :value="t"></option>
+                        </template>
+                    </select>
                     <div class="relative">
                         <i
                             class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-default-400 pointer-events-none"></i>
@@ -1638,7 +1662,9 @@
                             <tr
                                 class="border-b border-default-200 text-[10px] font-semibold text-default-500 uppercase tracking-widest">
                                 <th class="text-left py-2.5 px-3 w-10">#</th>
+                                <th class="text-left py-2.5 px-3 w-20">Código</th>
                                 <th class="text-left py-2.5 px-3">Nombre del curso</th>
+                                <th class="text-center py-2.5 px-3">Tipo de curso</th>
                                 <th class="text-center py-2.5 px-3 w-32">Estado</th>
                                 <th class="text-center py-2.5 px-3 w-20">Nota final</th>
                                 <th class="text-center py-2.5 px-3 w-32">Último acceso</th>
@@ -1649,7 +1675,13 @@
                                 <tr class="hover:bg-default-50 transition-colors">
                                     <td class="py-2.5 px-3 text-default-400 text-xs font-mono" x-text="index + 1"></td>
                                     <td class="py-2.5 px-3">
+                                        <p class="font-medium text-default-800 text-xs" x-text="c.codigo || ''"></p>
+                                    </td>
+                                    <td class="py-2.5 px-3">
                                         <p class="font-medium text-default-800 text-xs" x-text="c.nombre_curso || c.curso_nombre || c.nombre || ''"></p>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-center">
+                                        <p class="font-medium text-default-800 text-xs" x-text="c.tipo_curso || ''"></p>
                                     </td>
                                     <td class="py-2.5 px-3 text-center">
                                         <span x-show="c.estado === 'En curso'"
@@ -2836,6 +2868,7 @@
             filtroMatriculaHasta: '',
             filtroAnioCreacion: '',
             busquedaCurso: '',
+            filtroTipoCurso: '',
             memoInfo: {
                 total: 0,
                 siguiente_num_memo: 1,
@@ -2882,6 +2915,7 @@
                     const q = this.busquedaCurso.toLowerCase().trim();
                     const nombre = c.nombre_curso || '';
                     if (q && !nombre.toLowerCase().includes(q)) return false;
+                    if (this.filtroTipoCurso && c.tipo_curso !== this.filtroTipoCurso) return false;
                     if (this.filtroUltimoAccesoDesde) {
                         const desde = new Date(this.filtroUltimoAccesoDesde);
                         const val = c.fecha_ultimo_acceso ? new Date(c.fecha_ultimo_acceso) : null;
@@ -2920,6 +2954,10 @@
                 return años;
             },
 
+            get tiposCurso() {
+                return [...new Set(this.cursos.map(c => c.tipo_curso).filter(Boolean))].sort();
+            },
+
             formatearFecha(val) {
                 if (!val || val === '0' || val === 0) return null;
                 const d = new Date(val);
@@ -2952,6 +2990,7 @@
                 this.filtroMatriculaHasta = '';
                 this.filtroAnioCreacion = '';
                 this.busquedaCurso = '';
+                this.filtroTipoCurso = '';
                 this.memoInfo = {
                     total: 0,
                     siguiente_num_memo: 1,

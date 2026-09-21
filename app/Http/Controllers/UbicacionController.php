@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use DB;
-use Illuminate\Http\Request;
-use PDO;
+use Illuminate\Support\Facades\DB;
 
 class UbicacionController extends Controller
 {
@@ -23,7 +21,7 @@ class UbicacionController extends Controller
     }
 
 
-    public function provincias($departamento_id)
+    public function provincias(string $departamento_id)
     {
         $data = DB::table('si_solm.DBO.ADMI_PROVINCIA')
             ->where('DEPA_CODIGO', $departamento_id)
@@ -34,7 +32,7 @@ class UbicacionController extends Controller
         return response()->json($data);
     }
 
-    public function distritos($provincia_id)
+    public function distritos(string $provincia_id)
     {
         $data = DB::table('si_solm.DBO.ADMI_DISTRITO')
             ->where('PROVI_CODIGO', $provincia_id)

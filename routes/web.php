@@ -1,7 +1,8 @@
  <?php
 
-  use App\Http\Controllers\BiometricoController;
+use App\Http\Controllers\BiometricoController;
 use App\Http\Controllers\CapacitacionController;
+use App\Http\Controllers\ExamenesController;
 use App\Http\Controllers\ConsultaController;
 use App\Http\Controllers\DjController;
 use App\Http\Controllers\FileController;
@@ -181,6 +182,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
         Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
 
+        Route::get('/obtener-cursos-av', [ExamenesController::class, 'obtenerCursosAV']);
+        Route::post('/obtener-datos-reporte-av', [ExamenesController::class, 'obtenerDatosReporteAV']);
+
+
+
         // ── Nuevas rutas de Capacitación (Rodrigo) ───────────────────────
         Route::post('/obtener-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
         Route::post('/actualizar-curso/{codigo}', [CapacitacionController::class, 'actualizarCurso']);
@@ -197,12 +203,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cursos/obtener-prog-actual/{courseId}', [CapacitacionController::class, 'obtenerProgActual']);
         Route::get('/obtener-programaciones/{courseId}', [CapacitacionController::class, 'obtenerProgramaciones']);
         Route::get('/obtener-matriculados/{courseId}', [CapacitacionController::class, 'obtenerMatriculados']);
+        Route::get('/obtener-datos-matricula/{cursoId}', [CapacitacionController::class, 'obtenerDatosMatricula']);
         Route::get('/reporte-cursos', [CapacitacionController::class, 'obtenerCursosParaReportes']);
         Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
+        Route::get('/obtener-cursos-cliente/{cod_legacy}', [CapacitacionController::class, 'obtenerCursosPorCliente']);
         Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
         Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
         Route::get('/obtener-plan-pce', [CapacitacionController::class, 'obtenerPlanPCE']);
+        Route::get('/obtener-plan-pca/{codCliente}', [CapacitacionController::class, 'obtenerPlanPCA']);
+        Route::get('/obtener-cursos-por-plan/{tipo_curso}', [CapacitacionController::class, 'obtenerCursosPorPlan']);
+        Route::get('/obtener-tipos-curso', [CapacitacionController::class, 'obtenerTiposDeCurso']);
         Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
         Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
         Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
@@ -219,6 +230,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-personal-todas-empresas', [CapacitacionController::class, 'obtenerPersonalTodasEmpresas']);
         Route::post('/obtener-personal-record', [CapacitacionController::class, 'obtenerPersonalParaRecord']);
         Route::post('/obtener-reporte-general', [CapacitacionController::class, 'obtenerReporteGeneral']);
+        Route::post('/obtener-reporte-formato', [CapacitacionController::class, 'obtenerReporteFormato']);
         Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
         Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
         Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);
