@@ -1,14 +1,11 @@
 import Swal from "sweetalert2";
 import axios from "axios";
-import DataTable from "vanilla-datatables";
+import { TabulatorFull as Tabulator } from "tabulator-tables";
+import "tabulator-tables/dist/css/tabulator_simple.min.css";
 import imageCompression from 'browser-image-compression';
-
-console.log('ESTO ES UNA PREUBA PROVAOFR');
 
 window.cursosData = [];
 window.alertasCursosData = [];
-
-// window.alertasVencimientoCursos inyectado vía Blade para evitar race conditions con Vite
 
 const archivoInput = document.getElementById("archivoInput");
 const btnSeleccionar = document.getElementById("btnSeleccionar");
@@ -23,7 +20,6 @@ if (btnSeleccionar) {
         if (archivoInput) archivoInput.click();
     });
 }
-
 
 if (archivoInput) {
     archivoInput.addEventListener("change", (e) => {
@@ -161,7 +157,6 @@ if (btnAnalizar) {
 
 }
 
-// Actualiza la lista en pantalla
 function actualizarLista() {
     listaArchivos.innerHTML = "";
 
@@ -194,75 +189,152 @@ function actualizarLista() {
     }
 }
 
-// document.addEventListener('DOMContentLoaded', async () => {
-
-//     await listarTipoCurso("slcTipoCurso")
-//     await listarTipoCurso("slcFiltroTipoCurso", true)
-//     // await listarAreas("slcArea") // Removed: Replaced by Alpine component
-//     await listarAreas("slcFiltroArea", true)
-//     await listarCursos()
-
-//     // DataTable will be initialized inside renderTablaCursos
-// })
-
 document.addEventListener('DOMContentLoaded', async () => {
-    await listarTipoCurso("slcTipoCurso")
-    await listarTipoCurso("slcFiltroTipoCurso", true)
-    await listarAreas()
-    await listarCursos()
+    await listarCursos();
+    await Promise.all([
+        listarTipoCurso(),
+        listarAreas()
+    ]);
 });
 
-
-window.listarCursos = async function (habilitado = 1, area = '', tipoCurso = '') {
+window.cursosDataAll = [];
+let cursosLoadPromise = (async () => {
     try {
-        const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/${habilitado}`, {
-            params: { filtro_area: area, filtro_tipo: tipoCurso }
-        });
+        const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`);
+        window.cursosDataAll = res.data || [];
+    } catch (err) {
+        console.error("Error al obtener cursos", err);
+    }
+})();
 
-        window.cursosData = res.data;
-        window.renderTablaCursos(window.cursosData);
+function mostrarLoader() {
+    const loader = document.getElementById('tblCursosLoader');
+    if (loader) loader.classList.remove('hidden');
+}
+
+function ocultarLoader() {
+    const loader = document.getElementById('tblCursosLoader');
+    if (loader) loader.classList.add('hidden');
+}
+
+window.listarCursos = async function (
+    habilitado = 1,
+    area = "",
+    tipoCurso = "",
+    categoria = "",
+    fechaDesde = "",
+    fechaHasta = "",
+) {
+    mostrarLoader();
+
+    try {
+        await cursosLoadPromise;
+        await aplicarFiltros(
+            habilitado,
+            area,
+            tipoCurso,
+            categoria,
+            fechaDesde,
+            fechaHasta,
+        );
     } catch (err) {
         console.error("Error al obtener cursos", err);
         Swal.fire("Error", "No se pudieron cargar los cursos", "error");
     }
+};
+
+window.recargarCursos = async function (
+    habilitado = 1,
+    area = "",
+    tipoCurso = "",
+    categoria = "",
+    fechaDesde = "",
+    fechaHasta = "",
+) {
+    window.cursosDataAll = [];
+    cursosLoadPromise = (async () => {
+        try {
+            const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`);
+            window.cursosDataAll = res.data || [];
+        } catch (err) {
+            console.error("Error al obtener cursos", err);
+        }
+    })();
+    await window.listarCursos(
+        habilitado,
+        area,
+        tipoCurso,
+        categoria,
+        fechaDesde,
+        fechaHasta,
+    );
+};
+
+async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', categoria = '', fechaDesde = '', fechaHasta = '') {
+    const data = window.cursosDataAll || [];
+
+    if (!window.tablaCursos) {
+        window.initTablaCursos(data);
+        return;
+    }
+
+    mostrarLoader();
+
+    await window.tablaCursos.setData(data);
+    ocultarLoader();
+
+    const filters = [];
+
+    filters.push({ field: "habilitado", type: "=", value: habilitado === 1 ? "1" : "0" });
+
+    if (area) {
+        filters.push({ field: "area_conocimiento", type: "=", value: String(area) });
+    }
+
+    if (tipoCurso) {
+        const tipo = (window.opcionesTipoCurso || []).find(t => String(t.codigo) === String(tipoCurso));
+        const desc = tipo ? tipo.descripcion : null;
+        if (desc) {
+            filters.push({ field: "tipo_curso", type: "=", value: desc });
+        }
+    }
+
+    if (categoria) {
+        filters.push({ field: "categoria", type: "=", value: categoria });
+    }
+
+    if (fechaDesde || fechaHasta) {
+        filters.push({ field: "fecha_creacion", type: function (value, filterParams) {
+            const cellDate = new Date(value);
+            if (isNaN(cellDate.getTime())) return true;
+            if (filterParams.desde && cellDate < filterParams.desde) return false;
+            if (filterParams.hasta && cellDate > filterParams.hasta) return false;
+            return true;
+        }, filterParams: {
+            desde: fechaDesde ? new Date(fechaDesde + 'T00:00:00') : null,
+            hasta: fechaHasta ? new Date(fechaHasta + 'T23:59:59') : null
+        }});
+    }
+
+    window.tablaCursos.setFilter(filters);
 }
 
+window.opcionesTipoCurso = [];
 
-window.opcionesTipoCurso = []; // Global
-
-async function listarTipoCurso(selectId, esFiltro = false) {
+async function listarTipoCurso() {
     try {
         const res = await axios.get(`${VITE_URL_APP}/api/get-capacitacion-tipo-cursos`);
         const tipoCursosData = res.data;
 
-        // Update global state for Alpine
         window.opcionesTipoCurso = Array.isArray(tipoCursosData) ? tipoCursosData : [];
         window.dispatchEvent(new CustomEvent('tipo-curso-loaded', { detail: window.opcionesTipoCurso }));
-
-        // Legacy DOM manipulation: Only for elements NOT controlled by Alpine loop (or filters)
-        // 'slcTipoCurso' and 'slcFiltroTipoCurso' are migrated to Alpine x-for.
-        if (selectId !== 'slcTipoCurso' && selectId !== 'slcFiltroTipoCurso') {
-            const select = document.getElementById(selectId);
-            if (select) {
-                select.innerHTML = esFiltro
-                    ? '<option value="">-- Todos --</option>'
-                    : '<option value="">-- Seleccione --</option>';
-
-                window.opcionesTipoCurso.forEach(curso => {
-                    const option = document.createElement("option");
-                    option.value = curso.codigo;
-                    option.textContent = curso.descripcion;
-                    select.appendChild(option);
-                });
-            }
-        }
     } catch (err) {
         console.error("Error al obtener tipos de cursos", err);
         Swal.fire("Error", "No se pudieron cargar los tipos de cursos", "error");
     }
 }
 
-window.opcionesArea = []; // Global initialization
+window.opcionesArea = [];
 
 async function listarAreas(selectId = null, esFiltro = false) {
     try {
@@ -271,17 +343,13 @@ async function listarAreas(selectId = null, esFiltro = false) {
         );
         const areasData = Array.isArray(res.data) ? res.data : [];
 
-        // Populate global array for Alpine.js
-        window.opcionesArea = areasData.map(area => ({
+        window.opcionesArea = areasData.map((area) => ({
             codigo: area.codigo,
-            descripcion: area.descripcion
+            descripcion: area.abreviatura,
         }));
 
-        // Dispatch event for Alpine components
         window.dispatchEvent(new CustomEvent('areas-loaded', { detail: window.opcionesArea }));
 
-        // Legacy support (optional, can be removed if specific selects are fully replaced)
-        // Only try to update older selects if selectId is provided AND element exists
         if (selectId) {
             const select = document.getElementById(selectId);
             if (select) {
@@ -293,7 +361,7 @@ async function listarAreas(selectId = null, esFiltro = false) {
                     areasData.forEach(area => {
                         const option = document.createElement("option");
                         option.value = area.codigo;
-                        option.textContent = area.descripcion;
+                        option.textContent = area.abreviatura;
                         select.appendChild(option);
                     });
                 }
@@ -306,17 +374,6 @@ async function listarAreas(selectId = null, esFiltro = false) {
     }
 }
 
-// async function listarCursosFiltro() {
-//     try {
-//         const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/0`)
-//         window.cursosData = res.data
-//         window.renderTablaCursos(window.cursosData)
-//     } catch (err) {
-//         console.error("Error al obtener cursos", err)
-//         Swal.fire("Error", "No se pudieron cargar los cursos", "error")
-//     }
-// }
-
 async function obtenerCursoXId(id) {
     try {
         const res = await axios.get(`${VITE_URL_APP}/api/get-curso-id/${id}`)
@@ -328,136 +385,205 @@ async function obtenerCursoXId(id) {
     }
 }
 
-// Global variable to store DataTable instance
-window.cursoTable = null;
+window.tablaCursos = null;
 
-window.renderTablaCursos = function (data) {
-    // Destroy existing DataTable instance
-    if (window.cursoTable) {
-        window.cursoTable.destroy();
-        window.cursoTable = null;
-    }
-
-    const tblCursos = document.getElementById('tblCursos');
-    if (!tblCursos) return;
-
-    // Get the container and completely remove the old table
-    const container = tblCursos.parentElement;
-    tblCursos.remove();
-
-    // Create a completely fresh table element
-    const newTable = document.createElement('table');
-    newTable.id = 'tblCursos';
-    newTable.className = 'table table-bordered table-hover';
-
-    // Create thead
-    const thead = document.createElement('thead');
-    thead.innerHTML = `
-        <tr>
-            <th>#</th>
-            <th>CÓDIGO</th>
-            <th>NOMBRE</th>
-            <th>ACCIONES</th>
-        </tr>
-    `;
-    newTable.appendChild(thead);
-
-    // Create tbody with data
-    const tbody = document.createElement('tbody');
-
-    if (data.length > 0) {
-        data.forEach((curso, index) => {
-            const tr = document.createElement("tr");
-            tr.style.backgroundColor = curso.habilitado == '1' ? "" : '#fff1f1';
-
-            const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso))
-                ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
-                : '';
-
-            tr.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${curso.codigoCurso}</td>
-        <td class="text-primary font-medium">
-            <div class="flex items-center">
-                ${curso.nombre}${alertIcon}
-            </div>
-        </td>
-        <td>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="window.gestionCurso('EDIT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
-                    <i class="bx bxs-edit text-base"></i>
-                </button>
-
-
-                ${curso.habilitado == '1' ?
-                    `<button type="button" 
-                        ${curso.tiene_vigente
-                        ? 'disabled class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo"'
-                        : `class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar 1er Ciclo Manual" 
-                        onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}', tipo_curso: '${curso.tipo_curso || ''}', dirigido_a: '${curso.dirigido_a || ''}', frecuencia: '${curso.frecuencia || ''}' } }))"`}>
-                        <i class="bx bx-calendar-star text-base"></i>
-                    </button>
-                    
-                    <button type="button"  onclick="window.gestionCurso('DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
-                        <i class="bx bx-trash text-base"></i>
-                    </button>`
-                    :
-                    `<button type="button"  onclick="window.gestionCurso('ACT', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
-                        <i class='bx bx-check text-base'></i>
-                    </button>
-                    <button type="button"  onclick="window.gestionCurso('PERMA_DEL', '${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
-                        <i class="bx bx-trash text-base"></i>
-                    </button>`
-                }
-
-                ${curso.es_demanda == '1' ?
-                    `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${curso.codigo}', nombre: '${curso.nombre.replace(/'/g, "\\'")}' } }))"
-                    class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
-                        <i class="bx bxs-file-import text-base"></i>
-                    </button>` : ''
-                }
-
-                <button type="button" onclick="window.abrirModalAplazarCurso('${curso.codigo}', '${curso.nombre.replace(/'/g, "\\'")}')"
-                    class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
-                    <i class="bx bx-time-five text-base"></i>
-                </button>
-            </div>
-        </td>
-        `;
-            tbody.appendChild(tr);
-        });
-    } else {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-      <td colspan="4" class="text-center text-gray-500 py-4">
-        No hay datos disponibles
-      </td>`;
-        tbody.appendChild(tr);
-    }
-
-    newTable.appendChild(tbody);
-    container.appendChild(newTable);
-
-    // Initialize DataTables on the completely fresh table
-    window.cursoTable = new DataTable(newTable, {
-        perPage: 10,
-        perPageSelect: [10, 15, 20, 25],
-        searchable: true,
-        sortable: true,
-        fixedHeight: false,
-        labels: {
-            placeholder: "Buscar...",
-            perPage: "{select} por página",
-            noRows: "No hay registros",
-            info: "Mostrando {start} a {end} de {rows}"
-        }
-    });
+function formatFechaCreacion(fecha) {
+    if (!fecha) return '—';
+    const d = new Date(fecha);
+    if (isNaN(d.getTime())) return '—';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = String(hours % 12 || 12).padStart(2, '0');
+    return `${day}/${month}/${year} ${h12}:${minutes} ${ampm}`;
 }
 
+function safeStr(val) {
+    return (val || '').replace(/'/g, "\\'");
+}
+
+function generarBotonesAccion(curso) {
+    const cod = curso.codigo;
+    const nom = safeStr(curso.nombre);
+    const alerta = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso));
+    const hab = curso.habilitado == '1';
+    const tieneVig = curso.tiene_vigente;
+    const esDem = curso.es_demanda == '1';
+
+    let html = '<div class="flex items-center gap-1.5">';
+
+    html += `<button type="button" onclick="window.gestionCurso('EDIT', '${cod}', '${nom}')"
+        class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors" title="Editar curso">
+        <i class="bx bxs-edit text-base"></i></button>`;
+
+    if (hab) {
+        if (tieneVig) {
+            html += `<button type="button" disabled
+                class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Ya tiene un periodo VIGENTE activo">
+                <i class="bx bx-calendar-star text-base"></i></button>`;
+        } else {
+            html += `<button type="button"
+                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Aperturar curso"
+                onclick="window.dispatchEvent(new CustomEvent('open-apertura-modal', { detail: { codigo: '${cod}', nombre: '${nom}', tipo_curso: '${safeStr(curso.tipo_curso)}', dirigido_a: '${safeStr(curso.dirigido_a)}', frecuencia: '${safeStr(curso.frecuencia)}', es_periodico: '${curso.es_periodico ?? 1}' } }))">
+                <i class="bx bx-calendar-star text-base"></i></button>`;
+        }
+    } else {
+        html += `<button type="button" onclick="window.gestionCurso('ACT', '${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Habilitar curso">
+            <i class='bx bx-check text-base'></i></button>
+        <button type="button" onclick="window.gestionCurso('PERMA_DEL', '${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
+            <i class="bx bx-trash text-base"></i></button>`;
+    }
+
+    if (esDem) {
+        html += `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${cod}', nombre: '${nom}' } }))"
+            class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
+            <i class="bx bxs-file-import text-base"></i></button>`;
+    }
+
+    if (tieneVig) {
+        html += `<button type="button" onclick="window.abrirModalAplazarCurso('${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors" title="Dar más plazo al curso">
+            <i class="bx bx-time-five text-base"></i></button>`;
+    } else {
+        html += `<button type="button" disabled
+            class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed" title="Aplazamiento bloqueado: el curso "${nom}" no tiene un periodo VIGENTE activo">
+            <i class="bx bx-time-five text-base"></i></button>`;
+    }
+
+    if (hab) {
+        html += `<button type="button" onclick="window.gestionCurso('DEL', '${cod}', '${nom}')"
+            class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Deshabilitar curso">
+            <i class="bx bx-trash text-base"></i></button>`;
+    }
+
+    html += '</div>';
+    return html;
+}
+
+window.initTablaCursos = function (data) {
+    if (!document.getElementById('tblCursos')) return;
+
+    const loader = document.getElementById('tblCursosLoader');
+    if (loader) loader.classList.remove('hidden');
+
+    if (window.tablaCursos) {
+        window.tablaCursos.destroy();
+        window.tablaCursos = null;
+    }
+
+    window.tablaCursos = new Tabulator("#tblCursos", {
+        data: data,
+        layout: "fitColumns",
+        pagination: "local",
+        paginationSize: 5,
+        paginationSizeSelector: [10, 15, 20, 25],
+        movableColumns: false,
+        resizableColumns: false,
+        locale: true,
+        langs: {
+            "default": {
+                "pagination": {
+                    "page_size": "Mostrar",
+                    "first": "Primero",
+                    "last": "Último",
+                    "prev": "Anterior",
+                    "next": "Siguiente",
+                    "all": "Todos",
+                    "counter": "Mostrando {from} a {to} de {rows} resultados"
+                },
+                "headerFilters": {
+                    "default": "Filtrar..."
+                }
+            }
+        },
+        rowFormatter: function (row) {
+            const data = row.getData();
+            if (data.habilitado != '1') {
+                row.getElement().style.backgroundColor = '#fff1f1';
+            }
+        },
+        dataLoaded: function () {
+            ocultarLoader();
+        },
+        columns: [
+            {
+                title: "#",
+                formatter: "rownum",
+                hozAlign: "center",
+                width: 50,
+                headerSort: false
+            },
+            {
+                title: "CÓDIGO",
+                field: "codigoCurso",
+                width: 105,
+                headerSort: true
+            },
+            {
+                title: "NOMBRE",
+                field: "nombre",
+                headerSort: true,
+                formatter: function (cell) {
+                    const data = cell.getData();
+                    const alertIcon = window.alertasCursosData && window.alertasCursosData.includes(String(data.codigoCurso))
+                        ? '<i class="bx bxs-info-circle text-orange-500 ml-2 text-lg" title="Próxima clonación programada (≤15 días)"></i>'
+                        : '';
+                    return `<div class="flex items-center text-primary font-medium">${cell.getValue()}${alertIcon}</div>`;
+                }
+            },
+            {
+                title: "PLAN",
+                field: "tipo_curso",
+                width: 120,
+                headerSort: true,
+                formatter: function (cell) {
+                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">${cell.getValue() || '—'}</span>`;
+                }
+            },
+            {
+                title: "TIPO DE CURSO",
+                field: "categoria",
+                width: 160,
+                headerSort: true,
+                formatter: function (cell) {
+                    const value = cell.getValue();
+                    const estilos = {
+                        'INDUCCIÓN': 'bg-sky-500/10 text-sky-600',
+                        'CHARLA': 'bg-amber-500/10 text-amber-600',
+                        'CAPACITACIÓN': 'bg-primary/10 text-primary',
+                        'ENTRENAMIENTO': 'bg-emerald-500/10 text-emerald-600',
+                        'SIMULACROS DE EMERGENCIA': 'bg-rose-500/10 text-rose-600',
+                    };
+                    const cls = estilos[value] || 'bg-gray-500/10 text-gray-600';
+                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls}">${value || '—'}</span>`;
+                }
+            },
+            {
+                title: "FECHA CREACIÓN",
+                field: "fecha_creacion",
+                width: 170,
+                headerSort: true,
+                formatter: function (cell) {
+                    return `<span class="text-sm text-gray-600 whitespace-nowrap">${formatFechaCreacion(cell.getValue())}</span>`;
+                }
+            },
+            {
+                title: "ACCIONES",
+                field: "codigo",
+                width: 400,
+                headerSort: false,
+                formatter: function (cell) {
+                    return generarBotonesAccion(cell.getData());
+                }
+            }
+        ]
+    });
+}
 
 window.gestionCurso = async (op, cod, nombre = '') => {
     if (op === 'EDIT') {
@@ -494,6 +620,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.tieneVigente = curso.tiene_vigente ?? false;
                 alpineData.nombre = curso.nombre;
                 alpineData.tipoCurso = curso.tipo_curso?.codigo ?? "";
+                alpineData.categoria = curso.categoria ?? "";
 
                 // IMPORTANTE: Sincronizar Area de Conocimiento
                 // Usar tarea asincrónica para cargar las áreas y luego asignar el área responsable
@@ -558,6 +685,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData.obligatorioAlta = true; // Siempre true por regla de negocio
                 alpineData.esDemanda = false;      // Retirado por regla de negocio
 
+                alpineData.esPeriodico = curso.es_periodico == 1;
                 alpineData.targetGroup = curso.target_group || 'TODOS';
 
                 alpineData.limiteTiempo = curso.examen?.tiempo ?? 0;
@@ -572,6 +700,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 alpineData._original = {
                     nombre: alpineData.nombre,
                     tipoCurso: alpineData.tipoCurso,
+                    categoria: alpineData.categoria,
                     areaConocimiento: alpineData.areaConocimiento,
                     frecuencia: alpineData.frecuencia,
                     codResponsable: alpineData.codResponsable,
@@ -581,6 +710,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                     dirigido: alpineData.dirigido,
                     sucursal: alpineData.sucursal,
                     clienteSeleccionado: alpineData.clienteSeleccionado,
+                    esPeriodico: alpineData.esPeriodico,
                 };
             } else {
                 console.warn("No se encontró el elemento Alpine formCursoGestion o Alpine no está disponible");
@@ -641,9 +771,9 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                                 // Mantener el estado de la vista previa validando el switch local "Solo eliminados"
                                 const toggleEliminados = document.getElementById('chkEliminados');
                                 if (toggleEliminados && toggleEliminados.checked) {
-                                    await window.gestionListarCursos(0); // Forzar recarga de los deshabilitados
+                                    await window.recargarCursos(0);
                                 } else {
-                                    await listarCursos();
+                                    await window.recargarCursos();
                                 }
                             } else {
                                 Swal.fire('Error', res.data.message || 'No se pudo eliminar el curso permanentemente', 'error')
@@ -658,7 +788,7 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                         .then(async (res) => {
                             if (res.status === 200 && res.data.success) {
                                 Swal.fire('Éxito', res.data.message || (op === 'DEL' ? 'Curso Eliminado' : 'Curso Habilitado'), 'success')
-                                await listarCursos()
+                                await window.recargarCursos()
                             } else {
                                 Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
                             }
@@ -674,19 +804,11 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
 }
 
-// window.gestionListarCursos = (op) => {
-//     if (op === 1) {
-//         listarCursos();
-//     } else {
-//         listarCursosFiltro(0);
-//     }
-// }
-
 window.gestionListarCursos = (op) => {
     if (op === 1) {
-        listarCursos(1);
+        window.recargarCursos(1);
     } else {
-        listarCursos(0);
+        window.recargarCursos(0);
     }
 }
 
@@ -713,7 +835,9 @@ window.editarFormGestionCurso = async (e) => {
     }
 
     // Validación de campos obligatorios antes de actualizar
-    const camposObligatorios = ['nombre', 'tipoCurso', 'areaConocimiento'];
+    const camposObligatorios = alpineData.tipoCurso == '6'
+        ? ['nombre', 'tipoCurso', 'categoria']
+        : ['nombre', 'tipoCurso', 'categoria', 'areaConocimiento'];
     const vacio = camposObligatorios.some(campo => !alpineData[campo]);
 
     if (vacio) {
@@ -745,8 +869,10 @@ window.editarFormGestionCurso = async (e) => {
 
     if (isChanged('nombre')) formData.append('nombre', alpineData.nombre);
     if (isChanged('tipoCurso')) formData.append('tipo_curso', alpineData.tipoCurso);
+    if (isChanged('categoria')) formData.append('categoria', alpineData.categoria);
     if (isChanged('areaConocimiento')) formData.append('area_conocimiento', alpineData.areaConocimiento);
     if (isChanged('frecuencia')) formData.append('frecuencia', alpineData.frecuencia);
+    formData.append('es_periodico', alpineData.esPeriodico ? 1 : 0);
     if (isChanged('codResponsable')) formData.append('cod_responsable', alpineData.codResponsable);
     if (isChanged('areaResponsable')) formData.append('area_responsable', alpineData.areaResponsable);
     if (isChanged('codMoodleArea')) formData.append('cod_moodle_area', alpineData.codMoodleArea);
@@ -805,7 +931,7 @@ window.editarFormGestionCurso = async (e) => {
 
                 Swal.fire('Éxito', res.data.message || 'Curso actualizado correctamente', 'success')
 
-                await listarCursos();
+                await window.recargarCursos();
 
                 restaurarFormCurso(false);
             } else {
@@ -890,7 +1016,6 @@ window.restaurarFormCurso = (abrir = true) => {
 window.formCursoGestion = function () {
     return {
         codigo: '',
-        // Información de Sistema
         sys_codigo: '-',
         sys_creado_por: '-',
         sys_fecha_creacion: '-',
@@ -900,6 +1025,7 @@ window.formCursoGestion = function () {
         tieneVigente: false,
         nombre: '',
         tipoCurso: '5',
+        categoria: '',
         areaConocimiento: '',
         area: '',
         areaResponsable: '',
@@ -962,6 +1088,7 @@ window.formCursoGestion = function () {
         aplicaEvaluacion: false,
         obligatorioAlta: true, // Siempre true por regla de negocio
         esDemanda: false,      // Retirado
+        esPeriodico: false,
 
 
         // Procesamiento Word 2026
@@ -1215,56 +1342,35 @@ window.formCursoGestion = function () {
                     this.lastSistemaId = null;
                 }
             });
-            // Cargar sucursales dinámicamente al iniciar
-            axios.get(`${VITE_URL_APP}/api/get-sucursales`)
-                .then(res => {
-                    if (res.data.success) {
-                        // Extraer solo el nombre/abreviatura de la sucursal
-                        this.sucursalesDisponibles = res.data.sucursales.map(s => s.sucursal);
-                    }
-                })
-                .catch(err => {
-                    console.error("Error al cargar sucursales para gestión", err);
-                });
 
-            // Cargar áreas encargadas (AV_AREA)
-            axios.get(`${VITE_URL_APP}/api/get-areas-encargadas`)
-                .then(res => {
-                    this.areasEncargadas = res.data;
-                    window.dispatchEvent(new CustomEvent('areas-encargadas-loaded', { detail: res.data }));
-                })
-                .catch(err => {
-                    console.error("Error al cargar áreas encargadas", err);
-                });
+            const cargarDatosFormulario = async () => {
+                if (cursosLoadPromise) await cursosLoadPromise;
 
-            // Cargar Clientes para PCU
-            axios.get(`${VITE_URL_APP}/api/get-clientes-pac`)
-                .then(res => {
-                    this.clientesDisponibles = res.data || [];
-                });
+                await Promise.all([
+                    axios.get(`${VITE_URL_APP}/api/get-areas-encargadas`)
+                        .then(res => {
+                            this.areasEncargadas = res.data;
+                            window.dispatchEvent(new CustomEvent('areas-encargadas-loaded', { detail: res.data }));
+                        })
+                        .catch(err => console.error("Error al cargar áreas encargadas", err)),
+                    axios.get(`${VITE_URL_APP}/api/get-clientes-pac`)
+                        .then(res => { this.clientesDisponibles = res.data || []; }),
+                    axios.get(`${VITE_URL_APP}/api/get-empresas`)
+                        .then(res => { this.empresasDisponibles = res.data || []; }),
+                    axios.get(`${VITE_URL_APP}/api/obtener-sucursales`)
+                        .then(res => {
+                            if (res.data.success) {
+                                this.sucursalesOpciones = res.data.data || [];
+                                this.sucursalesDisponibles = (res.data.data || []).map(s => s.Sucursal);
+                            }
+                        })
+                        .catch(err => console.error("Error al cargar sucursales", err))
+                ]);
+            };
 
-            // Cargar Empresas para PCI
-            axios.get(`${VITE_URL_APP}/api/get-empresas`)
-                .then(res => {
-                    this.empresasDisponibles = res.data || [];
-                });
-
-            // Cargar sucursales para el dropdown principal
-            axios.get(`${VITE_URL_APP}/api/obtener-sucursales`)
-                .then(res => {
-                    if (res.data.success) {
-                        this.sucursalesOpciones = res.data.data || [];
-                    }
-                })
-                .catch(err => {
-                    console.error("Error al cargar sucursales", err);
-                });
-
-            // Eliminado el bloque de exclusión mutua ($watch) entre obligatorioAlta y esDemanda,
-            // ya que ahora obligatorioAlta siempre es true y esDemanda siempre es false por requerimiento.
+            cargarDatosFormulario();
 
             this.$watch('frecuencia', (val) => {
-                // Mantenemos otras lógicas de frecuencia si existen
             });
         },
 
@@ -1275,6 +1381,7 @@ window.formCursoGestion = function () {
         get formularioCompleto() {
             const nombreOk = this.nombre?.trim().length > 0;
             const tipoOk = this.tipoCurso !== undefined && this.tipoCurso !== null && this.tipoCurso !== '';
+            const categoriaOk = this.categoria !== undefined && this.categoria !== null && this.categoria !== '';
             const responsableOk = this.codResponsable?.length > 0;
             const areaResponsableOk = this.areaResponsable !== undefined && this.areaResponsable !== null && this.areaResponsable !== '';
             const dirigidoOk = this.dirigido?.length > 0;
@@ -1291,7 +1398,7 @@ window.formCursoGestion = function () {
                     && this.archivoWord && this.preguntasExamen.length > 0;
             }
 
-            return nombreOk && tipoOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && sucursalOk && examenOk;
+            return nombreOk && tipoOk && categoriaOk && responsableOk && areaResponsableOk && dirigidoOk && areaOk && sucursalOk && examenOk;
         },
 
         get tituloCamposFaltantes() {
@@ -1300,6 +1407,7 @@ window.formCursoGestion = function () {
             if (!this.nombre?.trim()) faltantes.push('Nombre del curso');
             if (!this.codResponsable) faltantes.push('Responsable');
             if (this.tipoCurso === undefined || this.tipoCurso === null || this.tipoCurso === '') faltantes.push('Plan de capacitación');
+            if (this.categoria === undefined || this.categoria === null || this.categoria === '') faltantes.push('Tipo de curso');
             if (this.areaResponsable === undefined || this.areaResponsable === null || this.areaResponsable === '') faltantes.push('Área responsable');
             if (!this.dirigido) faltantes.push('Dirigido a');
             if (this.tipoCurso != '6' && (this.areaConocimiento === undefined || this.areaConocimiento === null || this.areaConocimiento === '')) faltantes.push('Área de conocimiento');
@@ -1332,6 +1440,7 @@ window.formCursoGestion = function () {
             this.tieneVigente = false;
             this.nombre = '';
             this.tipoCurso = '5';
+            this.categoria = '';
             this.areaConocimiento = '';
             this.area = '';
             this.areaResponsable = '';
@@ -1378,6 +1487,7 @@ window.formCursoGestion = function () {
             this.aplicaEvaluacion = true;
             this.obligatorioAlta = true; // Forzado a true por requerimiento
             this.esDemanda = false;
+            this.esPeriodico = false;
 
             this.targetGroup = 'TODOS';
 
@@ -1428,8 +1538,8 @@ window.formCursoGestion = function () {
             }
 
             const camposObligatorios = this.tipoCurso == '6'
-                ? ['nombre', 'tipoCurso']
-                : ['nombre', 'tipoCurso', 'areaConocimiento'];
+                ? ['nombre', 'tipoCurso', 'categoria']
+                : ['nombre', 'tipoCurso', 'categoria', 'areaConocimiento'];
 
             const vacio = camposObligatorios.some(campo => {
                 const valor = this[campo];
@@ -1462,10 +1572,11 @@ window.formCursoGestion = function () {
             const formData = new FormData();
             formData.append('nombre', this.nombre);
             formData.append('tipo_curso', this.tipoCurso);
+            formData.append('categoria', this.categoria);
             formData.append('area_conocimiento', this.areaConocimiento);
             formData.append('area', this.area);
             formData.append('frecuencia', this.frecuencia);
-            formData.append('es_periodico', this.frecuencia ? 1 : 0);
+            formData.append('es_periodico', this.esPeriodico ? 1 : 0);
 
             formData.append('aplica_evaluacion', this.aplicaEvaluacion ? 1 : 0);
             formData.append('obligatorio_alta', this.obligatorioAlta ? 1 : 0);
@@ -1548,7 +1659,7 @@ window.formCursoGestion = function () {
                         Object.assign(this, valoresPorDefecto);
                         this.limpiarCampos();
 
-                        await listarCursos();
+                        await window.recargarCursos();
                         restaurarFormCurso(false);
 
                     } else {
@@ -1580,7 +1691,6 @@ window.formCursoGestion = function () {
     }
 }
 
-// Helper Generator Func
 window.generarFechasProyectadas = function (frecuencia, mesInicioStr, anios) {
     if (!mesInicioStr || !frecuencia || frecuencia === 'PERSONALIZADO') return [];
 
@@ -1615,13 +1725,10 @@ window.generarFechasProyectadas = function (frecuencia, mesInicioStr, anios) {
     return arrayFechas;
 }
 
-
-// --- Lógica del Panel de Programación ---
-
 window.activarPanelProgramacion = function (codigoCurso, nombreCurso, frecuenciaStr) {
     let mostrarBtn = true;
     if (frecuenciaStr && frecuenciaStr !== 'PERSONALIZADO' && frecuenciaStr !== 'null' && frecuenciaStr !== 'undefined') {
-        mostrarBtn = false; // Bloquea si es generado estructurado
+        mostrarBtn = false;
     }
 
     window.dispatchEvent(new CustomEvent('cambiar-panel', {
@@ -1631,22 +1738,19 @@ window.activarPanelProgramacion = function (codigoCurso, nombreCurso, frecuencia
             mostrarBtn: mostrarBtn
         }
     }));
-    // Wait a bit for Alpine transition or just setData
+
     setTimeout(() => {
-        // Find input hidden in Programacion form and set val
         const inputCod = document.getElementById('codigoCursoInput');
         if (inputCod) {
             inputCod.value = codigoCurso;
-            inputCod.dispatchEvent(new Event('input')); // Notify Alpine
+            inputCod.dispatchEvent(new Event('input'));
         }
-        // Also update Alpine data directly if possible?
-        // Better: Dispatch event to the form component
+
         window.dispatchEvent(new CustomEvent('set-curso-programacion', {
             detail: { codigo: codigoCurso, nombre: nombreCurso }
         }));
     }, 100);
 
-    // Cargar historial de programaciones
     listarProgramaciones(codigoCurso);
 }
 
@@ -1657,17 +1761,12 @@ window.listarProgramaciones = async function (codigoCurso) {
 
         tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Cargando...</td></tr>';
 
-        // Endpoint corregido
         const res = await axios.get(`${VITE_URL_APP}/api/get-curso-programacion/${codigoCurso}`);
 
         let html = '';
-        // La respuesta del backend es { success: true, programaciones: [...] }
         const programaciones = res.data.programaciones || [];
 
         if (res.data.success && programaciones.length > 0) {
-
-            // Helper para formatear fecha (YYYY-MM-DD -> DD/MM/YYYY)
-            // Helper para formatear fecha (YYYY-MM-DD -> DD/MM/YYYY)
             const formatDate = (dateString) => {
                 if (!dateString) return '';
                 try {
@@ -1682,7 +1781,6 @@ window.listarProgramaciones = async function (codigoCurso) {
                 const fInicio = formatDate(prog.fecha_inicio);
                 const fFin = formatDate(prog.fecha_final);
 
-                // Validar si la fecha ha pasado
                 let esPasada = false;
                 if (prog.fecha_final) {
                     const fechaFinal = new Date(prog.fecha_final);
@@ -1756,9 +1854,6 @@ window.eliminarProgramacion = function (idProg, codigoCurso) {
     })
 }
 
-
-// Formulario Programacion Alpine
-// Helper para editar
 window.editarProgramacion = function (codigo, tipo, periodo, fechaInicio, fechaFinal) {
     const event = new CustomEvent('edit-programacion', {
         detail: { codigo, tipo, periodo, fechaInicio, fechaFinal }
@@ -1767,7 +1862,6 @@ window.editarProgramacion = function (codigo, tipo, periodo, fechaInicio, fechaF
     abrirModalRegistro();
 }
 
-// Formulario Programacion Alpine
 window.formProgramacionGestion = function () {
     return {
         codigo: '',
@@ -1780,7 +1874,6 @@ window.formProgramacionGestion = function () {
         isEdit: false,
 
         init() {
-            // Helper interno para parsear fecha desde ISO o datetime SQL a formato datetime-local
             const parseDateISO = (dateStr) => {
                 if (!dateStr) return '';
                 if (dateStr.includes('T')) return dateStr.substring(0, 16);
@@ -1795,17 +1888,14 @@ window.formProgramacionGestion = function () {
                 this.codigoCurso = e.detail.codigo;
                 this.nombreCurso = e.detail.nombre;
 
-                // Inicializar con mes actual
                 this.periodo = new Date().toISOString().slice(0, 7);
                 this.tipo = 'REGULAR';
                 this.actualizarFechasPorPeriodo();
             });
 
-            // Evento para EDITAR programación
             window.addEventListener('edit-programacion', (e) => {
                 this.isEdit = true;
                 this.codigo = e.detail.codigo;
-                // Asumimos que estamos en el contexto del mismo curso
                 this.codigoCurso = document.getElementById('codigoCursoInput') ? document.getElementById('codigoCursoInput').value : '';
                 this.nombreCurso = document.getElementById('nombreCurso') ? document.getElementById('nombreCurso').value : '';
 
@@ -1816,20 +1906,17 @@ window.formProgramacionGestion = function () {
                     this.actualizarFechasPorPeriodo();
                 } else {
                     this.periodo = '';
-                    // Usar helper robusto para fecha
                     this.fechaInicio = parseDateISO(e.detail.fechaInicio);
                     this.fechaFinal = parseDateISO(e.detail.fechaFinal);
                 }
             });
 
-            // Watcher para periodo
             this.$watch('periodo', (val) => {
                 if (val && this.tipo === 'REGULAR') {
                     this.actualizarFechasPorPeriodo();
                 }
             });
 
-            // Watcher para tipo
             this.$watch('tipo', (val) => {
                 if (val === 'REGULAR') {
                     if (!this.periodo) {
@@ -1837,8 +1924,6 @@ window.formProgramacionGestion = function () {
                     }
                     this.actualizarFechasPorPeriodo();
                 }
-                // Si cambia a EXTEMPORANEO, mantenemos las fechas actuales (si existen) 
-                // para que el usuario no empiece de cero.
             });
         },
 
@@ -1851,10 +1936,8 @@ window.formProgramacionGestion = function () {
             const y = parseInt(year);
             const m = parseInt(month);
 
-            // Primer día
             this.fechaInicio = `${year}-${month}-01`;
 
-            // Último día
             const lastDayDate = new Date(y, m, 0);
             const lastDay = lastDayDate.getDate();
 
@@ -1862,7 +1945,6 @@ window.formProgramacionGestion = function () {
         },
 
         submit() {
-            // Validación de fechas obligatorias para TODOS los tipos
             if (!this.fechaInicio || !this.fechaFinal) {
                 Swal.fire('Error', 'Debe indicar fecha de inicio y fin', 'warning');
                 return;
@@ -1884,7 +1966,6 @@ window.formProgramacionGestion = function () {
             let promise;
             if (this.isEdit && this.codigo) {
                 formData.codigo = this.codigo;
-                // La ruta es definida como POST en api.php
                 promise = axios.post(`${VITE_URL_APP}/api/update-programacion`, formData);
             } else {
                 promise = axios.post(`${VITE_URL_APP}/api/save-programacion`, formData);
@@ -1895,7 +1976,6 @@ window.formProgramacionGestion = function () {
                     if (res.data.success) {
                         Swal.fire('Éxito', res.data.message || 'Operación exitosa', 'success');
 
-                        // Cerrar modal
                         const closeBtn = document.getElementById('btn-modal-docs-close');
                         if (closeBtn) closeBtn.click();
 
@@ -1913,18 +1993,14 @@ window.formProgramacionGestion = function () {
     }
 }
 
-// Helper para abrir modal (usado en el onclick del boton html)
 window.abrirModalRegistro = function () {
     const modal = document.querySelector('#modal-registro');
     if (modal) {
-        // Logic to open modal (Preline UI or similar)
-        // If using HSOverlay global
         if (typeof HSOverlay !== 'undefined') {
             HSOverlay.open(modal);
         } else {
-            // Fallback simplistic
             modal.classList.remove('hidden');
-            modal.classList.add('open'); // check css
+            modal.classList.add('open');
         }
     }
 }
@@ -1938,6 +2014,7 @@ window.searchablePersonnel = function () {
         loading: false,
         error: null,
         dropdownStyle: {},
+        _closeHandler: null,
         toggle() {
             this.open = !this.open;
             if (this.open) {
@@ -2147,14 +2224,9 @@ window.modalAplazarCurso = function() {
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
 
-                const formatDatetime = (dt) => {
-                    if (!dt) return '';
-                    return dt.replace('T', ' ') + ':00';
-                };
-
                 const res = await axios.post(`${VITE_URL_APP}/api/cursos/aplazar-curso`, {
                     cod_curso: this.cursoCodigo,
-                    nueva_fecha_final: formatDatetime(this.fechaNuevaFin)
+                    nueva_fecha_final: this.fechaNuevaFin
                 }, { headers });
 
                 if (res.data.success) {

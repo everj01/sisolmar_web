@@ -2752,7 +2752,6 @@ function limpiarSplitView() {
 
     const badge = document.getElementById('bkFechaModBadge');
     if (badge) badge.textContent = '';
-
 }
 
 // ============================================================

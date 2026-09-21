@@ -9,7 +9,7 @@ class BiometricoController extends Controller
 {
     public function show($codigo)
     {
-        // ── RUTAS HTTP (190.116.178.163 → acceso por URL pública) ───────────
+        // ── RUTAS HTTP (190.116.178.163 → acceso por URL) ───────────
         $baseHttp = "http://190.116.178.163/Biblioteca_Grafica";
 
         $rutaHuellaAntigua     = ['tipo' => 'http', 'base' => "$baseHttp/HUELLAS_DIGITALES/PERSONAL"];
@@ -18,7 +18,6 @@ class BiometricoController extends Controller
         $rutaFirmaNueva        = ['tipo' => 'http', 'base' => "$baseHttp/DOCUMENTOS_PERS/DJ_2026/firmas"];
         $rutaDNIanversoAntigua = ['tipo' => 'http', 'base' => "$baseHttp/DNI1_1"];
         $rutaDNIreversoAntigua = ['tipo' => 'http', 'base' => "$baseHttp/DNI2_1"];
-        $rutaFotoActual        = ['tipo' => 'http', 'base' => "$baseHttp/Fotos"];
 
         // ── RUTAS UNC (192.168.10.5 → red local, siguen igual) ──────
         $rutaDNIanversoNueva = ['tipo' => 'unc', 'base' => "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dni\\anverso\\"];
@@ -36,48 +35,8 @@ class BiometricoController extends Controller
             'dni_reverso_antigua' => $this->buscar($rutaDNIreversoAntigua, $codigo, $extensiones, 'antigua', 'dni'),
             'dni_anverso_nuevo'   => $this->buscar($rutaDNIanversoNueva,   $codigo, $extensiones, 'nueva',   'dni'),
             'dni_reverso_nuevo'   => $this->buscar($rutaDNIreversoNueva,   $codigo, $extensiones, 'nueva',   'dni'),
-            'foto_actual'         => $this->buscar($rutaFotoActual,        $codigo, $extensiones, 'antigua', 'foto'),
         ]);
     }
-
-    //  public function show($codigo)
-    // {
-    //     // ── RUTAS HTTP (190.116.178.163 → acceso por URL) ───────────
-    //     //$baseHttp = "http://190.116.178.163/Biblioteca_Grafica"
-    //     //$baseHttp = "file://192.168.10.2/Biblioteca_Grafica";
-    //        $baseHttp = "\\\\192.168.10.2\\Biblioteca_Grafica";
-
-    //     $rutaHuellaAntigua     = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\HUELLAS_DIGITALES\\PERSONAL\\"];
-    //     $rutaHuellaNueva       = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026\\huellas\\"];
-    //     $rutaFirmaAntigua      = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\FIRMAS\\PERSONAL\\"];
-    //     $rutaFirmaNueva        = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026\\firmas\\"];
-    //     $rutaDNIanversoAntigua = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\DNI1_1\\"];
-    //     $rutaDNIreversoAntigua = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\DNI2_1\\"];
-
-    //     $rutaFotoActual = ['tipo' => 'unc', 'base' => "\\\\192.168.10.2\\Biblioteca_Grafica\\Fotos\\"];
-
-    //     // ── RUTAS UNC (192.168.10.5 → red local, siguen igual) ──────
-    //     $rutaDNIanversoNueva = ['tipo' => 'unc', 'base' => "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dni\\anverso\\"];
-    //     $rutaDNIreversoNueva = ['tipo' => 'unc', 'base' => "\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dni\\reverso\\"];
-
-        
-
-    //     // ── EXTENSIONES A BUSCAR ────────────────────────────────────
-    //     $extensiones = ['jpg', 'jpeg', 'png', 'bmp'];
-
-    //     return response()->json([
-    //         'huella_antigua'      => $this->buscar($rutaHuellaAntigua,     $codigo, $extensiones, 'antigua', 'huella'),
-    //         'huella_nueva'        => $this->buscar($rutaHuellaNueva,       $codigo, $extensiones, 'nueva',   'huella'),
-    //         'firma_antigua'       => $this->buscar($rutaFirmaAntigua,      $codigo, $extensiones, 'antigua', 'firma'),
-    //         'firma_nueva'         => $this->buscar($rutaFirmaNueva,        $codigo, $extensiones, 'nueva',   'firma'),
-    //         'dni_anverso_antigua' => $this->buscar($rutaDNIanversoAntigua, $codigo, $extensiones, 'antigua', 'dni'),
-    //         'dni_reverso_antigua' => $this->buscar($rutaDNIreversoAntigua, $codigo, $extensiones, 'antigua', 'dni'),
-    //         'dni_anverso_nuevo'   => $this->buscar($rutaDNIanversoNueva,   $codigo, $extensiones, 'nueva',   'dni'),
-    //         'dni_reverso_nuevo'   => $this->buscar($rutaDNIreversoNueva,   $codigo, $extensiones, 'nueva',   'dni'),
-
-    //         'foto_actual'   => $this->buscar($rutaFotoActual,   $codigo, $extensiones, 'antigua',   'foto'),
-    //     ]);
-    // }
 
     // ── DISPATCHER: decide si usar HTTP o UNC ───────────────────────
     private function buscar($ruta, $codigo, $extensiones, $tipo, $biometrico)

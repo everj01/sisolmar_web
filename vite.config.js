@@ -51,12 +51,10 @@ export default defineConfig({
                 'resources/js/functions/cargo.js',
                 'resources/js/functions/changeFilePers.js',
                 'resources/js/functions/chargeFile.js',
-                'resources/js/functions/carga_escaneo_dj.js',
                 'resources/js/functions/folios.js',
                 'resources/js/functions/legajo.js',
                 'resources/js/functions/legajo_comercial.js',
                 'resources/js/functions/legajos_pdf.js',
-                'resources/js/functions/reporte_personal.js',
                 'resources/js/functions/search_legajos.js',
 
 

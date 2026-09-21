@@ -6,8 +6,30 @@ export default document.addEventListener("alpine:init", () => {
     Alpine.data("planesCapacApp", () => ({
         pdfUrl: "",
         open: false,
+        openConsultas: false,
+        planes: [],
+        loadingPlanes: false,
+        selectedCodigo: null,
+        selectedPlan: null,
+        selectedAbreviatura: null,
+        cursos: [],
+        loadingCursos: false,
+        filtroSistema: "",
+        filtroArea: "",
+        filtroCliente: "",
+        filtroMes: "",
+        filtroAnio: "",
+        openSeleccionCliente: false,
+        clientesPCA: [],
+        loadingClientesPCA: false,
+        selectedClientePCA: "",
+        pdfTitulo: "Plan de Capacitación Estándar (PCE)",
+        pdfDownloadNombre: "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf",
 
         async abrirPDF() {
+            this.pdfTitulo = "Plan de Capacitación Estándar (PCE)";
+            this.pdfDownloadNombre = "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf";
+
             Swal.fire({
                 title: "Generando PDF...",
                 allowOutsideClick: false,
@@ -156,6 +178,7 @@ export default document.addEventListener("alpine:init", () => {
 
                 autoTable(doc, {
                     startY: 10,
+                    margin: { left: 5, right: 5 },
                     head: [
                         [
                             {
@@ -238,14 +261,11 @@ export default document.addEventListener("alpine:init", () => {
                     },
                     columnStyles: {
                         0: { cellWidth: 8, halign: "center" }, // ITEM
-                        1: { cellWidth: 55 }, // TEMA
-                        2: { cellWidth: 20, halign: "center" }, // DIRIGIDO A
-                        3: { cellWidth: 24, halign: "center" }, // ÁREA RESPONSABLE
                         4: { cellWidth: 12, halign: "center" }, // TIEMPO
                         ...Object.fromEntries(
                             Array.from({ length: 24 }, (_, i) => [
                                 i + 5,
-                                { cellWidth: 6, halign: "center" },
+                                { cellWidth: 5, halign: "center" },
                             ]),
                         ),
                     },
@@ -286,6 +306,313 @@ export default document.addEventListener("alpine:init", () => {
                     title: "Error",
                     text: "No se pudo generar el PDF.",
                 });
+            }
+        },
+
+        get sistemasUnicos() {
+            return [...new Set(this.cursos.map(c => c.Sistema).filter(Boolean))].sort();
+        },
+
+        get areasUnicas() {
+            return [...new Set(this.cursos.map(c => c.Area).filter(Boolean))].sort();
+        },
+
+        get clientesUnicos() {
+            return [...new Set(this.cursos.map(c => c.Cliente).filter(Boolean))].sort();
+        },
+
+        _parseFecha(fecha) {
+            if (!fecha) return null;
+            const partes = fecha.split('/');
+            if (partes.length < 3) return null;
+            const dia = +partes[0];
+            const mes = +partes[1] - 1;
+            const anioHora = partes[2].split(' ');
+            return new Date(+anioHora[0], mes, dia);
+        },
+
+        _meses: [
+            { valor: '1', label: 'Enero' }, { valor: '2', label: 'Febrero' },
+            { valor: '3', label: 'Marzo' }, { valor: '4', label: 'Abril' },
+            { valor: '5', label: 'Mayo' }, { valor: '6', label: 'Junio' },
+            { valor: '7', label: 'Julio' }, { valor: '8', label: 'Agosto' },
+            { valor: '9', label: 'Setiembre' }, { valor: '10', label: 'Octubre' },
+            { valor: '11', label: 'Noviembre' }, { valor: '12', label: 'Diciembre' },
+        ],
+
+        get mesesUnicos() {
+            const meses = new Set();
+            this.cursos.forEach(c => {
+                const d = this._parseFecha(c.Fecha_Creacion);
+                if (d) meses.add(d.getMonth() + 1);
+            });
+            return [...meses].sort((a, b) => a - b).map(m => ({
+                valor: String(m),
+                label: this._meses[m - 1].label,
+            }));
+        },
+
+        get aniosUnicos() {
+            const anios = new Set();
+            this.cursos.forEach(c => {
+                const d = this._parseFecha(c.Fecha_Creacion);
+                if (d) anios.add(d.getFullYear());
+            });
+            return [...anios].sort((a, b) => b - a);
+        },
+
+        get cursosFiltrados() {
+            return this.cursos.filter(c => {
+                if (this.filtroSistema && c.Sistema !== this.filtroSistema) return false;
+                if (this.filtroArea && c.Area !== this.filtroArea) return false;
+                if (this.filtroCliente && c.Cliente !== this.filtroCliente) return false;
+                if (this.filtroMes || this.filtroAnio) {
+                    const d = this._parseFecha(c.Fecha_Creacion);
+                    if (!d) return false;
+                    if (this.filtroMes && String(d.getMonth() + 1) !== this.filtroMes) return false;
+                    if (this.filtroAnio && String(d.getFullYear()) !== this.filtroAnio) return false;
+                }
+                return true;
+            });
+        },
+
+        abrirConsultas() {
+            this.openConsultas = true;
+            if (this.planes.length === 0) {
+                this.cargarPlanes();
+            }
+        },
+
+        cerrarConsultas() {
+            this.openConsultas = false;
+            this.selectedCodigo = null;
+            this.selectedPlan = null;
+            this.selectedAbreviatura = null;
+            this.cursos = [];
+            this.filtroSistema = "";
+            this.filtroArea = "";
+            this.filtroCliente = "";
+            this.filtroMes = "";
+            this.filtroAnio = "";
+        },
+
+        async abrirSeleccionCliente() {
+            this.openSeleccionCliente = true;
+            this.selectedClientePCA = "";
+            if (this.clientesPCA.length === 0) {
+                this.loadingClientesPCA = true;
+                try {
+                    const { data } = await axios.get("/api/get-clientes-pac");
+                    this.clientesPCA = Array.isArray(data) ? data : [];
+                } catch (e) {
+                    console.error(e);
+                    this.clientesPCA = [];
+                } finally {
+                    this.loadingClientesPCA = false;
+                }
+            }
+        },
+
+        cerrarSeleccionCliente() {
+            this.openSeleccionCliente = false;
+            this.selectedClientePCA = "";
+        },
+
+        async obtenerPDF_PCA() {
+            const codLegacy = this.selectedClientePCA;
+            if (!codLegacy) return;
+
+            Swal.fire({
+                title: "Generando PDF...",
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            try {
+                const { data } = await axios.get(
+                    `/api/obtener-cursos-cliente/${codLegacy}`,
+                );
+                const cursos = data.Cursos || [];
+                const cliente = this.clientesPCA.find(
+                    (c) => c.cod_legacy === codLegacy,
+                );
+                const nombreCliente = cliente ? cliente.descripcion : "";
+
+                if (data.Total === 0 || cursos.length === 0) {
+                    Swal.close();
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Sin cursos",
+                        text: "No hay cursos registrados para el cliente seleccionado.",
+                    });
+                    return;
+                }
+
+                this.pdfTitulo =
+                    "Plan de Capacitación Aliado - PCA" +
+                    (nombreCliente ? " - " + nombreCliente : "");
+                this.pdfDownloadNombre =
+                    "Plan_Capacitacion_Aliado_PCA_" +
+                    new Date().getFullYear() +
+                    ".pdf";
+
+                const doc = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                });
+
+                const pageWidth = doc.internal.pageSize.getWidth();
+
+                doc.setFontSize(14);
+                doc.setFont(undefined, "bold");
+                doc.text(
+                    "PLAN DE CAPACITACIÓN ALIADO - PCA" +
+                        (nombreCliente
+                            ? " " + nombreCliente.toUpperCase()
+                            : ""),
+                    pageWidth / 2,
+                    15,
+                    { align: "center" },
+                );
+
+                const mesesMap = {
+                    "01": "ENERO",
+                    "02": "FEBRERO",
+                    "03": "MARZO",
+                    "04": "ABRIL",
+                    "05": "MAYO",
+                    "06": "JUNIO",
+                    "07": "JULIO",
+                    "08": "AGOSTO",
+                    "09": "SETIEMBRE",
+                    10: "OCTUBRE",
+                    11: "NOVIEMBRE",
+                    12: "DICIEMBRE",
+                };
+
+                function obtenerMes(fecha) {
+                    if (!fecha) return "";
+                    const partes = fecha.split("/");
+                    if (partes.length < 3) return "";
+                    return mesesMap[partes[1]] || "";
+                }
+
+                const rows = cursos.map((curso, i) => [
+                    String(i + 1),
+                    curso.Completado ? "X" : "",
+                    curso.Nombre,
+                    curso.Dirigido,
+                    obtenerMes(curso.Fecha_Inicio),
+                ]);
+
+                autoTable(doc, {
+                    startY: nombreCliente ? 28 : 22,
+                    margin: { left: 8, right: 8 },
+                    head: [
+                        [
+                            { content: "#", styles: { halign: "center" } },
+                            { content: "100%", styles: { halign: "center" } },
+                            { content: "TEMA", styles: { halign: "center" } },
+                            {
+                                content: "DIRIGIDO",
+                                styles: { halign: "center" },
+                            },
+                            {
+                                content: "PROGRAMACIÓN",
+                                styles: { halign: "center" },
+                            },
+                        ],
+                    ],
+                    body: rows,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+                        valign: "middle",
+                        lineColor: [0, 0, 0],
+                        lineWidth: 0.1,
+                    },
+                    headStyles: {
+                        fillColor: [250, 209, 90], // Amarillo similar al de la imagen
+                        textColor: [0, 0, 0],
+                        fontSize: 9,
+                        fontStyle: "bold",
+                        halign: "center",
+                        valign: "middle",
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 10, halign: "center" }, // #
+                        1: { cellWidth: 14, halign: "center" }, // 100%
+                        2: { cellWidth: "auto" }, // TEMA
+                        3: { cellWidth: 45, halign: "center" }, // DIRIGIDO
+                        4: { cellWidth: 35, halign: "center" }, // PROGRAMACIÓN
+                    },
+                    // Resalta en rojo con texto blanco en negrita las filas marcadas con "X"
+                    didParseCell: function (data) {
+                        const curso = cursos[data.row.index];
+                        if (
+                            curso &&
+                            curso.Completado &&
+                            data.section === "body" &&
+                            data.column.index === 2
+                        ) {
+                            data.cell.styles.fillColor = [255, 0, 0];
+                            data.cell.styles.textColor = [255, 255, 255];
+                            data.cell.styles.fontStyle = "bold";
+                        }
+                    },
+                });
+
+                const blob = doc.output("blob");
+                if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+                this.pdfUrl = URL.createObjectURL(blob);
+
+                Swal.close();
+                this.openSeleccionCliente = false;
+                this.open = true;
+            } catch (e) {
+                Swal.close();
+                console.error(e);
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "No se pudo generar el PDF.",
+                });
+            }
+        },
+
+        async cargarPlanes() {
+            this.loadingPlanes = true;
+            try {
+                const { data } = await axios.get("/api/obtener-tipos-curso");
+                this.planes = data.Tipos || [];
+            } catch (e) {
+                console.error(e);
+                this.planes = [];
+            } finally {
+                this.loadingPlanes = false;
+            }
+        },
+
+        async seleccionarPlan(plan) {
+            this.selectedCodigo = plan.Codigo;
+            this.selectedPlan = plan.Nombre;
+            this.selectedAbreviatura = plan.Abreviatura;
+            this.filtroSistema = "";
+            this.filtroArea = "";
+            this.filtroCliente = "";
+            this.filtroMes = "";
+            this.filtroAnio = "";
+            this.loadingCursos = true;
+            this.cursos = [];
+            try {
+                const { data } = await axios.get(`/api/obtener-cursos-por-plan/${plan.Codigo}`);
+                this.cursos = data.Cursos || [];
+            } catch (e) {
+                console.error(e);
+                this.cursos = [];
+            } finally {
+                this.loadingCursos = false;
             }
         },
 

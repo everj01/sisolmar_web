@@ -19,11 +19,14 @@
             margin-bottom: -1px;
             border-bottom-color: white !important;
         }
+<<<<<<< HEAD
 
         .hover-select-nativo:hover {
             background-color: #2563eb !important; /* Azul Tailwind */
             color: #ffffff !important;
         }
+=======
+>>>>>>> rodrigo
     </style>
 @endsection
 
@@ -33,6 +36,7 @@
 
     <div id="divListado" class="grid lg:grid-cols-1 gap-6 mt-8">
         <div class="card overflow-hidden">
+<<<<<<< HEAD
             <div class="card-header border-b border-gray-100 py-4 px-5">
                 <div class="flex flex-wrap justify-between items-center gap-4">
                     <div>
@@ -55,6 +59,16 @@
                         </div>
                     </div>
                 </div>
+=======
+            <div class="card-header">
+                <h4 class="card-title">Registro de personal (DJ)</h4>
+            </div>
+       
+
+            {{-- TÍTULO ESTÁTICO (Sin pestañas) --}}
+            <div class="px-5 pt-4 border-b border-gray-200 pb-2">
+                <h5 class="text-lg font-medium text-primary">DJ Listos</h5>
+>>>>>>> rodrigo
             </div>
 
             {{-- CONTROLES COMUNES --}}
@@ -107,6 +121,7 @@
 
             {{-- TABLA PESTAÑA 1: sin columna Migrado --}}
             <div id="panelPendiente" class="w-full px-5 py-2 mt-1">
+<<<<<<< HEAD
 
                 {{-- FILTROS EN CARD --}}
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -185,13 +200,90 @@
 
                 <div id="tblPersonas" class="w-full mt-2"></div>
 
+=======
+                <div class="flex gap-3 mb-3 flex-wrap">
+                    <div class="flex gap-3 mb-3 flex-wrap items-center">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-600">Sucursal:</label>
+                            
+                            @php
+                                $sucursalesFiltradas = array_slice($sucursales, 1);
+                            @endphp
+
+                            <select id="filtroSucursalPEN" 
+                            class=" px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+
+                                @if(count($sucursalesFiltradas) > 1)
+                                    <option value="">Todas</option>
+                                @endif
+
+                                @foreach ($sucursalesFiltradas as $sucursal)
+                                    <option value="{{ $sucursal->codigo }}">
+                                        {{ $sucursal->abreviatura }}
+                                    </option>
+                                @endforeach
+
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-600">Tipo:</label>
+                            <select id="filtroTipoPerPEN" class="w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                @if($tipoPerLimitar == 0)
+                                    <option value="">Todos</option>
+                                    <option value="OPERATIVO 4°">Operativo 4°</option>
+                                    <option value="OPERATIVO 5°">Operativo 5°</option>
+                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                                    <option value="ESPECIAL">Especial</option>
+                                @elseif($tipoPerLimitar == 1)
+                                    <option value="">Todos</option>
+                                    <option value="ADMINISTRATIVO 4°">Administrativo 4°</option>
+                                    <option value="ADMINISTRATIVO 5°">Administrativo 5°</option>
+                                @elseif($tipoPerLimitar == 2)
+                                    <option value="">Todos</option>
+                                    <option value="OPERATIVO 4°">Operativo 4°</option>
+                                    <option value="OPERATIVO 5°">Operativo 5°</option>
+                                @endif
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-600">Cargo:</label>
+                            <select id="filtroCargoPEN" class="w-48 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                                <option value="">Todos</option>
+                                </select>
+                        </div>
+                         {{-- <button type="button" id="btnDescargarDJs_PEN"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
+                                    <i class='bx bx-archive-in text-base'></i>
+                                    Descargar DJ's
+                                </button> --}}
+                                <button type="button" id="btnDJUnificado_PEN"
+                                    class="btn border-warning text-warning hover:bg-warning hover:text-white">
+                                    <i class='bx bx-file text-base'></i>
+                                    DJ Unificado
+
+                                </button>
+
+                        {{-- Card contador + Botón reporte --}}
+                        
+                    </div>
+
+                </div>
+                <div id="tblPersonas" class="w-full mt-5"></div>
+>>>>>>> rodrigo
                 <div class="flex items-center gap-2 mt-3">
                     <label for="page-size" class="text-sm text-gray-600">Mostrar</label>
                     <select id="page-size"
                         class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                         <option value="5">5</option>
+<<<<<<< HEAD
                         <option value="10">10</option>
                         <option value="20" selected>20</option>
+=======
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+>>>>>>> rodrigo
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
@@ -263,6 +355,7 @@
                     <option value="">Todas</option>
                 </select> -->
                 
+<<<<<<< HEAD
                 <select id="filtroSucursal" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                     
                     @if(! $restringirSucursalesGestionDj && count($sucursalesGestionDj) > 1)
@@ -270,6 +363,19 @@
                     @endif
 
                     @foreach ($sucursalesGestionDj as $sucursal)
+=======
+                @php
+                    $sucursalesFiltradas = array_slice($sucursales, 1);
+                @endphp
+
+                <select id="filtroSucursal" class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                    
+                    @if(count($sucursalesFiltradas) > 1)
+                        <option value="">Todas</option>
+                    @endif
+
+                    @foreach ($sucursalesFiltradas as $sucursal)
+>>>>>>> rodrigo
                         <option value="{{ $sucursal->codigo }}">
                             {{ $sucursal->abreviatura }}
                         </option>
@@ -324,8 +430,13 @@
         <select id="page-size-migrado" 
             class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
             <option value="5">5</option>
+<<<<<<< HEAD
             <option value="10">10</option>
             <option value="20" selected>20</option>
+=======
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+>>>>>>> rodrigo
             <option value="50">50</option>
             <option value="100">100</option>
         </select>
@@ -350,11 +461,17 @@
             </div>
         </div>
     </div>
+<<<<<<< HEAD
+=======
+    <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
+
+>>>>>>> rodrigo
     @include('file_control.rrhh.partials_modal_dj')
     @include('file_control.rrhh.partials_modal_nueva_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')
     @include('file_control.rrhh.partials_modal_reporte')
 
+<<<<<<< HEAD
     {{-- MODAL BIOMÉTRICO (Migrado desde Actualizar DJ) --}}
     <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
     @include('file_control.rrhh.partials_modal_comparacion_huellafirma_dni')
@@ -411,6 +528,8 @@
         </div>
     </div>
 
+=======
+>>>>>>> rodrigo
 @endsection
 
 @section('script')
@@ -431,7 +550,10 @@
 
     <script>
         window.logoUrl = "{{ asset('images/logo_sol.png') }}";
+<<<<<<< HEAD
         window.currentUser = "{{ session('usuario') }}";
+=======
+>>>>>>> rodrigo
     </script>
 @endsection
 
@@ -440,3 +562,8 @@
        'resources/js/functions/nueva_dj.js', 
        'resources/js/functions/modal_reporte.js'
     ])
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> rodrigo

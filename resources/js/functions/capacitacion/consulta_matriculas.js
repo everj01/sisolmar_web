@@ -80,12 +80,16 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    function fillSelect(id, values) {
+    function fillSelect(id, values, label) {
         const select = document.getElementById(id);
         if (!select) return;
-        const placeholder = select.options[0];
         select.innerHTML = "";
-        select.appendChild(placeholder);
+        if (label) {
+            const def = document.createElement("option");
+            def.value = "";
+            def.textContent = label;
+            select.appendChild(def);
+        }
         values.forEach((val) => {
             const opt = document.createElement("option");
             opt.value = val;
@@ -94,14 +98,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    let _cursosFullData = [];
+
     function populateFilters(data) {
+        _cursosFullData = data;
         const unique = (field) =>
             [...new Set(data.map((d) => d[field]).filter(Boolean))].sort();
 
         fillSelect("filtroTipoCurso", unique("Tipo"));
-        fillSelect("filtroAreaCurso", unique("Area"));
-        fillSelect("filtroSistemaCurso", unique("Sistema"));
-        fillSelect("filtroJefaturaCurso", unique("Responsable"));
+        fillSelect("filtroAreaCurso", unique("Area"), "Todas las áreas");
+        fillSelect("filtroSistemaCurso", unique("Sistema"), "Todos los sistemas");
+        fillSelect("filtroJefaturaCurso", unique("Responsable"), "Todas las jefaturas");
+        fillSelect("filtroClienteCurso", unique("Cliente"), "Todos los clientes");
+    }
+
+    function repopulateSecondaryFilters(tipo) {
+        const filtered = tipo
+            ? _cursosFullData.filter(d => d.Tipo === tipo)
+            : _cursosFullData;
+        const unique = (field) =>
+            [...new Set(filtered.map((d) => d[field]).filter(Boolean))].sort();
+
+        document.getElementById("filtroAreaCurso").value = "";
+        document.getElementById("filtroJefaturaCurso").value = "";
+        document.getElementById("filtroSistemaCurso").value = "";
+        document.getElementById("filtroClienteCurso").value = "";
+
+        fillSelect("filtroAreaCurso", unique("Area"), "Todas las áreas");
+        fillSelect("filtroSistemaCurso", unique("Sistema"), "Todos los sistemas");
+        fillSelect("filtroJefaturaCurso", unique("Responsable"), "Todas las jefaturas");
+        fillSelect("filtroClienteCurso", unique("Cliente"), "Todos los clientes");
     }
 
     function applyFilters(table) {
@@ -109,9 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const area = document.getElementById("filtroAreaCurso")?.value;
         const sistema = document.getElementById("filtroSistemaCurso")?.value;
         const jefatura = document.getElementById("filtroJefaturaCurso")?.value;
-        const desde = document.getElementById("filtroFechaDesde")?.value;
-        const hasta = document.getElementById("filtroFechaHasta")?.value;
-
+        const cliente = document.getElementById("filtroClienteCurso")?.value;
         const filters = [];
 
         if (tipo) filters.push({ field: "Tipo", type: "=", value: tipo });
@@ -120,22 +144,31 @@ document.addEventListener("DOMContentLoaded", () => {
             filters.push({ field: "Sistema", type: "=", value: sistema });
         if (jefatura)
             filters.push({ field: "Responsable", type: "=", value: jefatura });
-
-        if (desde)
-            filters.push({
-                field: "Fecha_Creacion",
-                type: ">=",
-                value: new Date(desde).getTime() / 1000,
-            });
-        if (hasta)
-            filters.push({
-                field: "Fecha_Creacion",
-                type: "<=",
-                value: new Date(hasta).getTime() / 1000 + 86399,
-            });
+        if (cliente)
+            filters.push({ field: "Cliente", type: "=", value: cliente });
 
         table.clearFilter();
         if (filters.length) table.setFilter(filters);
+    }
+
+    function toggleSecondaryFilters(tipo) {
+        const sistemaContainer = document.getElementById("filtroSistemaCursoContainer");
+        const clienteContainer = document.getElementById("filtroClienteCursoContainer");
+
+        if (!sistemaContainer || !clienteContainer) return;
+
+        if (tipo === "PCA") {
+            sistemaContainer.style.display = "none";
+            clienteContainer.style.display = "";
+            document.getElementById("filtroSistemaCurso").value = "";
+        } else if (tipo === "PCI") {
+            sistemaContainer.style.display = "";
+            clienteContainer.style.display = "";
+        } else {
+            sistemaContainer.style.display = "";
+            clienteContainer.style.display = "none";
+            document.getElementById("filtroClienteCurso").value = "";
+        }
     }
 
     function clearFilters(table) {
@@ -144,12 +177,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "filtroAreaCurso",
             "filtroSistemaCurso",
             "filtroJefaturaCurso",
-            "filtroFechaDesde",
-            "filtroFechaHasta",
+            "filtroClienteCurso",
         ].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.value = "";
         });
+        const tipoEl = document.getElementById("filtroTipoCurso");
+        if (tipoEl) {
+            tipoEl.value = "PCE";
+            toggleSecondaryFilters("PCE");
+            repopulateSecondaryFilters("PCE");
+        }
         table.clearFilter();
     }
 
@@ -177,6 +215,11 @@ document.addEventListener("DOMContentLoaded", () => {
             },
 
             columns: [
+                {
+                    title: "Código",
+                    field: "Codigo",
+                    width: 100,
+                },
                 {
                     title: "Nombre de curso",
                     field: "Nombre",
@@ -287,20 +330,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
         table.on("dataLoaded", function (data) {
             populateFilters(data);
+            const tipoEl = document.getElementById("filtroTipoCurso");
+            if (tipoEl) {
+                tipoEl.value = "PCE";
+                toggleSecondaryFilters("PCE");
+                repopulateSecondaryFilters("PCE");
+                applyFilters(table);
+            }
         });
 
         [
-            "filtroTipoCurso",
             "filtroAreaCurso",
             "filtroSistemaCurso",
             "filtroJefaturaCurso",
-            "filtroFechaDesde",
-            "filtroFechaHasta",
+            "filtroClienteCurso",
         ].forEach((id) => {
             document
                 .getElementById(id)
                 ?.addEventListener("change", () => applyFilters(table));
         });
+
+        document.getElementById("filtroTipoCurso")
+            ?.addEventListener("change", function () {
+                toggleSecondaryFilters(this.value);
+                repopulateSecondaryFilters(this.value);
+                applyFilters(table);
+            });
 
         document
             .getElementById("btnLimpiarFiltrosCursos")
@@ -331,8 +386,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (d._seleccionado && !d._matriculado) count++;
         });
         btn.innerHTML = `<i class="ti ti-user-plus"></i> Matricular personal (${count})`;
-        const slcVal = document.getElementById('slcProgramacion')?.value;
-        btn.disabled = count === 0 || !slcVal;
+        const slcProg = document.getElementById('slcProgramacion');
+        const slcVal = slcProg?.value;
+        const esVigente = window._selectedProgramacionEstado === 'VIGENTE';
+        btn.disabled = count === 0 || !slcVal || !esVigente;
     }
 
     window.limpiarModalMatriculados = function() {
@@ -373,13 +430,41 @@ document.addEventListener("DOMContentLoaded", () => {
         if (elS) elS.textContent = sinMatricular;
     }
 
+    function getRowsFiltradosVisibles() {
+        const table = window.tabulatorPersonalMatriculado;
+        if (!table) return [];
+
+        return table.getRows("active") || [];
+    }
+
+    function actualizarBotonSeleccionarFiltrados() {
+        const btn = document.getElementById('btnSeleccionarFiltrados');
+        if (!btn) return;
+
+        const rows = getRowsFiltradosVisibles();
+        const count = rows.length;
+        const pendientes = rows.filter(r => !r.getData()._matriculado && !r.getData()._seleccionado);
+        const todosSeleccionados = pendientes.length === 0 && count > 0;
+        if (todosSeleccionados) {
+            btn.innerHTML = `<i class="ti ti-checks text-sm"></i><span>Deseleccionar filtrados (${count})</span>`;
+            btn.dataset.mode = "deselect";
+        } else {
+            btn.innerHTML = `<i class="ti ti-checks text-sm"></i><span>Seleccionar filtrados (${count})</span>`;
+            btn.dataset.mode = "select";
+        }
+        btn.disabled = count === 0;
+    }
+
     window.cargarDatosModalMatriculados = async function(cursoId, alpineComponent) {
         if (!cursoId) return;
 
         try {
-            const resProgramaciones = await axios.get(`${VITE_URL_APP}/api/obtener-programaciones/${cursoId}`);
-            const programaciones = resProgramaciones.data.programaciones || resProgramaciones.data.Programaciones || resProgramaciones.data || [];
-            
+            const res = await axios.get(`${VITE_URL_APP}/api/obtener-datos-matricula/${cursoId}`);
+
+            const programaciones = res.data.programaciones || res.data.Programaciones || [];
+            const personalData = res.data.personal || [];
+            const matriculadosData = res.data.matriculados || res.data.Matriculados || [];
+
             const slcProg = document.getElementById('slcProgramacion');
             if (slcProg) {
                 slcProg.innerHTML = '<option value="">Seleccione una programación...</option>';
@@ -392,9 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const fFinal = formatDate(p.fecha_final);
                     const estado = p.estado_periodo || p.estado || '';
                     opt.textContent = `Programación ${codProg} | ${fInicio} - ${fFinal} (${estado})`;
-                    if (estado !== 'VIGENTE') {
-                        opt.disabled = true;
-                    } else if (!firstVigente) {
+                    opt.dataset.estado = estado;
+                    if (estado === 'VIGENTE' && !firstVigente) {
                         firstVigente = codProg;
                     }
                     slcProg.appendChild(opt);
@@ -403,14 +487,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     slcProg.value = firstVigente;
                 }
             }
-
-            const [resPersonal, resMatriculados] = await Promise.all([
-                axios.get(`${VITE_URL_APP}/api/obtener-personal`),
-                axios.get(`${VITE_URL_APP}/api/obtener-matriculados/${cursoId}`)
-            ]);
-
-            const personalData = resPersonal.data.personal || resPersonal.data || [];
-            const matriculadosData = resMatriculados.data.matriculados || resMatriculados.data.Matriculados || resMatriculados.data || [];
             window._matriculadosData = matriculadosData;
 
             const selectedCodProg = slcProg?.value || '';
@@ -436,10 +512,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const unique = (field) => [...new Set(tableData.map(d => d[field]).filter(Boolean))].sort();
-            fillSelect("slcFiltroCliente", unique("cliente"));
-            fillSelect("slcFiltroSucursal", unique("sucursal"));
-            fillSelect("slcFiltroCargo", unique("cargo"));
-            fillSelect("slcFiltroTipoTrabajador", unique("tipo_trabajador"));
+            fillSelect("slcFiltroCliente", unique("cliente"), "Todos los clientes");
+            fillSelect("slcFiltroSucursal", unique("sucursal"), "Todas las sucursales");
+            fillSelect("slcFiltroCargo", unique("cargo"), "Todos los cargos");
+            fillSelect("slcFiltroTipoTrabajador", unique("tipo_trabajador"), "Todos los tipos");
 
             if (window.tabulatorPersonalMatriculado) {
                 window.tabulatorPersonalMatriculado.destroy();
@@ -464,7 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             },
                             columns: [
                                 {
-                                    title: "<input type='checkbox' class='checkbox-select-all'>",
+                                    title: "<input type='checkbox' class='checkbox-select-all' title='Seleccionar todos' aria-label='Seleccionar todos'>",
                                     field: "_seleccionado",
                                     width: 50,
                                     hozAlign: "center",
@@ -547,6 +623,14 @@ document.addEventListener("DOMContentLoaded", () => {
                                     title: "Sucursal",
                                     field: "sucursal",
                                 },
+                                {
+                                    title: "Correo",
+                                    field: "email",
+                                },
+                                {
+                                    title: "Num. Telf.",
+                                    field: "num_tel",
+                                },
                                 { title: "Cargo", field: "cargo" },
                                 {
                                     title: "Tipo",
@@ -596,6 +680,10 @@ document.addEventListener("DOMContentLoaded", () => {
                                     cellClick(e, cell) {
                                         const rowData = cell.getRow().getData();
                                         if (!rowData._matriculado) return;
+                                        if (rowData._estado === 'FINALIZADO') {
+                                            Swal.fire({ icon: 'info', title: 'Matrícula finalizada', text: 'No se puede desmatricular un curso que ya ha finalizado.', confirmButtonText: 'Entendido' });
+                                            return;
+                                        }
                                         e.stopPropagation();
                                         const nombre = rowData.nombre_completo || 'este usuario';
                                         Swal.fire({
@@ -692,6 +780,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                     return nombre.includes(term) || codigo.includes(term) || dni.includes(term);
                                 });
                             }
+
+                            actualizarBotonSeleccionarFiltrados();
                         }
 
                         const txtBuscar = document.getElementById('txtBuscarPersonal');
@@ -734,6 +824,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         // Programación change → re-seleccionar filas
                         slcProg.onchange = function() {
                             const codProg = this.value;
+                            const selectedOpt = this.options[this.selectedIndex];
+                            window._selectedProgramacionEstado = selectedOpt ? selectedOpt.dataset.estado : '';
                             const filtered = codProg
                                 ? (window._matriculadosData || []).filter(m => String(m.cod_programacion || m.Cod_Programacion || '').toString().trim() === codProg)
                                 : [];
@@ -746,7 +838,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                 row.update({
                                     _matriculado: yaMatriculado,
                                     _seleccionado: yaMatriculado,
-                                    _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null
+                                    _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null,
+                                    _estado: match ? (match.estado || match.Estado || 'MATRICULADO') : null
                                 });
                             });
                             updateMatricularButton();
@@ -754,6 +847,31 @@ document.addEventListener("DOMContentLoaded", () => {
                         };
                         // Sincronizar filas por si el usuario cambió dropdown antes de que la tabla estuviera lista
                         if (slcProg.value) slcProg.onchange();
+
+                        const btnSeleccionarFiltrados = document.getElementById('btnSeleccionarFiltrados');
+                        if (btnSeleccionarFiltrados) {
+                            btnSeleccionarFiltrados.onclick = function() {
+                                const rows = getRowsFiltradosVisibles();
+
+                                if (!rows.length) {
+                                    Swal.fire({ icon: 'warning', title: 'Sin resultados', text: 'No hay personal filtrado para seleccionar', confirmButtonColor: '#6366f1' });
+                                    return;
+                                }
+
+                                const seleccionar = btnSeleccionarFiltrados.dataset.mode !== "deselect";
+
+                                rows.forEach((row) => {
+                                    const d = row.getData();
+                                    if (!d._matriculado) {
+                                        row.update({ _seleccionado: seleccionar });
+                                    }
+                                });
+
+                                updateMatricularButton();
+                                actualizarContadores();
+                                actualizarBotonSeleccionarFiltrados();
+                            };
+                        }
 
                         // Botón guardar matrícula
                         const btnGuardar = document.getElementById('btnGuardarMatriculas');
@@ -807,6 +925,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         updateMatricularButton();
                         actualizarContadores();
+                        actualizarBotonSeleccionarFiltrados();
                         if (alpineComponent) alpineComponent.isLoading = false;
                     });
 

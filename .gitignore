@@ -20,3 +20,4 @@ yarn-error.log
 /temp
 temp/
 public/build - copia/
+.php-preview-router.php

@@ -1991,7 +1991,6 @@ class FileController extends Controller
         return $statusCode === 200;
     }
 
-
     // public function saveFolioPersona(Request $request)
     // {
     //     $validated = $request->validate([

@@ -24,29 +24,19 @@ class Kernel extends ConsoleKernel
                      \Log::error('Error al ejecutar el comando de envío de alertas de caducidad.');
                  });
 
-        $schedule->command('capacitacion:clonar-vencidos')
-                 ->dailyAt('00:00')
-                 ->withoutOverlapping()
-                 ->onSuccess(function () {
-                     \Log::info('Comando de clonación de cursos ejecutado exitosamente.');
-                 })
-                 ->onFailure(function () {
-                     \Log::error('Error al ejecutar el comando de clonación de cursos.');
-                 });
+        //  $schedule->command('capacitacion:enviar-recordatorios-curso')
+        //            ->weeklyOn(1, '08:45')
+        //            ->withoutOverlapping()
+        //            ->runInBackground()
+        //            ->onSuccess(function () {
+        //                \Log::info('Comando de recordatorios de curso ejecutado exitosamente.');
+        //            })
+        //            ->onFailure(function () {
+        //                \Log::error('Error al ejecutar el comando de recordatorios de curso.');
+        //            });
 
-         $schedule->command('capacitacion:enviar-recordatorios-curso')
-                   ->weeklyOn(1, '08:45')
-                   ->withoutOverlapping()
-                   ->runInBackground()
-                   ->onSuccess(function () {
-                       \Log::info('Comando de recordatorios de curso ejecutado exitosamente.');
-                   })
-                   ->onFailure(function () {
-                       \Log::error('Error al ejecutar el comando de recordatorios de curso.');
-                   });
-
-          $schedule->command('capacitacion:procesar-cursos-periodicos')
-                   ->dailyAt('09:30')
+          $schedule->command('capacitacion:procesar-cursos')
+                   ->dailyAt('12:30')
                    ->withoutOverlapping()
                    ->onSuccess(function () {
                        \Log::info('Comando de procesamiento de cursos periódicos ejecutado exitosamente.');

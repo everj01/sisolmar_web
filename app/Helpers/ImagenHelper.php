@@ -61,5 +61,7 @@ class ImagenHelper
         }
 
         return $localPaths;
+        
     }
 }
+

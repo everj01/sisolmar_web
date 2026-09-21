@@ -17,14 +17,19 @@ document.addEventListener("DOMContentLoaded", () => {
         memoSucursal: "",
         memoTipo: "",
         cursoResponsable: "",
+        cursoTipo: "",
     };
 
     const elements = {
         searchCurso: document.getElementById("buscarCursoSeguimiento"),
-        filtroResponsableCursos: document.getElementById("filtroResponsableCursos"),
+        filtroResponsableCursos: document.getElementById(
+            "filtroResponsableCursos",
+        ),
+        filtroTipoCursos: document.getElementById("filtroTipoCursos"),
         searchPersonal: document.getElementById("buscarPersonalSeguimiento"),
         searchMemos: document.getElementById("buscarMemosEnviados"),
         filtroClienteMemos: document.getElementById("filtroClienteMemos"),
+        filtroTipoTrabMemos: document.getElementById("filtroTipoTrabMemos"),
         filtroSucursalMemos: document.getElementById("filtroSucursalMemos"),
         btnBuscarMemos: document.getElementById("btnBuscarMemosEnviados"),
         btnLimpiarMemos: document.getElementById("btnLimpiarFiltroMemos"),
@@ -41,7 +46,9 @@ document.addEventListener("DOMContentLoaded", () => {
     window.personalSeleccionado = () => {
         const table = window.tabulatorPersonal;
         if (!table) return [];
-        return table.getData().filter(row => personasSeleccionadasPersonal.has(row.dni));
+        return table
+            .getData()
+            .filter((row) => personasSeleccionadasPersonal.has(row.dni));
     };
 
     const actualizarContadorSeleccionPersonal = () => {
@@ -64,15 +71,21 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         if (btnText) {
-            btnText.textContent = count > 0
-                ? `Enviar MEMOs al personal seleccionado (${count} seleccionado${count !== 1 ? "s" : ""})`
-                : "Enviar MEMOs al personal seleccionado";
+            btnText.textContent =
+                count > 0
+                    ? `Enviar MEMOs al personal seleccionado (${count} seleccionado${count !== 1 ? "s" : ""})`
+                    : "Enviar MEMOs al personal seleccionado";
         }
-        const btnDeshacer = document.getElementById("btnDeshacerSeleccionPersonal");
+        const btnDeshacer = document.getElementById(
+            "btnDeshacerSeleccionPersonal",
+        );
         if (btnDeshacer) {
             if (count > 0) {
                 btnDeshacer.removeAttribute("disabled");
-                btnDeshacer.classList.remove("opacity-50", "cursor-not-allowed");
+                btnDeshacer.classList.remove(
+                    "opacity-50",
+                    "cursor-not-allowed",
+                );
             } else {
                 btnDeshacer.setAttribute("disabled", "disabled");
                 btnDeshacer.classList.add("opacity-50", "cursor-not-allowed");
@@ -85,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const table = window.tabulatorPersonal;
         if (table) {
             const visibleRows = table.getRows("visible");
-            visibleRows.forEach(row => {
+            visibleRows.forEach((row) => {
                 const cell = row.getCell("seleccionar");
                 if (cell) {
                     const el = cell.getElement();
@@ -129,14 +142,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const checked = e.target.checked;
                 const visibleData = table.getData("visible");
                 const visibleRows = table.getRows("visible");
-                visibleData.forEach(row => {
+                visibleData.forEach((row) => {
                     if (checked) {
                         personasSeleccionadasPersonal.add(row.dni);
                     } else {
                         personasSeleccionadasPersonal.delete(row.dni);
                     }
                 });
-                visibleRows.forEach(row => {
+                visibleRows.forEach((row) => {
                     const cell = row.getCell("seleccionar");
                     if (cell) {
                         const el = cell.getElement();
@@ -144,11 +157,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         const label = el?.querySelector("label");
                         if (cb) {
                             cb.checked = checked;
-                            cb.style.borderColor = checked ? "#3b82f6" : "#d1d5db";
-                            cb.style.background = checked ? "#3b82f6" : "transparent";
+                            cb.style.borderColor = checked
+                                ? "#3b82f6"
+                                : "#d1d5db";
+                            cb.style.background = checked
+                                ? "#3b82f6"
+                                : "transparent";
                         }
                         if (label) {
-                            label.style.background = checked ? "rgba(37,99,235,.1)" : "transparent";
+                            label.style.background = checked
+                                ? "rgba(37,99,235,.1)"
+                                : "transparent";
                         }
                     }
                 });
@@ -253,6 +272,22 @@ document.addEventListener("DOMContentLoaded", () => {
         select.value = actual;
     }
 
+    function cargarTiposTrabMemos(lista = []) {
+        const select = elements.filtroTipoTrabMemos;
+        if (!select) return;
+
+        const actual = select.value;
+        const tiposTrab = [
+            ...new Set(lista.map((m) => m.TIPO_TRABAJADOR).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todos los tipos</option>` +
+            tiposTrab.map((t) => `<option value="${t}">${t}</option>`).join("");
+
+        select.value = actual;
+    }
+
     function cargarSucursalesMemos(lista = []) {
         const select = elements.filtroSucursalMemos;
         if (!select) return;
@@ -264,7 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         select.innerHTML =
             `<option value="">Todas las sucursales</option>` +
-            sucursales.map((s) => `<option value="${s}">${s}</option>`).join("");
+            sucursales
+                .map((s) => `<option value="${s}">${s}</option>`)
+                .join("");
 
         select.value = actual;
     }
@@ -298,9 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         select.innerHTML =
             `<option value="">Todos los cargos</option>` +
-            cargos
-                .map((c) => `<option value="${c}">${c}</option>`)
-                .join("");
+            cargos.map((c) => `<option value="${c}">${c}</option>`).join("");
 
         select.value = actual;
     }
@@ -317,9 +352,23 @@ document.addEventListener("DOMContentLoaded", () => {
         select.innerHTML =
             `<option value="">Todos los clientes</option>` +
             `<option value="Sin cliente">Sin cliente</option>` +
-            clientes
-                .map((c) => `<option value="${c}">${c}</option>`)
-                .join("");
+            clientes.map((c) => `<option value="${c}">${c}</option>`).join("");
+
+        select.value = actual;
+    }
+
+    function cargarTiposPersonal(lista = []) {
+        const select = elements.filtroTipoPersonal;
+        if (!select) return;
+
+        const actual = select.value;
+        const tipos = [
+            ...new Set(lista.map((p) => p.tipo_trabajador).filter(Boolean)),
+        ].sort();
+
+        select.innerHTML =
+            `<option value="">Todos los tipos</option>` +
+            tipos.map((t) => `<option value="${t}">${t}</option>`).join("");
 
         select.value = actual;
     }
@@ -347,11 +396,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const matchNivel = !nivel || niv === nivel;
 
-            const matchSucursal = !sucursal || (data.SUCURSAL || "").toUpperCase() === sucursal;
+            const matchSucursal =
+                !sucursal || (data.SUCURSAL || "").toUpperCase() === sucursal;
 
-            const matchTipo = !tipo || (data.TIPO_TRABAJADOR || "").toUpperCase() === tipo.toUpperCase();
+            const matchTipo =
+                !tipo ||
+                (data.TIPO_TRABAJADOR || "").toUpperCase() ===
+                    tipo.toUpperCase();
 
-            return matchTexto && matchCliente && matchNivel && matchSucursal && matchTipo;
+            return (
+                matchTexto &&
+                matchCliente &&
+                matchNivel &&
+                matchSucursal &&
+                matchTipo
+            );
         });
     }
 
@@ -379,7 +438,11 @@ document.addEventListener("DOMContentLoaded", () => {
         tbl.setFilter((data) => {
             if (sucursal && (data.sucursal || "").toUpperCase() !== sucursal)
                 return false;
-            if (tipo && (data.tipo_trabajador || "").toUpperCase() !== tipo.toUpperCase())
+            if (
+                tipo &&
+                (data.tipo_trabajador || "").toUpperCase() !==
+                    tipo.toUpperCase()
+            )
                 return false;
             if (cargo && (data.cargo || "").toUpperCase() !== cargo)
                 return false;
@@ -388,7 +451,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (cliente === "Sin cliente") {
                     if (dataCliente) return false;
                 } else {
-                    if (dataCliente.toUpperCase() !== cliente.toUpperCase()) return false;
+                    if (dataCliente.toUpperCase() !== cliente.toUpperCase())
+                        return false;
                 }
             }
             return true;
@@ -412,6 +476,12 @@ document.addEventListener("DOMContentLoaded", () => {
             },
 
             columns: [
+                {
+                    title: "Código",
+                    field: "codigo",
+                    width: 100,
+                    hozAlign: "center",
+                },
                 {
                     title: "Nombre de curso",
                     field: "nombre",
@@ -478,6 +548,27 @@ document.addEventListener("DOMContentLoaded", () => {
                     hozAlign: "center",
                     headerSort: false,
                     formatter(cell) {
+                        const vigente = cell.getData().vigente;
+                        if (!vigente) {
+                            return `
+                            <button class="btn-detalle-curso" disabled title="Este curso aún no se ha aperturado, no se puede realizar un seguimiento" style="
+                                background: #e5e7eb;
+                                color: #9ca3af;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 6px 12px;
+                                font-size: 12px;
+                                font-weight: 500;
+                                cursor: not-allowed;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            ">
+                                <i class="ti ti-eye-off" style="font-size: 14px;"></i>
+                                Ver detalle
+                            </button>
+                        `;
+                        }
                         return `
                         <button class="btn-detalle-curso" data-row-id="${cell.getRow().getIndex()}" style="
                             background: #4f46e5;
@@ -499,6 +590,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     `;
                     },
                     cellClick: function (e, cell) {
+                        const vigente = cell.getData().vigente;
+                        if (!vigente) return;
                         e.stopPropagation();
                         const row = cell.getRow();
                         const data = row.getData();
@@ -546,40 +639,70 @@ document.addEventListener("DOMContentLoaded", () => {
                         .join("");
                 select.value = actual;
             }
+
+            const tipos = [
+                ...new Set(data.map((r) => r.tipo_curso).filter(Boolean)),
+            ].sort();
+
+            const selectTipo = elements.filtroTipoCursos;
+            if (selectTipo) {
+                const actualTipo = selectTipo.value;
+                selectTipo.innerHTML =
+                    `<option value="">Todos los tipos</option>` +
+                    tipos
+                        .map((t) => `<option value="${t}">${t}</option>`)
+                        .join("");
+                selectTipo.value = actualTipo;
+            }
         });
+
+        function aplicarFiltrosCursos() {
+            const term = (elements.searchCurso?.value || "")
+                .trim()
+                .toLowerCase();
+            const resp = state.cursoResponsable;
+            const tipo = state.cursoTipo;
+
+            if (term || resp || tipo) {
+                table.setFilter((data) => {
+                    if (resp && (data.responsable || "") !== resp)
+                        return false;
+                    if (tipo && (data.tipo_curso || "") !== tipo)
+                        return false;
+                    if (term) {
+                        const nombre = (data.nombre || "").toLowerCase();
+                        const codigo = String(
+                            data.codigo || "",
+                        ).toLowerCase();
+                        if (
+                            !nombre.includes(term) &&
+                            !codigo.includes(term)
+                        )
+                            return false;
+                    }
+                    return true;
+                });
+            } else {
+                table.clearFilter();
+            }
+        }
 
         if (elements.filtroResponsableCursos) {
             elements.filtroResponsableCursos.addEventListener(
                 "change",
                 function () {
                     state.cursoResponsable = this.value;
-                    const term = (elements.searchCurso?.value || "")
-                        .trim()
-                        .toLowerCase();
-                    const resp = state.cursoResponsable;
+                    aplicarFiltrosCursos();
+                },
+            );
+        }
 
-                    if (resp || term) {
-                        table.setFilter((data) => {
-                            if (resp && (data.responsable || "") !== resp)
-                                return false;
-                            if (term) {
-                                const nombre = (
-                                    data.nombre || ""
-                                ).toLowerCase();
-                                const codigo = String(
-                                    data.codigo_curso || "",
-                                ).toLowerCase();
-                                if (
-                                    !nombre.includes(term) &&
-                                    !codigo.includes(term)
-                                )
-                                    return false;
-                            }
-                            return true;
-                        });
-                    } else {
-                        table.clearFilter();
-                    }
+        if (elements.filtroTipoCursos) {
+            elements.filtroTipoCursos.addEventListener(
+                "change",
+                function () {
+                    state.cursoTipo = this.value;
+                    aplicarFiltrosCursos();
                 },
             );
         }
@@ -588,33 +711,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let debounceTimer;
             elements.searchCurso.addEventListener("input", function () {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    const term = this.value.trim().toLowerCase();
-                    const resp = state.cursoResponsable;
-
-                    if (term || resp) {
-                        table.setFilter((data) => {
-                            if (resp && (data.responsable || "") !== resp)
-                                return false;
-                            if (term) {
-                                const nombre = (
-                                    data.nombre || ""
-                                ).toLowerCase();
-                                const codigo = String(
-                                    data.codigo_curso || "",
-                                ).toLowerCase();
-                                if (
-                                    !nombre.includes(term) &&
-                                    !codigo.includes(term)
-                                )
-                                    return false;
-                            }
-                            return true;
-                        });
-                    } else {
-                        table.clearFilter();
-                    }
-                }, 300);
+                debounceTimer = setTimeout(aplicarFiltrosCursos, 300);
             });
         }
     }
@@ -632,6 +729,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     alpineEl._x_dataStack[0].actualizar(data);
                 }
 
+                cargarTiposTrabMemos(data);
                 cargarClientesMemos(data);
                 cargarSucursalesMemos(data);
                 return data;
@@ -938,9 +1036,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     field: "seleccionar",
                     formatter(cell) {
                         const data = cell.getRow().getData();
-                        const checked = personasSeleccionadasPersonal.has(data.dni) ? "checked" : "";
-                        return `<label style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:28px;height:28px;border-radius:10px;transition:all .15s ease;background:${checked ? 'rgba(37,99,235,.1)' : 'transparent'}" onclick="event.stopPropagation()">
-                            <input type="checkbox" class="checkbox-personal-row" data-dni="${data.dni}" ${checked} style="width:16px;height:16px;border-radius:5px;border:2px solid ${checked ? '#3b82f6' : '#d1d5db'};background:${checked ? '#3b82f6' : 'transparent'};appearance:none;-webkit-appearance:none;cursor:pointer;transition:all .15s ease;position:relative;flex-shrink:0" onchange="this.style.borderColor=this.checked?'#3b82f6':'#d1d5db';this.style.background=this.checked?'#3b82f6':'transparent';this.closest('label').style.background=this.checked?'rgba(37,99,235,.1)':'transparent'">
+                        const checked = personasSeleccionadasPersonal.has(
+                            data.dni,
+                        )
+                            ? "checked"
+                            : "";
+                        return `<label style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:28px;height:28px;border-radius:10px;transition:all .15s ease;background:${checked ? "rgba(37,99,235,.1)" : "transparent"}" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="checkbox-personal-row" data-dni="${data.dni}" ${checked} style="width:16px;height:16px;border-radius:5px;border:2px solid ${checked ? "#3b82f6" : "#d1d5db"};background:${checked ? "#3b82f6" : "transparent"};appearance:none;-webkit-appearance:none;cursor:pointer;transition:all .15s ease;position:relative;flex-shrink:0" onchange="this.style.borderColor=this.checked?'#3b82f6':'#d1d5db';this.style.background=this.checked?'#3b82f6':'transparent';this.closest('label').style.background=this.checked?'rgba(37,99,235,.1)':'transparent'">
                         </label>`;
                     },
                     titleFormatter() {
@@ -1029,7 +1131,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 cb.style.background = checked ? "#3b82f6" : "transparent";
                 const label = cb.closest("label");
                 if (label) {
-                    label.style.background = checked ? "rgba(37,99,235,.1)" : "transparent";
+                    label.style.background = checked
+                        ? "rgba(37,99,235,.1)"
+                        : "transparent";
                 }
                 const dni = cb.dataset.dni;
                 if (checked) {
@@ -1082,7 +1186,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
         }
 
-        const btnLimpiarPersonal = document.getElementById("btnLimpiarFiltroPersonal");
+        const btnLimpiarPersonal = document.getElementById(
+            "btnLimpiarFiltroPersonal",
+        );
         if (btnLimpiarPersonal) {
             btnLimpiarPersonal.addEventListener("click", () => {
                 if (elements.filtroSucursalPersonal)
@@ -1094,13 +1200,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (elements.filtroClientePersonal)
                     elements.filtroClientePersonal.value = "";
 
-                const searchEl = document.querySelector('[x-data="searchPersonalSeguimiento()"]');
+                const searchEl = document.querySelector(
+                    '[x-data="searchPersonalSeguimiento()"]',
+                );
                 if (searchEl) {
                     const data = searchEl._x_dataStack?.[0];
                     if (data) data.query = "";
                 }
 
-                const filtrosEl = document.querySelector('[x-data="filtrosPersonal()"]');
+                const filtrosEl = document.querySelector(
+                    '[x-data="filtrosPersonal()"]',
+                );
                 if (filtrosEl) {
                     const data = filtrosEl._x_dataStack?.[0];
                     if (data && data.verificar) data.verificar();
@@ -1123,6 +1233,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     cargarSucursalesPersonal(personal);
                     cargarCargosPersonal(personal);
                     cargarClientesPersonal(personal);
+                    cargarTiposPersonal(personal);
                     aplicarFiltrosPersonal();
                 }
             })
@@ -1148,58 +1259,70 @@ document.addEventListener("DOMContentLoaded", () => {
 
     buscarPersonalSeguimiento("");
 
-    const btnDeshacerSeleccionPersonal = document.getElementById("btnDeshacerSeleccionPersonal");
+    const btnDeshacerSeleccionPersonal = document.getElementById(
+        "btnDeshacerSeleccionPersonal",
+    );
     if (btnDeshacerSeleccionPersonal) {
-        btnDeshacerSeleccionPersonal.addEventListener("click", limpiarSeleccionPersonal);
+        btnDeshacerSeleccionPersonal.addEventListener(
+            "click",
+            limpiarSeleccionPersonal,
+        );
     }
 
-    const btnEnviarMemosPersonal = document.getElementById("btnEnviarMemosPersonal");
+    const btnEnviarMemosPersonal = document.getElementById(
+        "btnEnviarMemosPersonal",
+    );
     if (btnEnviarMemosPersonal) {
         btnEnviarMemosPersonal.addEventListener("click", () => {
             const seleccionados = window.personalSeleccionado();
             if (seleccionados.length === 0) return;
 
-            const personales = seleccionados.map(p => ({
+            const personales = seleccionados.map((p) => ({
                 nroDoc: p.dni,
                 nombreCompleto: p.nombre_completo,
                 correo: p.email,
-                cargo: p.cargo
+                cargo: p.cargo,
             }));
 
             Swal.fire({
-                title: 'Enviando MEMOs...',
-                text: 'Por favor espere',
+                title: "Enviando MEMOs...",
+                text: "Por favor espere",
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
             });
 
-            axios.post(`${VITE_URL_APP}/api/enviar-memos-varios`, { personales })
-                .then(res => {
+            axios
+                .post(`${VITE_URL_APP}/api/enviar-memos-varios`, { personales })
+                .then((res) => {
                     if (res.data.success) {
                         if (window.tabulatorMemos) {
-                            window.tabulatorMemos.setData("/api/obtener-memos-enviados");
+                            window.tabulatorMemos.setData(
+                                "/api/obtener-memos-enviados",
+                            );
                         }
                         limpiarSeleccionPersonal();
                         Swal.fire({
-                            icon: 'success',
-                            title: 'MEMOs enviados',
+                            icon: "success",
+                            title: "MEMOs enviados",
                             timer: 2000,
                             timerProgressBar: true,
-                            showConfirmButton: false
+                            showConfirmButton: false,
                         });
                     } else {
                         Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: res.data.message || 'No se pudieron enviar los MEMOs'
+                            icon: "error",
+                            title: "Error",
+                            text:
+                                res.data.message ||
+                                "No se pudieron enviar los MEMOs",
                         });
                     }
                 })
                 .catch(() => {
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'No se pudieron enviar los MEMOs'
+                        icon: "error",
+                        title: "Error",
+                        text: "No se pudieron enviar los MEMOs",
                     });
                 });
         });

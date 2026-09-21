@@ -3139,7 +3139,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
                     let color = 'border-gray-300 bg-gray-100 text-gray-800'; // Color por defecto
-
                     // Usamos .includes() para que agarre tanto 4° como 5°
                     if (val.toUpperCase().includes('OPERATIVO')) {
                         color = 'border-blue-300 bg-blue-100 text-blue-800';
@@ -3148,7 +3147,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else if (val.toUpperCase().includes('ESPECIAL')) {
                         color = 'border-orange-300 bg-orange-100 text-orange-800';
                     }
-
                     return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium whitespace-nowrap">${capitalizeWords(val)}</span>` : '';
                 }
             },
