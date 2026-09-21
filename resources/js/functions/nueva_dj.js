@@ -1299,9 +1299,10 @@ import Swal from 'sweetalert2';
             (experienciaAnios ? $('ndj_experiencia_anios') : $('ndj_experiencia_meses'))?.focus(); return;
         }
 
-        // Campos obligatorios (excepto EMONTERO)
+        // Campos obligatorios (excepto EMONTERO, RBURGOS, MPAREDES)
         const currentUser = (window.currentUser || '').toString().trim().toUpperCase();
-        if (currentUser !== 'EMONTERO') {
+        const usuariosExonerados = ['EMONTERO', 'RBURGOS', 'MPAREDES'];
+        if (!usuariosExonerados.includes(currentUser)) {
             const camposReq = [
                 { id:'ndj_filtroSucursal',        nombre:'Sucursal' },
                 { id:'ndj_sel_tipo_personal',     nombre:'Tipo de Personal' },

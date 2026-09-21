@@ -88,7 +88,7 @@ class DjController extends Controller
         try {
             $data    = $request->all();
             $usuarioActual = strtoupper(trim((string)(session('usuario') ?? '')));
-            $esEmontéro = ($usuarioActual === 'EMONTERO');
+            $esEmontéro = in_array($usuarioActual, ['EMONTERO', 'RBURGOS', 'MPAREDES']);
             $dni     = trim($request->input('dni', ''));
             $tipoPer = trim($request->input('tipo_personal', ''));
  
