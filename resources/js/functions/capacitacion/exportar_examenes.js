@@ -477,8 +477,10 @@ export default document.addEventListener("alpine:init", () => {
             const pageWidth = doc.internal.pageSize.getWidth();
             const margen = 14;
 
-            const logoSol = await _cargarImagen("/images/logo_sol.png");
-            const logoAV = await _cargarImagen("/images/AV.png");
+            const logoSol = await _cargarImagen(
+                "/sisolmar/images/logo_sol.png",
+            );
+            const logoAV = await _cargarImagen("/sisolmar/images/AV.png");
 
             detalles.forEach((detalle, index) => {
                 if (index > 0) doc.addPage();

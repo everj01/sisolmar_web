@@ -904,7 +904,7 @@ export default document.addEventListener("alpine:init", () => {
 
                 const nombreCurso = this.nombreCursosSeleccionados;
 
-                const logoSol = await _cargarImagen("/images/logo_sol.png");
+                const logoSol = await _cargarImagen("/sisolmar/images/logo_sol.png");
 
                 const dibujarEncabezado = () => {
                     let logoBottomY = 26;
@@ -1950,7 +1950,9 @@ export default document.addEventListener("alpine:init", () => {
                           ] || ""
                         : "TODAS LAS ÁREAS";
 
-                const logoSol = await _cargarImagen("/images/logo_sol.png");
+                const logoSol = await _cargarImagen(
+                    "/sisolmar/images/logo_sol.png",
+                );
 
                 let logoBottomY = 26;
                 const logoWidth = 60;
@@ -3404,7 +3406,9 @@ export default document.addEventListener("alpine:init", () => {
                     format: "a4",
                 });
 
-                const logoSol = await _cargarImagen("/images/logo_sol.png");
+                const logoSol = await _cargarImagen(
+                    "/sisolmar/images/logo_sol.png",
+                );
 
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const pageHeight = doc.internal.pageSize.getHeight();
@@ -4516,7 +4520,9 @@ export default document.addEventListener("alpine:init", () => {
                     format: "a4",
                 });
 
-                const logoSol = await _cargarImagen("/images/logo_sol.png");
+                const logoSol = await _cargarImagen(
+                    "/sisolmar/images/logo_sol.png",
+                );
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const pageHeight = doc.internal.pageSize.getHeight();
                 const marginL = 10;
@@ -5312,7 +5318,9 @@ export default document.addEventListener("alpine:init", () => {
                 const { jsPDF } = window.jspdf;
 
                 const data = this.reporteData;
-                const logoSol = await _cargarImagen("/images/logo_sol.png");
+                const logoSol = await _cargarImagen(
+                    "/sisolmar/images/logo_sol.png",
+                );
 
                 const firmaResponsable = await _cargarFirma(
                     data.Firma_Responsable || "",
