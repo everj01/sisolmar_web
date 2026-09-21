@@ -3611,8 +3611,8 @@ $tipotrab    = $tipoPer;
                     dj2026_experiencia_anios=?, dj2026_experiencia_meses=?, dj2026_familiar_empresa=?,
                     dj2026_familiar_nombre=?, dj2026_familiar_parentesco=?,
                     dj2026_laboral_1=?, dj2026_laboral_2=?, dj2026_cantprofesion=?,
-                    PERS_TIPOTRAB=?, USUA_FECHA_MOD=GETDATE(), SUCU_CODIGO = ?, CODI_UNID_OPER = ?, USUA_CODIGO_REG = ?, EMPR_CODIGO = '01',
-                    TIPO_CONT=?, FECH_INGRE=?
+                    PERS_TIPOTRAB=?, CODI_CARG=?, USUA_FECHA_MOD=GETDATE(), SUCU_CODIGO = ?, CODI_UNID_OPER = ?, USUA_CODIGO_REG = ?, EMPR_CODIGO = '01',
+                    TIPO_CONT=?, FECH_INGRE=?, NO_CADUCA_DNI=?, PERS_CONSMO=?
                 WHERE CODI_PERS=?",
                 [
                     $sexo, $sexo,
@@ -3640,11 +3640,14 @@ $tipotrab    = $tipoPer;
                     $laboral1, $laboral2, $cantProfesion,
                     //$tipotrab,
                     $tipoPer,
+                    $trim($data['cargo'] ?? null),
                     $sucursal,
                     $codiUnidOper,
                     $usuario,
                     $tipoCont,
                     $fechaIngre,
+                    ($data['no_caduca_dni'] ?? '0') === '1' ? 1 : 0,
+                    strtoupper(trim($data['presto_smo'] ?? 'NO')),
                     $codiPers
                 ]
             );

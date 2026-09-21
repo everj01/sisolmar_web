@@ -1209,6 +1209,10 @@ import Swal from 'sweetalert2';
     // ============================================================
     async function ndj_guardar() {
 
+        const currentUser = (window.currentUser || '').toString().trim().toUpperCase();
+        const usuariosExonerados = ['EMONTERO', 'RBURGOS', 'MPAREDES'];
+
+        if (!usuariosExonerados.includes(currentUser)) {
 
         // ── Validaciones previas ──────────────────────────────
         const hoy    = new Date(); hoy.setHours(0,0,0,0);
@@ -1299,10 +1303,7 @@ import Swal from 'sweetalert2';
             (experienciaAnios ? $('ndj_experiencia_anios') : $('ndj_experiencia_meses'))?.focus(); return;
         }
 
-        // Campos obligatorios (excepto EMONTERO, RBURGOS, MPAREDES)
-        const currentUser = (window.currentUser || '').toString().trim().toUpperCase();
-        const usuariosExonerados = ['EMONTERO', 'RBURGOS', 'MPAREDES'];
-        if (!usuariosExonerados.includes(currentUser)) {
+        // Campos obligatorios
             const camposReq = [
                 { id:'ndj_filtroSucursal',        nombre:'Sucursal' },
                 { id:'ndj_sel_tipo_personal',     nombre:'Tipo de Personal' },
@@ -1367,7 +1368,6 @@ import Swal from 'sweetalert2';
                 if (primerFaltante) primerFaltante.focus();
                 return;
             }
-        }
 
         const hijoSinFecha = [...document.querySelectorAll('#ndj_familyContainer .ndj-family-row')]
             .find(fila => {
@@ -1411,6 +1411,8 @@ import Swal from 'sweetalert2';
             });
             if (!isConfirmed) return;
         }
+
+        } // fin usuariosExonerados
         // ── Fin validaciones ─────────────────────────────────
 
         const fd      = new FormData($('formNuevaDJ'));
