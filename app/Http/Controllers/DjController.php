@@ -3518,13 +3518,15 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
             // Solo usuarios autorizados pueden cambiar el tipo de personal.
             $usuarioTipoPer = strtoupper(trim((string)(session('usuario') ?? '')));
-            if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
+            $tipoActual = trim((string)($personal->PERS_TIPOTRAB ?? ''));
+
+            if ($tipoPer !== $tipoActual) {
+                if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
+                }
             }
 
-            // Regla: solo se permite cambiar de Operativo a Administrativo y viceversa.
-            $tipoActual = trim((string)($personal->PERS_TIPOTRAB ?? ''));
             if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
