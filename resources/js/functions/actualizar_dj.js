@@ -3987,6 +3987,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
+                    // Subir foto si fue seleccionada
+                    const fotoFile = inputFoto?.files?.[0];
+                    const codiPersFoto = response.data.codi_pers || data.cod_postulante || '';
+                    if (fotoFile && codiPersFoto) {
+                        try {
+                            const fdFoto = new FormData();
+                            fdFoto.append('foto', fotoFile);
+                            fdFoto.append('codi_pers', codiPersFoto);
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                            const resFoto = await fetch(`${VITE_URL_APP}/api/dj/upload-foto-personal`, {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                                credentials: 'same-origin',
+                                body: fdFoto
+                            });
+                            const jsonFoto = await resFoto.json();
+                            if (!jsonFoto.success) {
+                                console.warn('[ActualizarDJ] Foto no guardada:', jsonFoto.message);
+                            }
+                        } catch (e) {
+                            console.warn('[ActualizarDJ] Error subiendo foto:', e);
+                        }
+                    }
+
                     Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
 
                     const modal = document.getElementById('modalDjGestion');

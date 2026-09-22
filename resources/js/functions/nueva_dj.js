@@ -1114,8 +1114,10 @@ import Swal from 'sweetalert2';
         const numero = docInput.value.trim();
 
         docErrorMsg.innerHTML = '';
-        modoRecontratacion    = false;
-        desactivarModoRecontratacion();
+        if (modoRecontratacion) {
+            modoRecontratacion = false;
+            desactivarModoRecontratacion();
+        }
         dniValido = false;
         actualizarEstadoGuardar();
 
@@ -1189,10 +1191,12 @@ import Swal from 'sweetalert2';
             const fdFoto = new FormData();
             fdFoto.append('foto',      fotoFile);
             fdFoto.append('codi_pers', codiPers);
-            fdFoto.append('_token',    document.querySelector('[name=_token]')?.value || '');
 
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
             const res  = await fetch(`${VITE_URL_APP}/api/dj/upload-foto-personal`, {
                 method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
                 body:   fdFoto,
             });
             const json = await res.json();
@@ -1313,7 +1317,7 @@ import Swal from 'sweetalert2';
                 { id:'ndj_nombre1',               nombre:'Primer Nombre' },
                 { id:'ndj_apellido_paterno',      nombre:'Apellido Paterno' },
                 { id:'ndj_apellido_materno',      nombre:'Apellido Materno' },
-                { id:'ndj_cargo',                 nombre:'Cargo' },
+                { id:'ndj_sel_cargo',              nombre:'Cargo' },
                 { id:'ndj_caduca',                nombre:'Caducidad del Documento' },
                 { id:'ndj_estado_civil',          nombre:'Estado Civil' },
                 { id:'ndj_sexo',                  nombre:'Sexo' },

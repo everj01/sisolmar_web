@@ -11,6 +11,8 @@ const API_URL = `${VITE_URL_APP}/api`;
 let registroSeleccionado = null;
 let generadosCache = {};
 let generadosCacheLoaded = false;
+let fotoSeleccionada = null;   // ← archivo de foto seleccionado por el usuario
+let codiPersActual = '';       // ← codi_pers de la DJ abierta actualmente
 
 async function cargarGeneradosCache(codPeriodo = '2026') {
     try {
@@ -656,6 +658,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function limpiarPreviewFoto() {
+        fotoSeleccionada = null;
         if (inputFoto) inputFoto.value = "";
         if (preview) { preview.src = ""; preview.classList.add("hidden"); }
         if (placeholder) placeholder.classList.remove("hidden");
@@ -717,6 +720,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (form) form.reset();
         //if (tagifyLicencia) tagifyLicencia.removeAllTags();
 
+        fotoSeleccionada = null;
+        codiPersActual = '';
         limpiarPreviewFoto();
 
         if (container) { container.innerHTML = ''; container.insertAdjacentHTML('beforeend', makeFamilyRow()); }
@@ -1127,6 +1132,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inputFoto?.addEventListener("change", () => {
         const file = inputFoto.files?.[0];
         if (file) {
+            fotoSeleccionada = file;  // ← guardar referencia
             const reader = new FileReader();
             reader.onload = e => {
                 if (preview) { preview.src = e.target.result; preview.classList.remove("hidden"); }
@@ -1136,7 +1142,7 @@ document.addEventListener('DOMContentLoaded', function () {
             reader.readAsDataURL(file);
         }
     });
-    btnEliminar?.addEventListener("click", () => limpiarPreviewFoto());
+    btnEliminar?.addEventListener("click", () => { fotoSeleccionada = null; limpiarPreviewFoto(); });
 
     // Page size
     pageSizeSelect?.addEventListener("change", function () { tblPersonas.setPageSize(parseInt(this.value)); });
@@ -1239,7 +1245,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
-                    Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    // Subir foto si fue seleccionada
+                    const fotoFile = fotoSeleccionada;
+                    const codiPersFoto = response.data.codi_pers || data.cod_postulante || codiPersActual || '';
+                    console.log('[GestionDJ] fotoSeleccionada:', fotoSeleccionada, '| fotoFile:', fotoFile);
+                    console.log('[GestionDJ] codiPersFoto:', codiPersFoto, '| codiPersActual:', codiPersActual);
+                    if (fotoFile && codiPersFoto) {
+                        try {
+                            const fdFoto = new FormData();
+                            fdFoto.append('foto', fotoFile);
+                            fdFoto.append('codi_pers', codiPersFoto);
+                            console.log('[GestionDJ] Enviando foto...', fotoFile.name, fotoFile.size, 'bytes', fotoFile.type);
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                            const resFoto = await axios.post(`${VITE_URL_APP}/api/dj/upload-foto-personal`, fdFoto, {
+                                headers: { 'X-CSRF-TOKEN': csrfToken },
+                            });
+                            console.log('[GestionDJ] Respuesta foto:', resFoto.data);
+                            if (resFoto.data.success) {
+                                Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada y la foto se guardaron correctamente.' });
+                            } else {
+                                Swal.fire({ icon: 'warning', title: 'DJ guardada, pero foto falló', text: resFoto.data.message || 'No se pudo actualizar la foto.' });
+                            }
+                        } catch (e) {
+                            console.error('[GestionDJ] Error subiendo foto:', e.response?.status, e.response?.data);
+                            const errMsg = e.response?.data?.message
+                                || (e.response?.data?.errors ? Object.values(e.response.data.errors).flat().join('<br>') : null)
+                                || e.message;
+                            Swal.fire({ icon: 'warning', title: 'DJ guardada, pero foto falló', html: errMsg });
+                        }
+                    } else {
+                        console.warn('[GestionDJ] No se sube foto nueva.');
+                        Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    }
 
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
@@ -2046,6 +2083,7 @@ async function cargarDatosPersonales(codiPers, source = 'migracion') {
 
 // ── Llenar formulario ────────────────────────────────────────
 async function llenarFormulario(data) {
+    codiPersActual = data.CODI_PERS || '';
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
