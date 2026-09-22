@@ -448,7 +448,6 @@ function generarBotonesAccion(curso) {
     const alerta = window.alertasCursosData && window.alertasCursosData.includes(String(curso.codigoCurso));
     const hab = curso.habilitado == '1';
     const tieneVig = curso.tiene_vigente;
-    const esDem = curso.es_demanda == '1';
 
     let html = '<div class="flex items-center gap-1.5">';
 
@@ -474,12 +473,6 @@ function generarBotonesAccion(curso) {
         <button type="button" onclick="window.gestionCurso('PERMA_DEL', '${cod}', '${nom}')"
             class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors" title="Eliminar definitivamente de BD">
             <i class="bx bx-trash text-base"></i></button>`;
-    }
-
-    if (esDem) {
-        html += `<button type="button" onclick="window.dispatchEvent(new CustomEvent('abrir-modal-excel', { detail: { codigo: '${cod}', nombre: '${nom}' } }))"
-            class="btn btn-sm rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors" title="Matrícula Masiva (Excel)">
-            <i class="bx bxs-file-import text-base"></i></button>`;
     }
 
     if (tieneVig) {
@@ -1478,9 +1471,6 @@ window.formCursoGestion = function (idPrefijo = '') {
             // Forzar limpieza de inputs de archivos y estados visuales
             const wordInput = document.getElementById(this.idPrefijo + 'inputWordExamen');
             if (wordInput) wordInput.value = '';
-
-            const excelInput = document.getElementById(this.idPrefijo + 'inputExcelMatricula');
-            if (excelInput) excelInput.value = '';
 
             archivoSeleccionado = null;
             if (typeof resumenPlantilla !== 'undefined' && resumenPlantilla) resumenPlantilla.innerHTML = "";

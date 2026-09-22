@@ -173,8 +173,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
         Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
         Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
-        Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
-        Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
         Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
         Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
         Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
