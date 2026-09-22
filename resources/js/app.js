@@ -17,7 +17,6 @@ import "./functions/capacitacion/planes_capacitaciones.js";
 import "./functions/capacitacion/exportar_examenes.js";
 import Waves from "node-waves";
 import Alpine from "alpinejs";
-import DataTable from "vanilla-datatables";
 import "vanilla-datatables/dist/vanilla-dataTables.min.css"; // Import Styles
 import Swal from "sweetalert2";
 import Echo from "laravel-echo";

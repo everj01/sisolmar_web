@@ -29,7 +29,6 @@ export default defineConfig({
                 "node_modules/sweetalert2/dist/sweetalert2.min.css",
                 "node_modules/sweetalert2/dist/sweetalert2.js",
                 "node_modules/boxicons/dist/boxicons.js",
-                'node_modules/vanilla-datatables/dist/vanilla-dataTables.min.js',
                 'node_modules/vanilla-datatables/dist/vanilla-dataTables.min.css',
 
                 // DJ
