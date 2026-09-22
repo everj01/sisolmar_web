@@ -79,7 +79,7 @@ if (btnAnalizar) {
             }
 
             // --- AUTO-RELLENADO INTELIGENTE (PAUTA 7/11) ---
-            const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+            const formElement = document.querySelector('#modalRegistroCurso [x-data="formCursoGestion()"]');
             if (formElement && window.Alpine) {
                 const alpineData = Alpine.$data(formElement);
                 // Sincronizar el total de preguntas detectadas
@@ -629,27 +629,11 @@ window.gestionCurso = async (op, cod, nombre = '') => {
 
         if (dataget && dataget.success && dataget.curso) {
             const curso = dataget.curso;
-            const mensaje = document.getElementById('txtMensajeNuevo');
-            const view = document.getElementById('viewEditCreate');
-            const btn = document.getElementById('btnGestion');
-            const btnEdit = document.getElementById('btnGestionEditar');
-            const title = document.getElementById('txtTitleFile');
-            const btnDownload = document.getElementById('btnDownloadPlantilla');
 
-            if (mensaje) {
-                mensaje.textContent = 'Editar';
-                mensaje.classList.remove('bg-primary/25', 'text-primary-800');
-                mensaje.classList.add('bg-warning/25', 'text-warning-800');
-            }
+            document.getElementById('edicodGestionEditar').value = curso.codigo;
 
-            if (title) title.textContent = 'Actualizar curso';
-            if (view) view.classList.remove('hidden');
-            if (btnDownload) btnDownload.classList.remove('hidden');
-
-            document.getElementById('codGestionEditar').value = curso.codigo;
-
-            // Populate Alpine.js data directly
-            const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+            // Populate Alpine.js data directly (modal de edición independiente)
+            const formElement = document.querySelector('#modalEditarCurso [x-data="formCursoGestion()"]');
             if (formElement && window.Alpine) {
                 const alpineData = Alpine.$data(formElement);
 
@@ -754,25 +738,8 @@ window.gestionCurso = async (op, cod, nombre = '') => {
                 console.warn("No se encontró el elemento Alpine formCursoGestion o Alpine no está disponible");
             }
 
-            if (btnDownload) {
-                if (curso.examen && curso.examen.file_tiene == 1 && curso.examen.file_ruta) {
-                    btnDownload.href = `${VITE_URL_APP}/storage/${curso.examen.file_ruta}`;
-                    btnDownload.setAttribute('download', curso.examen.file_nombre || 'plantilla');
-                    const nombreMostrar = curso.examen.file_nombre_original || curso.examen.file_nombre || 'plantilla';
-                    btnDownload.innerHTML = `<i class='bx bxs-cloud-download'></i>&nbsp;Descargar ${nombreMostrar}`;
-                    btnDownload.classList.remove('hidden');
-                    btnDownload.target = "_blank";
-                } else {
-                    btnDownload.classList.add('hidden');
-                    btnDownload.href = '#';
-                }
-            }
-
-            if (btn) btn.classList.add('hidden');
-            if (btnEdit) btnEdit.classList.remove('hidden');
-
-            // Abrir el modal
-            window.dispatchEvent(new CustomEvent('open-modal-gestion'));
+            // Abrir el modal de edición (independiente del de registro)
+            window.dispatchEvent(new CustomEvent('open-modal-editar'));
 
         } else {
             Swal.fire('Advertencia', 'No se encontró el curso', 'warning');
@@ -853,7 +820,7 @@ window.gestionListarCursos = (op) => {
 window.editarFormGestionCurso = async (e) => {
     if (e) e.preventDefault();
 
-    const formElement = document.querySelector('[x-data="formCursoGestion()"]');
+    const formElement = document.querySelector('#modalEditarCurso [x-data="formCursoGestion()"]');
     if (!formElement || !window.Alpine) return;
     const alpineData = Alpine.$data(formElement);
 
@@ -965,13 +932,12 @@ window.editarFormGestionCurso = async (e) => {
         .then(async (res) => {
             if (res.status === 200 && res.data.success) {
                 // Cerrar el modal antes de mostrar el éxito
-                window.dispatchEvent(new CustomEvent('close-modal-gestion'));
+                window.dispatchEvent(new CustomEvent('close-modal-editar'));
 
                 Swal.fire('Éxito', res.data.message || 'Curso actualizado correctamente', 'success')
 
                 await window.recargarCursos();
 
-                restaurarFormCurso(false);
             } else {
                 Swal.fire('Error', res.data.message || 'No se pudo actualizar el curso', 'error')
             }
@@ -998,46 +964,16 @@ window.editarFormGestionCurso = async (e) => {
         })
 }
 
-window.restaurarFormCurso = (abrir = true) => {
-    const mensaje = document.getElementById('txtMensajeNuevo');
-    const view = document.getElementById('viewEditCreate');
-    const btn = document.getElementById('btnGestion');
-    const btnEdit = document.getElementById('btnGestionEditar');
-    const title = document.getElementById('txtTitleFile');
-    const btnDownload = document.getElementById('btnDownloadPlantilla');
-
-    if (btnDownload) {
-        btnDownload.classList.add('hidden');
-        btnDownload.href = '#';
-    }
-
-    if (mensaje) {
-        mensaje.textContent = 'Nuevo';
-        mensaje.classList.add('bg-primary/25', 'text-primary-800');
-        mensaje.classList.remove('bg-warning/25', 'text-warning-800');
-    }
-
-    if (title) {
-        title.textContent = 'Actualizar plantilla';
-    }
-
-    if (view) {
-        view.classList.add('hidden');
-    }
-
-    const codEditar = document.getElementById('codGestionEditar');
+/**
+ * Modales independientes: Registro y Edición de curso.
+ * Ya no existe un único modal compartido que oscile entre "Registrar" y "Actualizar".
+ */
+window.abrirModalRegistro = () => {
+    // Limpia el formulario del modal de REGISTRO (id = modalRegistroCurso)
+    const formElement = document.querySelector('#modalRegistroCurso [x-data="formCursoGestion()"]');
+    const codEditar = document.getElementById('regcodGestionEditar');
     if (codEditar) codEditar.value = '';
 
-    // Si es cancelar, cerrar modal y salir sin limpiar campos (evita flicker por la transición de salida)
-    if (!abrir) {
-        window.dispatchEvent(new CustomEvent('close-modal-gestion'));
-        if (btn) btn.classList.remove('hidden');
-        if (btnEdit) btnEdit.classList.add('hidden');
-        return;
-    }
-
-    // Al llamar a restaurarFormCurso (Crear curso), limpiamos el estado de Alpine
-    const formElement = document.querySelector('[x-data="formCursoGestion()"]');
     if (formElement && window.Alpine) {
         const alpineData = Alpine.$data(formElement);
         if (typeof alpineData.limpiarCampos === 'function') {
@@ -1045,14 +981,20 @@ window.restaurarFormCurso = (abrir = true) => {
         }
     }
 
-    if (btn) btn.classList.remove('hidden');
-    if (btnEdit) btnEdit.classList.add('hidden');
+    window.dispatchEvent(new CustomEvent('open-modal-registro'));
+};
 
-    window.dispatchEvent(new CustomEvent('open-modal-gestion'));
-}
+window.cerrarModalRegistro = () => {
+    window.dispatchEvent(new CustomEvent('close-modal-registro'));
+};
 
-window.formCursoGestion = function () {
+window.cerrarModalEdicion = () => {
+    window.dispatchEvent(new CustomEvent('close-modal-editar'));
+};
+
+window.formCursoGestion = function (idPrefijo = '') {
     return {
+        idPrefijo: idPrefijo,
         codigo: '',
         sys_codigo: '-',
         sys_creado_por: '-',
@@ -1071,6 +1013,7 @@ window.formCursoGestion = function () {
         areasResponsables: [],
         sucursal: '',
         sucursalesOpciones: [],
+        personalJefaturas: [],
         lastSistemaId: null,
         async cargarAreasResponsables(sistemaId) {
             if (!sistemaId) {
@@ -1307,7 +1250,7 @@ window.formCursoGestion = function () {
                 detail: {
                     preguntas: this.preguntasExamen,
                     cursoId: this.codigo,
-                    examenId: document.getElementById('codGestionEditar')?.value || -1,
+                    examenId: this.codigo || -1,
                     nombreArc: this.archivoWordNombre,
                     metrics: this.wordMetrics
                 }
@@ -1402,7 +1345,10 @@ window.formCursoGestion = function () {
                                 this.sucursalesDisponibles = (res.data.data || []).map(s => s.Sucursal);
                             }
                         })
-                        .catch(err => console.error("Error al cargar sucursales", err))
+                        .catch(err => console.error("Error al cargar sucursales", err)),
+                    axios.get(`${VITE_URL_APP}/api/listar-jefaturas`)
+                        .then(res => { this.personalJefaturas = res.data.personal || []; })
+                        .catch(err => console.error("Error al cargar jefaturas de responsables", err))
                 ]);
             };
 
@@ -1517,8 +1463,8 @@ window.formCursoGestion = function () {
             this.imagePreviewPortada = null;
             this.imageFileAfiche = null;
             this.imagePreviewAfiche = null;
-            const portInput = document.getElementById('inputImagePortada');
-            const aficInput = document.getElementById('inputImageAfiche');
+            const portInput = document.getElementById(this.idPrefijo + 'inputImagePortada');
+            const aficInput = document.getElementById(this.idPrefijo + 'inputImageAfiche');
             if (portInput) portInput.value = '';
             if (aficInput) aficInput.value = '';
 
@@ -1530,10 +1476,10 @@ window.formCursoGestion = function () {
             this.targetGroup = 'TODOS';
 
             // Forzar limpieza de inputs de archivos y estados visuales
-            const wordInput = document.getElementById('inputWordExamen');
+            const wordInput = document.getElementById(this.idPrefijo + 'inputWordExamen');
             if (wordInput) wordInput.value = '';
 
-            const excelInput = document.getElementById('inputExcelMatricula');
+            const excelInput = document.getElementById(this.idPrefijo + 'inputExcelMatricula');
             if (excelInput) excelInput.value = '';
 
             archivoSeleccionado = null;
@@ -1698,7 +1644,7 @@ window.formCursoGestion = function () {
                         this.limpiarCampos();
 
                         await window.recargarCursos();
-                        restaurarFormCurso(false);
+                        window.dispatchEvent(new CustomEvent('close-modal-registro'));
 
                     } else {
                         Swal.fire('Error', res.data.message || 'No se pudo registrar el curso', 'error')
@@ -2027,104 +1973,6 @@ window.formProgramacionGestion = function () {
                     const msg = err.response?.data?.message || 'Error al guardar programación';
                     Swal.fire('Error', msg, 'error');
                 });
-        }
-    }
-}
-
-window.abrirModalRegistro = function () {
-    const modal = document.querySelector('#modal-registro');
-    if (modal) {
-        if (typeof HSOverlay !== 'undefined') {
-            HSOverlay.open(modal);
-        } else {
-            modal.classList.remove('hidden');
-            modal.classList.add('open');
-        }
-    }
-}
-
-window.searchablePersonnel = function () {
-    return {
-        open: false,
-        query: '',
-        results: [],
-        jefaturasCache: [],
-        loading: false,
-        error: null,
-        dropdownStyle: {},
-        _closeHandler: null,
-        toggle() {
-            this.open = !this.open;
-            if (this.open) {
-                if (this.jefaturasCache.length === 0) {
-                    this.cargarJefaturas();
-                } else if (this.query.length > 0) {
-                    this.filtrarLocal();
-                }
-            }
-        },
-        openDropdown(evt) {
-            const rect = evt.currentTarget.getBoundingClientRect();
-            this.dropdownStyle = {
-                position: 'fixed',
-                top: (rect.bottom + 4) + 'px',
-                left: rect.left + 'px',
-                width: Math.max(rect.width, 580) + 'px',
-            };
-            this.open = true;
-            if (this.jefaturasCache.length === 0) {
-                this.cargarJefaturas();
-            } else if (this.query.length > 0) {
-                this.filtrarLocal();
-            }
-            this.$nextTick(() => document.addEventListener('click', this._closeHandler));
-        },
-        closeDropdown() {
-            this.open = false;
-            document.removeEventListener('click', this._closeHandler);
-        },
-        init() {
-            this._closeHandler = (e) => {
-                if (!this.$el.contains(e.target)) this.closeDropdown();
-            };
-        },
-        cargarJefaturas() {
-            this.loading = true;
-            this.error = null;
-            axios.get(`${VITE_URL_APP}/api/listar-jefaturas`)
-                .then(res => {
-                    this.jefaturasCache = res.data.personal || [];
-                    this.filtrarLocal();
-                })
-                .catch(err => {
-                    console.error(err);
-                    this.error = 'Error al cargar jefaturas. Verifique la consola.';
-                })
-                .finally(() => this.loading = false);
-        },
-        filtrarLocal() {
-            const q = this.query.toLowerCase().trim();
-            if (!q) {
-                this.results = this.jefaturasCache;
-            } else {
-                this.results = this.jefaturasCache.filter(p =>
-                    (p.nombre_completo || '').toLowerCase().includes(q) ||
-                    (p.dni || '').includes(q) ||
-                    (p.area || '').toLowerCase().includes(q)
-                );
-            }
-        },
-        search() {
-            this.filtrarLocal();
-        },
-        select(p) {
-            const formElement = document.querySelector('[x-data^="formCursoGestion"]');
-            if (formElement && window.Alpine) {
-                const alpineData = Alpine.$data(formElement);
-                alpineData.codResponsable = p.codigo;
-                alpineData.nombreResponsable = p.nombre_completo;
-            }
-            this.closeDropdown();
         }
     }
 }
