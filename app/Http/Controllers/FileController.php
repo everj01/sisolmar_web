@@ -39,6 +39,11 @@ class FileController extends Controller
         $instituciones = FileControl::getInstitucionesDJ();
         $bancos = FileControl::getBancosDJ();
         $sucursales = FileControl::getSucursales();
+
+        // Lista completa de sucursales vigentes para el modal Nueva DJ
+        // (llamada al SP sin filtro de usuario: @usuario = '0')
+        $todasLasSucursales = DB::select('EXEC SW_LISTAR_SUCURSALES ?', ['0']);
+
         $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
         $restringirSucursalesGestionDj = $this->usuarioTieneSucursalLimitada();
 
@@ -106,6 +111,7 @@ class FileController extends Controller
             'instituciones',
             'bancos',
             'sucursales',
+            'todasLasSucursales',
             'sucursalesGestionDj',
             'restringirSucursalesGestionDj',
             'filtrosInicialesGestionDj',

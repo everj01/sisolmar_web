@@ -50,7 +50,7 @@
                                 <div>
                                     <label class="dj-label">Sucursal <span style="color:#ef4444">*</span></label>
                                     <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
-                                        @foreach ($sucursalesGestionDj as $sucursal)
+                                        @foreach ($todasLasSucursales as $sucursal)
                                             <option value="{{ $sucursal->codigo }}">
                                                 {{ $sucursal->abreviatura }}
                                             </option>
