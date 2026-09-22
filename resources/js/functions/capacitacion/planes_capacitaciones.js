@@ -19,6 +19,8 @@ export default document.addEventListener("alpine:init", () => {
         filtroCliente: "",
         filtroMes: "",
         filtroAnio: "",
+        paginaActual: 1,
+        cursosPorPagina: 5,
         openSeleccionCliente: false,
         clientesPCA: [],
         loadingClientesPCA: false,
@@ -323,6 +325,10 @@ export default document.addEventListener("alpine:init", () => {
             return [...new Set(this.cursos.map(c => c.Cliente).filter(Boolean))].sort();
         },
 
+        get hayVigentes() {
+            return this.cursosFiltrados.some(c => c.Vigente);
+        },
+
         _parseFecha(fecha) {
             if (!fecha) return null;
             const partes = fecha.split('/');
@@ -378,6 +384,35 @@ export default document.addEventListener("alpine:init", () => {
             });
         },
 
+        get totalPaginas() {
+            return Math.max(1, Math.ceil(this.cursosFiltrados.length / this.cursosPorPagina));
+        },
+
+        get paginaClamp() {
+            return Math.min(this.paginaActual, this.totalPaginas);
+        },
+
+        get cursosPaginados() {
+            const inicio = (this.paginaClamp - 1) * this.cursosPorPagina;
+            return this.cursosFiltrados.slice(inicio, inicio + this.cursosPorPagina);
+        },
+
+        get paginasVisibles() {
+            const total = this.totalPaginas;
+            const actual = this.paginaClamp;
+            const ventana = 5;
+            let inicio = Math.max(1, actual - 2);
+            let fin = Math.min(total, inicio + ventana - 1);
+            inicio = Math.max(1, fin - ventana + 1);
+            const paginas = [];
+            for (let p = inicio; p <= fin; p++) paginas.push(p);
+            return paginas;
+        },
+
+        irAPagina(n) {
+            if (n >= 1 && n <= this.totalPaginas) this.paginaActual = n;
+        },
+
         abrirConsultas() {
             this.openConsultas = true;
             if (this.planes.length === 0) {
@@ -396,6 +431,7 @@ export default document.addEventListener("alpine:init", () => {
             this.filtroCliente = "";
             this.filtroMes = "";
             this.filtroAnio = "";
+            this.paginaActual = 1;
         },
 
         async abrirSeleccionCliente() {
@@ -609,6 +645,7 @@ export default document.addEventListener("alpine:init", () => {
             this.filtroCliente = "";
             this.filtroMes = "";
             this.filtroAnio = "";
+            this.paginaActual = 1;
             this.loadingCursos = true;
             this.cursos = [];
             try {

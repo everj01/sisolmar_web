@@ -3959,7 +3959,7 @@ class CapacitacionController extends Controller
                         'Cliente' => mb_strtoupper($cliente->abreviatura ?? 'Sin cliente'),
                         'Area' => mb_strtoupper($area->nombre ?? 'Sin área'),
                         'Sistema' => mb_strtoupper($sistema?->abreviatura ?? 'Sin sistema'),
-                        'Dirigido' => mb_strtoupper($dirigido->opcion ?? 'Otros'),
+                        'Dirigido' => mb_strtoupper($dirigido->nombre ?? 'Otros'),
                         'Fecha_Inicio'   => $fechaInicio,
                         'Fecha_Cierre'   => $fechaCierre,
                         'Fecha_Creacion' => $curso->fecha_creacion ? Carbon::parse($curso->fecha_creacion)->format('d/m/Y H:i:s') : null,
@@ -4033,7 +4033,7 @@ class CapacitacionController extends Controller
                         'Codigo' => $curso->codigo_curso,
                         'Nombre' => mb_strtoupper($curso->nombre),
                         'Area' => mb_strtoupper($area->nombre ?? 'Sin área'),
-                        'Dirigido' => mb_strtoupper($dirigido->opcion ?? 'Otros'),
+                        'Dirigido' => mb_strtoupper($dirigido->nombre ?? 'Otros'),
                         'Completado' => $completado,
                         'Fecha_Inicio'   => $fechaInicio,
                         'Fecha_Fin'      => $fechaFin,
@@ -5941,7 +5941,7 @@ class CapacitacionController extends Controller
                         'Nombre_Personal' => mb_strtoupper($this->obtenerValorColumna($firma, ['NOMBRES'])),
                         'DNI_Personal'    => $dni,
                         'Cargo_Personal'  => mb_strtoupper($this->obtenerValorColumna($firma, ['CARGO'])),
-                        'Firma_Personal'  => FirmaService::toBase64($this->obtenerValorColumna($firma, ['RUTA_FIRMA'])),
+                        'Firma_Personal'  => FirmaService::toUrl($this->obtenerValorColumna($firma, ['RUTA_FIRMA'])),
                     ];
                 })
                 ->sortBy('Nombre_Personal', SORT_NATURAL | SORT_FLAG_CASE)
@@ -5955,7 +5955,7 @@ class CapacitacionController extends Controller
                 'Nombre_Curso'       => mb_strtoupper($nombreCurso),
                 'Nombre_Responsable' => mb_strtoupper($this->obtenerValorColumna($firmaResponsable, ['NOMBRES'])),
                 'Cargo_Responsable'  => mb_strtoupper($this->obtenerValorColumna($firmaResponsable, ['CARGO'])),
-                'Firma_Responsable'  => FirmaService::toBase64($this->obtenerValorColumna($firmaResponsable, ['RUTA_FIRMA'])),
+                'Firma_Responsable'  => FirmaService::toUrl($this->obtenerValorColumna($firmaResponsable, ['RUTA_FIRMA'])),
                 'Personal'           => $personal,
                 'Tipo_Curso'         => $this->mapearCategoriaCurso($cursoLocal?->categoria, $curso->course_id),
                 'Total_Aprobados'    => count($personal),
@@ -6081,7 +6081,10 @@ class CapacitacionController extends Controller
                 ->pluck('nombre', 'codigo');
 
             $cursos = Cursos::with([
-                'programaciones' => fn($q) => $q->where('habilitado', 1),
+                'programaciones' => function ($q) use ($anio) {
+                    $q->where('habilitado', 1)
+                        ->whereYear('fecha_inicio', $anio);
+                },
             ])
                 ->where('habilitado', 1)
                 ->where('tipo_curso', 5)
@@ -6095,6 +6098,11 @@ class CapacitacionController extends Controller
                 $cursosData = [];
 
                 foreach ($cursos->get($sistemaId, collect()) as $curso) {
+
+                    if ($curso->programaciones->isEmpty()) {
+                        continue;
+                    }
+
                     $programacionesData = [];
 
                     foreach ($curso->programaciones as $prog) {
@@ -6118,12 +6126,16 @@ class CapacitacionController extends Controller
                     };
 
                     $cursosData[] = [
-                        'Nombre'       => strtoupper($curso->nombre),
-                        'Dirigido_a'   => $dirigidoTexto,
-                        'Area_Resp'    => strtoupper($areasResp->get($curso->area) ?? ''),
-                        'Tiempo_Horas' => '1',
+                        'Nombre'         => strtoupper($curso->nombre),
+                        'Dirigido_a'     => $dirigidoTexto,
+                        'Area_Resp'      => strtoupper($areasResp->get($curso->area) ?? ''),
+                        'Tiempo_Horas'   => '1',
                         'Programaciones' => $programacionesData,
                     ];
+                }
+
+                if (empty($cursosData)) {
+                    continue;
                 }
 
                 $sistemasData[] = [
@@ -6160,7 +6172,7 @@ class CapacitacionController extends Controller
 
             $dirigidos = DB::table('sw_cursos_dirigido')
                 ->where('habilitado', 1)
-                ->pluck('opcion', 'codigo')
+                ->pluck('nombre', 'codigo')
                 ->toArray();
 
             $cursosCliente = DB::table('sw_cursos')

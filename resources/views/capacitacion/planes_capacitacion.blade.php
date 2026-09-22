@@ -431,35 +431,35 @@
                                     <i class="ti ti-filter text-sm"></i>
                                     <span class="font-medium">Filtrar:</span>
                                 </div>
-                                <select x-show="selectedAbreviatura !== 'PCA'" x-model="filtroSistema" :disabled="loadingCursos"
+                                <select x-show="selectedAbreviatura !== 'PCA'" x-model="filtroSistema" :disabled="loadingCursos" @change="paginaActual = 1"
                                     class="min-w-[180px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
                                     <option value="" x-text="loadingCursos ? 'Cargando sistemas...' : 'Todos los sistemas'"></option>
                                     <template x-for="s in sistemasUnicos" :key="s">
                                         <option :value="s" x-text="s"></option>
                                     </template>
                                 </select>
-                                <select x-model="filtroArea" :disabled="loadingCursos"
+                                <select x-model="filtroArea" :disabled="loadingCursos" @change="paginaActual = 1"
                                     class="min-w-[230px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
                                     <option value="" x-text="loadingCursos ? 'Cargando áreas...' : 'Todas las áreas'"></option>
                                     <template x-for="a in areasUnicas" :key="a">
                                         <option :value="a" x-text="a"></option>
                                     </template>
                                 </select>
-                                <select x-show="selectedAbreviatura === 'PCA'" x-model="filtroCliente" :disabled="loadingCursos"
+                                <select x-show="selectedAbreviatura === 'PCA'" x-model="filtroCliente" :disabled="loadingCursos" @change="paginaActual = 1"
                                     class="min-w-[180px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
                                     <option value="" x-text="loadingCursos ? 'Cargando clientes...' : 'Todos los clientes'"></option>
                                     <template x-for="c in clientesUnicos" :key="c">
                                         <option :value="c" x-text="c"></option>
                                     </template>
                                 </select>
-                                <select x-model="filtroMes" :disabled="loadingCursos"
+                                <select x-model="filtroMes" :disabled="loadingCursos" @change="paginaActual = 1"
                                     class="min-w-[140px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
                                     <option value="" x-text="loadingCursos ? 'Cargando meses...' : 'Todos los meses'"></option>
                                     <template x-for="m in mesesUnicos" :key="m.valor">
                                         <option :value="m.valor" x-text="m.label"></option>
                                     </template>
                                 </select>
-                                <select x-model="filtroAnio" :disabled="loadingCursos"
+                                <select x-model="filtroAnio" :disabled="loadingCursos" @change="paginaActual = 1"
                                     class="min-w-[120px] h-8 px-2.5 text-xs bg-white border border-default-200 rounded-lg text-default-700 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait">
                                     <option value="" x-text="loadingCursos ? 'Cargando años...' : 'Todos los años'"></option>
                                     <template x-for="a in aniosUnicos" :key="a">
@@ -499,25 +499,25 @@
                                                 <th x-show="selectedAbreviatura !== 'PCA'" class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Sistema</th>
                                                 <th class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Área</th>
                                                 <th class="px-4 py-3 text-left font-semibold text-default-700 text-xs uppercase tracking-wider">Dirigido a</th>
-                                                <th class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Inicio</th>
-                                                <th class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Cierre</th>
+                                                <th x-show="hayVigentes" class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Inicio</th>
+                                                <th x-show="hayVigentes" class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Cierre</th>
                                                 <th class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Vigente</th>
                                                 <th class="px-4 py-3 text-center font-semibold text-default-700 text-xs uppercase tracking-wider">Creación</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white">
-                                            <template x-for="(curso, i) in cursosFiltrados" :key="i">
+                                            <template x-for="(curso, i) in cursosPaginados" :key="i">
                                                 <tr class="border-b border-default-100 transition-colors"
                                                     :class="i % 2 === 1 ? 'bg-default-50/30' : ''">
-                                                    <td class="px-4 py-2.5 text-center text-default-400 text-xs font-mono" x-text="i + 1"></td>
+                                                    <td class="px-4 py-2.5 text-center text-default-400 text-xs font-mono" x-text="(paginaClamp - 1) * cursosPorPagina + i + 1"></td>
                                                     <td class="px-4 py-2.5 text-default-800 font-medium text-sm" x-text="curso.Codigo"></td>
                                                     <td class="px-4 py-2.5 text-default-800 font-medium text-sm" x-text="curso.Nombre"></td>
                                                     <td x-show="selectedAbreviatura === 'PCA'" class="px-4 py-2.5 text-default-600 text-sm font-semibold" x-text="curso.Cliente"></td>
                                                     <td x-show="selectedAbreviatura !== 'PCA'" class="px-4 py-2.5 text-default-600 text-sm" x-text="curso.Sistema"></td>
                                                     <td class="px-4 py-2.5 text-default-600 text-sm" x-text="curso.Area"></td>
                                                     <td class="px-4 py-2.5 text-default-600 text-sm" x-text="curso.Dirigido"></td>
-                                                    <td class="px-4 py-2.5 text-default-600 text-sm text-center whitespace-nowrap" x-text="curso.Fecha_Inicio ?? 'Sin fecha'"></td>
-                                                    <td class="px-4 py-2.5 text-default-600 text-sm text-center whitespace-nowrap" x-text="curso.Fecha_Cierre ?? 'Sin fecha'"></td>
+                                                    <td x-show="curso.Vigente" class="px-4 py-2.5 text-default-600 text-sm text-center whitespace-nowrap" x-text="curso.Fecha_Inicio ?? 'Sin fecha'"></td>
+                                                    <td x-show="curso.Vigente" class="px-4 py-2.5 text-default-600 text-sm text-center whitespace-nowrap" x-text="curso.Fecha_Cierre ?? 'Sin fecha'"></td>
                                                     <td class="px-4 py-2.5 text-center">
                                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
                                                             :class="curso.Vigente ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
@@ -531,6 +531,33 @@
                                         </tbody>
                                     </table>
                                 </template>
+                            </div>
+
+                            {{-- Paginación --}}
+                            <div x-show="cursosFiltrados.length > 0"
+                                class="px-5 py-3 border-t border-default-200 bg-default-50/50 flex items-center justify-between gap-3 flex-wrap">
+                                <div class="flex items-center gap-3 text-xs text-default-500">
+                                    <span>
+                                        Mostrando <span class="font-semibold text-default-700" x-text="cursosPaginados.length"></span> de
+                                        <span class="font-semibold text-default-700" x-text="cursosFiltrados.length"></span> curso(s)
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" @click="irAPagina(paginaActual - 1)" :disabled="paginaClamp <= 1"
+                                        class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-default-200 bg-white text-default-600 text-xs font-semibold hover:bg-default-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">
+                                        <i class="ti ti-chevron-left text-sm"></i>
+                                    </button>
+                                    <template x-for="n in paginasVisibles" :key="n">
+                                        <button type="button" @click="irAPagina(n)"
+                                            class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                            :class="n === paginaClamp ? 'bg-primary text-white shadow-sm' : 'bg-white border border-default-200 text-default-600 hover:bg-default-100'"
+                                            x-text="n"></button>
+                                    </template>
+                                    <button type="button" @click="irAPagina(paginaActual + 1)" :disabled="paginaClamp >= totalPaginas"
+                                        class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-default-200 bg-white text-default-600 text-xs font-semibold hover:bg-default-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">
+                                        <i class="ti ti-chevron-right text-sm"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </template>

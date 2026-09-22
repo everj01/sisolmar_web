@@ -4,19 +4,23 @@ namespace App\Services;
 
 class FirmaService
 {
-    public static function toBase64(?string $rutaFirma): ?string
+    public static function toUrl(?string $rutaFirma): ?string
     {
         if (empty($rutaFirma)) {
             return null;
         }
 
-        $rutaUNC = preg_replace('/^file:/', '', $rutaFirma);
+        if (str_starts_with($rutaFirma, 'http')) {
+            return $rutaFirma;
+        }
 
-        if (!file_exists($rutaUNC)) {
+        $rutaNormalizada = str_replace(['\\', '/'], '/', $rutaFirma);
+        $nombreArchivo = basename($rutaNormalizada);
+
+        if ($nombreArchivo === '') {
             return null;
         }
 
-        $contenido = file_get_contents($rutaUNC);
-        return 'data:image/jpeg;base64,' . base64_encode($contenido);
+        return 'http://190.116.178.163/Biblioteca_Grafica/FIRMAS/PERSONAL/' . $nombreArchivo;
     }
 }
