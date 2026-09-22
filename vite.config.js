@@ -15,6 +15,8 @@ export default defineConfig({
         commonjsOptions: {
             include: [/node_modules/],
             transformMixedEsModules: true,
+            requireReturnsDefault: 'auto',
+            defaultIsModuleExports: true,
         },
     },
     optimizeDeps: {
@@ -27,7 +29,23 @@ export default defineConfig({
             'quill',
             'jsvectormap',
             'glightbox',
+            'jspdf',
+            'jspdf-autotable',
+            'html2canvas',
+            'exceljs',
+            'file-saver',
+            'lodash',
+            'moment',
+            'pako',
+            'preline',
+            'imask',
+            'flatpickr',
+            'apexcharts',
+            'vanilla-datatables',
+            'glightbox',
+            'simplebar',
         ],
+        force: true,
     },
     plugins: [
         laravel({

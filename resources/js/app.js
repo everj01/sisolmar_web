@@ -1,14 +1,6 @@
-/**
- * Theme: Taildash - Tailwind CSS 3 Admin Layout & UI Kit Template
- * Author: MyraStudio
- * Module/App: App js
- */
-
-// import _ from 'lodash/lodash';
-
 import "dropzone/dist/dropzone-min";
 
-import "preline";
+import "preline/dist/index.js";
 import "jquery";
 import "simplebar";
 import "boxicons/css/boxicons.min.css";
@@ -223,7 +215,6 @@ class App {
     }
 }
 
-// Esperar a que el DOM esté listo antes de inicializar
 document.addEventListener("DOMContentLoaded", function () {
     new App().init();
 });

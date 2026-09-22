@@ -365,18 +365,6 @@
             </div>
 
             <div class="card-body">
-                {{-- <div 
-                x-data="{ 
-                    soloEliminados: false, 
-                    filtroArea: '', 
-                    filtroTipoCurso: '',
-                    tipos: window.opcionesTipoCurso || [] 
-                }" 
-                x-init="$watch('tipos', val => console.log('⚡ Alpine: Types loaded:', val)); console.log('⚡ Alpine: Init types:', tipos)"
-                @tipo-curso-loaded.window="tipos = $event.detail; console.log('⚡ Alpine: Event caught, types updated')"
-                @update-filtro-area="filtroArea = $event.detail; console.log('⚡ Alpine: Area Updated:', $event.detail); listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso)"
-                class="flex flex-wrap items-center justify-between gap-6"
-            > --}}
                 <div x-data="{
                     soloEliminados: false,
                     filtroArea: '',
