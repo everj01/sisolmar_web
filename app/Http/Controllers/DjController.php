@@ -735,7 +735,7 @@ class DjController extends Controller
 
             $familiares = DB::select(
                 "SELECT *, 
-                (ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ', ' + ISNULL(NOMB_1,'') + ' ' + ISNULL(NOMB_2,'')) AS Nombres,
+                (ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ' ' + ISNULL(NOMB_1,'') + ' ' + ISNULL(NOMB_2,'')) AS Nombres,
                 CONVERT(CHAR(10), FECH_NACI, 105) AS FECH_NACI,
                 FECH_NACI AS FECH_NACI2
                 FROM {$familiaresTable}
@@ -1272,7 +1272,7 @@ class DjController extends Controller
             $familiares = DB::select(
                 "SELECT
                 TIPO_RELA,
-                ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ', ' +
+                ISNULL(APEL_1,'') + ' ' + ISNULL(APEL_2,'') + ' ' +
                 ISNULL(NOMB_1,'') + ' ' + ISNULL(NOMB_2,'') AS Nombres,
                 CONVERT(CHAR(10), FECH_NACI, 103) AS FECH_NACI
              FROM si_solm.dbo.DERECHO_HABIENTE
