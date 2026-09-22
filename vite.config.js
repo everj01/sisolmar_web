@@ -86,9 +86,9 @@ export default defineConfig({
                 "resources/js/functions/reportes.js",
                 "resources/js/functions/notifications.js",
 
-                "resources/js/functions/cargo_.js",
                 "resources/js/functions/legajo_.js",
                 "resources/js/functions/gestion_dj.js",
+                "resources/js/functions/nueva_dj.js",
 
                 /* CAPACITACION */
                 "resources/js/functions/capacitacion/gestion_cursos.js",
