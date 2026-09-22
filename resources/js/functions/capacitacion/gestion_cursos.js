@@ -190,22 +190,17 @@ function actualizarLista() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await listarCursos();
+    window.initTablaCursos([]);
     await Promise.all([
+        listarCursos(),
         listarTipoCurso(),
-        listarAreas()
+        listarAreas(),
     ]);
 });
 
 window.cursosDataAll = [];
-let cursosLoadPromise = (async () => {
-    try {
-        const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`);
-        window.cursosDataAll = res.data || [];
-    } catch (err) {
-        console.error("Error al obtener cursos", err);
-    }
-})();
+let cursosLoadPromise = null;
+const TIMEOUT_CURSOS = 30000;
 
 function mostrarLoader() {
     const loader = document.getElementById('tblCursosLoader');
@@ -217,6 +212,59 @@ function ocultarLoader() {
     if (loader) loader.classList.add('hidden');
 }
 
+async function cargarCursosData() {
+    if (cursosLoadPromise) return cursosLoadPromise;
+
+    mostrarLoader();
+    cursosLoadPromise = (async () => {
+        window.cursosDataAll = [];
+        try {
+            const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`, {
+                timeout: TIMEOUT_CURSOS,
+            });
+            window.cursosDataAll = res.data || [];
+        } catch (err) {
+            console.error("Error al obtener cursos", err);
+            window.cursosDataAll = [];
+            throw err;
+        } finally {
+            ocultarLoader();
+        }
+    })();
+
+    try {
+        await cursosLoadPromise;
+    } catch (err) {
+        cursosLoadPromise = null;
+        const reintentar = () => {
+            cursosLoadPromise = null;
+            const f = window._filtrosCursos || {};
+            window.listarCursos(
+                f.habilitado ?? 1,
+                f.area ?? "",
+                f.tipoCurso ?? "",
+                f.categoria ?? "",
+                f.fechaDesde ?? "",
+                f.fechaHasta ?? "",
+            );
+        };
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "No se pudieron cargar los cursos",
+            showCancelButton: true,
+            confirmButtonText: "Reintentar",
+            cancelButtonText: "Cerrar",
+        }).then((result) => {
+            if (result.isConfirmed) reintentar();
+        });
+    } finally {
+        ocultarLoader();
+    }
+
+    return window.cursosDataAll;
+}
+
 window.listarCursos = async function (
     habilitado = 1,
     area = "",
@@ -225,22 +273,19 @@ window.listarCursos = async function (
     fechaDesde = "",
     fechaHasta = "",
 ) {
-    mostrarLoader();
+    window._filtrosCursos = { habilitado, area, tipoCurso, categoria, fechaDesde, fechaHasta };
 
-    try {
-        await cursosLoadPromise;
-        await aplicarFiltros(
-            habilitado,
-            area,
-            tipoCurso,
-            categoria,
-            fechaDesde,
-            fechaHasta,
-        );
-    } catch (err) {
-        console.error("Error al obtener cursos", err);
-        Swal.fire("Error", "No se pudieron cargar los cursos", "error");
-    }
+    if (!window.tablaCursos) window.initTablaCursos([]);
+
+    await cargarCursosData();
+    await aplicarFiltros(
+        habilitado,
+        area,
+        tipoCurso,
+        categoria,
+        fechaDesde,
+        fechaHasta,
+    );
 };
 
 window.recargarCursos = async function (
@@ -251,15 +296,7 @@ window.recargarCursos = async function (
     fechaDesde = "",
     fechaHasta = "",
 ) {
-    window.cursosDataAll = [];
-    cursosLoadPromise = (async () => {
-        try {
-            const res = await axios.get(`${VITE_URL_APP}/api/get-cursos/1`);
-            window.cursosDataAll = res.data || [];
-        } catch (err) {
-            console.error("Error al obtener cursos", err);
-        }
-    })();
+    cursosLoadPromise = null;
     await window.listarCursos(
         habilitado,
         area,
@@ -273,15 +310,15 @@ window.recargarCursos = async function (
 async function aplicarFiltros(habilitado = 1, area = '', tipoCurso = '', categoria = '', fechaDesde = '', fechaHasta = '') {
     const data = window.cursosDataAll || [];
 
-    if (!window.tablaCursos) {
-        window.initTablaCursos(data);
-        return;
-    }
+    if (!window.tablaCursos) window.initTablaCursos([]);
+    if (!window.tablaCursos) return;
 
     mostrarLoader();
-
-    await window.tablaCursos.setData(data);
-    ocultarLoader();
+    try {
+        await window.tablaCursos.setData(data);
+    } finally {
+        ocultarLoader();
+    }
 
     const filters = [];
 
@@ -465,20 +502,21 @@ function generarBotonesAccion(curso) {
     return html;
 }
 
-window.initTablaCursos = function (data) {
+window.initTablaCursos = function (data = []) {
     if (!document.getElementById('tblCursos')) return;
+
+    if (window.tablaCursos) {
+        window.tablaCursos.setData(data);
+        return;
+    }
 
     const loader = document.getElementById('tblCursosLoader');
     if (loader) loader.classList.remove('hidden');
 
-    if (window.tablaCursos) {
-        window.tablaCursos.destroy();
-        window.tablaCursos = null;
-    }
-
     window.tablaCursos = new Tabulator("#tblCursos", {
         data: data,
         layout: "fitColumns",
+        placeholder: "No hay cursos disponibles...",
         pagination: "local",
         paginationSize: 5,
         paginationSizeSelector: [10, 15, 20, 25],
