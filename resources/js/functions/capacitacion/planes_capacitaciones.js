@@ -434,7 +434,7 @@ export default document.addEventListener("alpine:init", () => {
 
             try {
                 const { data } = await axios.get(
-                    `/api/obtener-cursos-cliente/${codLegacy}`,
+                    `${VITE_URL_APP}/api/obtener-cursos-cliente/${codLegacy}`,
                 );
                 const cursos = data.Cursos || [];
                 const cliente = this.clientesPCA.find(
@@ -612,7 +612,7 @@ export default document.addEventListener("alpine:init", () => {
             this.loadingCursos = true;
             this.cursos = [];
             try {
-                const { data } = await axios.get(`/api/obtener-cursos-por-plan/${plan.Codigo}`);
+                const { data } = await axios.get(`${VITE_URL_APP}/api/obtener-cursos-por-plan/${plan.Codigo}`);
                 this.cursos = data.Cursos || [];
             } catch (e) {
                 console.error(e);

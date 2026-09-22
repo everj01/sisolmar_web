@@ -4,7 +4,7 @@ import { saveAs } from "file-saver";
 
 async function _cargarLogoExcel(workbook) {
     try {
-        const response = await fetch("/images/logo_sol.png");
+        const response = await fetch("/sisolmar/images/logo_sol.png");
         const arrayBuffer = await response.arrayBuffer();
         return workbook.addImage({ buffer: arrayBuffer, extension: "png" });
     } catch (e) {
@@ -2484,7 +2484,7 @@ export default document.addEventListener("alpine:init", () => {
             this.savingEdit = true;
             try {
                 const response = await axios.put(
-                    `/api/capacitacion/actualizar-reporte/${this.editingId}`,
+                    `${VITE_URL_APP}/api/capacitacion/actualizar-reporte/${this.editingId}`,
                     {
                         nombre_archivo: this.editForm.nombre_archivo,
                         descripcion: this.editForm.descripcion,
@@ -2538,7 +2538,7 @@ export default document.addEventListener("alpine:init", () => {
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         const response = await axios.patch(
-                            `/api/capacitacion/actualizar-estado-reporte/${id}`,
+                            `${VITE_URL_APP}/api/capacitacion/actualizar-estado-reporte/${id}`,
                             {
                                 habilitado: habilitado,
                             },
@@ -2581,7 +2581,7 @@ export default document.addEventListener("alpine:init", () => {
                 if (!result.isConfirmed) return;
 
                 const response = await axios.delete(
-                    `/api/capacitacion/eliminar-reporte/${id}`,
+                    `${VITE_URL_APP}/api/capacitacion/eliminar-reporte/${id}`,
                 );
 
                 if (response.data.success) {
@@ -2613,7 +2613,7 @@ export default document.addEventListener("alpine:init", () => {
             });
             try {
                 const response = await axios.get(
-                    `/api/capacitacion/descargar-reporte/${id}/${tipo}`,
+                    `${VITE_URL_APP}/api/capacitacion/descargar-reporte/${id}/${tipo}`,
                     {
                         responseType: "blob",
                     },
@@ -2908,7 +2908,7 @@ export default document.addEventListener("alpine:init", () => {
                 let areas = [];
                 if (this.selectedSistema) {
                     const { data } = await axios.get(
-                        `/api/obtener-areas-por-sistema/${this.selectedSistema}`,
+                        `${VITE_URL_APP}/api/obtener-areas-por-sistema/${this.selectedSistema}`,
                     );
                     if (data.success) {
                         areas = (data.areas || []).map((a) => ({
