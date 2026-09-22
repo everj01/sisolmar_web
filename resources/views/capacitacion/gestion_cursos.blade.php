@@ -384,11 +384,10 @@
                     filtroCategoria: '',
                     filtroFechaDesde: '',
                     filtroFechaHasta: '',
-                    tipos: []
+                    tipos: [],
+                    areas: []
                 }" x-init="$nextTick(() => listarCursos(1, '', '', '', '', ''))" @tipo-curso-loaded.window="tipos = $event.detail"
-                    @update-filtro-area="filtroArea = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
-                    @update-filtro-tipo-curso="filtroTipoCurso = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
-                    @update-filtro-categoria="filtroCategoria = $event.detail; listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
+                    @areas-loaded.window="areas = $event.detail"
                     class="flex flex-wrap items-center justify-between gap-6">
                     <div class="flex items-center">
                         {{-- <input 
@@ -406,202 +405,32 @@
                     </div>
 
                     <div class="flex flex-wrap items-end gap-4 ml-auto flex-1 justify-end">
-                        <div class="flex flex-col min-w-[200px]" x-data="{
-                            open: false,
-                            search: '',
-                            selected: null,
-                            options: [],
-                            get filteredOptions() {
-                                if (this.search === '') return this.options;
-                                return this.options.filter(opt => opt.descripcion.toLowerCase().includes(this.search.toLowerCase()))
-                                    .sort((a, b) => {
-                                        const aStarts = a.descripcion.toLowerCase().startsWith(this.search.toLowerCase());
-                                        const bStarts = b.descripcion.toLowerCase().startsWith(this.search.toLowerCase());
-                                        if (aStarts && !bStarts) return -1;
-                                        if (!aStarts && bStarts) return 1;
-                                        return 0;
-                                    });
-                            },
-                            selectOption(option) {
-                                this.selected = option;
-                                this.open = false;
-                                this.search = '';
-                                this.$dispatch('update-filtro-tipo-curso', option ? option.codigo : '');
-                            },
-                            init() {
-                                this._closeHandler = (e) => {
-                                    if (!this.$el.contains(e.target)) {
-                                        this.closeDropdown();
-                                    }
-                                };
-                            }
-                        }" x-init="$watch('tipos', val => options = val)"
-                            @tipo-curso-loaded.window="options = $event.detail">
+                        <div class="flex flex-col min-w-[200px]">
                             <label class="text-sm font-medium text-gray-700 mb-1">
                                 Plan de Capacitación
                             </label>
-
-                            <div class="relative">
-                                <button type="button" @click="open = !open" @click.away="open = false"
-                                    class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-left text-sm cursor-default focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 overflow-hidden">
-                                    <span class="block truncate"
-                                        x-text="selected ? selected.descripcion : '-- Todos --'"></span>
-                                    <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                        <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fill-rule="evenodd"
-                                                d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </span>
-                                </button>
-
-                                <div x-show="open" x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="transform opacity-0 scale-95"
-                                    x-transition:enter-end="transform opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="transform opacity-100 scale-100"
-                                    x-transition:leave-end="transform opacity-0 scale-95"
-                                    class="absolute z-50 w-full min-w-[280px] mt-1 bg-white border border-gray-300 rounded-md shadow-lg flex flex-col overflow-hidden"
-                                    style="max-height: 320px; display: none;">
-
-                                    <div class="p-2 border-b border-gray-100 bg-gray-50 flex-shrink-0">
-                                        <input type="text" x-model="search" placeholder="Buscar..."
-                                            class="w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5"
-                                            @click.stop>
-                                    </div>
-
-                                    <div @click="selectOption(null)"
-                                        class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-indigo-50 text-sm border-b border-gray-100 flex-shrink-0">
-                                        <span class="block font-bold text-gray-500">-- Todos --</span>
-                                    </div>
-
-                                    <div class="overflow-y-auto custom-scrollbar flex-1">
-                                        <template x-for="option in filteredOptions" :key="option.codigo">
-                                            <div @click="selectOption(option)"
-                                                class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-indigo-50 text-sm"
-                                                :class="{
-                                                    'bg-indigo-50 font-semibold text-indigo-900': selected && selected
-                                                        .codigo === option.codigo
-                                                }">
-                                                <span class="block" x-text="option.descripcion"></span>
-
-                                                <span x-show="selected && selected.codigo === option.codigo"
-                                                    class="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600">
-                                                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fill-rule="evenodd"
-                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                            clip-rule="evenodd" />
-                                                    </svg>
-                                                </span>
-                                            </div>
-                                        </template>
-                                    </div>
-                                    <div x-show="filteredOptions.length === 0"
-                                        class="py-2 px-3 text-sm text-gray-500 text-center flex-shrink-0">
-                                        No se encontraron resultados
-                                    </div>
-                                </div>
-                            </div>
+                            <select x-model="filtroTipoCurso"
+                                @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
+                                class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Todos --</option>
+                                <template x-for="tipo in tipos" :key="tipo.codigo">
+                                    <option :value="tipo.codigo" x-text="tipo.descripcion"></option>
+                                </template>
+                            </select>
                         </div>
 
-                        <div class="flex flex-col min-w-[200px]" x-data="{
-                            open: false,
-                            search: '',
-                            selected: null,
-                            options: window.opcionesArea || [],
-                            get filteredOptions() {
-                                if (this.search === '') return this.options;
-                                return this.options.filter(opt => opt.descripcion.toLowerCase().includes(this.search.toLowerCase()))
-                                    .sort((a, b) => {
-                                        const aStarts = a.descripcion.toLowerCase().startsWith(this.search.toLowerCase());
-                                        const bStarts = b.descripcion.toLowerCase().startsWith(this.search.toLowerCase());
-                                        if (aStarts && !bStarts) return -1;
-                                        if (!aStarts && bStarts) return 1;
-                                        return 0;
-                                    });
-                            },
-                            selectOption(option) {
-                                this.selected = option;
-                                this.open = false;
-                                this.search = '';
-                                this.$dispatch('update-filtro-area', option ? option.codigo : ''); // Send Code or empty
-                            }
-                        }" @update-filtro-area="filtroArea = $event.detail"
-                            @areas-loaded.window="options = $event.detail">
+                        <div class="flex flex-col min-w-[200px]">
                             <label class="text-sm font-medium text-gray-700 mb-1">
                                 Sistema de Gestión
                             </label>
-
-                            <div class="relative">
-                                <!-- Botón principal del Select -->
-                                <button type="button" @click="open = !open" @click.away="open = false"
-                                    class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-left text-sm cursor-default focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 overflow-hidden">
-                                    <span class="block truncate"
-                                        x-text="selected ? selected.descripcion : '-- Todas --'"></span>
-                                    <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                        <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fill-rule="evenodd"
-                                                d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </span>
-                                </button>
-
-                                <!-- Dropdown -->
-                                <div x-show="open" x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="transform opacity-0 scale-95"
-                                    x-transition:enter-end="transform opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="transform opacity-100 scale-100"
-                                    x-transition:leave-end="transform opacity-0 scale-95"
-                                    class="absolute z-50 w-full min-w-[320px] mt-1 bg-white border border-gray-300 rounded-md shadow-lg flex flex-col overflow-hidden"
-                                    style="max-height: 320px; display: none;">
-
-                                    <!-- Search Input inside Dropdown -->
-                                    <div class="p-2 border-b border-gray-100 bg-gray-50 flex-shrink-0">
-                                        <input type="text" x-model="search" placeholder="Buscar..."
-                                            class="w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5"
-                                            @click.stop>
-                                    </div>
-
-                                    <!-- Opcion "Todas" por defecto -->
-                                    <div @click="selectOption(null)"
-                                        class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-indigo-50 text-sm border-b border-gray-100 flex-shrink-0">
-                                        <span class="block truncate font-bold text-gray-500">-- Todas --</span>
-                                    </div>
-
-                                    <!-- Lista de Opciones Filtradas -->
-                                    <div class="overflow-y-auto custom-scrollbar flex-1">
-                                        <template x-for="option in filteredOptions" :key="option.codigo">
-                                            <div @click="selectOption(option)"
-                                                class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-indigo-50 text-sm"
-                                                :class="{
-                                                    'bg-indigo-50 font-semibold text-indigo-900': selected && selected
-                                                        .codigo === option.codigo
-                                                }">
-                                                <span class="block" x-text="option.descripcion"></span>
-
-                                                <span x-show="selected && selected.codigo === option.codigo"
-                                                    class="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600">
-                                                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fill-rule="evenodd"
-                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                            clip-rule="evenodd" />
-                                                    </svg>
-                                                </span>
-                                            </div>
-                                        </template>
-                                    </div>
-                                    <div x-show="filteredOptions.length === 0"
-                                        class="py-2 px-3 text-sm text-gray-500 text-center flex-shrink-0">
-                                        No se encontraron resultados
-                                    </div>
-                                </div>
-                            </div>
+                            <select x-model="filtroArea"
+                                @change="listarCursos(soloEliminados ? 0 : 1, filtroArea, filtroTipoCurso, filtroCategoria, filtroFechaDesde, filtroFechaHasta)"
+                                class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Todas --</option>
+                                <template x-for="area in areas" :key="area.codigo">
+                                    <option :value="area.codigo" x-text="area.descripcion"></option>
+                                </template>
+                            </select>
                         </div>
 
                         <div class="flex flex-col">
