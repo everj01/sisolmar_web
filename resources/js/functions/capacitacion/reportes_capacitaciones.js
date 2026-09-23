@@ -81,43 +81,40 @@ async function _cargarFirma(url) {
     try {
         const respuesta = await fetch(url);
         if (!respuesta.ok) return null;
-        const buffer = await respuesta.arrayBuffer();
+        const blob = await respuesta.blob();
 
-        // Dimensiones sin canvas: el blob viene del mismo origen (proxy),
-        // por lo que createImageBitmap no queda "tainted".
-        let width = 0;
-        let height = 0;
-        if (typeof createImageBitmap === "function") {
-            try {
-                const bmp = await createImageBitmap(new Blob([buffer]));
-                width = bmp.width;
-                height = bmp.height;
-                bmp.close && bmp.close();
-            } catch (e) {
-                width = 0;
-                height = 0;
-            }
-        }
-        // Fallback de dimensiones (leer naturalWidth/Height no contamina el canvas)
-        if (!width || !height) {
-            const img = await _cargarImagen(url);
-            if (!img) return null;
-            width = img.naturalWidth;
-            height = img.naturalHeight;
-        }
+        // Forzar decodificación vía <img> + canvas, más tolerante que createImageBitmap
+        const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
 
-        const tipo = (respuesta.headers.get("content-type") || "").toLowerCase();
-        const bytes = new Uint8Array(buffer);
-        // Magic bytes JPEG: FF D8 (más fiable que el content-type del servidor remoto)
-        const esJpeg =
-            bytes.length > 2 && bytes[0] === 0xff && bytes[1] === 0xd8;
-        const format = /jpeg|jpg/.test(tipo) || esJpeg ? "JPEG" : "PNG";
+        const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = dataUrl;
+        });
+
+        // Convertir SIEMPRE a PNG limpio vía canvas (normaliza cualquier formato raro)
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        const pngDataUrl = canvas.toDataURL("image/png");
+        const pngBytes = Uint8Array.from(atob(pngDataUrl.split(",")[1]), (c) =>
+            c.charCodeAt(0),
+        );
 
         return {
-            src: bytes,
-            format,
-            width,
-            height,
+            src: pngBytes,
+            format: "PNG",
+            width: img.naturalWidth,
+            height: img.naturalHeight,
         };
     } catch (e) {
         console.error("Error cargando firma:", e);
@@ -5366,7 +5363,7 @@ export default document.addEventListener("alpine:init", () => {
                 const proxyFirma = (u) =>
                     u &&
                     u.startsWith("http://190.116.178.163/Biblioteca_Grafica/")
-                        ? `${VITE_URL_APP}/api/reporte/proxy-imagen?url=${encodeURIComponent(u)}`
+                        ? `${VITE_URL_APP}/api/dj/reporte/proxy-imagen?url=${encodeURIComponent(u)}`
                         : u;
 
                 const firmaResponsable = await _cargarFirma(
