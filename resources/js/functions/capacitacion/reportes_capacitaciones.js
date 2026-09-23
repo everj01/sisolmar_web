@@ -81,9 +81,20 @@ async function _cargarFirma(url) {
     try {
         const respuesta = await fetch(url);
         if (!respuesta.ok) return null;
-        const blob = await respuesta.blob();
+        let buffer = await respuesta.arrayBuffer();
+        let bytes = new Uint8Array(buffer);
 
-        // Forzar decodificación vía <img> + canvas, más tolerante que createImageBitmap
+        // Buscar el marcador JPEG real (FF D8 FF) y descartar basura previa
+        const jpegStart = bytes.findIndex(
+            (b, i) =>
+                b === 0xff && bytes[i + 1] === 0xd8 && bytes[i + 2] === 0xff,
+        );
+        if (jpegStart > 0) {
+            bytes = bytes.slice(jpegStart);
+        }
+
+        const blob = new Blob([bytes], { type: "image/jpeg" });
+
         const dataUrl = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
@@ -98,7 +109,6 @@ async function _cargarFirma(url) {
             image.src = dataUrl;
         });
 
-        // Convertir SIEMPRE a PNG limpio vía canvas (normaliza cualquier formato raro)
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
