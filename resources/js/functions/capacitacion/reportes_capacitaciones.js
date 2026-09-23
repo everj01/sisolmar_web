@@ -77,13 +77,52 @@ function _imagenAPngDataUrl(img) {
 }
 
 async function _cargarFirma(url) {
-    const img = await _cargarImagen(url);
-    if (!img) return null;
-    return {
-        src: _imagenAPngDataUrl(img),
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-    };
+    if (!url) return null;
+    try {
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) return null;
+        const buffer = await respuesta.arrayBuffer();
+
+        // Dimensiones sin canvas: el blob viene del mismo origen (proxy),
+        // por lo que createImageBitmap no queda "tainted".
+        let width = 0;
+        let height = 0;
+        if (typeof createImageBitmap === "function") {
+            try {
+                const bmp = await createImageBitmap(new Blob([buffer]));
+                width = bmp.width;
+                height = bmp.height;
+                bmp.close && bmp.close();
+            } catch (e) {
+                width = 0;
+                height = 0;
+            }
+        }
+        // Fallback de dimensiones (leer naturalWidth/Height no contamina el canvas)
+        if (!width || !height) {
+            const img = await _cargarImagen(url);
+            if (!img) return null;
+            width = img.naturalWidth;
+            height = img.naturalHeight;
+        }
+
+        const tipo = (respuesta.headers.get("content-type") || "").toLowerCase();
+        const bytes = new Uint8Array(buffer);
+        // Magic bytes JPEG: FF D8 (más fiable que el content-type del servidor remoto)
+        const esJpeg =
+            bytes.length > 2 && bytes[0] === 0xff && bytes[1] === 0xd8;
+        const format = /jpeg|jpg/.test(tipo) || esJpeg ? "JPEG" : "PNG";
+
+        return {
+            src: bytes,
+            format,
+            width,
+            height,
+        };
+    } catch (e) {
+        console.error("Error cargando firma:", e);
+        return null;
+    }
 }
 
 async function _fetchSistemas() {
@@ -5322,8 +5361,16 @@ export default document.addEventListener("alpine:init", () => {
                     "/sisolmar/images/logo_sol.png",
                 );
 
+                // Proxy server-side: convierte la URL cross-origin de la firma
+                // en una URL del mismo origen para poder leer sus bytes en el JS.
+                const proxyFirma = (u) =>
+                    u &&
+                    u.startsWith("http://190.116.178.163/Biblioteca_Grafica/")
+                        ? `${VITE_URL_APP}/api/reporte/proxy-imagen?url=${encodeURIComponent(u)}`
+                        : u;
+
                 const firmaResponsable = await _cargarFirma(
-                    data.Firma_Responsable || "",
+                    proxyFirma(data.Firma_Responsable || ""),
                 );
                 console.log("firmaResponsable:", firmaResponsable);
                 const personalFirmas = {};
@@ -5331,7 +5378,7 @@ export default document.addEventListener("alpine:init", () => {
                     (data.Personal || []).map(async (p) => {
                         if (p.Firma_Personal) {
                             personalFirmas[p.DNI_Personal] =
-                                await _cargarFirma(p.Firma_Personal);
+                                await _cargarFirma(proxyFirma(p.Firma_Personal));
                         }
                     }),
                 );
@@ -5596,7 +5643,14 @@ export default document.addEventListener("alpine:init", () => {
                             ? cell.x + pad
                             : cell.x + (cell.width - w) / 2;
                     const y = cell.y + (cell.height - h) / 2;
-                    doc.addImage(firma.src, "PNG", x, y, w, h);
+                    doc.addImage(
+                        firma.src,
+                        firma.format || "PNG",
+                        x,
+                        y,
+                        w,
+                        h,
+                    );
                 }
 
                 const renderContenido = (doc, totalPaginas) => {
