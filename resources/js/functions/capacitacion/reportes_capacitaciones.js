@@ -5661,25 +5661,144 @@ export default document.addEventListener("alpine:init", () => {
                 }
 
                 const renderContenido = (doc, totalPaginas) => {
-                    let ultimaPaginaEncabezado = 0;
+                    // Estilos compactos para el REPORTE FORMATO
+                    const fontSize7 = 7.5;
+                    const ptToMm3 = 0.3528;
+                    const fillAzul = [167, 203, 240];
+                    const blockH = 70; // altura fija del bloque que se repite en cada hoja
 
-                    const onDidDrawPage = (tableData) => {
-                        if (!totalPaginas) return;
-                        if (tableData.pageNumber === ultimaPaginaEncabezado)
-                            return;
-                        ultimaPaginaEncabezado = tableData.pageNumber;
-                        dibujarEncabezadoPagina(
-                            doc,
-                            tableData.pageNumber,
-                            totalPaginas,
+                    let ultimaPaginaDibujo = 0;
+
+                    const dividirTexto = (texto, ancho) => {
+                        const partes = doc.splitTextToSize(
+                            String(texto ?? ""),
+                            Math.max(ancho, 5),
                         );
+                        return partes && partes.length ? partes : [""];
                     };
 
-                    const margenContenido = {
-                        top: 49,
-                        left: margenIzq,
-                        right: margenIzq,
-                        bottom: margenIzq,
+                    const dibujarCeldaTexto = (doc, x, y, w, h, contenido, opts = {}) => {
+                        const fs = opts.fontSize ?? fontSize7;
+                        const align = opts.align || "left";
+                        const pad = opts.pad != null ? opts.pad : 1;
+                        const ph = fs * ptToMm3 * 1.15;
+                        const lineas = Array.isArray(contenido)
+                            ? contenido
+                            : dividirTexto(contenido, w - pad * 2);
+                        doc.setDrawColor(0, 0, 0);
+                        doc.setLineWidth(0.2);
+                        if (opts.fill) {
+                            doc.setFillColor(...opts.fill);
+                            doc.rect(x, y, w, h, "FD");
+                        } else {
+                            doc.rect(x, y, w, h);
+                        }
+                        doc.setFontSize(fs);
+                        doc.setFont(undefined, opts.bold ? "bold" : "normal");
+                        const totalH = lineas.length * ph;
+                        let ty = y + (h - totalH) / 2 + ph * 0.8;
+                        lineas.forEach((linea) => {
+                            const anchoLinea = doc.getTextWidth(linea);
+                            const tx =
+                                align === "center"
+                                    ? x + (w - anchoLinea) / 2
+                                    : x + pad;
+                            doc.text(linea, tx, ty);
+                            ty += ph;
+                        });
+                        doc.setFont(undefined, "normal");
+                    };
+
+                    // Bloque de cabecera (DATOS DEL EMPLEADOR → Nº DE HORAS) que se
+                    // repite en cada hoja. Devuelve la Y final del bloque.
+                    const dibujarBloqueCabecera = (doc, y0) => {
+                        let y = y0;
+                        const x0 = margenIzq;
+
+                        // DATOS DEL EMPLEADOR
+                        dibujarCeldaTexto(doc, x0, y, 185, 5, "DATOS DEL EMPLEADOR", { align: "center", bold: true, fill: fillAzul });
+                        y += 5;
+                        dibujarCeldaTexto(doc, x0, y, 33, 7, "RAZÓN SOCIAL", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 27, 7, "RUC", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 60, y, 55, 7, "DOMICILIO (Dirección, distrito,\ndepartamento, provincia)", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 115, y, 35, 7, "ACTIVIDAD ECONÓMICA", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 150, y, 35, 7, "Nº DE TRABAJADORES EN EL\nCENTRO LABORAL", { align: "center", bold: true, fill: fillAzul });
+                        y += 7;
+                        dibujarCeldaTexto(doc, x0, y, 33, 7, "SOL SECURITY S.A.C.", { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 27, 7, "20445414833", { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 60, y, 55, 7, "Calle José Gálvez 334, Callao -\nProv. Const. Del Callao", { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 115, y, 35, 7, "SEGURIDAD PRIVADA\nY ELECTRÓNICA", { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 150, y, 35, 7, data.Total_Aprobados || "0", { align: "center" });
+                        y += 7;
+
+                        // MARCAR (X)
+                        dibujarCeldaTexto(doc, x0, y, 185, 5, "MARCAR (X)", { align: "center", bold: true, fill: fillAzul });
+                        y += 5;
+                        dibujarCeldaTexto(doc, x0, y, 33, 6, marcarTipo("INDUCCIÓN"), { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 27, 6, marcarTipo("CHARLA"), { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 60, y, 30, 6, marcarTipo("CAPACITACIÓN"), { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 90, y, 35, 6, marcarTipo("ENTRENAMIENTO"), { align: "center" });
+                        dibujarCeldaTexto(doc, x0 + 125, y, 60, 6, marcarTipo("SIMULACROS DE EMERGENCIA"), { align: "center" });
+                        y += 6;
+
+                        // Datos de capacitación y capacitador
+                        dibujarCeldaTexto(doc, x0, y, 33, 7, "TEMA:", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 152, 7, data.Nombre_Curso || "", { align: "left" });
+                        y += 7;
+                        dibujarCeldaTexto(doc, x0, y, 33, 6, "FECHA:", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 152, 6, data.Fecha_Reporte || "", { align: "left" });
+                        y += 6;
+                        dibujarCeldaTexto(doc, x0, y, 33, 15, "CAPACITADOR:", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 92, 15, data.Nombre_Responsable || "", { align: "left" });
+                        dibujarCeldaTexto(doc, x0 + 125, y, 25, 15, "FIRMA", { align: "center", bold: true, fill: fillAzul });
+                        dibujarFirmaEnCelda(doc, firmaResponsable, { x: x0 + 150, y, width: 35, height: 15 }, { pad: 0.8 });
+                        y += 15;
+                        dibujarCeldaTexto(doc, x0, y, 33, 6, "Nº DE HORAS:", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 33, y, 152, 6, "01", { align: "left" });
+                        y += 6;
+
+                        // Encabezado del listado
+                        dibujarCeldaTexto(doc, x0, y, 10, 6, "Nº", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 10, y, 75, 6, "APELLIDOS Y NOMBRES", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 85, y, 25, 6, "DNI", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 110, y, 45, 6, "CARGO", { align: "center", bold: true, fill: fillAzul });
+                        dibujarCeldaTexto(doc, x0 + 155, y, 30, 6, "FIRMA", { align: "center", bold: true, fill: fillAzul });
+                        y += 6;
+
+                        return y;
+                    };
+
+                    // Solo la hoja 1 lleva el encabezado principal (SOL SECURITY,
+                    // logo, código FAS-05, ...); las demás solo repiten el bloque.
+                    const onDidDrawPageListado = (tableData) => {
+                        if (!totalPaginas) return;
+                        if (tableData.pageNumber === ultimaPaginaDibujo)
+                            return;
+                        ultimaPaginaDibujo = tableData.pageNumber;
+                        if (tableData.pageNumber === 1) {
+                            dibujarEncabezadoPagina(
+                                doc,
+                                tableData.pageNumber,
+                                totalPaginas,
+                            );
+                            dibujarBloqueCabecera(doc, 48);
+                        } else {
+                            dibujarBloqueCabecera(doc, 10);
+                        }
+                    };
+
+                    const onDidDrawPageFooter = (tableData) => {
+                        if (!totalPaginas) return;
+                        if (tableData.pageNumber === ultimaPaginaDibujo)
+                            return;
+                        ultimaPaginaDibujo = tableData.pageNumber;
+                        if (tableData.pageNumber === 1) {
+                            dibujarEncabezadoPagina(
+                                doc,
+                                tableData.pageNumber,
+                                totalPaginas,
+                            );
+                        }
                     };
 
                     const normalizarTipo = (s) =>
@@ -5698,212 +5817,20 @@ export default document.addEventListener("alpine:init", () => {
                             ? `${label} (X)`
                             : `${label} (  )`;
 
-                    // Datos del empleador
-                    doc.autoTable({
-                        startY: 49,
-                        margin: margenContenido,
-                        theme: "grid",
-                        didDrawPage: onDidDrawPage,
-                        styles: {
-                            fontSize: 8,
-                            cellPadding: 2,
-                            textColor: [0, 0, 0],
-                            valign: "middle",
-                            lineColor: [0, 0, 0],
-                            lineWidth: 0.2,
-                        },
-                        head: [
-                            [
-                                {
-                                    content: "DATOS DEL EMPLEADOR",
-                                    colSpan: 5,
-                                    styles: headerStyle,
-                                },
-                            ],
-                            [
-                                {
-                                    content: "RAZÓN SOCIAL",
-                                    styles: headerStyle,
-                                },
-                                {
-                                    content: "RUC",
-                                    styles: headerStyle,
-                                },
-                                {
-                                    content:
-                                        "DOMICILIO (Dirección, distrito,\ndepartamento, provincia)",
-                                    styles: headerStyle,
-                                },
-                                {
-                                    content: "ACTIVIDAD ECONÓMICA",
-                                    styles: headerStyle,
-                                },
-                                {
-                                    content:
-                                        "Nº DE TRABAJADORES EN EL\nCENTRO LABORAL",
-                                    styles: headerStyle,
-                                },
-                            ],
-                        ],
-                        body: [
-                            [
-                                {
-                                    content: "SOL SECURITY S.A.C.",
-                                    styles: { halign: "center" },
-                                },
-                                {
-                                    content: "20445414833",
-                                    styles: { halign: "center" },
-                                },
-                                {
-                                    content:
-                                        "Calle José Gálvez 334, Callao -\nProv. Const. Del Callao",
-                                    styles: { halign: "center" },
-                                },
-                                {
-                                    content: "SEGURIDAD PRIVADA\nY ELECTRÓNICA",
-                                    styles: { halign: "center" },
-                                },
-                                {
-                                    content: data.Total_Aprobados || "0",
-                                    styles: { halign: "center" },
-                                },
-                            ],
-                        ],
-                        columnStyles: {
-                            0: { cellWidth: 33 },
-                            1: { cellWidth: 27 },
-                            2: { cellWidth: 55 },
-                            3: { cellWidth: 35 },
-                            4: { cellWidth: 35 },
-                        },
-                    });
-
-                    // Marcar (X)
-                    doc.autoTable({
-                        startY: doc.lastAutoTable.finalY,
-                        margin: margenContenido,
-                        theme: "grid",
-                        didDrawPage: onDidDrawPage,
-                        styles: {
-                            fontSize: 8,
-                            cellPadding: 2,
-                            valign: "middle",
-                            textColor: [0, 0, 0],
-                            lineColor: [0, 0, 0],
-                            lineWidth: 0.2,
-                        },
-                        body: [
-                            [
-                                {
-                                    content: "MARCAR (X)",
-                                    colSpan: 5,
-                                    styles: headerStyle,
-                                },
-                            ],
-                            [
-                                marcarTipo("INDUCCIÓN"),
-                                marcarTipo("CHARLA"),
-                                marcarTipo("CAPACITACIÓN"),
-                                marcarTipo("ENTRENAMIENTO"),
-                                marcarTipo("SIMULACROS DE EMERGENCIA"),
-                            ],
-                        ],
-                        columnStyles: {
-                            0: { cellWidth: 33 },
-                            1: { cellWidth: 27 },
-                            2: { cellWidth: 30 },
-                            3: { cellWidth: 35 },
-                            4: { cellWidth: 60 },
-                        },
-                    });
-
-                    // Datos de capacitación y capacitador
-                    doc.autoTable({
-                        startY: doc.lastAutoTable.finalY,
-                        margin: margenContenido,
-                        theme: "grid",
-                        didDrawPage: onDidDrawPage,
-                        didDrawCell: (cellData) => {
-                            if (
-                                cellData.section === "body" &&
-                                cellData.row.index === 2 &&
-                                cellData.column.index === 3
-                            ) {
-                                dibujarFirmaEnCelda(
-                                    doc,
-                                    firmaResponsable,
-                                    cellData.cell,
-                                );
-                            }
-                        },
-                        styles: {
-                            fontSize: 8,
-                            cellPadding: 2,
-                            valign: "middle",
-                            textColor: [0, 0, 0],
-                            lineColor: [0, 0, 0],
-                            lineWidth: 0.2,
-                        },
-                        body: [
-                            [
-                                {
-                                    content: "TEMA:",
-                                    styles: {
-                                        ...headerStyle,
-                                        halign: "left",
-                                        cellWidth: 33,
-                                    },
-                                },
-                                {
-                                    content: data.Nombre_Curso || "",
-                                    colSpan: 3,
-                                },
-                            ],
-                            [
-                                {
-                                    content: "FECHA:",
-                                    styles: { ...headerStyle, halign: "left" },
-                                },
-                                {
-                                    content: data.Fecha_Reporte || "",
-                                    colSpan: 3,
-                                },
-                            ],
-                            [
-                                {
-                                    content: "CAPACITADOR:",
-                                    styles: { ...headerStyle, halign: "left" },
-                                },
-                                data.Nombre_Responsable || "",
-                                { content: "FIRMA", styles: headerStyle },
-                                {
-                                    content: "",
-                                    styles: { minCellHeight: 16 },
-                                },
-                            ],
-                            [
-                                {
-                                    content: "Nº DE HORAS:",
-                                    styles: { ...headerStyle, halign: "left" },
-                                },
-                                { content: "01", colSpan: 3 },
-                            ],
-                        ],
-                        columnStyles: {
-                            0: { cellWidth: 33 },
-                            1: { cellWidth: 92 },
-                            2: { cellWidth: 25 },
-                            3: { cellWidth: 35 },
-                        },
-                    });
+                    // Cabecera (DATOS DEL EMPLEADOR → Nº DE HORAS) dibujada en cada hoja
+                    // por didDrawPage mediante dibujarBloqueCabecera.
 
                     // Listado de personal capacitado
                     doc.autoTable({
-                        startY: doc.lastAutoTable.finalY,
-                        margin: margenContenido,
+                        startY: 48 + blockH + 2,
+                        margin: {
+                            top: 10 + blockH + 2,
+                            left: margenIzq,
+                            right: margenIzq,
+                            bottom: margenIzq,
+                        },
                         theme: "grid",
-                        didDrawPage: onDidDrawPage,
+                        didDrawPage: onDidDrawPageListado,
                         didDrawCell: (cellData) => {
                             if (
                                 cellData.section === "body" &&
@@ -5918,35 +5845,24 @@ export default document.addEventListener("alpine:init", () => {
                                         ? personalFirmas[persona.DNI_Personal]
                                         : null,
                                     cellData.cell,
+                                    { pad: 0.8 },
                                 );
                             }
                         },
                         styles: {
-                            fontSize: 8,
-                            cellPadding: 1.5,
+                            fontSize: fontSize7,
+                            cellPadding: 1,
                             valign: "middle",
                             textColor: [0, 0, 0],
                             lineColor: [0, 0, 0],
                             lineWidth: 0.2,
                         },
-                        head: [
-                            [
-                                { content: "Nº", styles: headerStyle },
-                                {
-                                    content: "APELLIDOS Y NOMBRES",
-                                    styles: headerStyle,
-                                },
-                                { content: "DNI", styles: headerStyle },
-                                { content: "CARGO", styles: headerStyle },
-                                { content: "FIRMA", styles: headerStyle },
-                            ],
-                        ],
                         body: (data.Personal || []).map((persona, index) => [
                             String(index + 1),
                             persona.Nombre_Personal || "",
                             persona.DNI_Personal || "",
                             persona.Cargo_Personal || "",
-                            { content: "", styles: { minCellHeight: 10 } },
+                            { content: "", styles: { minCellHeight: 11 } },
                         ]),
                         columnStyles: {
                             0: { cellWidth: 10, halign: "center" },
@@ -5959,10 +5875,15 @@ export default document.addEventListener("alpine:init", () => {
 
                     // Responsable del registro
                     doc.autoTable({
-                        startY: doc.lastAutoTable.finalY + 10,
-                        margin: margenContenido,
+                        startY: doc.lastAutoTable.finalY + 8,
+                        margin: {
+                            top: margenIzq,
+                            left: margenIzq,
+                            right: margenIzq,
+                            bottom: margenIzq,
+                        },
                         theme: "grid",
-                        didDrawPage: onDidDrawPage,
+                        didDrawPage: onDidDrawPageFooter,
                         didDrawCell: (cellData) => {
                             if (
                                 cellData.section === "body" &&
@@ -5972,13 +5893,13 @@ export default document.addEventListener("alpine:init", () => {
                                 dibujarFirmaEnCelda(doc, firmaResponsable, cellData.cell, {
                                     pad: 0.5,
                                     align: "left",
-                                    height: 13,
+                                    height: 15,
                                 });
                             }
                         },
                         styles: {
-                            fontSize: 8,
-                            cellPadding: 2,
+                            fontSize: fontSize7,
+                            cellPadding: 1,
                             valign: "middle",
                             textColor: [0, 0, 0],
                             lineColor: [0, 0, 0],
@@ -6035,12 +5956,12 @@ export default document.addEventListener("alpine:init", () => {
                                     styles: {
                                         fontStyle: "bold",
                                         halign: "left",
-                                        minCellHeight: 17,
+                                        minCellHeight: 18,
                                     },
                                 },
                                 {
                                     content: "",
-                                    styles: { minCellHeight: 17 },
+                                    styles: { minCellHeight: 18 },
                                 },
                             ],
                         ],
