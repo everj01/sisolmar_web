@@ -513,7 +513,12 @@ class DjController extends Controller
             DB::commit();
  
             Log::info('saveNuevaDj: Personal nuevo creado', ['CODI_PERS' => $nuevoCod, 'DNI' => $dni]);
- 
+
+            // ── Correo automático de bienvenida SIP (solo Operativo 5° y Administrativo 5°) ──
+            if (in_array($tipoPer, ['03', '05'])) {
+                $this->enviarCorreoBienvenidaSip($data, $dni, $nuevoCod);
+            }
+
             return response()->json([
                 'success'   => true,
                 'message'   => 'Declaración Jurada guardada correctamente.',
@@ -1999,6 +2004,129 @@ class DjController extends Controller
      * Solo actualiza columnas donde DJ2026_PERSONAL tenga valor NO NULL.
      * Si DJ2026_PERSONAL tiene NULL en una columna, NO borra lo que ya existe en PERSONAL.
      */
+    /**
+     * Registra el usuario en el SIP y envía la carta de bienvenida.
+     * Flujo (según código PowerBuilder original):
+     *   1. Generar contraseña (algoritmo hora: quitar ':' → 1→A, 2→B, 3→C)
+     *   2. Hashear con MD5 para almacenar en Seguridad_UsuarioSIP
+     *   3. SipCartaElectronica: desactivar cartas previas + insertar nueva
+     *   4. Seguridad_UsuarioSIP: INSERT (nuevo) o UPDATE (existente)
+     *   5. CMS_Actividad: desactivar eventos pendientes (solo si UPDATE)
+     *   6. Enviar correo con contraseña en texto plano
+     */
+    private function enviarCorreoBienvenidaSip(array $data, string $dni, string $codiPers): void
+    {
+        try {
+            $correo = trim($data['correo'] ?? '');
+            if (empty($correo) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                Log::warning('BienvenidaSip: correo vacío o inválido, no se registra ni envía.', ['dni' => $dni]);
+                return;
+            }
+
+            // ── 1. Generar contraseña (algoritmo PowerBuilder) ──
+            $password = str_replace([':', '1', '2', '3'], ['', 'A', 'B', 'C'], now()->format('H:i:s'));
+
+            // Hash SIP: doble MD5 de (DNI + password) según función F_SIP_MD5 de SQL Server
+            $hash1 = strtoupper(md5($dni . $password));
+            $passwordMd5 = strtoupper(md5($hash1));
+
+            $nombreCompleto = trim(
+                ($data['nombre1'] ?? '') . ' ' .
+                ($data['nombre2'] ?? '') . ' ' .
+                ($data['apellido_paterno'] ?? '') . ' ' .
+                ($data['apellido_materno'] ?? '')
+            );
+            if (empty($nombreCompleto)) {
+                $nombreCompleto = $data['nombres_apellidos'] ?? 'Usuario SIP';
+            }
+            $nombreCorto = ucfirst(strtolower(trim($data['nombre1'] ?? explode(' ', $nombreCompleto)[0] ?? 'Usuario')));
+
+            $usuarioReg  = strtoupper(trim((string)(session('usuario') ?? 'SISTEMAS')));
+            $empresa     = '01';
+            $mes         = (int) now()->format('n');
+            $anio        = (int) now()->format('Y');
+            $plcaCod     = 'planillaco';
+            $fechaCorta  = now()->format('Ymd');   // YYYYMMDD
+            $horaCorta   = now()->format('His');   // HHMMSS
+
+            // ── 2. SipCartaElectronica (si_solm): desactivar previas + insertar nueva ──
+            DB::connection('sqlsrv')->update(
+                "UPDATE si_solm.dbo.SipCartaElectronica SET Vigencia = 0
+                 WHERE CodiPers = ? AND Vigencia = 1",
+                [$codiPers]
+            );
+            DB::connection('sqlsrv')->insert(
+                "INSERT INTO si_solm.dbo.SipCartaElectronica
+                    (CodiPers, Email, FechaEmail, Mes, Anio, PlcaCod, Usuario, Vigencia, Rebote)
+                 VALUES (?, ?, GETDATE(), ?, ?, ?, ?, 1, 0)",
+                [$codiPers, $correo, $mes, $anio, $plcaCod, $usuarioReg]
+            );
+            Log::info('BienvenidaSip: SipCartaElectronica registrada.', ['codiPers' => $codiPers]);
+
+            // ── 3. Seguridad_UsuarioSIP (extranet_solmar): verificar existencia ──
+            $existe = DB::connection('sqlsrv')->selectOne(
+                "SELECT COUNT(*) AS cnt FROM extranet_solmar.dbo.Seguridad_UsuarioSIP WITH (NOLOCK)
+                 WHERE usuarioSIP_DNI = ? AND usuarioSIP_CODI_PERS = ?
+                   AND usuarioSIP_vigencia = '1' AND usuarioSIP_estado IN ('1','2','0')
+                   AND empr_codigo = ?",
+                [$dni, $codiPers, $empresa]
+            );
+
+            if ((int)($existe->cnt ?? 0) <= 0) {
+                // ── 3a. INSERT (usuario nuevo) ──
+                DB::connection('sqlsrv')->insert(
+                    "INSERT INTO extranet_solmar.dbo.Seguridad_UsuarioSIP
+                        (usuarioSIP_CODI_PERS, usuarioSIP_DNI, usuarioSIP_clave, usuarioSIP_vigencia,
+                         usuarioSIP_Correo, usuarioSIP_Creacion_fecha, usuarioSIP_Creacion_hora,
+                         usuarioSIP_estado, rol_id, auxiliar, empr_codigo,
+                         actualizacion_datos, modificado_por, fecha_modificacion)
+                     VALUES (?, ?, ?, '1', ?, ?, ?, '2', 4, NULL, ?, NULL, NULL, NULL)",
+                    [$codiPers, $dni, $passwordMd5, $correo, $fechaCorta, $horaCorta, $empresa]
+                );
+                Log::info('BienvenidaSip: usuario INSERTado en Seguridad_UsuarioSIP.', ['dni' => $dni, 'codiPers' => $codiPers]);
+            } else {
+                // ── 3b. UPDATE (usuario existente) ──
+                DB::connection('sqlsrv')->update(
+                    "UPDATE extranet_solmar.dbo.Seguridad_UsuarioSIP
+                     SET usuarioSIP_estado = '2', usuarioSIP_clave = ?, usuarioSIP_vigencia = '1', usuarioSIP_Correo = ?
+                     WHERE usuarioSIP_DNI = ? AND usuarioSIP_CODI_PERS = ?
+                       AND usuarioSIP_estado IN ('1','2','0') AND empr_codigo = ?",
+                    [$passwordMd5, $correo, $dni, $codiPers, $empresa]
+                );
+                Log::info('BienvenidaSip: usuario UPDATEado en Seguridad_UsuarioSIP.', ['dni' => $dni, 'codiPers' => $codiPers]);
+
+                // ── 3c. CMS_Actividad: desactivar eventos pendientes ──
+                DB::connection('sqlsrv')->update(
+                    "UPDATE intranet.dbo.CMS_Actividad
+                     SET ESTADO = 0
+                     FROM intranet.dbo.CMS_Actividad A
+                     INNER JOIN extranet_solmar.dbo.Seguridad_UsuarioSIP U
+                             ON U.usuarioSIP_id = A.user_id
+                     WHERE U.usuarioSIP_codi_pers = ? AND U.usuarioSIP_vigencia = '1'
+                       AND U.usuarioSIP_DNI = ? AND U.empr_codigo = ?
+                       AND A.CMS_TIPO_ID = 9 AND A.CodEvento IN ('002','003') AND A.ESTADO = 1",
+                    [$codiPers, $dni, $empresa]
+                );
+                Log::info('BienvenidaSip: CMS_Actividad desactivado.', ['dni' => $dni]);
+            }
+
+            // ── 4. Enviar correo con contraseña en texto plano ──
+            $datos = [
+                'nombre'       => mb_strtoupper($nombreCompleto, 'UTF-8'),
+                'nombre_corto' => $nombreCorto,
+                'dni'          => $dni,
+                'password'     => $password,
+                'correo'       => $correo,
+            ];
+
+            Mail::mailer('sip')->to($correo)->send(new \App\Mail\BienvenidaSipMail($datos));
+
+            Log::info('BienvenidaSip: correo enviado exitosamente.', ['dni' => $dni, 'correo' => $correo]);
+        } catch (\Exception $e) {
+            Log::error('BienvenidaSip: error en el proceso: ' . $e->getMessage(), ['dni' => $dni, 'codiPers' => $codiPers]);
+        }
+    }
+
     private function syncDJ2026ToPersonal($codiPers)
     {
         // 1. Obtener el registro recién guardado en DJ2026_PERSONAL
@@ -3660,6 +3788,11 @@ $tipotrab    = $tipoPer;
             DB::commit();
  
             Log::info('saveRecontratacion: Personal recontratado', ['CODI_PERS' => $codiPers, 'DNI' => $personal->NRO_DOCU_IDEN]);
+
+            // ── Correo automático de bienvenida SIP (solo Operativo 5° y Administrativo 5°) ──
+            if (in_array($tipoPer, ['03', '05'])) {
+                $this->enviarCorreoBienvenidaSip($data, $personal->NRO_DOCU_IDEN, $codiPers);
+            }
  
             return response()->json([
                 'success'   => true,

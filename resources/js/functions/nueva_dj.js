@@ -1356,6 +1356,7 @@ import Swal from 'sweetalert2';
             const faltantes = camposReq.filter(c => {
                 const el = $(c.id);
                 if (!el) return true;
+                if (el.type !== 'hidden' && el.offsetParent === null) return false;
                 if (el.type === 'checkbox') return !el.checked;
                 return !el.value?.trim();
             });

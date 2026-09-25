@@ -79,6 +79,17 @@ return [
             'transport' => 'array',
         ],
 
+        'sip' => [
+            'transport' => 'smtp',
+            'host' => 'smtp.gmail.com',
+            'port' => 465,
+            'encryption' => 'ssl',
+            'username' => 'robotsisolmar@solsecurity.pe',
+            'password' => 'dpmw ethh oabr byak',
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN'),
+        ],
+
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
