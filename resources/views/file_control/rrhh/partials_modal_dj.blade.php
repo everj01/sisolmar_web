@@ -895,7 +895,7 @@
                                             <div>
                                                 <label class="dj-label">Sucursal</label>
                                                 <select id="sucursal" name="sucursal" class="dj-select"
-                                                    data-compare="sucursal">
+                                                    data-compare="sucursal" @if($tipoUsuario != 17) disabled style="opacity:0.5;cursor:not-allowed;" @endif>
                                                     <option value="">—</option>
                                                     @foreach ($sucursales ?? [] as $sucursal)
                                                         @if (!in_array(trim((string) $sucursal->codigo), ['', '0', '00'], true))

@@ -88,11 +88,11 @@ class DjController extends Controller
         try {
             $data    = $request->all();
             $usuarioActual = strtoupper(trim((string)(session('usuario') ?? '')));
-            $esEmontéro = in_array($usuarioActual, ['EMONTERO', 'RBURGOS', 'MPAREDES']);
+            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
             $dni     = trim($request->input('dni', ''));
             $tipoPer = trim($request->input('tipo_personal', ''));
  
-            if (!$esEmontéro) {
+            if (!$exentoValidaciones) {
                 if (empty($dni)) {
                     return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
                 }
@@ -1134,15 +1134,15 @@ class DjController extends Controller
 
             if ($tipoPer !== $tipoActual) {
                 $usuarioTipoPer = strtoupper(trim((string)(session('usuario') ?? '')));
-                if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                if (!in_array('cambiar_tipo_personal', session('funcionalidades', []))) {
                     DB::rollBack();
                     return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
                 }
             }
 
-            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
+            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer, in_array('cambiar_tipo_personal', session('funcionalidades', [])))) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
+                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
             $source = $request->input('source', 'migracion');
 
@@ -3582,7 +3582,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
      * - Si el tipo actual es Especiales (06), no se permite cambiar.
      * - Si no hay tipo previo en BD, no se aplica la regla.
      */
-    private function validarCambioTipoPersonal(?string $tipoActual, string $tipoNuevo): bool
+    private function validarCambioTipoPersonal(?string $tipoActual, string $tipoNuevo, bool $esAdminRrhh = false): bool
     {
         $tipoActual = trim((string) $tipoActual);
 
@@ -3594,6 +3594,11 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         }
         if ($tipoActual === '06') {
             return false;
+        }
+
+        // Admins RRHH: cualquier cambio permitido excepto a Especial (06)
+        if ($esAdminRrhh) {
+            return $tipoNuevo !== '06';
         }
 
         $operativo      = ['01', '03'];
@@ -3649,15 +3654,15 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             $tipoActual = trim((string)($personal->PERS_TIPOTRAB ?? ''));
 
             if ($tipoPer !== $tipoActual) {
-                if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                if (!in_array('cambiar_tipo_personal', session('funcionalidades', []))) {
                     DB::rollBack();
                     return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
                 }
             }
 
-            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
+            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer, in_array('cambiar_tipo_personal', session('funcionalidades', [])))) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
+                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
  
             $str2 = fn($v) => strtoupper(substr(trim($v ?? ''), 0, 2));
@@ -3784,6 +3789,9 @@ $tipotrab    = $tipoPer;
             $this->migrarFamiliares($codiPers);
             $this->saveTelefonosTemp($codiPers, $data);
             $this->migrarTelefonos($codiPers);
+
+            // Actualizar DJ2026_PERSONAL con los datos de la recontratación (sucursal, fecha modificación, etc.)
+            $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
  
             DB::commit();
  

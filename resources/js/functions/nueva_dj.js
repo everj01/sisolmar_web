@@ -1214,9 +1214,9 @@ import Swal from 'sweetalert2';
     async function ndj_guardar() {
 
         const currentUser = (window.currentUser || '').toString().trim().toUpperCase();
-        const usuariosExonerados = ['EMONTERO', 'RBURGOS', 'MPAREDES'];
+        const exentoValidaciones = (window.funcionalidadesSISOL || []).includes('exento_validaciones');
 
-        if (!usuariosExonerados.includes(currentUser)) {
+        if (!exentoValidaciones) {
 
         // ── Validaciones previas ──────────────────────────────
         const hoy    = new Date(); hoy.setHours(0,0,0,0);
@@ -1417,7 +1417,7 @@ import Swal from 'sweetalert2';
             if (!isConfirmed) return;
         }
 
-        } // fin usuariosExonerados
+        } // fin exentoValidaciones
         // ── Fin validaciones ─────────────────────────────────
 
         const fd      = new FormData($('formNuevaDJ'));

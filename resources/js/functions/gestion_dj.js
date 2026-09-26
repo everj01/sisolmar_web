@@ -1193,7 +1193,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btnGuardar) btnGuardar.disabled = true;
 
             try {
+                // Habilitar sucursal temporalmente para que su valor se envíe en el FormData
+                const sucursalEl = document.getElementById('sucursal');
+                if (sucursalEl) sucursalEl.disabled = false;
+
                 const formData = new FormData(form);
+
+                // Restaurar estado disabled si el usuario no es Admins RRHH
+                if (sucursalEl && window.tipoUsuario != 17) sucursalEl.disabled = true;
 
                 // Verificar que formData tiene datos
                 console.log('📋 FormData entries:');
@@ -2392,8 +2399,7 @@ const TIPO_CODIGO_ESPECIALES = '06';
 let tipoPersonalEsEspecial = false;
 
 function userPuedeCambiarTipoPersonal() {
-    const user = (window.currentUser || '').toString().trim().toUpperCase();
-    return ['RBURGOS', 'MPAREDES'].includes(user);
+    return (window.funcionalidadesSISOL || []).includes('cambiar_tipo_personal');
 }
 
 function poblarSelectTiposPersonal(items) {
@@ -2414,6 +2420,7 @@ function poblarSelectTiposPersonal(items) {
 }
 
 // Regla: Operativo (01/03) solo puede cambiar a Administrativo (02/05) y viceversa.
+// Admins RRHH pueden cambiar a cualquier tipo excepto Especial (06).
 // Especiales (06) queda deshabilitado sin posibilidad de cambio.
 function aplicarReglaTipoPersonal(tipotrab) {
     const catalogo = window.allTiposPersonalDj || [];
@@ -2426,6 +2433,12 @@ function aplicarReglaTipoPersonal(tipotrab) {
         tipoPersonalEsEspecial = true;
         const ui = document.getElementById('tipo_personal_ui');
         if (ui) { ui.disabled = true; ui.style.background = '#f3f4f6'; ui.style.color = '#9ca3af'; }
+        return;
+    }
+
+    // Admins RRHH: mostrar todos excepto Especial
+    if (userPuedeCambiarTipoPersonal()) {
+        poblarSelectTiposPersonal(catalogo.filter(t => String(t.codigo).trim() !== TIPO_CODIGO_ESPECIALES));
         return;
     }
 
