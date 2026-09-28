@@ -328,7 +328,7 @@ class DjController extends Controller
             $tipoContMap = ['01' => 'O', '02' => 'A', '03' => 'O', '05' => 'A', '06' => 'O'];
             $tipoCont = $tipoContMap[$tipoPer] ?? 'O';
 
-            $personalPlaceholders = implode(',', array_fill(0, 66, '?'));
+            $personalPlaceholders = implode(',', array_fill(0, 68, '?'));
             $personalLocationPlaceholders = "?,?,?,'01',?,?,?,?,?,?";
  
             // ── INSERT EN PERSONAL ──────────────────────────────────────────────
@@ -342,8 +342,10 @@ class DjController extends Controller
                     ESCI_CODIGO, ESTA_CIVI,
                     PERS_EMAIL, PERS_TELEFONO, PERS_WHATSAPP,
                     DIRECCION, PERS_DIREC_DNI,
+                    PERS_ZONA_DIRDNI,
                     PERS_DEPT_ACT, PERS_PROV_ACT, PERS_DIST_ACT,
                     PERS_DPTO_DIRDNI, PERS_PROV_DIRDNI, PERS_DIST_DIRDNI,
+                    TIZO_CODIGO,
                     tipo_sangr, peso_kilo, tall_metr,
                     CODI_SIST_PENS, ESSALUD, PERS_PENSIONISTA, PERS_EMBARGO,
                     PERS_GRADO_INSTRUCCION, CARR_CODIGO, IEDU_CODIGO, EGRESO_EDUCATIVO,
@@ -379,12 +381,14 @@ class DjController extends Controller
                     $data['whatsapp'] ?? null,
                     $data['direccion_actual'] ?? null,
                     $data['direccion_dni'] ?? null,
+                    $data['zona_dirdni'] ?? null,
                     $data['departamento_actual'] ?? null,
                     $data['provincia_actual'] ?? null,
                     $data['distrito_actual'] ?? null,
                     $data['departamento_dni'] ?? null,
                     $data['provincia_dni'] ?? null,
                     $data['distrito_dni'] ?? null,
+                    $data['tipo_zona_dni'] ?? null,
                     $data['tipo_sangre'] ?? null,
                     $peso, $talla,
                     $data['sistema_previsional'] ?? '07',
@@ -1740,6 +1744,8 @@ class DjController extends Controller
             'PERS_PROV_DIRDNI' => $getValue('provincia_dni', 'PERS_PROV_DIRDNI'),
             'PERS_DIST_DIRDNI' => $getValue('distrito_dni', 'PERS_DIST_DIRDNI'),
             'PERS_DIREC_DNI' => $getValue('direccion_dni', 'PERS_DIREC_DNI'),
+            'PERS_ZONA_DIRDNI' => $getValue('zona_dirdni', 'PERS_ZONA_DIRDNI'),
+            'TIZO_CODIGO' => $getValue('tipo_zona_dni', 'TIZO_CODIGO'),
             'PERS_GRADO_INSTRUCCION' => $getValue('grado_instruccion', 'PERS_GRADO_INSTRUCCION'),
             'CARR_CODIGO' => empty($getValue('carrera', 'CARR_CODIGO')) ? null : $getValue('carrera', 'CARR_CODIGO'),
 
@@ -3727,7 +3733,7 @@ $tipotrab    = $tipoPer;
                     ESCI_CODIGO=?, ESTA_CIVI=?,
                     FECH_NACI=?, PERS_FECHCADUCADNI=?,
                     PERS_EMAIL=?, PERS_TELEFONO=?, PERS_WHATSAPP=?,
-                    DIRECCION=?, PERS_DIREC_DNI=?,
+                    DIRECCION=?, PERS_DIREC_DNI=?, TIZO_CODIGO=?, PERS_ZONA_DIRDNI=?,
                     PERS_DEPT_ACT=?, PERS_PROV_ACT=?, PERS_DIST_ACT=?,
                     PERS_DPTO_DIRDNI=?, PERS_PROV_DIRDNI=?, PERS_DIST_DIRDNI=?,
                     DEPARTAMENTO=?, PROVINCIA=?, DISTRITO=?,
@@ -3752,7 +3758,7 @@ $tipotrab    = $tipoPer;
                     $estadoCivil, $estadoCivilCorto,
                     $fechaNaci, $fechaCaduca,
                     $trim($data['correo']   ?? null), $trim($data['celular'] ?? null), $trim($data['whatsapp'] ?? null),
-                    $trim($data['direccion_actual'] ?? null), $trim($data['direccion_dni'] ?? null),
+                    $trim($data['direccion_actual'] ?? null), $trim($data['direccion_dni'] ?? null), $trim($data['tipo_zona_dni'] ?? null), $trim($data['zona_dirdni'] ?? null),
                     $trim($data['departamento_actual'] ?? null), $trim($data['provincia_actual'] ?? null), $trim($data['distrito_actual'] ?? null),
                     $trim($data['departamento_dni']  ?? null), $trim($data['provincia_dni']    ?? null), $trim($data['distrito_dni']    ?? null),
                     strtoupper(trim($data['departamento_actual'] ?? '') ?: ''), strtoupper(trim($data['provincia_actual'] ?? '') ?: ''), strtoupper(trim($data['distrito_actual'] ?? '') ?: ''),

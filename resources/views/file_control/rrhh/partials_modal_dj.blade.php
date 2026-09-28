@@ -983,6 +983,25 @@
                                                             <option value="" disabled>—</option>
                                                         </select></div>
                                                 </div>
+                                                <div class="dj-grid-2" style="margin-top:8px;">
+                                                    <div>
+                                                        <label class="dj-label">Tipo Zona</label>
+                                                        <select id="tipo_zona_dni" name="tipo_zona_dni" class="dj-select"
+                                                            data-compare="tipo_zona_dni">
+                                                            <option value="">—</option>
+                                                            @foreach ($tiposZona ?? [] as $tz)
+                                                                <option value="{{ trim($tz->TIZO_CODIGO) }}">{{ $tz->TIZO_DESCRIPCION }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Nombre de Zona</label>
+                                                        <input type="text" id="zona_dirdni" name="zona_dirdni"
+                                                            class="dj-input" placeholder="Nombre de la zona"
+                                                            maxlength="100" style="text-transform:uppercase;"
+                                                            data-compare="zona_dirdni">
+                                                    </div>
+                                                </div>
                                                 <label class="dj-label">Descripción</label>
                                                 <textarea id="direccion_dni" name="direccion_dni" class="dj-textarea"
                                                     placeholder="Dirección registrada en el DNI"

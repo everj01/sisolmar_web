@@ -452,6 +452,8 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_cuenta_banco',          data.dj2026_banco?.trim()  || '');
             ndj_setVal('ndj_direccion_actual',      data.DIRECCION?.trim()     || '');
             ndj_setVal('ndj_direccion_dni',         data.PERS_DIREC_DNI?.trim()|| '');
+            ndj_setVal('ndj_tipo_zona',            data.TIZO_CODIGO?.trim()       || '');
+            ndj_setVal('ndj_zona_dirdni',          data.PERS_ZONA_DIRDNI?.trim()  || '');
             ndj_setVal('ndj_contacto_emergencia',   data.PERS_NOMCONTACTO?.trim()    || '');
             ndj_setVal('ndj_celular_emergencia',    data.PERS_NROEMERGENCIA?.trim()  || '');
             ndj_setVal('ndj_parentesco_emergencia', data.PERS_EMERC_FAMILIAR?.trim() || '');
@@ -1459,6 +1461,8 @@ import Swal from 'sweetalert2';
             cuenta_banco:        payload.ndj_cuenta_banco,
             direccion_actual:    payload.ndj_direccion_actual,
             direccion_dni:       payload.ndj_direccion_dni,
+            tipo_zona_dni:       payload.ndj_tipo_zona,
+            zona_dirdni:         payload.ndj_zona_dirdni,
             departamento_actual: payload.ndj_departamento_actual,
             provincia_actual:    payload.ndj_provincia_actual,
             distrito_actual:     payload.ndj_distrito_actual,

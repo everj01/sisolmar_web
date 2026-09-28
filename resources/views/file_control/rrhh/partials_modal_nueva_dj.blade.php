@@ -464,6 +464,23 @@
                                                     </select>
                                                 </div>
                                             </div>
+                                            <div class="dj-grid-2" style="margin-top:8px;">
+                                                <div>
+                                                    <label class="dj-label">Tipo Zona</label>
+                                                    <select id="ndj_tipo_zona" name="ndj_tipo_zona" class="dj-select">
+                                                        <option value="">—</option>
+                                                        @foreach ($tiposZona ?? [] as $tz)
+                                                            <option value="{{ trim($tz->TIZO_CODIGO) }}">{{ $tz->TIZO_DESCRIPCION }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="dj-label">Nombre de Zona</label>
+                                                    <input type="text" id="ndj_zona_dirdni" name="ndj_zona_dirdni"
+                                                        class="dj-input" placeholder="Nombre de la zona"
+                                                        maxlength="100" style="text-transform:uppercase;">
+                                                </div>
+                                            </div>
                                             <label class="dj-label">Descripción</label>
                                             <textarea id="ndj_direccion_dni" name="ndj_direccion_dni"
                                                 class="dj-textarea" placeholder="Dirección registrada en el DNI"></textarea>
