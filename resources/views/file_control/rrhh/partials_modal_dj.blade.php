@@ -727,25 +727,23 @@
                                                 <div class="dj-grid-4" style="margin-bottom:8px;">
                                                     <div>
                                                         <label class="dj-label">País</label>
-                                                        <input type="hidden" id="aj_pais_codigo" name="nacionalidad">
-                                                        <input type="text" id="aj_pais" class="dj-input"
-                                                            list="aj_paises_list"
-                                                            placeholder="Escriba para buscar..." autocomplete="off">
-                                                        <datalist id="aj_paises_list"></datalist>
+                                                        <select id="aj_pais" name="nacionalidad" class="dj-select">
+                                                            <option value="">— Seleccionar —</option>
+                                                        </select>
                                                     </div>
-                                                    <div>
+                                                    <div id="aj_wrap_departamento_nac">
                                                         <label class="dj-label">Departamento</label>
                                                         <select id="departamento_nac" name="departamento_nac" class="dj-select">
                                                             <option value="" disabled selected>—</option>
                                                         </select>
                                                     </div>
-                                                    <div>
+                                                    <div id="aj_wrap_provincia_nac">
                                                         <label class="dj-label">Provincia</label>
                                                         <select id="provincia_nac" name="provincia_nac" class="dj-select">
                                                             <option value="" disabled selected>—</option>
                                                         </select>
                                                     </div>
-                                                    <div>
+                                                    <div id="aj_wrap_distrito_nac">
                                                         <label class="dj-label">Distrito</label>
                                                         <select id="distrito_nac" name="distrito_nac" class="dj-select">
                                                             <option value="" disabled selected>—</option>

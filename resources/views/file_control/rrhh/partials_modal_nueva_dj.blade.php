@@ -214,11 +214,9 @@
                                     <div class="dj-grid-4" style="margin-bottom:8px;">
                                         <div>
                                             <label class="dj-label">País</label>
-                                            <input type="hidden" id="ndj_pais_codigo" name="ndj_pais">
-                                            <input type="text" id="ndj_pais" class="dj-input"
-                                                list="ndj_paises_list"
-                                                placeholder="Escriba para buscar..." autocomplete="off">
-                                            <datalist id="ndj_paises_list"></datalist>
+                                            <select id="ndj_pais" name="ndj_pais" class="dj-select">
+                                                <option value="">— Seleccionar —</option>
+                                            </select>
                                         </div>
                                         <div id="ndj_wrap_departamento_nac">
                                             <label class="dj-label">Departamento</label>

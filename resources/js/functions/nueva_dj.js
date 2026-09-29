@@ -492,6 +492,10 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_tipo_personal',     tipotrab);
             ndj_aplicarTipo(tipotrab);
             ndj_aplicarSctr(tipotrab, data.SCRT ?? null);
+            // Llenar el select de Cargo filtrado por el tipo cargado (antes solo se
+            // llenaba al cambiar el tipo manualmente) y preseleccionar su cargo actual
+            ndj_filtrarCargos(tipotrab);
+            ndj_setVal('ndj_sel_cargo', data.CODI_CARG?.trim() || '');
             ndj_bloquearCampos(false);
 
             if (data.CLASE_BREVETE) {
@@ -826,9 +830,7 @@ import Swal from 'sweetalert2';
 
         // Reset búsqueda país
         const paisInput = $('ndj_pais');
-        const paisCodigo = $('ndj_pais_codigo');
         if (paisInput) paisInput.value = '';
-        if (paisCodigo) paisCodigo.value = '';
 
         ndj_limpiarFoto();
 
@@ -887,44 +889,28 @@ import Swal from 'sweetalert2';
     function ndj_cargarSistemaPrev(){ return ndj_fetchSelect('ndj_sistema_previsional', `${VITE_URL_APP}/api/dj/get-sistema-prev/`, 'codigo','nombre'); }
 
     async function ndj_cargarPaises() {
-        const input = $('ndj_pais');
-        const dl = document.getElementById('ndj_paises_list');
-        if (!input || !dl) return;
-        input.disabled = true;
+        const sel = $('ndj_pais');
+        if (!sel) return;
         try {
             const res = await fetch(`${VITE_URL_APP}/api/dj/get-paises/`);
             const json = await res.json();
             const items = json.paises ?? [];
             ndj_paisesData = items;
-            dl.innerHTML = '';
+            sel.innerHTML = '<option value="">— Seleccionar —</option>';
             items.forEach(item => {
                 const o = document.createElement('option');
-                o.value = item.text;
-                o.dataset.codigo = item.id;
-                dl.appendChild(o);
+                o.value = item.id;
+                o.textContent = item.text;
+                sel.appendChild(o);
             });
-            input.dataset.loaded = 'true';
         } catch (err) {
             console.error('[NuevaDJ] Error cargando países:', err);
-        } finally { input.disabled = false; }
-    }
-
-    function ndj_syncPaisCodigo() {
-        const input = $('ndj_pais');
-        const hidden = $('ndj_pais_codigo');
-        if (!input || !hidden) return;
-        const texto = input.value.toUpperCase().trim();
-        const match = ndj_paisesData.find(p => p.text.toUpperCase() === texto);
-        hidden.value = match ? match.id : '';
+        }
     }
 
     function ndj_setPais(codigo) {
-        const input = $('ndj_pais');
-        const hidden = $('ndj_pais_codigo');
-        if (!input || !hidden) return;
-        hidden.value = codigo || '';
-        const match = ndj_paisesData.find(p => p.id === codigo);
-        input.value = match ? match.text : '';
+        const sel = $('ndj_pais');
+        if (sel) sel.value = codigo || '';
     }
 
     // Regla: si TIPO DE DOCUMENTO es CARNET DE EXTRANJERÍA, se ocultan
@@ -1378,7 +1364,7 @@ import Swal from 'sweetalert2';
                 { id:'ndj_estado_civil',          nombre:'Estado Civil' },
                 { id:'ndj_sexo',                  nombre:'Sexo' },
                 { id:'ndj_fecha_nacimiento',      nombre:'Fecha de Nacimiento' },
-                { id:'ndj_pais_codigo',           nombre:'País de Nacimiento' },
+                { id:'ndj_pais',                   nombre:'País de Nacimiento' },
                 { id:'ndj_departamento_nac',      nombre:'Departamento (Nacimiento)' },
                 { id:'ndj_provincia_nac',         nombre:'Provincia (Nacimiento)' },
                 { id:'ndj_distrito_nac',          nombre:'Distrito (Nacimiento)' },
@@ -1928,7 +1914,7 @@ import Swal from 'sweetalert2';
         $('ndj_provincia_nac')?.addEventListener('change',       function () { ndj_cargarDistritos(this.value,'ndj_distrito_nac'); });
 
         // País: sincronizar código al escribir/seleccionar
-        $('ndj_pais')?.addEventListener('input', ndj_syncPaisCodigo);
+        // (el select de país ya guarda el código directamente)
 
         // Familiar empresa / SUCAMEC / Clase brevete
         $('ndj_familiar_empresa')?.addEventListener('change', function () { $('ndj_div_familiar_interno')?.classList.toggle('hidden', this.value !== 'SI'); });

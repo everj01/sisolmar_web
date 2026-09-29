@@ -4746,7 +4746,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
-            aplicarSctr(''); cargarFechasIngresoCese({});
+            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
 
             await cargarCatalogos();
             await cargarPaises();
@@ -4811,47 +4811,37 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 let aj_paisesData = [];
 
 async function cargarPaises() {
-    const input = document.getElementById('aj_pais');
-    const dl = document.getElementById('aj_paises_list');
-    if (!input || !dl) return;
-    input.disabled = true;
+    const sel = document.getElementById('aj_pais');
+    if (!sel) return;
     try {
         const res = await axios.get(`${API_URL}/dj/get-paises/`);
         const items = res.data.paises ?? [];
         aj_paisesData = items;
-        dl.innerHTML = '';
+        sel.innerHTML = '<option value="">— Seleccionar —</option>';
         items.forEach(item => {
             const o = document.createElement('option');
-            o.value = item.text;
-            o.dataset.codigo = item.id;
-            dl.appendChild(o);
+            o.value = item.id;
+            o.textContent = item.text;
+            sel.appendChild(o);
         });
     } catch (err) {
         console.error('[ActualizarDJ] Error cargando países:', err);
-    } finally { input.disabled = false; }
-}
-
-function syncAjPaisCodigo() {
-    const input = document.getElementById('aj_pais');
-    const hidden = document.getElementById('aj_pais_codigo');
-    if (!input || !hidden) return;
-    const texto = input.value.toUpperCase().trim();
-    const match = aj_paisesData.find(p => p.text.toUpperCase() === texto);
-    hidden.value = match ? match.id : '';
+    }
 }
 
 function setAjPais(codigo) {
-    const input = document.getElementById('aj_pais');
-    const hidden = document.getElementById('aj_pais_codigo');
-    if (!input || !hidden) return;
-    hidden.value = codigo || '';
-    const match = aj_paisesData.find(p => p.id === codigo);
-    input.value = match ? match.text : '';
+    const sel = document.getElementById('aj_pais');
+    if (sel) sel.value = String(codigo ?? '').trim();
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('aj_pais')?.addEventListener('input', syncAjPaisCodigo);
-});
+// ── Regla: Carnet de Extranjería (0035) → oculta Dep/Prov/Dist de Nacimiento ──
+function aplicarExtranjeriaNacimiento(codTipoDoc) {
+    const esExtranjeria = String(codTipoDoc ?? '').trim() === '0035';
+    ['aj_wrap_departamento_nac', 'aj_wrap_provincia_nac', 'aj_wrap_distrito_nac'].forEach(id => {
+        const w = document.getElementById(id);
+        if (w) w.style.display = esExtranjeria ? 'none' : '';
+    });
+}
 
 let catalogosCache = null;
 let catalogosPromise = null;
@@ -4974,6 +4964,7 @@ async function llenarFormulario(data) {
     setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
     setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
     setAjPais(data.NACIONALIDAD ? data.NACIONALIDAD.trim() : (data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : ''));
+    aplicarExtranjeriaNacimiento(data.CODI_TIPO_DOCU ? String(data.CODI_TIPO_DOCU).trim() : '');
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
     // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
@@ -5767,7 +5758,7 @@ function limpiarSplitView() {
         tipoPersonalEsEspecial = false;
         poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
     }
-    aplicarSctr(''); cargarFechasIngresoCese({});
+    aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
 
 }
 
@@ -6018,7 +6009,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
         }
-        aplicarSctr(''); cargarFechasIngresoCese({});
+        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
 
         // Reset No Caduca checkbox y restore caduca
         const noCaducaReset = document.getElementById('no_caduca_dni');
