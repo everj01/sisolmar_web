@@ -1814,10 +1814,12 @@ class DjController extends Controller
 
             // ✅ TODOS LOS DEMÁS CAMPOS (con cascada: formulario → migra → original → null)
             'CODI_TIPO_DOCU' => $getValue('CODI_TIPO_DOCU', 'CODI_TIPO_DOCU'),
-            'APEL_1' => $getValue('APEL_1', 'APEL_1'),
-            'APEL_2' => $getValue('APEL_2', 'APEL_2'),
-            'NOMB_1' => $getValue('NOMB_1', 'NOMB_1'),
-            'NOMB_2' => $getValue('NOMB_2', 'NOMB_2'),
+            // Nombres: el formulario envía nombre1/nombre2/apellido_paterno/apellido_materno
+            // (antes se buscaban las claves NOMB_*/APEL_* y nunca se guardaban los cambios)
+            'APEL_1' => strtoupper(trim((string) $getValue('apellido_paterno', 'APEL_1', 'APEL_1'))) ?: null,
+            'APEL_2' => strtoupper(trim((string) $getValue('apellido_materno', 'APEL_2', 'APEL_2'))) ?: null,
+            'NOMB_1' => strtoupper(trim((string) $getValue('nombre1', 'NOMB_1', 'NOMB_1'))) ?: null,
+            'NOMB_2' => strtoupper(trim((string) $getValue('nombre2', 'NOMB_2', 'NOMB_2'))) ?: null,
             'SIST_PENS_TIPOCOMI' => $getValue('SIST_PENS_TIPOCOMI', 'SIST_PENS_TIPOCOMI'),
             'CODI_CARG' => $getValue('cargo', 'CODI_CARG'),
             'CODI_AREA' => $getValue('CODI_AREA', 'CODI_AREA'),
@@ -3786,7 +3788,9 @@ $tipotrab    = $tipoPer;
  
             DB::update(
                 "UPDATE si_solm.dbo.PERSONAL SET
-                    PERS_VIGENCIA='SI', PERS_CONTRATADO='1', SEXO=?, PERS_SEXO=?,
+                    PERS_VIGENCIA='SI', PERS_CONTRATADO='1',
+                    NOMB_1=?, NOMB_2=?, APEL_1=?, APEL_2=?,
+                    SEXO=?, PERS_SEXO=?,
                     ESCI_CODIGO=?, ESTA_CIVI=?,
                     FECH_NACI=?, PERS_FECHCADUCADNI=?,
                     PERS_EMAIL=?, PERS_TELEFONO=?, PERS_WHATSAPP=?,
@@ -3811,6 +3815,10 @@ $tipotrab    = $tipoPer;
                     TIPO_CONT=?, FECH_INGRE=?, NO_CADUCA_DNI=?, PERS_CONSMO=?
                 WHERE CODI_PERS=?",
                 [
+                    strtoupper(trim((string) ($data['nombre1'] ?? ''))) ?: null,
+                    strtoupper(trim((string) ($data['nombre2'] ?? ''))) ?: null,
+                    strtoupper(trim((string) ($data['apellido_paterno'] ?? ''))) ?: null,
+                    strtoupper(trim((string) ($data['apellido_materno'] ?? ''))) ?: null,
                     $sexo, $sexo,
                     $estadoCivil, $estadoCivilCorto,
                     $fechaNaci, $fechaCaduca,

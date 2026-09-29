@@ -51,6 +51,9 @@ class AuthenticatedSessionController extends Controller
             }
             session(['funcionalidades' => $funcionalidades]);
 
+            // Pop-ups de notificaciones: se muestran una vez por login
+            session()->forget('notif_popups_ya_mostrados');
+
             return redirect()->intended('/home');
         }
 
