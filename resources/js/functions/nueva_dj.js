@@ -319,6 +319,10 @@ import Swal from 'sweetalert2';
     function activarModoRecontratacion(codiPers, tipotrab = '') {
         modoRecontratacion     = true;
         codiPersRecontratacion = codiPers;
+
+        // Fecha de Ingreso a Solmar: VACÍA y obligatoria.
+        // Es el NUEVO ingreso: no se hereda la fecha antigua que precarga la carga de datos.
+        ndj_setVal('ndj_fecha_ingreso_solmar', '');
         if (btnGuardar) {
             btnGuardar.textContent = 'Recontratar';
             btnGuardar.style.background = '#f59e0b';
@@ -487,6 +491,7 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_sel_tipo_personal', tipotrab);
             ndj_setVal('ndj_tipo_personal',     tipotrab);
             ndj_aplicarTipo(tipotrab);
+            ndj_aplicarSctr(tipotrab, data.SCRT ?? null);
             ndj_bloquearCampos(false);
 
             if (data.CLASE_BREVETE) {
@@ -837,6 +842,7 @@ import Swal from 'sweetalert2';
             tipoUi.style.background = '';
             tipoUi.style.color = '';
         }
+        ndj_aplicarSctr('');
 
         ['ndj_provincia_actual','ndj_distrito_actual','ndj_provincia_dni','ndj_distrito_dni','ndj_provincia_nac','ndj_distrito_nac']
             .forEach(id => { const s = $(id); if (s) s.innerHTML = '<option value="">—</option>'; });
@@ -1050,6 +1056,28 @@ import Swal from 'sweetalert2';
     // ============================================================
     // VISIBILIDAD POR TIPO
     // ============================================================
+    // ── SCTR: visible solo para Administrativo (02/05) ─────────
+    // OP (01/03)  → sin checkbox, SCTR='SI' automático (backend)
+    // ADMIN       → checkbox "SCTR": marcado='SI', sin marcar='NO'
+    let ndjSctrTipoAnterior = '';
+    function ndj_aplicarSctr(tipoCod, scrt = null) {
+        const wrap = $('ndj_wrap_sctr');
+        const chk  = $('ndj_autorizar_sctr');
+        if (!wrap || !chk) return;
+        const tipo     = String(tipoCod || '').trim();
+        const esAdmin  = ['02', '05'].includes(tipo);
+        const eraAdmin = ['02', '05'].includes(ndjSctrTipoAnterior);
+        wrap.style.display = esAdmin ? '' : 'none';
+        if (!esAdmin) {
+            chk.checked = false;
+        } else if (scrt !== null && scrt !== undefined) {
+            chk.checked = ['SI', '1'].includes(String(scrt).trim().toUpperCase());
+        } else if (!eraAdmin) {
+            chk.checked = false; // op → admin: aparece sin marcar
+        }
+        ndjSctrTipoAnterior = tipo;
+    }
+
     function ndj_aplicarTipo(tipoCod) {
         const el = $('ndj_tipo_personal');
         if (el) el.value = tipoCod;
@@ -1457,6 +1485,7 @@ import Swal from 'sweetalert2';
         const body = {
             ...payload,
             tipo_personal:       payload.ndj_tipo_personal        || payload.ndj_sel_tipo_personal,
+            autorizar_sctr:      payload.ndj_autorizar_sctr === '1' ? '1' : '0',
             cargo:               payload.ndj_cargo                 || '',
             cod_postulante:      payload.ndj_cod_postulante        || '',
             tipo_documento:      payload.ndj_tipo_documento        || '0034',
@@ -1885,7 +1914,7 @@ import Swal from 'sweetalert2';
         });
 
         // Tipo personal
-        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_aplicarTipo(this.value); ndj_filtrarCargos(this.value); });
+        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_aplicarTipo(this.value); ndj_filtrarCargos(this.value); ndj_aplicarSctr(this.value); });
 
         // Institución → carrera
         $('ndj_institucion')?.addEventListener('change', function () { ndj_poblarCarreras(this.value); });

@@ -67,6 +67,13 @@
                                     <select id="ndj_sel_tipo_personal" name="ndj_sel_tipo_personal" class="dj-select">
                                         <option value="">— Seleccionar —</option>
                                     </select>
+                                    <div id="ndj_wrap_sctr" style="display:none;margin-top:6px;">
+                                        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;">
+                                            <input type="checkbox" id="ndj_autorizar_sctr" name="ndj_autorizar_sctr" value="1"
+                                                style="width:14px;height:14px;accent-color:#25d366;cursor:pointer;">
+                                            SCTR
+                                        </label>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="dj-label">Cargo</label>

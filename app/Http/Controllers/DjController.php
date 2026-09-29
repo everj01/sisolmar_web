@@ -511,6 +511,9 @@ class DjController extends Controller
             $this->saveTelefonosTemp($nuevoCod, $data);
             $this->migrarTelefonos($nuevoCod);
 
+            // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
+            $this->aplicarScrt($nuevoCod, $data);
+
             // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
             $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
  
@@ -1163,6 +1166,16 @@ class DjController extends Controller
             );
 
             // ✅ 2. INSERTAR/ACTUALIZAR DIRECTAMENTE en DJ2026_PERSONAL
+            // Fecha Ingreso a Solmar: editable SOLO para Admins RRHH (tipo_rol 17);
+            // otros roles conservan el valor actual. Fecha de Cese: bloqueada para todos.
+            if (session('tipo_rol') == 17 && !empty(trim((string) ($data['fecha_ingreso_solmar'] ?? '')))) {
+                $data['FECH_INGRE'] = trim((string) $data['fecha_ingreso_solmar']);
+            } else {
+                unset($data['FECH_INGRE'], $data['fecha_ingreso_solmar']);
+            }
+            unset($data['FECH_CESE'], $data['fecha_cese']);
+            // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
+            $this->aplicarScrt($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, $source);
 
             // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
@@ -3587,6 +3600,35 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
 
     /**
+     * Regla SCTR (columna SCRT en si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
+     * - Operativo 4°/5° (01/03)  → 'SI' automático
+     * - Administrativo 4°/5° (02/05) → 'SI' si el checkbox autorizar_sctr viene marcado, 'NO' si no
+     * - Especial (06) u otro → no se toca
+     */
+    private function aplicarScrt($codiPers, &$data)
+    {
+        $tipo = strtoupper(trim((string) ($data['tipo_personal'] ?? '')));
+
+        if (in_array($tipo, ['01', '03'], true)) {
+            $scrt = 'SI';
+        } elseif (in_array($tipo, ['02', '05'], true)) {
+            $scrt = trim((string) ($data['autorizar_sctr'] ?? '')) === '1' ? 'SI' : 'NO';
+        } else {
+            return; // Especial u otro: no se toca
+        }
+
+        $data['SCRT'] = $scrt;
+
+        // Reflejar también en la tabla maestra PERSONAL
+        DB::update(
+            'UPDATE si_solm.dbo.PERSONAL SET SCRT = ? WHERE CODI_PERS = ?',
+            [$scrt, $codiPers]
+        );
+
+        Log::info('aplicarScrt', ['CODI_PERS' => $codiPers, 'tipo' => $tipo, 'SCRT' => $scrt]);
+    }
+
+    /**
      * Regla de cambio de Tipo de Personal:
      * solo se permite cambiar de Operativo (01/03) a Administrativo (02/05) o viceversa.
      * - Mantener el mismo tipo no se considera cambio (válido).
@@ -3653,6 +3695,16 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             }
 
             $data = $request->all();
+
+            // Fecha de Ingreso a Solmar: OBLIGATORIA en recontratación
+            // (es el nuevo ingreso; no se hereda la fecha anterior)
+            if (trim((string) ($data['fecha_ingreso_solmar'] ?? '')) === '') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La Fecha de Ingreso a Solmar es obligatoria para la recontratación.',
+                ], 422);
+            }
 
             $tipoPer = trim($data['tipo_personal'] ?? '');
             if ($tipoPer === '') {
@@ -3802,6 +3854,8 @@ $tipotrab    = $tipoPer;
             $this->migrarTelefonos($codiPers);
 
             // Actualizar DJ2026_PERSONAL con los datos de la recontratación (sucursal, fecha modificación, etc.)
+            // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
+            $this->aplicarScrt($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
  
             DB::commit();

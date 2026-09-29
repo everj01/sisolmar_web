@@ -569,6 +569,14 @@
                                     <option value="">— Seleccionar —</option>
                                 </select>
                             </div>
+                            <div id="wrap_sctr" style="display:none;min-width:130px;">
+                                <label class="dj-label">&nbsp;</label>
+                                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;padding:7px 0;">
+                                    <input type="checkbox" id="autorizar_sctr" name="autorizar_sctr" value="1"
+                                        style="width:14px;height:14px;accent-color:#25d366;cursor:pointer;">
+                                    SCTR
+                                </label>
+                            </div>
                         </div>
 
                         {{-- ① DATOS PERSONALES --}}
@@ -683,6 +691,19 @@
                                             <div><label class="dj-label">Fecha de Nacimiento</label><input type="date"
                                                     id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input"
                                                     data-compare="fecha_nacimiento"></div>
+                                            <div>
+                                                <label class="dj-label">Fecha Ingreso a Solmar</label>
+                                                <input type="date" id="fecha_ingreso_solmar" name="fecha_ingreso_solmar"
+                                                    class="dj-input"
+                                                    {{ session('tipo_rol') == 17 ? '' : 'readonly' }}
+                                                    style="{{ session('tipo_rol') == 17 ? '' : 'background:#f3f4f6;color:#6b7280;cursor:not-allowed;' }}">
+                                            </div>
+                                            <div id="wrap_fecha_cese" style="display:none;">
+                                                <label class="dj-label">Fecha de Cese</label>
+                                                <input type="date" id="fecha_cese" name="fecha_cese"
+                                                    class="dj-input" readonly
+                                                    style="background:#f3f4f6;color:#6b7280;cursor:not-allowed;">
+                                            </div>
                                             <input type="hidden" id="ciudad_nacimiento" name="ciudad_nacimiento">
                                             <div style="visibility:hidden;">
                                                 <label class="dj-label">¿Sabe nadar?</label>

@@ -3704,6 +3704,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const hidden = document.getElementById('tipo_personal');
         if (hidden) hidden.value = this.value;
         aplicarVisibilidadPorTipo(this.value);
+        aplicarSctr(this.value);
     });
 
     // ============================================================
@@ -4745,6 +4746,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
+            aplicarSctr(''); cargarFechasIngresoCese({});
 
             await cargarCatalogos();
             await cargarPaises();
@@ -4933,6 +4935,7 @@ async function llenarFormulario(data) {
     aplicarReglaTipoPersonal(tipotrab);
     setValue('#tipo_personal_ui', tipotrab);
     aplicarVisibilidadPorTipo(tipotrab);
+    aplicarSctr(tipotrab, data.SCRT ?? null);
 
     // Mostrar la sección Tipo de Personal / Cargo
     const cardTC = document.getElementById('cardTipoCargo');
@@ -4967,6 +4970,7 @@ async function llenarFormulario(data) {
     setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
     setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
+    cargarFechasIngresoCese(data);
     setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
     setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
     setAjPais(data.NACIONALIDAD ? data.NACIONALIDAD.trim() : (data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : ''));
@@ -5302,6 +5306,28 @@ function poblarSelectTiposPersonal(items) {
 // Regla: Operativo (01/03) solo puede cambiar a Administrativo (02/05) y viceversa.
 // Admins RRHH pueden cambiar a cualquier tipo excepto Especial (06).
 // Especiales (06) queda deshabilitado sin posibilidad de cambio.
+// ── SCTR: visible solo para Administrativo (02/05) ─────────────
+// OP (01/03)  → sin checkbox, SCTR='SI' automático (backend)
+// ADMIN       → checkbox "SCTR": marcado='SI', sin marcar='NO'
+let sctrTipoAnterior = '';
+function aplicarSctr(tipoCod, scrt = null) {
+    const wrap = document.getElementById('wrap_sctr');
+    const chk  = document.getElementById('autorizar_sctr');
+    if (!wrap || !chk) return;
+    const tipo     = String(tipoCod || '').trim();
+    const esAdmin  = ['02', '05'].includes(tipo);
+    const eraAdmin = ['02', '05'].includes(sctrTipoAnterior);
+    wrap.style.display = esAdmin ? '' : 'none';
+    if (!esAdmin) {
+        chk.checked = false;
+    } else if (scrt !== null && scrt !== undefined) {
+        chk.checked = ['SI', '1'].includes(String(scrt).trim().toUpperCase());
+    } else if (!eraAdmin) {
+        chk.checked = false; // op → admin: aparece sin marcar
+    }
+    sctrTipoAnterior = tipo;
+}
+
 function aplicarReglaTipoPersonal(tipotrab) {
     const catalogo = window.allTiposPersonalDj || [];
     tipoPersonalEsEspecial = false;
@@ -5333,6 +5359,19 @@ function aplicarReglaTipoPersonal(tipotrab) {
     }));
 }
 
+
+// ── Fechas Ingreso Solmar / Cese (DJ existentes) ──────────────
+// Ingreso: editable SOLO para Admins RRHH (rol 17) — el readonly lo pone el blade
+// Cese:    visible solo si es recontratado (tiene FECH_CESE) y siempre bloqueado
+function cargarFechasIngresoCese(data = {}) {
+    const fi   = document.getElementById('fecha_ingreso_solmar');
+    const fc   = document.getElementById('fecha_cese');
+    const wrap = document.getElementById('wrap_fecha_cese');
+    if (fi) fi.value = formatDateForInput(data.FECH_INGRE) || '';
+    const esRecontratado = !!(data.FECH_CESE && String(data.FECH_CESE).trim() !== '');
+    if (wrap) wrap.style.display = esRecontratado ? '' : 'none';
+    if (fc) fc.value = esRecontratado ? (formatDateForInput(data.FECH_CESE) || '') : '';
+}
 
 function formatDateForInput(dateValue) {
     if (!dateValue) return '';
@@ -5728,6 +5767,7 @@ function limpiarSplitView() {
         tipoPersonalEsEspecial = false;
         poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
     }
+    aplicarSctr(''); cargarFechasIngresoCese({});
 
 }
 
@@ -5978,6 +6018,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
         }
+        aplicarSctr(''); cargarFechasIngresoCese({});
 
         // Reset No Caduca checkbox y restore caduca
         const noCaducaReset = document.getElementById('no_caduca_dni');
