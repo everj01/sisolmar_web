@@ -3322,10 +3322,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <div>
                 <label class="text-sm font-medium inline-block mb-2">Parentesco</label>
                 <select name="parentesco[]" class="form-select w-full">
-                    <option value="">Seleccionar</option>
-                    <option value="PADRE">Padre</option>    <option value="MADRE">Madre</option>
-                    <option value="CONYUGE">Conyuge</option>  
-                    <option value="HIJO">Hijo(a)</option>     
+                    ${opcionesVinculoHTML('', 'Seleccionar')}
                 </select>
             </div>
             <div>
@@ -3951,7 +3948,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     .find(fila => {
                         const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
                         const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
-                        return parentesco === 'HIJO' && !fecha;
+                        return parentesco.startsWith('HIJO') && !fecha;
                     });
                 if (hijoSinFecha) {
                     Swal.fire({ icon: 'warning', title: 'Fecha obligatoria', text: 'Ingrese la fecha de nacimiento para el familiar Hijo(a).', confirmButtonText: 'Entendido' });
@@ -5109,7 +5106,7 @@ function actualizarFechaFamiliar(fila) {
     const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
     const contenedorFecha = fila.querySelector('.family-date');
     const inputFecha = fila.querySelector('input[name="fechaNacimiento[]"]');
-    const esHijo = parentesco === 'HIJO';
+    const esHijo = parentesco.startsWith('HIJO');
 
     if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
     if (inputFecha) {
@@ -5127,11 +5124,28 @@ function renderFamiliares(familiares) {
         ...(familiares.padres || []),
         ...(familiares.madre || []),
         ...(familiares.hijos || []),
-        ...(familiares.conyugue || [])
+        ...(familiares.conyugue || []),
+        ...(familiares.otros || [])
     ];
 
     if (allFam.length === 0) addFamiliarRow({}, container);
     else allFam.forEach(f => addFamiliarRow(f, container));
+}
+
+// ── Opciones del select de Parentesco (catálogo TIPO_VINCULO_FAMILIAR) ──
+// Solo catálogo para filas nuevas; si se carga un dato legado fuera del
+// catálogo se añade como opción seleccionada para que se muestre como debe.
+function opcionesVinculoHTML(selected = '', emptyLabel = '—') {
+    const cats = (window.TIPOS_VINCULO || []).map(v => String(v).trim()).filter(Boolean);
+    const sel  = String(selected || '').trim();
+    let html = `<option value=""${sel ? '' : ' selected'}>${emptyLabel}</option>`;
+    for (const v of cats) {
+        html += `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`;
+    }
+    if (sel && !cats.includes(sel)) {
+        html += `<option value="${sel}" selected>${sel}</option>`;
+    }
+    return html;
 }
 
 function addFamiliarRow(data = {}, container = null) {
@@ -5153,9 +5167,7 @@ function addFamiliarRow(data = {}, container = null) {
         <div>
             <label class="dj-label">Parentesco</label>
             <select name="parentesco[]" class="dj-select">
-                <option value="">—</option>
-                ${['PADRE', 'MADRE', 'CONYUGE', 'HIJO']
-            .map(p => `<option value="${p}" ${data.TIPO_RELA === p ? 'selected' : ''}>${p.charAt(0) + p.slice(1).toLowerCase()}</option>`).join('')}
+                ${opcionesVinculoHTML(data.TIPO_RELA || '', '—')}
             </select>
         </div>
         <div>
@@ -5251,7 +5263,13 @@ function populateSelect(selector, data) {
 function setValue(selector, value) {
     const id = selector.startsWith('#') ? selector : `#${selector}`;
     const el = document.querySelector(id);
-    if (el) el.value = value || '';
+    if (!el) return;
+    const v = value || '';
+    // Si es select y el valor guardado no está en las opciones (dato legado), añadirlo
+    if (el.tagName === 'SELECT' && v && ![...el.options].some(o => o.value === v)) {
+        el.add(new Option(v, v));
+    }
+    el.value = v;
 }
 
 // ── Regla cambio Tipo de Personal (Operativo ↔ Administrativo) ─────────────

@@ -1,4 +1,8 @@
 {{-- Partial: _modal_dj.blade.php — Split View Comparación --}}
+{{-- Catálogo de vínculos familiares para JS (filas dinámicas de familiares) --}}
+<script>
+    window.TIPOS_VINCULO = window.TIPOS_VINCULO || @json(array_map('trim', array_column($tiposVinculo ?? [], 'descripcion')));
+</script>
 @if(session('tipo_rol') == 9 || session('tipo_rol') == 8)
 <style>
     #formDatos input:not([type="hidden"]),
@@ -1033,15 +1037,9 @@
                                                 <select id="parentesco_emergencia" name="parentesco_emergencia"
                                                         class="dj-select" data-compare="parentesco_emergencia">
                                                     <option value="">—</option>
-                                                    <option value="PADRE">Padre</option>
-                                                    <option value="MADRE">Madre</option>
-                                                    <option value="CONYUGE">Cónyuge</option>
-                                                    <option value="HIJO">Hijo(a)</option>
-                                                    <!-- <option value="HERMANO">Hermano(a)</option>
-                                                    <option value="ABUELO">Abuelo(a)</option>
-                                                    <option value="TIO">Tío(a)</option>
-                                                    <option value="PRIMO">Primo(a)</option>
-                                                    <option value="OTRO">Otro</option> -->
+                                                    @foreach(($tiposVinculo ?? []) as $tv)
+                                                    <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
@@ -1344,18 +1342,9 @@
                                                     <label class="dj-label">Parentesco</label>
                                                     <select name="parentesco[]" class="dj-select">
                                                         <option value="" disabled>—</option>
-                                                        <option value="PADRE">Padre</option>
-                                                        <option value="MADRE">Madre</option>
-                                                        <option value="CONYUGE">Conyuge</option>
-                                                        <!-- <option value="ESPOSO">Esposo</option>
-                                                        <option value="ESPOSA">Esposa</option> -->
-                                                        <option value="HIJO">Hijo(a)</option>
-                                                        <!-- <option value="HIJA">Hija</option>
-                                                        <option value="HERMANO">Hermano</option>
-                                                        <option value="HERMANA">Hermana</option>
-                                                        <option value="ABUELO">Abuelo</option>
-                                                        <option value="ABUELA">Abuela</option>
-                                                        <option value="OTROS">OTROS</option> -->
+                                                        @foreach(($tiposVinculo ?? []) as $tv)
+                                                        <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                                 <div><label class="dj-label">Apellidos y Nombres</label><input

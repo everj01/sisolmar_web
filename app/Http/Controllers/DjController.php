@@ -643,8 +643,13 @@ class DjController extends Controller
             foreach ($telefonos as $tel) {
                 $tel = (array) $tel;
 
-                // Emergencia
-                if ($tel['TELE_EMERGENCIA'] == '1') {
+                // Emergencia:
+                //  - '1'  → registro legado (TELE_EMERGENCIA siempre '0'/'1' en datos antiguos)
+                //  - NULL → formato nuevo (solo el registro de emergencia guarda NULL;
+                //           los teléfonos personal/whatsapp guardan '0')
+                $esEmergencia = ($tel['TELE_EMERGENCIA'] ?? null) === null
+                    || $tel['TELE_EMERGENCIA'] == '1';
+                if ($esEmergencia) {
                     $result['PERS_NROEMERGENCIA']  = $tel['NRO_TELE']          ?? null;
                     $result['PERS_NOMCONTACTO']    = $tel['TELE_CONTACTO']     ?? null;
                     $result['PERS_EMERC_FAMILIAR'] = $tel['VINCULO_FAMILIAR']  ?? null;
@@ -749,7 +754,6 @@ class DjController extends Controller
                 FECH_NACI AS FECH_NACI2
                 FROM {$familiaresTable}
                 WHERE CODI_PERS = ?
-                AND TIPO_RELA IN ('MADRE', 'PADRE', 'HIJO', 'CONYUGE')
                 ORDER BY TIPO_RELA",
                 [$codiPers]
             );
@@ -1326,7 +1330,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = $parentesco === 'HIJO'
+            $fechaNaci = str_starts_with($parentesco, 'HIJO')
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -2677,7 +2681,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = $parentesco === 'HIJO'
+            $fechaNaci = str_starts_with($parentesco, 'HIJO')
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -3161,26 +3165,23 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             'madre' => [],
             'hijos' => [],
             'conyugue' => [],
+            'otros' => [],
         ];
 
         foreach ($familiares as $f) {
             $f = (array) $f;
+            $tipo = strtoupper(trim((string) ($f['TIPO_RELA'] ?? '')));
 
-            switch ($f['TIPO_RELA']) {
-                case 'PADRE':
-                case 'MADRE':
-                case 'HERMANO':
-                    $grouped['padres'][] = $f;
-                    break;
-                case 'HIJO':
-                case 'HIJA':
-                    $grouped['hijos'][] = $f;
-                    break;
-                case 'CONYUGE':
-                case 'Conyuge':
-                case 'CONVIVIENTE':
-                    $grouped['conyugue'][] = $f;
-                    break;
+            // Catálogo TIPO_VINCULO_FAMILIAR + valores legados
+            if (str_starts_with($tipo, 'HIJO')) {
+                $grouped['hijos'][] = $f;
+            } elseif (in_array($tipo, ['CONYUGE', 'CONYUGUE', 'CONVIVIENTE', 'GESTANTE'], true)) {
+                $grouped['conyugue'][] = $f;
+            } elseif (in_array($tipo, ['PADRE', 'MADRE', 'HERMANO', 'HERMANA'], true)) {
+                $grouped['padres'][] = $f;
+            } else {
+                // Legados u otros (ABUELO, TIO, PRIMO, OTRO, AMISTAD...) — no se pierden
+                $grouped['otros'][] = $f;
             }
         }
 
@@ -3470,6 +3471,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 $telefonos[] = [
                     'NRO_TELE'         => $telPersonal,
                     'TIPO_TELE'        => 'MOVIL',
+                    'TELE_RESERVADO'   => '0',
                     'TELE_EMERGENCIA'  => '0',
                     'NRO_WSP'         => 1,
                     'TELE_CONTACTO'    => null,
@@ -3483,6 +3485,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 $telefonos[] = [
                     'NRO_TELE'         => $telPersonal,
                     'TIPO_TELE'        => 'MOVIL',
+                    'TELE_RESERVADO'   => '0',
                     'TELE_EMERGENCIA'  => '0',
                     'NRO_WSP'         => 0,
                     'TELE_CONTACTO'    => null,
@@ -3494,6 +3497,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 $telefonos[] = [
                     'NRO_TELE'         => $telWsp,
                     'TIPO_TELE'        => 'MOVIL',
+                    'TELE_RESERVADO'   => '0',
                     'TELE_EMERGENCIA'  => '0',
                     'NRO_WSP'         => 1,
                     'TELE_CONTACTO'    => null,
@@ -3507,12 +3511,13 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         if (!empty($telEmergencia) && strlen($telEmergencia) <= 12) {
             $telefonos[] = [
                 'NRO_TELE'         => $telEmergencia,
-                'TIPO_TELE'        => 'MOVIL',
-                'TELE_EMERGENCIA'  => '1',
-                'NRO_WSP'         => 0,
+                'TIPO_TELE'        => 'MOVIL',          // predeterminado
+                'TELE_RESERVADO'   => null,             // null predeterminado
+                'TELE_EMERGENCIA'  => null,             // null predeterminado
+                'NRO_WSP'          => null,             // null predeterminado (sin checkbox)
                 'TELE_CONTACTO'    => isset($data['contacto_emergencia']) ? trim($data['contacto_emergencia']) : null,
                 'VINCULO_FAMILIAR' => isset($data['parentesco_emergencia']) ? trim($data['parentesco_emergencia']) : null,
-                'OBSERVACION'      => isset($data['contacto_emergencia']) ? trim($data['contacto_emergencia']) : null,
+                'OBSERVACION'      => null,             // null predeterminado
             ];
         }
 
@@ -3529,8 +3534,8 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     substr($tel['NRO_TELE'], 0, 12),
                     $tel['TIPO_TELE'],
                     $tel['OBSERVACION'],
-                    'SI',
-                    '0',
+                    'SI',                                // TELE_VIGENCIA predeterminado
+                    $tel['TELE_RESERVADO'],               // emergencia → null, personal/whatsapp → '0'
                     $tel['TELE_EMERGENCIA'],
                     $tel['NRO_WSP'],
                     $tel['TELE_CONTACTO'],

@@ -50,6 +50,11 @@ class FileController extends Controller
             ['1']
         );
 
+        // Catálogo de vínculos familiares (parentescos) para Contacto de Emergencia
+        $tiposVinculo = DB::select(
+            'SELECT cod, descripcion FROM sisolm_web.dbo.TIPO_VINCULO_FAMILIAR ORDER BY cod'
+        );
+
         $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
         $restringirSucursalesGestionDj = $this->usuarioTieneSucursalLimitada();
 
@@ -125,7 +130,8 @@ class FileController extends Controller
             'cargos',
             'tipoPerLimitar',
             'tipoUsuario',
-            'tiposZona'
+            'tiposZona',
+            'tiposVinculo'
         ));
     }
 
@@ -215,10 +221,15 @@ class FileController extends Controller
             ['1']
         );
 
+        // Catálogo de vínculos familiares (parentescos) para Contacto de Emergencia
+        $tiposVinculo = DB::select(
+            'SELECT cod, descripcion FROM sisolm_web.dbo.TIPO_VINCULO_FAMILIAR ORDER BY cod'
+        );
+
         $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
         $esAdmin = in_array($tipoUsuario, [5, 11]);
 
-        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'bancos', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin', 'tiposZona'));
+        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'bancos', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin', 'tiposZona', 'tiposVinculo'));
     }
 
 

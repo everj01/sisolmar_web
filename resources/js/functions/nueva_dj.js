@@ -521,7 +521,7 @@ import Swal from 'sweetalert2';
             const fc = $('ndj_familyContainer');
             if (fc) {
                 fc.innerHTML = '';
-                const allFam = [...(familiares.padres||[]),...(familiares.madre||[]),...(familiares.hijos||[]),...(familiares.conyugue||[])];
+                const allFam = [...(familiares.padres||[]),...(familiares.madre||[]),...(familiares.hijos||[]),...(familiares.conyugue||[]),...(familiares.otros||[])];
                 if (allFam.length === 0) fc.appendChild(ndj_crearFila());
                 else allFam.forEach(f => fc.appendChild(ndj_crearFilaConDatos(f)));
             }
@@ -571,7 +571,11 @@ import Swal from 'sweetalert2';
         const selPar = div.querySelector('select[name="ndj_parentesco[]"]');
         const inpNom = div.querySelector('input[name="ndj_apellidosNombres[]"]');
         const inpFec = div.querySelector('input[name="ndj_fechaNacimiento[]"]');
-        if (selPar) selPar.value = f.TIPO_RELA || '';
+        if (selPar) {
+            const vPar = (f.TIPO_RELA || '').trim();
+            if (vPar && ![...selPar.options].some(o => o.value === vPar)) selPar.add(new Option(vPar, vPar));
+            selPar.value = vPar;
+        }
         if (inpNom) inpNom.value = f.Nombres   || '';
         if (inpFec) inpFec.value = fechaFormateada;
         ndj_actualizarFechaFamiliar(div);
@@ -580,7 +584,13 @@ import Swal from 'sweetalert2';
 
     function ndj_setVal(id, value) {
         const el = document.getElementById(id);
-        if (el) el.value = value || '';
+        if (!el) return;
+        const v = value || '';
+        // Si es select y el valor guardado no está en las opciones (dato legado), añadirlo
+        if (el.tagName === 'SELECT' && v && ![...el.options].some(o => o.value === v)) {
+            el.add(new Option(v, v));
+        }
+        el.value = v;
     }
 
     function ndj_fmtDate(val) {
@@ -1078,13 +1088,31 @@ import Swal from 'sweetalert2';
         const parentesco = fila.querySelector('select[name="ndj_parentesco[]"]')?.value;
         const contenedorFecha = fila.querySelector('.ndj-family-date');
         const inputFecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]');
-        const esHijo = parentesco === 'HIJO';
+        const esHijo = parentesco.startsWith('HIJO');
 
         if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
         if (inputFecha) {
             inputFecha.required = esHijo;
             if (!esHijo) inputFecha.value = '';
         }
+    }
+
+    // ── Opciones del select de Parentesco (catálogo TIPO_VINCULO_FAMILIAR) ──
+    // Solo catálogo para filas nuevas; si se carga un dato legado fuera del
+    // catálogo se añade como opción seleccionada para que se muestre como debe.
+    function ndj_opcionesVinculo(selected = '') {
+        const cats = (window.TIPOS_VINCULO || []).map(v => String(v).trim()).filter(Boolean);
+        const sel  = String(selected || '').trim();
+        let html = sel
+            ? '<option value="">—</option>'
+            : '<option value="" disabled selected>—</option>';
+        for (const v of cats) {
+            html += `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`;
+        }
+        if (sel && !cats.includes(sel)) {
+            html += `<option value="${sel}" selected>${sel}</option>`;
+        }
+        return html;
     }
 
     function ndj_crearFila() {
@@ -1094,9 +1122,7 @@ import Swal from 'sweetalert2';
         div.innerHTML = `
             <div><label class="dj-label">Parentesco</label>
                 <select name="ndj_parentesco[]" class="dj-select">
-                    <option value="" disabled selected>—</option>
-                    <option value="PADRE">Padre</option><option value="MADRE">Madre</option>
-                    <option value="CONYUGE">Cónyuge</option><option value="HIJO">Hijo(a)</option>
+                    ${ndj_opcionesVinculo('')}
                 </select></div>
             <div><label class="dj-label">Apellidos y Nombres</label>
                 <input type="text" name="ndj_apellidosNombres[]" class="dj-input" placeholder="Apellidos y nombres completos" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+"></div>
@@ -1380,7 +1406,7 @@ import Swal from 'sweetalert2';
             .find(fila => {
                 const parentesco = fila.querySelector('select[name="ndj_parentesco[]"]')?.value;
                 const fecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]')?.value;
-                return parentesco === 'HIJO' && !fecha;
+                return parentesco.startsWith('HIJO') && !fecha;
             });
         if (hijoSinFecha) {
             Swal.fire({
