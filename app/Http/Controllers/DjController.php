@@ -372,7 +372,7 @@ class DjController extends Controller
                     strtoupper(trim($data['nombre1'] ?? '')),
                     strtoupper(trim($data['nombre2'] ?? '')),
                     strtoupper(trim($data['apellido_paterno'] ?? '')),
-                    strtoupper(trim($data['apellido_materno'] ?? '')),
+                    strtoupper(trim($data['apellido_materno'] ?? '')) ?: null,
                     $fechaNaci, $fechaCaduca, $fechaIngre,
                     $sexo, $sexo,
                     $estadoCivil, $estadoCivilCorto,

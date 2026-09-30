@@ -935,6 +935,12 @@ import Swal from 'sweetalert2';
                 if (s) s.value = '';
             });
         }
+        // Apellido Materno: OPCIONAL para extranjeros (hay personal con 1 solo apellido).
+        // Se guarda como NULL si se deja vacío.
+        const apMat = $('ndj_apellido_materno');
+        if (apMat) {
+            apMat.placeholder = esCarnetExtranjeria ? 'Apellido materno (opcional)' : 'Apellido materno';
+        }
     }
 
     async function ndj_cargarCargos() {
@@ -1403,6 +1409,9 @@ import Swal from 'sweetalert2';
             const faltantes = camposReq.filter(c => {
                 const el = $(c.id);
                 if (!el) return true;
+                // Regla Carnet de Extranjería (0035): Apellido Materno es OPCIONAL
+                // (hay personal extranjero con 1 solo apellido; se guarda NULL si está vacío)
+                if (c.id === 'ndj_apellido_materno' && ($('ndj_tipo_documento')?.value || '').trim() === '0035') return false;
                 if (el.type !== 'hidden' && el.offsetParent === null) return false;
                 if (el.type === 'checkbox') return !el.checked;
                 return !el.value?.trim();
