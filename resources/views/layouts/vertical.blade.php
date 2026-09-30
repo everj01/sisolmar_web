@@ -176,13 +176,22 @@
     </div>
     @endauth
 
-    @include('layouts.shared/footer-scripts')
+    @include('layouts.shared.footer-scripts')
+
+    @php
+        // Pop-ups de notificaciones: solo se muestran UNA VEZ por login.
+        // La primera renderización consume el flag; al navegar entre vistas ya no aparecen.
+        $notifPopupsAutoshow = !session('notif_popups_ya_mostrados');
+        if ($notifPopupsAutoshow) {
+            session(['notif_popups_ya_mostrados' => true]);
+        }
+    @endphp
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
 
-            // 🔹 Evita que se muestre más de una vez por sesión
-            if (sessionStorage.getItem("folioToastShown")) {
+            // 🔹 Solo una vez por login (y sin repetir en el mismo navegador)
+            if (!@json($notifPopupsAutoshow) || sessionStorage.getItem("folioToastShown")) {
                 return;
             }
 
@@ -227,6 +236,9 @@
 <script>
         document.addEventListener("DOMContentLoaded", function() {
             let notificacionesMostradas = new Set();
+            // Pop-ups solo una vez por login: el primer check los muestra;
+            // los checks siguientes (cada 5s) solo actualizan la campanita.
+            let popupsActivos = @json($notifPopupsAutoshow);
 
             function checkDemandasAdmin() {
                 fetch("{{ url('/api/notificaciones/demandas-admin') }}")
@@ -243,7 +255,7 @@
 
                             result.data.forEach(demanda => {
                                 // --- 1. POP-UP SUPERIOR DERECHA ---
-                                if (!notificacionesMostradas.has(demanda.id)) {
+                                if (popupsActivos && !notificacionesMostradas.has(demanda.id)) {
                                     notificacionesMostradas.add(demanda.id);
 
                                     const toast = document.createElement("div");
@@ -300,6 +312,9 @@
                                 }
                             });
                         }
+
+                        // Después del primer check ya no se muestran más pop-ups
+                        popupsActivos = false;
                     })
                     .catch(error => console.error('Error revisando demandas del SIP:', error));
             }
@@ -339,14 +354,10 @@
                 .catch(err => console.error('Error al borrar la notificación', err));
             };
 
-            // Función para OCULTAR el pop-up visualmente sin afectar la base de datos
+            // Función para CERRAR el pop-up: descarta la notificación definitivamente
+            // (se elimina de la BD y ya no vuelve a aparecer en ningún login)
             window.cerrarToastSip = function(id) {
-                const toast = document.getElementById(`demanda-toast-${id}`);
-                if (toast) {
-                    toast.style.opacity = "0";
-                    toast.style.transform = "translateX(100%)";
-                    setTimeout(() => toast.remove(), 400); 
-                }
+                window.borrarDemandaSip(id);
             };
 
             setInterval(checkDemandasAdmin, 5000); 

@@ -671,10 +671,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <div>
                 <label class="text-sm font-medium inline-block mb-2">Parentesco</label>
                 <select name="parentesco[]" class="form-select w-full">
-                    <option value="">Seleccionar</option>
-                    <option value="PADRE">Padre</option>    <option value="MADRE">Madre</option>
-                    <option value="CONYUGE">Conyuge</option>  
-                    <option value="HIJO">Hijo(a)</option>     
+                    ${opcionesVinculoHTML('', 'Seleccionar')}
                 </select>
             </div>
             <div>
@@ -1173,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // País de nacimiento: sincronizar el hidden al escribir en el input
-    document.getElementById('aj_pais')?.addEventListener('input', syncPaisCodigoGest);
+    // (el select de país ya guarda el código directamente)
 
     // ============================================================
     // GUARDAR FORMULARIO
@@ -1193,7 +1190,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btnGuardar) btnGuardar.disabled = true;
 
             try {
+                // Habilitar sucursal temporalmente para que su valor se envíe en el FormData
+                const sucursalEl = document.getElementById('sucursal');
+                if (sucursalEl) sucursalEl.disabled = false;
+
                 const formData = new FormData(form);
+
+                // Restaurar estado disabled si el usuario no es Admins RRHH
+                if (sucursalEl && window.tipoUsuario != 17) sucursalEl.disabled = true;
 
                 // Verificar que formData tiene datos
                 console.log('📋 FormData entries:');
@@ -1210,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     .find(fila => {
                         const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
                         const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
-                        return parentesco === 'HIJO' && !fecha;
+                        return parentesco.startsWith('HIJO') && !fecha;
                     });
                 if (hijoSinFecha) {
                     Swal.fire({ icon: 'warning', title: 'Fecha obligatoria', text: 'Ingrese la fecha de nacimiento para el familiar Hijo(a).', confirmButtonText: 'Entendido' });
@@ -1802,6 +1806,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const hidden = document.getElementById('tipo_personal');
         if (hidden) hidden.value = this.value;
         aplicarVisibilidadPorTipo(this.value);
+        aplicarSctr(this.value);
     });
 
     // No Caduca checkbox: bloquear/desbloquear caduca
@@ -1868,6 +1873,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
+            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
 
             await cargarCatalogos();
 
@@ -1930,7 +1936,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 let catalogosCache = null;
 let catalogosPromise = null;
 
-// ── Países de nacimiento (datalist) ─────────────────────────
+// ── Países de nacimiento (select desde ADMI_PAIS) ────────────
 let paisesDataGest = [];
 let paisesPromiseGest = null;
 
@@ -1941,14 +1947,14 @@ async function cargarPaisesGest() {
     paisesPromiseGest = axios.get(`${API_URL}/dj/get-paises/`)
         .then(res => {
             paisesDataGest = res.data?.paises ?? [];
-            const dl = document.getElementById('aj_paises_list');
-            if (dl) {
-                dl.innerHTML = '';
+            const sel = document.getElementById('aj_pais');
+            if (sel) {
+                sel.innerHTML = '<option value="">— Seleccionar —</option>';
                 paisesDataGest.forEach(p => {
                     const o = document.createElement('option');
-                    o.value = p.text;
-                    o.dataset.codigo = p.id;
-                    dl.appendChild(o);
+                    o.value = p.id;
+                    o.textContent = p.text;
+                    sel.appendChild(o);
                 });
             }
         })
@@ -1958,23 +1964,21 @@ async function cargarPaisesGest() {
     return paisesPromiseGest;
 }
 
-function setPaisGest(codigo) {
-    const input  = document.getElementById('aj_pais');
-    const hidden = document.getElementById('aj_pais_codigo');
-    if (!input || !hidden) return;
-    const c = String(codigo ?? '').trim();
-    hidden.value = c;
-    const match = paisesDataGest.find(p => String(p.id) === c);
-    input.value = match ? match.text : '';
+async function setPaisGest(codigo) {
+    const sel = document.getElementById('aj_pais');
+    if (!sel) return;
+    // Autoguarantía: si el catálogo de países no llegó, cargarlo ahora
+    if (!paisesDataGest.length) await cargarPaisesGest();
+    sel.value = String(codigo ?? '').trim();
 }
 
-function syncPaisCodigoGest() {
-    const input  = document.getElementById('aj_pais');
-    const hidden = document.getElementById('aj_pais_codigo');
-    if (!input || !hidden) return;
-    const texto = input.value.toUpperCase().trim();
-    const match = paisesDataGest.find(p => String(p.text).toUpperCase() === texto);
-    hidden.value = match ? match.id : '';
+// ── Regla: Carnet de Extranjería (0035) → oculta Dep/Prov/Dist de Nacimiento ──
+function aplicarExtranjeriaNacimiento(codTipoDoc) {
+    const esExtranjeria = String(codTipoDoc ?? '').trim() === '0035';
+    ['aj_wrap_departamento_nac', 'aj_wrap_provincia_nac', 'aj_wrap_distrito_nac'].forEach(id => {
+        const w = document.getElementById(id);
+        if (w) w.style.display = esExtranjeria ? 'none' : '';
+    });
 }
 
 async function cargarCatalogos(source = 'migracion') {
@@ -2023,9 +2027,11 @@ async function cargarCargosDj() {
     }
 }
 
-function filtrarCargos(tipoPersonal) {
+async function filtrarCargos(tipoPersonal) {
     const sel = document.getElementById('cargo_ui');
     if (!sel) return;
+    // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
+    if (!window.allCargosDj || !window.allCargosDj.length) await cargarCargosDj();
     const operativos = ['01', '03', '06'];
     const admin = ['02', '05'];
     const cargoTipo = operativos.includes(tipoPersonal) ? '01'
@@ -2092,6 +2098,7 @@ async function llenarFormulario(data) {
     aplicarReglaTipoPersonal(tipotrab);
     setValue('#tipo_personal_ui', tipotrab);
     aplicarVisibilidadPorTipo(tipotrab);
+    aplicarSctr(tipotrab, data.SCRT ?? null);
 
     // Mostrar la sección Tipo de Personal / Cargo
     const cardTC = document.getElementById('cardTipoCargo');
@@ -2126,12 +2133,14 @@ async function llenarFormulario(data) {
     setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
     setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
+    cargarFechasIngresoCese(data);
     setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
     setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
 
     // País de nacimiento (columna NACIONALIDAD de PERSONAL → datalist de países)
     await cargarPaisesGest();
     setPaisGest(data.NACIONALIDAD ? String(data.NACIONALIDAD).trim() : '');
+    aplicarExtranjeriaNacimiento(data.CODI_TIPO_DOCU ? String(data.CODI_TIPO_DOCU).trim() : '');
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
     // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
@@ -2210,6 +2219,8 @@ async function llenarFormulario(data) {
 
     setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
     setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
+    setValue('#tipo_zona_dni', data.TIZO_CODIGO ? data.TIZO_CODIGO.trim() : '');
+    setValue('#zona_dirdni', data.PERS_ZONA_DIRDNI ? data.PERS_ZONA_DIRDNI.trim() : '');
 
     cargarUbicaciones('actual', data.PERS_DEPT_ACT?.trim() ?? '', data.PERS_PROV_ACT?.trim() ?? '', data.PERS_DIST_ACT?.trim() ?? '');
     cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI?.trim() ?? '', data.PERS_PROV_DIRDNI?.trim() ?? '', data.PERS_DIST_DIRDNI?.trim() ?? '');
@@ -2260,7 +2271,7 @@ function actualizarFechaFamiliar(fila) {
     const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
     const contenedorFecha = fila.querySelector('.family-date');
     const inputFecha = fila.querySelector('input[name="fechaNacimiento[]"]');
-    const esHijo = parentesco === 'HIJO';
+    const esHijo = parentesco.startsWith('HIJO');
 
     if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
     if (inputFecha) {
@@ -2278,11 +2289,28 @@ function renderFamiliares(familiares) {
         ...(familiares.padres || []),
         ...(familiares.madre || []),
         ...(familiares.hijos || []),
-        ...(familiares.conyugue || [])
+        ...(familiares.conyugue || []),
+        ...(familiares.otros || [])
     ];
 
     if (allFam.length === 0) addFamiliarRow({}, container);
     else allFam.forEach(f => addFamiliarRow(f, container));
+}
+
+// ── Opciones del select de Parentesco (catálogo TIPO_VINCULO_FAMILIAR) ──
+// Solo catálogo para filas nuevas; si se carga un dato legado fuera del
+// catálogo se añade como opción seleccionada para que se muestre como debe.
+function opcionesVinculoHTML(selected = '', emptyLabel = '—') {
+    const cats = (window.TIPOS_VINCULO || []).map(v => String(v).trim()).filter(Boolean);
+    const sel  = String(selected || '').trim();
+    let html = `<option value=""${sel ? '' : ' selected'}>${emptyLabel}</option>`;
+    for (const v of cats) {
+        html += `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`;
+    }
+    if (sel && !cats.includes(sel)) {
+        html += `<option value="${sel}" selected>${sel}</option>`;
+    }
+    return html;
 }
 
 function addFamiliarRow(data = {}, container = null) {
@@ -2304,9 +2332,7 @@ function addFamiliarRow(data = {}, container = null) {
         <div>
             <label class="dj-label">Parentesco</label>
             <select name="parentesco[]" class="dj-select">
-                <option value="">—</option>
-                ${['PADRE', 'MADRE', 'CONYUGE', 'HIJO']
-            .map(p => `<option value="${p}" ${data.TIPO_RELA === p ? 'selected' : ''}>${p.charAt(0) + p.slice(1).toLowerCase()}</option>`).join('')}
+                ${opcionesVinculoHTML(data.TIPO_RELA || '', '—')}
             </select>
         </div>
         <div>
@@ -2382,7 +2408,13 @@ function populateSelect(selector, data) {
 function setValue(selector, value) {
     const id = selector.startsWith('#') ? selector : `#${selector}`;
     const el = document.querySelector(id);
-    if (el) el.value = value || '';
+    if (!el) return;
+    const v = value || '';
+    // Si es select y el valor guardado no está en las opciones (dato legado), añadirlo
+    if (el.tagName === 'SELECT' && v && ![...el.options].some(o => o.value === v)) {
+        el.add(new Option(v, v));
+    }
+    el.value = v;
 }
 
 // ── Regla cambio Tipo de Personal (Operativo ↔ Administrativo) ─────────────
@@ -2392,8 +2424,7 @@ const TIPO_CODIGO_ESPECIALES = '06';
 let tipoPersonalEsEspecial = false;
 
 function userPuedeCambiarTipoPersonal() {
-    const user = (window.currentUser || '').toString().trim().toUpperCase();
-    return ['RBURGOS', 'MPAREDES'].includes(user);
+    return (window.funcionalidadesSISOL || []).includes('cambiar_tipo_personal');
 }
 
 function poblarSelectTiposPersonal(items) {
@@ -2414,7 +2445,30 @@ function poblarSelectTiposPersonal(items) {
 }
 
 // Regla: Operativo (01/03) solo puede cambiar a Administrativo (02/05) y viceversa.
+// Admins RRHH pueden cambiar a cualquier tipo excepto Especial (06).
 // Especiales (06) queda deshabilitado sin posibilidad de cambio.
+// ── SCTR: visible solo para Administrativo (02/05) ─────────────
+// OP (01/03)  → sin checkbox, SCTR='SI' automático (backend)
+// ADMIN       → checkbox "SCTR": marcado='SI', sin marcar='NO'
+let sctrTipoAnterior = '';
+function aplicarSctr(tipoCod, scrt = null) {
+    const wrap = document.getElementById('wrap_sctr');
+    const chk  = document.getElementById('autorizar_sctr');
+    if (!wrap || !chk) return;
+    const tipo     = String(tipoCod || '').trim();
+    const esAdmin  = ['02', '05'].includes(tipo);
+    const eraAdmin = ['02', '05'].includes(sctrTipoAnterior);
+    wrap.style.display = esAdmin ? '' : 'none';
+    if (!esAdmin) {
+        chk.checked = false;
+    } else if (scrt !== null && scrt !== undefined) {
+        chk.checked = ['SI', '1'].includes(String(scrt).trim().toUpperCase());
+    } else if (!eraAdmin) {
+        chk.checked = false; // op → admin: aparece sin marcar
+    }
+    sctrTipoAnterior = tipo;
+}
+
 function aplicarReglaTipoPersonal(tipotrab) {
     const catalogo = window.allTiposPersonalDj || [];
     tipoPersonalEsEspecial = false;
@@ -2429,6 +2483,12 @@ function aplicarReglaTipoPersonal(tipotrab) {
         return;
     }
 
+    // Admins RRHH: mostrar todos excepto Especial
+    if (userPuedeCambiarTipoPersonal()) {
+        poblarSelectTiposPersonal(catalogo.filter(t => String(t.codigo).trim() !== TIPO_CODIGO_ESPECIALES));
+        return;
+    }
+
     const esOperativo = TIPO_GRUPO_OPERATIVO.includes(tipotrab);
     const esAdmin = TIPO_GRUPO_ADMINISTRATIVO.includes(tipotrab);
     if (!esOperativo && !esAdmin) { poblarSelectTiposPersonal(catalogo); return; }
@@ -2438,6 +2498,19 @@ function aplicarReglaTipoPersonal(tipotrab) {
         const cod = String(t.codigo).trim();
         return cod === tipotrab || grupoOpuesto.includes(cod);
     }));
+}
+
+// ── Fechas Ingreso Solmar / Cese (DJ existentes) ──────────────
+// Ingreso: editable SOLO para Admins RRHH (rol 17) — el readonly lo pone el blade
+// Cese:    visible solo si es recontratado (tiene FECH_CESE) y siempre bloqueado
+function cargarFechasIngresoCese(data = {}) {
+    const fi   = document.getElementById('fecha_ingreso_solmar');
+    const fc   = document.getElementById('fecha_cese');
+    const wrap = document.getElementById('wrap_fecha_cese');
+    if (fi) fi.value = formatDateForInput(data.FECH_INGRE) || '';
+    const esRecontratado = !!(data.FECH_CESE && String(data.FECH_CESE).trim() !== '');
+    if (wrap) wrap.style.display = esRecontratado ? '' : 'none';
+    if (fc) fc.value = esRecontratado ? (formatDateForInput(data.FECH_CESE) || '') : '';
 }
 
 function formatDateForInput(dateValue) {
@@ -3059,6 +3132,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
         }
+        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
 
         // Reset No Caduca checkbox y restore caduca
         const noCaducaReset = document.getElementById('no_caduca_dni');

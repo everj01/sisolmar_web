@@ -6,6 +6,11 @@
      ============================================================ --}}
 @include('file_control.rrhh.modal_js_styles_nuevo')
 
+{{-- Catálogo de vínculos familiares para JS (filas dinámicas de familiares) --}}
+<script>
+    window.TIPOS_VINCULO = window.TIPOS_VINCULO || @json(array_map('trim', array_column($tiposVinculo ?? [], 'descripcion')));
+</script>
+
 <div id="modalNuevaDJ"
     class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none">
     <div class="-translate-y-5 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 sm:w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded"
@@ -62,6 +67,13 @@
                                     <select id="ndj_sel_tipo_personal" name="ndj_sel_tipo_personal" class="dj-select">
                                         <option value="">— Seleccionar —</option>
                                     </select>
+                                    <div id="ndj_wrap_sctr" style="display:none;margin-top:6px;">
+                                        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;">
+                                            <input type="checkbox" id="ndj_autorizar_sctr" name="ndj_autorizar_sctr" value="1"
+                                                style="width:14px;height:14px;accent-color:#25d366;cursor:pointer;">
+                                            SCTR
+                                        </label>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="dj-label">Cargo</label>
@@ -202,11 +214,9 @@
                                     <div class="dj-grid-4" style="margin-bottom:8px;">
                                         <div>
                                             <label class="dj-label">País</label>
-                                            <input type="hidden" id="ndj_pais_codigo" name="ndj_pais">
-                                            <input type="text" id="ndj_pais" class="dj-input"
-                                                list="ndj_paises_list"
-                                                placeholder="Escriba para buscar..." autocomplete="off">
-                                            <datalist id="ndj_paises_list"></datalist>
+                                            <select id="ndj_pais" name="ndj_pais" class="dj-select">
+                                                <option value="">— Seleccionar —</option>
+                                            </select>
                                         </div>
                                         <div id="ndj_wrap_departamento_nac">
                                             <label class="dj-label">Departamento</label>
@@ -464,6 +474,23 @@
                                                     </select>
                                                 </div>
                                             </div>
+                                            <div class="dj-grid-2" style="margin-top:8px;">
+                                                <div>
+                                                    <label class="dj-label">Tipo Zona</label>
+                                                    <select id="ndj_tipo_zona" name="ndj_tipo_zona" class="dj-select">
+                                                        <option value="">—</option>
+                                                        @foreach ($tiposZona ?? [] as $tz)
+                                                            <option value="{{ trim($tz->TIZO_CODIGO) }}">{{ $tz->TIZO_DESCRIPCION }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="dj-label">Nombre de Zona</label>
+                                                    <input type="text" id="ndj_zona_dirdni" name="ndj_zona_dirdni"
+                                                        class="dj-input" placeholder="Nombre de la zona"
+                                                        maxlength="100" style="text-transform:uppercase;">
+                                                </div>
+                                            </div>
                                             <label class="dj-label">Descripción</label>
                                             <textarea id="ndj_direccion_dni" name="ndj_direccion_dni"
                                                 class="dj-textarea" placeholder="Dirección registrada en el DNI"></textarea>
@@ -496,10 +523,9 @@
                                             <label class="dj-label">Parentesco</label>
                                             <select id="ndj_parentesco_emergencia" name="ndj_parentesco_emergencia" class="dj-select">
                                                 <option value="">—</option>
-                                                <option value="PADRE">Padre</option>
-                                                <option value="MADRE">Madre</option>
-                                                <option value="CONYUGE">Cónyuge</option>
-                                                <option value="HIJO">Hijo(a)</option>
+                                                @foreach(($tiposVinculo ?? []) as $tv)
+                                                <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                @endforeach
                                             </select>
                                         </div>
                                     </div>
@@ -757,10 +783,9 @@
                                                 <label class="dj-label">Parentesco</label>
                                                 <select name="ndj_parentesco[]" class="dj-select">
                                                     <option value="" disabled selected>—</option>
-                                                    <option value="PADRE">Padre</option>
-                                                    <option value="MADRE">Madre</option>
-                                                    <option value="CONYUGE">Cónyuge</option>
-                                                    <option value="HIJO">Hijo(a)</option>
+                                                    @foreach(($tiposVinculo ?? []) as $tv)
+                                                    <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                             <div>

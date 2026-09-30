@@ -44,6 +44,17 @@ class FileController extends Controller
         // (llamada al SP sin filtro de usuario: @usuario = '0')
         $todasLasSucursales = DB::select('EXEC SW_LISTAR_SUCURSALES ?', ['0']);
 
+        // Catálogo de tipos de zona para los formularios DJ
+        $tiposZona = DB::select(
+            'SELECT TIZO_CODIGO, TIZO_DESCRIPCION FROM si_solm.dbo.TIPO_ZONA WHERE TIZO_VIGENCIA = ? ORDER BY TIZO_CODIGO',
+            ['1']
+        );
+
+        // Catálogo de vínculos familiares (parentescos) para Contacto de Emergencia
+        $tiposVinculo = DB::select(
+            'SELECT cod, descripcion FROM sisolm_web.dbo.TIPO_VINCULO_FAMILIAR ORDER BY cod'
+        );
+
         $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
         $restringirSucursalesGestionDj = $this->usuarioTieneSucursalLimitada();
 
@@ -118,7 +129,9 @@ class FileController extends Controller
             'mostrarTodosTiposGestionDj',
             'cargos',
             'tipoPerLimitar',
-            'tipoUsuario'
+            'tipoUsuario',
+            'tiposZona',
+            'tiposVinculo'
         ));
     }
 
@@ -201,10 +214,22 @@ class FileController extends Controller
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
+
+        // Catálogo de tipos de zona
+        $tiposZona = DB::select(
+            'SELECT TIZO_CODIGO, TIZO_DESCRIPCION FROM si_solm.dbo.TIPO_ZONA WHERE TIZO_VIGENCIA = ? ORDER BY TIZO_CODIGO',
+            ['1']
+        );
+
+        // Catálogo de vínculos familiares (parentescos) para Contacto de Emergencia
+        $tiposVinculo = DB::select(
+            'SELECT cod, descripcion FROM sisolm_web.dbo.TIPO_VINCULO_FAMILIAR ORDER BY cod'
+        );
+
         $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
         $esAdmin = in_array($tipoUsuario, [5, 11]);
 
-        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'bancos', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin'));
+        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'bancos', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin', 'tiposZona', 'tiposVinculo'));
     }
 
 

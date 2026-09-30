@@ -319,6 +319,10 @@ import Swal from 'sweetalert2';
     function activarModoRecontratacion(codiPers, tipotrab = '') {
         modoRecontratacion     = true;
         codiPersRecontratacion = codiPers;
+
+        // Fecha de Ingreso a Solmar: VACÍA y obligatoria.
+        // Es el NUEVO ingreso: no se hereda la fecha antigua que precarga la carga de datos.
+        ndj_setVal('ndj_fecha_ingreso_solmar', '');
         if (btnGuardar) {
             btnGuardar.textContent = 'Recontratar';
             btnGuardar.style.background = '#f59e0b';
@@ -409,7 +413,7 @@ import Swal from 'sweetalert2';
                     ndj_cargarTipoDoc(), ndj_cargarTipoPer(),
                     ndj_cargarEstadoCivil(), ndj_cargarSistemaPrev(),
                     ndj_cargarDepartamentos(), ndj_cargarEducacion(),
-                    ndj_cargarCargos(),
+                    ndj_cargarCargos(), ndj_cargarPaises(),
                 ]);
             }
 
@@ -452,6 +456,8 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_cuenta_banco',          data.dj2026_banco?.trim()  || '');
             ndj_setVal('ndj_direccion_actual',      data.DIRECCION?.trim()     || '');
             ndj_setVal('ndj_direccion_dni',         data.PERS_DIREC_DNI?.trim()|| '');
+            ndj_setVal('ndj_tipo_zona',            data.TIZO_CODIGO?.trim()       || '');
+            ndj_setVal('ndj_zona_dirdni',          data.PERS_ZONA_DIRDNI?.trim()  || '');
             ndj_setVal('ndj_contacto_emergencia',   data.PERS_NOMCONTACTO?.trim()    || '');
             ndj_setVal('ndj_celular_emergencia',    data.PERS_NROEMERGENCIA?.trim()  || '');
             ndj_setVal('ndj_parentesco_emergencia', data.PERS_EMERC_FAMILIAR?.trim() || '');
@@ -485,6 +491,11 @@ import Swal from 'sweetalert2';
             ndj_setVal('ndj_sel_tipo_personal', tipotrab);
             ndj_setVal('ndj_tipo_personal',     tipotrab);
             ndj_aplicarTipo(tipotrab);
+            ndj_aplicarSctr(tipotrab, data.SCRT ?? null);
+            // Llenar el select de Cargo filtrado por el tipo cargado (antes solo se
+            // llenaba al cambiar el tipo manualmente) y preseleccionar su cargo actual
+            await ndj_filtrarCargos(tipotrab);
+            ndj_setVal('ndj_sel_cargo', data.CODI_CARG?.trim() || '');
             ndj_bloquearCampos(false);
 
             if (data.CLASE_BREVETE) {
@@ -513,13 +524,13 @@ import Swal from 'sweetalert2';
             await ndj_cargarUbigeosCascada('ndj_departamento_actual','ndj_provincia_actual','ndj_distrito_actual', data.PERS_DEPT_ACT?.trim(),   data.PERS_PROV_ACT?.trim(),    data.PERS_DIST_ACT?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_dni',   'ndj_provincia_dni',   'ndj_distrito_dni',    data.PERS_DPTO_DIRDNI?.trim(), data.PERS_PROV_DIRDNI?.trim(), data.PERS_DIST_DIRDNI?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_nac',   'ndj_provincia_nac',   'ndj_distrito_nac',    data.DEPA_CODIGO_NACI?.trim(), data.PROVI_CODIGO_NACI?.trim(),data.DIST_NACI?.trim());
-            ndj_setPais(data.NACIONALIDAD?.trim() || '');
+            await ndj_setPais(data.NACIONALIDAD?.trim() || '');
             ndj_toggleUbigeoNacimiento(false);
 
             const fc = $('ndj_familyContainer');
             if (fc) {
                 fc.innerHTML = '';
-                const allFam = [...(familiares.padres||[]),...(familiares.madre||[]),...(familiares.hijos||[]),...(familiares.conyugue||[])];
+                const allFam = [...(familiares.padres||[]),...(familiares.madre||[]),...(familiares.hijos||[]),...(familiares.conyugue||[]),...(familiares.otros||[])];
                 if (allFam.length === 0) fc.appendChild(ndj_crearFila());
                 else allFam.forEach(f => fc.appendChild(ndj_crearFilaConDatos(f)));
             }
@@ -569,7 +580,11 @@ import Swal from 'sweetalert2';
         const selPar = div.querySelector('select[name="ndj_parentesco[]"]');
         const inpNom = div.querySelector('input[name="ndj_apellidosNombres[]"]');
         const inpFec = div.querySelector('input[name="ndj_fechaNacimiento[]"]');
-        if (selPar) selPar.value = f.TIPO_RELA || '';
+        if (selPar) {
+            const vPar = (f.TIPO_RELA || '').trim();
+            if (vPar && ![...selPar.options].some(o => o.value === vPar)) selPar.add(new Option(vPar, vPar));
+            selPar.value = vPar;
+        }
         if (inpNom) inpNom.value = f.Nombres   || '';
         if (inpFec) inpFec.value = fechaFormateada;
         ndj_actualizarFechaFamiliar(div);
@@ -578,7 +593,13 @@ import Swal from 'sweetalert2';
 
     function ndj_setVal(id, value) {
         const el = document.getElementById(id);
-        if (el) el.value = value || '';
+        if (!el) return;
+        const v = value || '';
+        // Si es select y el valor guardado no está en las opciones (dato legado), añadirlo
+        if (el.tagName === 'SELECT' && v && ![...el.options].some(o => o.value === v)) {
+            el.add(new Option(v, v));
+        }
+        el.value = v;
     }
 
     function ndj_fmtDate(val) {
@@ -809,9 +830,7 @@ import Swal from 'sweetalert2';
 
         // Reset búsqueda país
         const paisInput = $('ndj_pais');
-        const paisCodigo = $('ndj_pais_codigo');
         if (paisInput) paisInput.value = '';
-        if (paisCodigo) paisCodigo.value = '';
 
         ndj_limpiarFoto();
 
@@ -825,6 +844,7 @@ import Swal from 'sweetalert2';
             tipoUi.style.background = '';
             tipoUi.style.color = '';
         }
+        ndj_aplicarSctr('');
 
         ['ndj_provincia_actual','ndj_distrito_actual','ndj_provincia_dni','ndj_distrito_dni','ndj_provincia_nac','ndj_distrito_nac']
             .forEach(id => { const s = $(id); if (s) s.innerHTML = '<option value="">—</option>'; });
@@ -869,44 +889,31 @@ import Swal from 'sweetalert2';
     function ndj_cargarSistemaPrev(){ return ndj_fetchSelect('ndj_sistema_previsional', `${VITE_URL_APP}/api/dj/get-sistema-prev/`, 'codigo','nombre'); }
 
     async function ndj_cargarPaises() {
-        const input = $('ndj_pais');
-        const dl = document.getElementById('ndj_paises_list');
-        if (!input || !dl) return;
-        input.disabled = true;
+        const sel = $('ndj_pais');
+        if (!sel) return;
         try {
             const res = await fetch(`${VITE_URL_APP}/api/dj/get-paises/`);
             const json = await res.json();
             const items = json.paises ?? [];
             ndj_paisesData = items;
-            dl.innerHTML = '';
+            sel.innerHTML = '<option value="">— Seleccionar —</option>';
             items.forEach(item => {
                 const o = document.createElement('option');
-                o.value = item.text;
-                o.dataset.codigo = item.id;
-                dl.appendChild(o);
+                o.value = item.id;
+                o.textContent = item.text;
+                sel.appendChild(o);
             });
-            input.dataset.loaded = 'true';
         } catch (err) {
             console.error('[NuevaDJ] Error cargando países:', err);
-        } finally { input.disabled = false; }
+        }
     }
 
-    function ndj_syncPaisCodigo() {
-        const input = $('ndj_pais');
-        const hidden = $('ndj_pais_codigo');
-        if (!input || !hidden) return;
-        const texto = input.value.toUpperCase().trim();
-        const match = ndj_paisesData.find(p => p.text.toUpperCase() === texto);
-        hidden.value = match ? match.id : '';
-    }
-
-    function ndj_setPais(codigo) {
-        const input = $('ndj_pais');
-        const hidden = $('ndj_pais_codigo');
-        if (!input || !hidden) return;
-        hidden.value = codigo || '';
-        const match = ndj_paisesData.find(p => p.id === codigo);
-        input.value = match ? match.text : '';
+    async function ndj_setPais(codigo) {
+        const sel = $('ndj_pais');
+        if (!sel) return;
+        // Autoguarantía: si el catálogo aún no cargó (p. ej. modo recontratación), cargarlo primero
+        if (!ndj_paisesData.length) await ndj_cargarPaises();
+        sel.value = codigo || '';
     }
 
     // Regla: si TIPO DE DOCUMENTO es CARNET DE EXTRANJERÍA, se ocultan
@@ -940,9 +947,11 @@ import Swal from 'sweetalert2';
         }
     }
 
-    function ndj_filtrarCargos(tipoPersonal) {
+    async function ndj_filtrarCargos(tipoPersonal) {
         const sel = $('ndj_sel_cargo');
         if (!sel) return;
+        // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
+        if (!ndj_allCargos || !ndj_allCargos.length) await ndj_cargarCargos();
         const operativos = ['01', '03', '06'];
         const admin      = ['02', '05'];
         const cargoTipo = operativos.includes(tipoPersonal) ? '01'
@@ -1038,6 +1047,28 @@ import Swal from 'sweetalert2';
     // ============================================================
     // VISIBILIDAD POR TIPO
     // ============================================================
+    // ── SCTR: visible solo para Administrativo (02/05) ─────────
+    // OP (01/03)  → sin checkbox, SCTR='SI' automático (backend)
+    // ADMIN       → checkbox "SCTR": marcado='SI', sin marcar='NO'
+    let ndjSctrTipoAnterior = '';
+    function ndj_aplicarSctr(tipoCod, scrt = null) {
+        const wrap = $('ndj_wrap_sctr');
+        const chk  = $('ndj_autorizar_sctr');
+        if (!wrap || !chk) return;
+        const tipo     = String(tipoCod || '').trim();
+        const esAdmin  = ['02', '05'].includes(tipo);
+        const eraAdmin = ['02', '05'].includes(ndjSctrTipoAnterior);
+        wrap.style.display = esAdmin ? '' : 'none';
+        if (!esAdmin) {
+            chk.checked = false;
+        } else if (scrt !== null && scrt !== undefined) {
+            chk.checked = ['SI', '1'].includes(String(scrt).trim().toUpperCase());
+        } else if (!eraAdmin) {
+            chk.checked = false; // op → admin: aparece sin marcar
+        }
+        ndjSctrTipoAnterior = tipo;
+    }
+
     function ndj_aplicarTipo(tipoCod) {
         const el = $('ndj_tipo_personal');
         if (el) el.value = tipoCod;
@@ -1076,13 +1107,31 @@ import Swal from 'sweetalert2';
         const parentesco = fila.querySelector('select[name="ndj_parentesco[]"]')?.value;
         const contenedorFecha = fila.querySelector('.ndj-family-date');
         const inputFecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]');
-        const esHijo = parentesco === 'HIJO';
+        const esHijo = parentesco.startsWith('HIJO');
 
         if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
         if (inputFecha) {
             inputFecha.required = esHijo;
             if (!esHijo) inputFecha.value = '';
         }
+    }
+
+    // ── Opciones del select de Parentesco (catálogo TIPO_VINCULO_FAMILIAR) ──
+    // Solo catálogo para filas nuevas; si se carga un dato legado fuera del
+    // catálogo se añade como opción seleccionada para que se muestre como debe.
+    function ndj_opcionesVinculo(selected = '') {
+        const cats = (window.TIPOS_VINCULO || []).map(v => String(v).trim()).filter(Boolean);
+        const sel  = String(selected || '').trim();
+        let html = sel
+            ? '<option value="">—</option>'
+            : '<option value="" disabled selected>—</option>';
+        for (const v of cats) {
+            html += `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`;
+        }
+        if (sel && !cats.includes(sel)) {
+            html += `<option value="${sel}" selected>${sel}</option>`;
+        }
+        return html;
     }
 
     function ndj_crearFila() {
@@ -1092,9 +1141,7 @@ import Swal from 'sweetalert2';
         div.innerHTML = `
             <div><label class="dj-label">Parentesco</label>
                 <select name="ndj_parentesco[]" class="dj-select">
-                    <option value="" disabled selected>—</option>
-                    <option value="PADRE">Padre</option><option value="MADRE">Madre</option>
-                    <option value="CONYUGE">Cónyuge</option><option value="HIJO">Hijo(a)</option>
+                    ${ndj_opcionesVinculo('')}
                 </select></div>
             <div><label class="dj-label">Apellidos y Nombres</label>
                 <input type="text" name="ndj_apellidosNombres[]" class="dj-input" placeholder="Apellidos y nombres completos" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+"></div>
@@ -1214,9 +1261,9 @@ import Swal from 'sweetalert2';
     async function ndj_guardar() {
 
         const currentUser = (window.currentUser || '').toString().trim().toUpperCase();
-        const usuariosExonerados = ['EMONTERO', 'RBURGOS', 'MPAREDES'];
+        const exentoValidaciones = (window.funcionalidadesSISOL || []).includes('exento_validaciones');
 
-        if (!usuariosExonerados.includes(currentUser)) {
+        if (!exentoValidaciones) {
 
         // ── Validaciones previas ──────────────────────────────
         const hoy    = new Date(); hoy.setHours(0,0,0,0);
@@ -1322,7 +1369,7 @@ import Swal from 'sweetalert2';
                 { id:'ndj_estado_civil',          nombre:'Estado Civil' },
                 { id:'ndj_sexo',                  nombre:'Sexo' },
                 { id:'ndj_fecha_nacimiento',      nombre:'Fecha de Nacimiento' },
-                { id:'ndj_pais_codigo',           nombre:'País de Nacimiento' },
+                { id:'ndj_pais',                   nombre:'País de Nacimiento' },
                 { id:'ndj_departamento_nac',      nombre:'Departamento (Nacimiento)' },
                 { id:'ndj_provincia_nac',         nombre:'Provincia (Nacimiento)' },
                 { id:'ndj_distrito_nac',          nombre:'Distrito (Nacimiento)' },
@@ -1356,6 +1403,7 @@ import Swal from 'sweetalert2';
             const faltantes = camposReq.filter(c => {
                 const el = $(c.id);
                 if (!el) return true;
+                if (el.type !== 'hidden' && el.offsetParent === null) return false;
                 if (el.type === 'checkbox') return !el.checked;
                 return !el.value?.trim();
             });
@@ -1377,7 +1425,7 @@ import Swal from 'sweetalert2';
             .find(fila => {
                 const parentesco = fila.querySelector('select[name="ndj_parentesco[]"]')?.value;
                 const fecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]')?.value;
-                return parentesco === 'HIJO' && !fecha;
+                return parentesco.startsWith('HIJO') && !fecha;
             });
         if (hijoSinFecha) {
             Swal.fire({
@@ -1416,7 +1464,7 @@ import Swal from 'sweetalert2';
             if (!isConfirmed) return;
         }
 
-        } // fin usuariosExonerados
+        } // fin exentoValidaciones
         // ── Fin validaciones ─────────────────────────────────
 
         const fd      = new FormData($('formNuevaDJ'));
@@ -1428,6 +1476,7 @@ import Swal from 'sweetalert2';
         const body = {
             ...payload,
             tipo_personal:       payload.ndj_tipo_personal        || payload.ndj_sel_tipo_personal,
+            autorizar_sctr:      payload.ndj_autorizar_sctr === '1' ? '1' : '0',
             cargo:               payload.ndj_cargo                 || '',
             cod_postulante:      payload.ndj_cod_postulante        || '',
             tipo_documento:      payload.ndj_tipo_documento        || '0034',
@@ -1458,6 +1507,8 @@ import Swal from 'sweetalert2';
             cuenta_banco:        payload.ndj_cuenta_banco,
             direccion_actual:    payload.ndj_direccion_actual,
             direccion_dni:       payload.ndj_direccion_dni,
+            tipo_zona_dni:       payload.ndj_tipo_zona,
+            zona_dirdni:         payload.ndj_zona_dirdni,
             departamento_actual: payload.ndj_departamento_actual,
             provincia_actual:    payload.ndj_provincia_actual,
             distrito_actual:     payload.ndj_distrito_actual,
@@ -1854,7 +1905,7 @@ import Swal from 'sweetalert2';
         });
 
         // Tipo personal
-        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_aplicarTipo(this.value); ndj_filtrarCargos(this.value); });
+        $('ndj_sel_tipo_personal')?.addEventListener('change', function () { ndj_aplicarTipo(this.value); ndj_filtrarCargos(this.value); ndj_aplicarSctr(this.value); });
 
         // Institución → carrera
         $('ndj_institucion')?.addEventListener('change', function () { ndj_poblarCarreras(this.value); });
@@ -1868,7 +1919,7 @@ import Swal from 'sweetalert2';
         $('ndj_provincia_nac')?.addEventListener('change',       function () { ndj_cargarDistritos(this.value,'ndj_distrito_nac'); });
 
         // País: sincronizar código al escribir/seleccionar
-        $('ndj_pais')?.addEventListener('input', ndj_syncPaisCodigo);
+        // (el select de país ya guarda el código directamente)
 
         // Familiar empresa / SUCAMEC / Clase brevete
         $('ndj_familiar_empresa')?.addEventListener('change', function () { $('ndj_div_familiar_interno')?.classList.toggle('hidden', this.value !== 'SI'); });

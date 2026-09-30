@@ -88,11 +88,11 @@ class DjController extends Controller
         try {
             $data    = $request->all();
             $usuarioActual = strtoupper(trim((string)(session('usuario') ?? '')));
-            $esEmontéro = in_array($usuarioActual, ['EMONTERO', 'RBURGOS', 'MPAREDES']);
+            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
             $dni     = trim($request->input('dni', ''));
             $tipoPer = trim($request->input('tipo_personal', ''));
  
-            if (!$esEmontéro) {
+            if (!$exentoValidaciones) {
                 if (empty($dni)) {
                     return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
                 }
@@ -328,7 +328,7 @@ class DjController extends Controller
             $tipoContMap = ['01' => 'O', '02' => 'A', '03' => 'O', '05' => 'A', '06' => 'O'];
             $tipoCont = $tipoContMap[$tipoPer] ?? 'O';
 
-            $personalPlaceholders = implode(',', array_fill(0, 66, '?'));
+            $personalPlaceholders = implode(',', array_fill(0, 68, '?'));
             $personalLocationPlaceholders = "?,?,?,'01',?,?,?,?,?,?";
  
             // ── INSERT EN PERSONAL ──────────────────────────────────────────────
@@ -342,8 +342,10 @@ class DjController extends Controller
                     ESCI_CODIGO, ESTA_CIVI,
                     PERS_EMAIL, PERS_TELEFONO, PERS_WHATSAPP,
                     DIRECCION, PERS_DIREC_DNI,
+                    PERS_ZONA_DIRDNI,
                     PERS_DEPT_ACT, PERS_PROV_ACT, PERS_DIST_ACT,
                     PERS_DPTO_DIRDNI, PERS_PROV_DIRDNI, PERS_DIST_DIRDNI,
+                    TIZO_CODIGO,
                     tipo_sangr, peso_kilo, tall_metr,
                     CODI_SIST_PENS, ESSALUD, PERS_PENSIONISTA, PERS_EMBARGO,
                     PERS_GRADO_INSTRUCCION, CARR_CODIGO, IEDU_CODIGO, EGRESO_EDUCATIVO,
@@ -379,12 +381,14 @@ class DjController extends Controller
                     $data['whatsapp'] ?? null,
                     $data['direccion_actual'] ?? null,
                     $data['direccion_dni'] ?? null,
+                    $data['zona_dirdni'] ?? null,
                     $data['departamento_actual'] ?? null,
                     $data['provincia_actual'] ?? null,
                     $data['distrito_actual'] ?? null,
                     $data['departamento_dni'] ?? null,
                     $data['provincia_dni'] ?? null,
                     $data['distrito_dni'] ?? null,
+                    $data['tipo_zona_dni'] ?? null,
                     $data['tipo_sangre'] ?? null,
                     $peso, $talla,
                     $data['sistema_previsional'] ?? '07',
@@ -507,13 +511,21 @@ class DjController extends Controller
             $this->saveTelefonosTemp($nuevoCod, $data);
             $this->migrarTelefonos($nuevoCod);
 
+            // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
+            $this->aplicarScrt($nuevoCod, $data);
+
             // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
             $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
  
             DB::commit();
  
             Log::info('saveNuevaDj: Personal nuevo creado', ['CODI_PERS' => $nuevoCod, 'DNI' => $dni]);
- 
+
+            // ── Correo automático de bienvenida SIP (solo Operativo 5° y Administrativo 5°) ──
+            if (in_array($tipoPer, ['03', '05'])) {
+                $this->enviarCorreoBienvenidaSip($data, $dni, $nuevoCod);
+            }
+
             return response()->json([
                 'success'   => true,
                 'message'   => 'Declaración Jurada guardada correctamente.',
@@ -634,8 +646,13 @@ class DjController extends Controller
             foreach ($telefonos as $tel) {
                 $tel = (array) $tel;
 
-                // Emergencia
-                if ($tel['TELE_EMERGENCIA'] == '1') {
+                // Emergencia:
+                //  - '1'  → registro legado (TELE_EMERGENCIA siempre '0'/'1' en datos antiguos)
+                //  - NULL → formato nuevo (solo el registro de emergencia guarda NULL;
+                //           los teléfonos personal/whatsapp guardan '0')
+                $esEmergencia = ($tel['TELE_EMERGENCIA'] ?? null) === null
+                    || $tel['TELE_EMERGENCIA'] == '1';
+                if ($esEmergencia) {
                     $result['PERS_NROEMERGENCIA']  = $tel['NRO_TELE']          ?? null;
                     $result['PERS_NOMCONTACTO']    = $tel['TELE_CONTACTO']     ?? null;
                     $result['PERS_EMERC_FAMILIAR'] = $tel['VINCULO_FAMILIAR']  ?? null;
@@ -740,7 +757,6 @@ class DjController extends Controller
                 FECH_NACI AS FECH_NACI2
                 FROM {$familiaresTable}
                 WHERE CODI_PERS = ?
-                AND TIPO_RELA IN ('MADRE', 'PADRE', 'HIJO', 'CONYUGE')
                 ORDER BY TIPO_RELA",
                 [$codiPers]
             );
@@ -1129,15 +1145,15 @@ class DjController extends Controller
 
             if ($tipoPer !== $tipoActual) {
                 $usuarioTipoPer = strtoupper(trim((string)(session('usuario') ?? '')));
-                if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                if (!in_array('cambiar_tipo_personal', session('funcionalidades', []))) {
                     DB::rollBack();
                     return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
                 }
             }
 
-            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
+            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer, in_array('cambiar_tipo_personal', session('funcionalidades', [])))) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
+                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
             $source = $request->input('source', 'migracion');
 
@@ -1150,6 +1166,16 @@ class DjController extends Controller
             );
 
             // ✅ 2. INSERTAR/ACTUALIZAR DIRECTAMENTE en DJ2026_PERSONAL
+            // Fecha Ingreso a Solmar: editable SOLO para Admins RRHH (tipo_rol 17);
+            // otros roles conservan el valor actual. Fecha de Cese: bloqueada para todos.
+            if (session('tipo_rol') == 17 && !empty(trim((string) ($data['fecha_ingreso_solmar'] ?? '')))) {
+                $data['FECH_INGRE'] = trim((string) $data['fecha_ingreso_solmar']);
+            } else {
+                unset($data['FECH_INGRE'], $data['fecha_ingreso_solmar']);
+            }
+            unset($data['FECH_CESE'], $data['fecha_cese']);
+            // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
+            $this->aplicarScrt($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, $source);
 
             // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
@@ -1317,7 +1343,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = $parentesco === 'HIJO'
+            $fechaNaci = str_starts_with($parentesco, 'HIJO')
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -1735,6 +1761,8 @@ class DjController extends Controller
             'PERS_PROV_DIRDNI' => $getValue('provincia_dni', 'PERS_PROV_DIRDNI'),
             'PERS_DIST_DIRDNI' => $getValue('distrito_dni', 'PERS_DIST_DIRDNI'),
             'PERS_DIREC_DNI' => $getValue('direccion_dni', 'PERS_DIREC_DNI'),
+            'PERS_ZONA_DIRDNI' => $getValue('zona_dirdni', 'PERS_ZONA_DIRDNI'),
+            'TIZO_CODIGO' => $getValue('tipo_zona_dni', 'TIZO_CODIGO'),
             'PERS_GRADO_INSTRUCCION' => $getValue('grado_instruccion', 'PERS_GRADO_INSTRUCCION'),
             'CARR_CODIGO' => empty($getValue('carrera', 'CARR_CODIGO')) ? null : $getValue('carrera', 'CARR_CODIGO'),
 
@@ -1786,10 +1814,12 @@ class DjController extends Controller
 
             // ✅ TODOS LOS DEMÁS CAMPOS (con cascada: formulario → migra → original → null)
             'CODI_TIPO_DOCU' => $getValue('CODI_TIPO_DOCU', 'CODI_TIPO_DOCU'),
-            'APEL_1' => $getValue('APEL_1', 'APEL_1'),
-            'APEL_2' => $getValue('APEL_2', 'APEL_2'),
-            'NOMB_1' => $getValue('NOMB_1', 'NOMB_1'),
-            'NOMB_2' => $getValue('NOMB_2', 'NOMB_2'),
+            // Nombres: el formulario envía nombre1/nombre2/apellido_paterno/apellido_materno
+            // (antes se buscaban las claves NOMB_*/APEL_* y nunca se guardaban los cambios)
+            'APEL_1' => strtoupper(trim((string) $getValue('apellido_paterno', 'APEL_1', 'APEL_1'))) ?: null,
+            'APEL_2' => strtoupper(trim((string) $getValue('apellido_materno', 'APEL_2', 'APEL_2'))) ?: null,
+            'NOMB_1' => strtoupper(trim((string) $getValue('nombre1', 'NOMB_1', 'NOMB_1'))) ?: null,
+            'NOMB_2' => strtoupper(trim((string) $getValue('nombre2', 'NOMB_2', 'NOMB_2'))) ?: null,
             'SIST_PENS_TIPOCOMI' => $getValue('SIST_PENS_TIPOCOMI', 'SIST_PENS_TIPOCOMI'),
             'CODI_CARG' => $getValue('cargo', 'CODI_CARG'),
             'CODI_AREA' => $getValue('CODI_AREA', 'CODI_AREA'),
@@ -1999,6 +2029,129 @@ class DjController extends Controller
      * Solo actualiza columnas donde DJ2026_PERSONAL tenga valor NO NULL.
      * Si DJ2026_PERSONAL tiene NULL en una columna, NO borra lo que ya existe en PERSONAL.
      */
+    /**
+     * Registra el usuario en el SIP y envía la carta de bienvenida.
+     * Flujo (según código PowerBuilder original):
+     *   1. Generar contraseña (algoritmo hora: quitar ':' → 1→A, 2→B, 3→C)
+     *   2. Hashear con MD5 para almacenar en Seguridad_UsuarioSIP
+     *   3. SipCartaElectronica: desactivar cartas previas + insertar nueva
+     *   4. Seguridad_UsuarioSIP: INSERT (nuevo) o UPDATE (existente)
+     *   5. CMS_Actividad: desactivar eventos pendientes (solo si UPDATE)
+     *   6. Enviar correo con contraseña en texto plano
+     */
+    private function enviarCorreoBienvenidaSip(array $data, string $dni, string $codiPers): void
+    {
+        try {
+            $correo = trim($data['correo'] ?? '');
+            if (empty($correo) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                Log::warning('BienvenidaSip: correo vacío o inválido, no se registra ni envía.', ['dni' => $dni]);
+                return;
+            }
+
+            // ── 1. Generar contraseña (algoritmo PowerBuilder) ──
+            $password = str_replace([':', '1', '2', '3'], ['', 'A', 'B', 'C'], now()->format('H:i:s'));
+
+            // Hash SIP: doble MD5 de (DNI + password) según función F_SIP_MD5 de SQL Server
+            $hash1 = strtoupper(md5($dni . $password));
+            $passwordMd5 = strtoupper(md5($hash1));
+
+            $nombreCompleto = trim(
+                ($data['nombre1'] ?? '') . ' ' .
+                ($data['nombre2'] ?? '') . ' ' .
+                ($data['apellido_paterno'] ?? '') . ' ' .
+                ($data['apellido_materno'] ?? '')
+            );
+            if (empty($nombreCompleto)) {
+                $nombreCompleto = $data['nombres_apellidos'] ?? 'Usuario SIP';
+            }
+            $nombreCorto = ucfirst(strtolower(trim($data['nombre1'] ?? explode(' ', $nombreCompleto)[0] ?? 'Usuario')));
+
+            $usuarioReg  = strtoupper(trim((string)(session('usuario') ?? 'SISTEMAS')));
+            $empresa     = '01';
+            $mes         = (int) now()->format('n');
+            $anio        = (int) now()->format('Y');
+            $plcaCod     = 'planillaco';
+            $fechaCorta  = now()->format('Ymd');   // YYYYMMDD
+            $horaCorta   = now()->format('His');   // HHMMSS
+
+            // ── 2. SipCartaElectronica (si_solm): desactivar previas + insertar nueva ──
+            DB::connection('sqlsrv')->update(
+                "UPDATE si_solm.dbo.SipCartaElectronica SET Vigencia = 0
+                 WHERE CodiPers = ? AND Vigencia = 1",
+                [$codiPers]
+            );
+            DB::connection('sqlsrv')->insert(
+                "INSERT INTO si_solm.dbo.SipCartaElectronica
+                    (CodiPers, Email, FechaEmail, Mes, Anio, PlcaCod, Usuario, Vigencia, Rebote)
+                 VALUES (?, ?, GETDATE(), ?, ?, ?, ?, 1, 0)",
+                [$codiPers, $correo, $mes, $anio, $plcaCod, $usuarioReg]
+            );
+            Log::info('BienvenidaSip: SipCartaElectronica registrada.', ['codiPers' => $codiPers]);
+
+            // ── 3. Seguridad_UsuarioSIP (extranet_solmar): verificar existencia ──
+            $existe = DB::connection('sqlsrv')->selectOne(
+                "SELECT COUNT(*) AS cnt FROM extranet_solmar.dbo.Seguridad_UsuarioSIP WITH (NOLOCK)
+                 WHERE usuarioSIP_DNI = ? AND usuarioSIP_CODI_PERS = ?
+                   AND usuarioSIP_vigencia = '1' AND usuarioSIP_estado IN ('1','2','0')
+                   AND empr_codigo = ?",
+                [$dni, $codiPers, $empresa]
+            );
+
+            if ((int)($existe->cnt ?? 0) <= 0) {
+                // ── 3a. INSERT (usuario nuevo) ──
+                DB::connection('sqlsrv')->insert(
+                    "INSERT INTO extranet_solmar.dbo.Seguridad_UsuarioSIP
+                        (usuarioSIP_CODI_PERS, usuarioSIP_DNI, usuarioSIP_clave, usuarioSIP_vigencia,
+                         usuarioSIP_Correo, usuarioSIP_Creacion_fecha, usuarioSIP_Creacion_hora,
+                         usuarioSIP_estado, rol_id, auxiliar, empr_codigo,
+                         actualizacion_datos, modificado_por, fecha_modificacion)
+                     VALUES (?, ?, ?, '1', ?, ?, ?, '2', 4, NULL, ?, NULL, NULL, NULL)",
+                    [$codiPers, $dni, $passwordMd5, $correo, $fechaCorta, $horaCorta, $empresa]
+                );
+                Log::info('BienvenidaSip: usuario INSERTado en Seguridad_UsuarioSIP.', ['dni' => $dni, 'codiPers' => $codiPers]);
+            } else {
+                // ── 3b. UPDATE (usuario existente) ──
+                DB::connection('sqlsrv')->update(
+                    "UPDATE extranet_solmar.dbo.Seguridad_UsuarioSIP
+                     SET usuarioSIP_estado = '2', usuarioSIP_clave = ?, usuarioSIP_vigencia = '1', usuarioSIP_Correo = ?
+                     WHERE usuarioSIP_DNI = ? AND usuarioSIP_CODI_PERS = ?
+                       AND usuarioSIP_estado IN ('1','2','0') AND empr_codigo = ?",
+                    [$passwordMd5, $correo, $dni, $codiPers, $empresa]
+                );
+                Log::info('BienvenidaSip: usuario UPDATEado en Seguridad_UsuarioSIP.', ['dni' => $dni, 'codiPers' => $codiPers]);
+
+                // ── 3c. CMS_Actividad: desactivar eventos pendientes ──
+                DB::connection('sqlsrv')->update(
+                    "UPDATE intranet.dbo.CMS_Actividad
+                     SET ESTADO = 0
+                     FROM intranet.dbo.CMS_Actividad A
+                     INNER JOIN extranet_solmar.dbo.Seguridad_UsuarioSIP U
+                             ON U.usuarioSIP_id = A.user_id
+                     WHERE U.usuarioSIP_codi_pers = ? AND U.usuarioSIP_vigencia = '1'
+                       AND U.usuarioSIP_DNI = ? AND U.empr_codigo = ?
+                       AND A.CMS_TIPO_ID = 9 AND A.CodEvento IN ('002','003') AND A.ESTADO = 1",
+                    [$codiPers, $dni, $empresa]
+                );
+                Log::info('BienvenidaSip: CMS_Actividad desactivado.', ['dni' => $dni]);
+            }
+
+            // ── 4. Enviar correo con contraseña en texto plano ──
+            $datos = [
+                'nombre'       => mb_strtoupper($nombreCompleto, 'UTF-8'),
+                'nombre_corto' => $nombreCorto,
+                'dni'          => $dni,
+                'password'     => $password,
+                'correo'       => $correo,
+            ];
+
+            Mail::mailer('sip')->to($correo)->send(new \App\Mail\BienvenidaSipMail($datos));
+
+            Log::info('BienvenidaSip: correo enviado exitosamente.', ['dni' => $dni, 'correo' => $correo]);
+        } catch (\Exception $e) {
+            Log::error('BienvenidaSip: error en el proceso: ' . $e->getMessage(), ['dni' => $dni, 'codiPers' => $codiPers]);
+        }
+    }
+
     private function syncDJ2026ToPersonal($codiPers)
     {
         // 1. Obtener el registro recién guardado en DJ2026_PERSONAL
@@ -2543,7 +2696,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = $parentesco === 'HIJO'
+            $fechaNaci = str_starts_with($parentesco, 'HIJO')
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -3027,26 +3180,23 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             'madre' => [],
             'hijos' => [],
             'conyugue' => [],
+            'otros' => [],
         ];
 
         foreach ($familiares as $f) {
             $f = (array) $f;
+            $tipo = strtoupper(trim((string) ($f['TIPO_RELA'] ?? '')));
 
-            switch ($f['TIPO_RELA']) {
-                case 'PADRE':
-                case 'MADRE':
-                case 'HERMANO':
-                    $grouped['padres'][] = $f;
-                    break;
-                case 'HIJO':
-                case 'HIJA':
-                    $grouped['hijos'][] = $f;
-                    break;
-                case 'CONYUGE':
-                case 'Conyuge':
-                case 'CONVIVIENTE':
-                    $grouped['conyugue'][] = $f;
-                    break;
+            // Catálogo TIPO_VINCULO_FAMILIAR + valores legados
+            if (str_starts_with($tipo, 'HIJO')) {
+                $grouped['hijos'][] = $f;
+            } elseif (in_array($tipo, ['CONYUGE', 'CONYUGUE', 'CONVIVIENTE', 'GESTANTE'], true)) {
+                $grouped['conyugue'][] = $f;
+            } elseif (in_array($tipo, ['PADRE', 'MADRE', 'HERMANO', 'HERMANA'], true)) {
+                $grouped['padres'][] = $f;
+            } else {
+                // Legados u otros (ABUELO, TIO, PRIMO, OTRO, AMISTAD...) — no se pierden
+                $grouped['otros'][] = $f;
             }
         }
 
@@ -3336,6 +3486,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 $telefonos[] = [
                     'NRO_TELE'         => $telPersonal,
                     'TIPO_TELE'        => 'MOVIL',
+                    'TELE_RESERVADO'   => '0',
                     'TELE_EMERGENCIA'  => '0',
                     'NRO_WSP'         => 1,
                     'TELE_CONTACTO'    => null,
@@ -3349,6 +3500,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 $telefonos[] = [
                     'NRO_TELE'         => $telPersonal,
                     'TIPO_TELE'        => 'MOVIL',
+                    'TELE_RESERVADO'   => '0',
                     'TELE_EMERGENCIA'  => '0',
                     'NRO_WSP'         => 0,
                     'TELE_CONTACTO'    => null,
@@ -3360,6 +3512,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 $telefonos[] = [
                     'NRO_TELE'         => $telWsp,
                     'TIPO_TELE'        => 'MOVIL',
+                    'TELE_RESERVADO'   => '0',
                     'TELE_EMERGENCIA'  => '0',
                     'NRO_WSP'         => 1,
                     'TELE_CONTACTO'    => null,
@@ -3373,12 +3526,13 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         if (!empty($telEmergencia) && strlen($telEmergencia) <= 12) {
             $telefonos[] = [
                 'NRO_TELE'         => $telEmergencia,
-                'TIPO_TELE'        => 'MOVIL',
-                'TELE_EMERGENCIA'  => '1',
-                'NRO_WSP'         => 0,
+                'TIPO_TELE'        => 'MOVIL',          // predeterminado
+                'TELE_RESERVADO'   => null,             // null predeterminado
+                'TELE_EMERGENCIA'  => null,             // null predeterminado
+                'NRO_WSP'          => null,             // null predeterminado (sin checkbox)
                 'TELE_CONTACTO'    => isset($data['contacto_emergencia']) ? trim($data['contacto_emergencia']) : null,
                 'VINCULO_FAMILIAR' => isset($data['parentesco_emergencia']) ? trim($data['parentesco_emergencia']) : null,
-                'OBSERVACION'      => isset($data['contacto_emergencia']) ? trim($data['contacto_emergencia']) : null,
+                'OBSERVACION'      => null,             // null predeterminado
             ];
         }
 
@@ -3395,8 +3549,8 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     substr($tel['NRO_TELE'], 0, 12),
                     $tel['TIPO_TELE'],
                     $tel['OBSERVACION'],
-                    'SI',
-                    '0',
+                    'SI',                                // TELE_VIGENCIA predeterminado
+                    $tel['TELE_RESERVADO'],               // emergencia → null, personal/whatsapp → '0'
                     $tel['TELE_EMERGENCIA'],
                     $tel['NRO_WSP'],
                     $tel['TELE_CONTACTO'],
@@ -3448,13 +3602,42 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
 
     /**
+     * Regla SCTR (columna SCRT en si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
+     * - Operativo 4°/5° (01/03)  → 'SI' automático
+     * - Administrativo 4°/5° (02/05) → 'SI' si el checkbox autorizar_sctr viene marcado, 'NO' si no
+     * - Especial (06) u otro → no se toca
+     */
+    private function aplicarScrt($codiPers, &$data)
+    {
+        $tipo = strtoupper(trim((string) ($data['tipo_personal'] ?? '')));
+
+        if (in_array($tipo, ['01', '03'], true)) {
+            $scrt = 'SI';
+        } elseif (in_array($tipo, ['02', '05'], true)) {
+            $scrt = trim((string) ($data['autorizar_sctr'] ?? '')) === '1' ? 'SI' : 'NO';
+        } else {
+            return; // Especial u otro: no se toca
+        }
+
+        $data['SCRT'] = $scrt;
+
+        // Reflejar también en la tabla maestra PERSONAL
+        DB::update(
+            'UPDATE si_solm.dbo.PERSONAL SET SCRT = ? WHERE CODI_PERS = ?',
+            [$scrt, $codiPers]
+        );
+
+        Log::info('aplicarScrt', ['CODI_PERS' => $codiPers, 'tipo' => $tipo, 'SCRT' => $scrt]);
+    }
+
+    /**
      * Regla de cambio de Tipo de Personal:
      * solo se permite cambiar de Operativo (01/03) a Administrativo (02/05) o viceversa.
      * - Mantener el mismo tipo no se considera cambio (válido).
      * - Si el tipo actual es Especiales (06), no se permite cambiar.
      * - Si no hay tipo previo en BD, no se aplica la regla.
      */
-    private function validarCambioTipoPersonal(?string $tipoActual, string $tipoNuevo): bool
+    private function validarCambioTipoPersonal(?string $tipoActual, string $tipoNuevo, bool $esAdminRrhh = false): bool
     {
         $tipoActual = trim((string) $tipoActual);
 
@@ -3466,6 +3649,11 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         }
         if ($tipoActual === '06') {
             return false;
+        }
+
+        // Admins RRHH: cualquier cambio permitido excepto a Especial (06)
+        if ($esAdminRrhh) {
+            return $tipoNuevo !== '06';
         }
 
         $operativo      = ['01', '03'];
@@ -3510,6 +3698,16 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
             $data = $request->all();
 
+            // Fecha de Ingreso a Solmar: OBLIGATORIA en recontratación
+            // (es el nuevo ingreso; no se hereda la fecha anterior)
+            if (trim((string) ($data['fecha_ingreso_solmar'] ?? '')) === '') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La Fecha de Ingreso a Solmar es obligatoria para la recontratación.',
+                ], 422);
+            }
+
             $tipoPer = trim($data['tipo_personal'] ?? '');
             if ($tipoPer === '') {
                 // Si no se envía tipo, se mantiene el actual del personal.
@@ -3521,15 +3719,15 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             $tipoActual = trim((string)($personal->PERS_TIPOTRAB ?? ''));
 
             if ($tipoPer !== $tipoActual) {
-                if (!in_array($usuarioTipoPer, ['RBURGOS', 'MPAREDES'])) {
+                if (!in_array('cambiar_tipo_personal', session('funcionalidades', []))) {
                     DB::rollBack();
                     return response()->json(['success' => false, 'message' => 'No tiene permisos para modificar el tipo de personal.'], 403);
                 }
             }
 
-            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer)) {
+            if (!$this->validarCambioTipoPersonal($tipoActual, $tipoPer, in_array('cambiar_tipo_personal', session('funcionalidades', [])))) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal. Solo se permite cambiar de Operativo a Administrativo o viceversa.'], 422);
+                return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
  
             $str2 = fn($v) => strtoupper(substr(trim($v ?? ''), 0, 2));
@@ -3590,11 +3788,13 @@ $tipotrab    = $tipoPer;
  
             DB::update(
                 "UPDATE si_solm.dbo.PERSONAL SET
-                    PERS_VIGENCIA='SI', PERS_CONTRATADO='1', SEXO=?, PERS_SEXO=?,
+                    PERS_VIGENCIA='SI', PERS_CONTRATADO='1',
+                    NOMB_1=?, NOMB_2=?, APEL_1=?, APEL_2=?,
+                    SEXO=?, PERS_SEXO=?,
                     ESCI_CODIGO=?, ESTA_CIVI=?,
                     FECH_NACI=?, PERS_FECHCADUCADNI=?,
                     PERS_EMAIL=?, PERS_TELEFONO=?, PERS_WHATSAPP=?,
-                    DIRECCION=?, PERS_DIREC_DNI=?,
+                    DIRECCION=?, PERS_DIREC_DNI=?, TIZO_CODIGO=?, PERS_ZONA_DIRDNI=?,
                     PERS_DEPT_ACT=?, PERS_PROV_ACT=?, PERS_DIST_ACT=?,
                     PERS_DPTO_DIRDNI=?, PERS_PROV_DIRDNI=?, PERS_DIST_DIRDNI=?,
                     DEPARTAMENTO=?, PROVINCIA=?, DISTRITO=?,
@@ -3615,11 +3815,15 @@ $tipotrab    = $tipoPer;
                     TIPO_CONT=?, FECH_INGRE=?, NO_CADUCA_DNI=?, PERS_CONSMO=?
                 WHERE CODI_PERS=?",
                 [
+                    strtoupper(trim((string) ($data['nombre1'] ?? ''))) ?: null,
+                    strtoupper(trim((string) ($data['nombre2'] ?? ''))) ?: null,
+                    strtoupper(trim((string) ($data['apellido_paterno'] ?? ''))) ?: null,
+                    strtoupper(trim((string) ($data['apellido_materno'] ?? ''))) ?: null,
                     $sexo, $sexo,
                     $estadoCivil, $estadoCivilCorto,
                     $fechaNaci, $fechaCaduca,
                     $trim($data['correo']   ?? null), $trim($data['celular'] ?? null), $trim($data['whatsapp'] ?? null),
-                    $trim($data['direccion_actual'] ?? null), $trim($data['direccion_dni'] ?? null),
+                    $trim($data['direccion_actual'] ?? null), $trim($data['direccion_dni'] ?? null), $trim($data['tipo_zona_dni'] ?? null), $trim($data['zona_dirdni'] ?? null),
                     $trim($data['departamento_actual'] ?? null), $trim($data['provincia_actual'] ?? null), $trim($data['distrito_actual'] ?? null),
                     $trim($data['departamento_dni']  ?? null), $trim($data['provincia_dni']    ?? null), $trim($data['distrito_dni']    ?? null),
                     strtoupper(trim($data['departamento_actual'] ?? '') ?: ''), strtoupper(trim($data['provincia_actual'] ?? '') ?: ''), strtoupper(trim($data['distrito_actual'] ?? '') ?: ''),
@@ -3656,10 +3860,20 @@ $tipotrab    = $tipoPer;
             $this->migrarFamiliares($codiPers);
             $this->saveTelefonosTemp($codiPers, $data);
             $this->migrarTelefonos($codiPers);
+
+            // Actualizar DJ2026_PERSONAL con los datos de la recontratación (sucursal, fecha modificación, etc.)
+            // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
+            $this->aplicarScrt($codiPers, $data);
+            $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
  
             DB::commit();
  
             Log::info('saveRecontratacion: Personal recontratado', ['CODI_PERS' => $codiPers, 'DNI' => $personal->NRO_DOCU_IDEN]);
+
+            // ── Correo automático de bienvenida SIP (solo Operativo 5° y Administrativo 5°) ──
+            if (in_array($tipoPer, ['03', '05'])) {
+                $this->enviarCorreoBienvenidaSip($data, $personal->NRO_DOCU_IDEN, $codiPers);
+            }
  
             return response()->json([
                 'success'   => true,

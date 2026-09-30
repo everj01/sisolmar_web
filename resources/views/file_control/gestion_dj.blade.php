@@ -432,6 +432,7 @@
     <script>
         window.logoUrl = "{{ asset('images/logo_sol.png') }}";
         window.currentUser = "{{ session('usuario') }}";
+        window.tipoUsuario = {{ $tipoUsuario ?? 'null' }};
     </script>
 @endsection
 

@@ -102,6 +102,7 @@
 
         </div>
     </div>
+    <script>window.funcionalidadesSISOL = @json($funcionalidades ?? []);</script>
 </header>
 {{-- Modal: Cambiar contraseña --}}
 <div id="modal-password-change-user"

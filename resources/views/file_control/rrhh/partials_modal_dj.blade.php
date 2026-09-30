@@ -1,4 +1,8 @@
 {{-- Partial: _modal_dj.blade.php — Split View Comparación --}}
+{{-- Catálogo de vínculos familiares para JS (filas dinámicas de familiares) --}}
+<script>
+    window.TIPOS_VINCULO = window.TIPOS_VINCULO || @json(array_map('trim', array_column($tiposVinculo ?? [], 'descripcion')));
+</script>
 @if(session('tipo_rol') == 9 || session('tipo_rol') == 8)
 <style>
     #formDatos input:not([type="hidden"]),
@@ -565,6 +569,14 @@
                                     <option value="">— Seleccionar —</option>
                                 </select>
                             </div>
+                            <div id="wrap_sctr" style="display:none;min-width:130px;">
+                                <label class="dj-label">&nbsp;</label>
+                                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;padding:7px 0;">
+                                    <input type="checkbox" id="autorizar_sctr" name="autorizar_sctr" value="1"
+                                        style="width:14px;height:14px;accent-color:#25d366;cursor:pointer;">
+                                    SCTR
+                                </label>
+                            </div>
                         </div>
 
                         {{-- ① DATOS PERSONALES --}}
@@ -679,6 +691,19 @@
                                             <div><label class="dj-label">Fecha de Nacimiento</label><input type="date"
                                                     id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input"
                                                     data-compare="fecha_nacimiento"></div>
+                                            <div>
+                                                <label class="dj-label">Fecha Ingreso a Solmar</label>
+                                                <input type="date" id="fecha_ingreso_solmar" name="fecha_ingreso_solmar"
+                                                    class="dj-input"
+                                                    {{ session('tipo_rol') == 17 ? '' : 'readonly' }}
+                                                    style="{{ session('tipo_rol') == 17 ? '' : 'background:#f3f4f6;color:#6b7280;cursor:not-allowed;' }}">
+                                            </div>
+                                            <div id="wrap_fecha_cese" style="display:none;">
+                                                <label class="dj-label">Fecha de Cese</label>
+                                                <input type="date" id="fecha_cese" name="fecha_cese"
+                                                    class="dj-input" readonly
+                                                    style="background:#f3f4f6;color:#6b7280;cursor:not-allowed;">
+                                            </div>
                                             <input type="hidden" id="ciudad_nacimiento" name="ciudad_nacimiento">
                                             <div style="visibility:hidden;">
                                                 <label class="dj-label">¿Sabe nadar?</label>
@@ -702,25 +727,23 @@
                                                 <div class="dj-grid-4" style="margin-bottom:8px;">
                                                     <div>
                                                         <label class="dj-label">País</label>
-                                                        <input type="hidden" id="aj_pais_codigo" name="nacionalidad">
-                                                        <input type="text" id="aj_pais" class="dj-input"
-                                                            list="aj_paises_list"
-                                                            placeholder="Escriba para buscar..." autocomplete="off">
-                                                        <datalist id="aj_paises_list"></datalist>
+                                                        <select id="aj_pais" name="nacionalidad" class="dj-select">
+                                                            <option value="">— Seleccionar —</option>
+                                                        </select>
                                                     </div>
-                                                    <div>
+                                                    <div id="aj_wrap_departamento_nac">
                                                         <label class="dj-label">Departamento</label>
                                                         <select id="departamento_nac" name="departamento_nac" class="dj-select">
                                                             <option value="" disabled selected>—</option>
                                                         </select>
                                                     </div>
-                                                    <div>
+                                                    <div id="aj_wrap_provincia_nac">
                                                         <label class="dj-label">Provincia</label>
                                                         <select id="provincia_nac" name="provincia_nac" class="dj-select">
                                                             <option value="" disabled selected>—</option>
                                                         </select>
                                                     </div>
-                                                    <div>
+                                                    <div id="aj_wrap_distrito_nac">
                                                         <label class="dj-label">Distrito</label>
                                                         <select id="distrito_nac" name="distrito_nac" class="dj-select">
                                                             <option value="" disabled selected>—</option>
@@ -895,7 +918,7 @@
                                             <div>
                                                 <label class="dj-label">Sucursal</label>
                                                 <select id="sucursal" name="sucursal" class="dj-select"
-                                                    data-compare="sucursal">
+                                                    data-compare="sucursal" @if($tipoUsuario != 17) disabled style="opacity:0.5;cursor:not-allowed;" @endif>
                                                     <option value="">—</option>
                                                     @foreach ($sucursales ?? [] as $sucursal)
                                                         @if (!in_array(trim((string) $sucursal->codigo), ['', '0', '00'], true))
@@ -983,6 +1006,25 @@
                                                             <option value="" disabled>—</option>
                                                         </select></div>
                                                 </div>
+                                                <div class="dj-grid-2" style="margin-top:8px;">
+                                                    <div>
+                                                        <label class="dj-label">Tipo Zona</label>
+                                                        <select id="tipo_zona_dni" name="tipo_zona_dni" class="dj-select"
+                                                            data-compare="tipo_zona_dni">
+                                                            <option value="">—</option>
+                                                            @foreach ($tiposZona ?? [] as $tz)
+                                                                <option value="{{ trim($tz->TIZO_CODIGO) }}">{{ $tz->TIZO_DESCRIPCION }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Nombre de Zona</label>
+                                                        <input type="text" id="zona_dirdni" name="zona_dirdni"
+                                                            class="dj-input" placeholder="Nombre de la zona"
+                                                            maxlength="100" style="text-transform:uppercase;"
+                                                            data-compare="zona_dirdni">
+                                                    </div>
+                                                </div>
                                                 <label class="dj-label">Descripción</label>
                                                 <textarea id="direccion_dni" name="direccion_dni" class="dj-textarea"
                                                     placeholder="Dirección registrada en el DNI"
@@ -1014,15 +1056,9 @@
                                                 <select id="parentesco_emergencia" name="parentesco_emergencia"
                                                         class="dj-select" data-compare="parentesco_emergencia">
                                                     <option value="">—</option>
-                                                    <option value="PADRE">Padre</option>
-                                                    <option value="MADRE">Madre</option>
-                                                    <option value="CONYUGE">Cónyuge</option>
-                                                    <option value="HIJO">Hijo(a)</option>
-                                                    <!-- <option value="HERMANO">Hermano(a)</option>
-                                                    <option value="ABUELO">Abuelo(a)</option>
-                                                    <option value="TIO">Tío(a)</option>
-                                                    <option value="PRIMO">Primo(a)</option>
-                                                    <option value="OTRO">Otro</option> -->
+                                                    @foreach(($tiposVinculo ?? []) as $tv)
+                                                    <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
@@ -1325,18 +1361,9 @@
                                                     <label class="dj-label">Parentesco</label>
                                                     <select name="parentesco[]" class="dj-select">
                                                         <option value="" disabled>—</option>
-                                                        <option value="PADRE">Padre</option>
-                                                        <option value="MADRE">Madre</option>
-                                                        <option value="CONYUGE">Conyuge</option>
-                                                        <!-- <option value="ESPOSO">Esposo</option>
-                                                        <option value="ESPOSA">Esposa</option> -->
-                                                        <option value="HIJO">Hijo(a)</option>
-                                                        <!-- <option value="HIJA">Hija</option>
-                                                        <option value="HERMANO">Hermano</option>
-                                                        <option value="HERMANA">Hermana</option>
-                                                        <option value="ABUELO">Abuelo</option>
-                                                        <option value="ABUELA">Abuela</option>
-                                                        <option value="OTROS">OTROS</option> -->
+                                                        @foreach(($tiposVinculo ?? []) as $tv)
+                                                        <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                                 <div><label class="dj-label">Apellidos y Nombres</label><input
