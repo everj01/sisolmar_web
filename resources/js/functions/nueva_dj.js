@@ -413,7 +413,7 @@ import Swal from 'sweetalert2';
                     ndj_cargarTipoDoc(), ndj_cargarTipoPer(),
                     ndj_cargarEstadoCivil(), ndj_cargarSistemaPrev(),
                     ndj_cargarDepartamentos(), ndj_cargarEducacion(),
-                    ndj_cargarCargos(),
+                    ndj_cargarCargos(), ndj_cargarPaises(),
                 ]);
             }
 
@@ -494,7 +494,7 @@ import Swal from 'sweetalert2';
             ndj_aplicarSctr(tipotrab, data.SCRT ?? null);
             // Llenar el select de Cargo filtrado por el tipo cargado (antes solo se
             // llenaba al cambiar el tipo manualmente) y preseleccionar su cargo actual
-            ndj_filtrarCargos(tipotrab);
+            await ndj_filtrarCargos(tipotrab);
             ndj_setVal('ndj_sel_cargo', data.CODI_CARG?.trim() || '');
             ndj_bloquearCampos(false);
 
@@ -524,7 +524,7 @@ import Swal from 'sweetalert2';
             await ndj_cargarUbigeosCascada('ndj_departamento_actual','ndj_provincia_actual','ndj_distrito_actual', data.PERS_DEPT_ACT?.trim(),   data.PERS_PROV_ACT?.trim(),    data.PERS_DIST_ACT?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_dni',   'ndj_provincia_dni',   'ndj_distrito_dni',    data.PERS_DPTO_DIRDNI?.trim(), data.PERS_PROV_DIRDNI?.trim(), data.PERS_DIST_DIRDNI?.trim());
             await ndj_cargarUbigeosCascada('ndj_departamento_nac',   'ndj_provincia_nac',   'ndj_distrito_nac',    data.DEPA_CODIGO_NACI?.trim(), data.PROVI_CODIGO_NACI?.trim(),data.DIST_NACI?.trim());
-            ndj_setPais(data.NACIONALIDAD?.trim() || '');
+            await ndj_setPais(data.NACIONALIDAD?.trim() || '');
             ndj_toggleUbigeoNacimiento(false);
 
             const fc = $('ndj_familyContainer');
@@ -908,9 +908,12 @@ import Swal from 'sweetalert2';
         }
     }
 
-    function ndj_setPais(codigo) {
+    async function ndj_setPais(codigo) {
         const sel = $('ndj_pais');
-        if (sel) sel.value = codigo || '';
+        if (!sel) return;
+        // Autoguarantía: si el catálogo aún no cargó (p. ej. modo recontratación), cargarlo primero
+        if (!ndj_paisesData.length) await ndj_cargarPaises();
+        sel.value = codigo || '';
     }
 
     // Regla: si TIPO DE DOCUMENTO es CARNET DE EXTRANJERÍA, se ocultan
@@ -944,9 +947,11 @@ import Swal from 'sweetalert2';
         }
     }
 
-    function ndj_filtrarCargos(tipoPersonal) {
+    async function ndj_filtrarCargos(tipoPersonal) {
         const sel = $('ndj_sel_cargo');
         if (!sel) return;
+        // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
+        if (!ndj_allCargos || !ndj_allCargos.length) await ndj_cargarCargos();
         const operativos = ['01', '03', '06'];
         const admin      = ['02', '05'];
         const cargoTipo = operativos.includes(tipoPersonal) ? '01'

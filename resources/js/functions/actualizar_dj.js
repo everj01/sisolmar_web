@@ -4711,9 +4711,11 @@ document.addEventListener('DOMContentLoaded', function () {
 // ============================================================
 
 // ── Filtrar cargos según tipo de personal ──────────────────
-function filtrarCargos(tipoPersonal) {
+async function filtrarCargos(tipoPersonal) {
     const sel = document.getElementById('cargo_ui');
     if (!sel) return;
+    // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
+    if (!window.allCargosDj || !window.allCargosDj.length) await cargarCargosDj();
     const operativos = ['01', '03', '06'];
     const admin = ['02', '05'];
     const cargoTipo = operativos.includes(tipoPersonal) ? '01'
@@ -4829,9 +4831,12 @@ async function cargarPaises() {
     }
 }
 
-function setAjPais(codigo) {
+async function setAjPais(codigo) {
     const sel = document.getElementById('aj_pais');
-    if (sel) sel.value = String(codigo ?? '').trim();
+    if (!sel) return;
+    // Autoguarantía: si el catálogo de países no llegó, cargarlo ahora
+    if (!aj_paisesData.length) await cargarPaises();
+    sel.value = String(codigo ?? '').trim();
 }
 
 // ── Regla: Carnet de Extranjería (0035) → oculta Dep/Prov/Dist de Nacimiento ──
