@@ -6091,6 +6091,34 @@ class CapacitacionController extends Controller
         }  
     }
 
+    public function listarCertificados(): JsonResponse {
+        try {
+            $certificados = DB::table('si_solm.dbo.REDO_REQUISITOS')
+                ->select(
+                    'REQU_CODIGO AS CODIGO',
+                    'REQU_DESCRIPCION AS DESCRIPCION'
+                )
+                ->orderBy('REQU_CODIGO', 'ASC')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $certificados,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al listar los certificados.", [
+                "error" => $e->getMessage(),
+                "line" => $e->getLine(),
+                "file" => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function obtenerPlanPCE(): JsonResponse
     {
         try {
