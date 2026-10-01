@@ -14,9 +14,7 @@ function _escapeHtml(valor) {
 export default document.addEventListener("alpine:init", () => {
     Alpine.data("cursosExternosApp", () => ({
         abrirModalCursosPortuarios() {
-            window.dispatchEvent(
-                new CustomEvent("abrir-cursos-portuarios"),
-            );
+            window.dispatchEvent(new CustomEvent("abrir-cursos-portuarios"));
         },
     }));
 
@@ -47,7 +45,10 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         async cargarCatalogos() {
-            await Promise.all([this.cargarSucursales(), this.cargarTiposPers()]);
+            await Promise.all([
+                this.cargarSucursales(),
+                this.cargarTiposPers(),
+            ]);
         },
 
         async cargarSucursales() {
