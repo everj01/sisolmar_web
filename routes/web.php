@@ -221,6 +221,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-sucursales', [CapacitacionController::class, 'listarSucursales']);
         Route::get('/obtener-tipos-pers', [CapacitacionController::class, 'listarTiposPers']);
         Route::get('/obtener-certificados', [CapacitacionController::class, 'listarCertificados']);
+        Route::post('/cursos-externos/reporte-portuarios', [CapacitacionController::class, 'reporteCursosPortuarios']);
         Route::get('/obtener-memos-resumen/{nivelMemo}', [CapacitacionController::class, 'obtenerMemosResumen']);
         Route::get('/obtener-memos-enviados', [CapacitacionController::class, 'obtenerMemosEnviados']);
         Route::get('/obtener-detalle-memo/{memoId}', [CapacitacionController::class, 'obtenerDetalleMemo']);

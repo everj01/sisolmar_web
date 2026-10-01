@@ -6098,7 +6098,7 @@ class CapacitacionController extends Controller
                     'REQU_CODIGO AS CODIGO',
                     'REQU_DESCRIPCION AS DESCRIPCION'
                 )
-                ->orderBy('REQU_CODIGO', 'ASC')
+                ->orderBy('REQU_DESCRIPCION', 'ASC')
                 ->get();
 
             return response()->json([
@@ -6117,6 +6117,110 @@ class CapacitacionController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function reporteCursosPortuarios(Request $request): JsonResponse
+    {
+        try {
+            /* ---------------- 1) Lectura directa del request ---------------- */
+            $sucursal     = $this->normalizarCodigo($request->input('sucursal'));
+            $tipoPersonal = $this->normalizarCodigo($request->input('tipo_personal'));
+            $vigencia     = $this->normalizarSiNoT($request->input('vigencia'));
+            $estado       = $this->normalizarSiNoT($request->input('estado'));
+
+            /* ---------------- 2) CSV de certificados ---------------- */
+            $certificados = $request->input('certificados', []);
+            if (!is_array($certificados)) {
+                $certificados = [];
+            }
+
+            $certificados = array_values(array_filter(array_map(
+                fn($c) => trim((string) $c),
+                $certificados
+            ), fn($c) => $c !== ''));
+
+            $requisitosCsv = implode(',', $certificados);
+
+            /* ---------------- 3) Fecha de vencimiento ---------------- */
+            $vencimientoInput = $request->input('vencimiento');
+            $vencimiento = $vencimientoInput
+                ? Carbon::parse($vencimientoInput)->format('Ymd')
+                : '20991231';
+
+            /* ---------------- 4) Ejecutar SP ---------------- */
+            $rows = DB::connection('sqlsrv')->select(
+                "EXEC si_solm.dbo.USP_Redo_CertificadosReporte_2026
+                    @AS_SUCURSAL   = ?,
+                    @AS_TIPO_PERS  = ?,
+                    @AS_VIGENCIA   = ?,
+                    @AS_ESTADO     = ?,
+                    @AI_REQUISITOS = ?,
+                    @VENCIMIENTO   = ?,
+                    @EMPRESA       = ?",
+                [
+                    $sucursal,
+                    $tipoPersonal,
+                    $vigencia,
+                    $estado,
+                    $requisitosCsv,
+                    $vencimiento,
+                    '01',
+                ]
+            );
+
+            /* ---------------- 5) Respuesta ---------------- */
+            return response()->json([
+                'success' => true,
+                'total' => count($rows),
+                'data'    => $rows
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al generar el reporte de cursos portuarios.", [
+                "error"   => $e->getMessage(),
+                "line"    => $e->getLine(),
+                "file"    => $e->getFile(),
+                "payload" => $request->all(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al generar el reporte.',
+                'debug'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /* =========================================================
+     * Helpers
+     * ========================================================= */
+
+    /**
+     * Normaliza códigos de sucursal / tipo de personal:
+     *   - null, "", "T", "t"   → 'T'  (todos)
+     *   - en otro caso         → el valor en mayúsculas, sin espacios
+     */
+    private function normalizarCodigo($valor): string
+    {
+        $valor = strtoupper(trim((string) $valor));
+        return ($valor === '' || $valor === 'T') ? 'T' : $valor;
+    }
+
+    /**
+     * Normaliza valores SI/NO/T para vigencia y estado.
+     *   - "", null, "T"  → 'T'
+     *   - "1", "SI"      → 'SI'
+     *   - "2", "NO"      → 'NO'
+     *   - otro           → 'T' (fallback seguro)
+     */
+    private function normalizarSiNoT($valor): string
+    {
+        $valor = strtoupper(trim((string) $valor));
+
+        return match ($valor) {
+            '1', 'SI' => 'SI',
+            '2', 'NO' => 'NO',
+            default   => 'T',
+        };
     }
 
     public function obtenerPlanPCE(): JsonResponse
