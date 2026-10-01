@@ -309,6 +309,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);
             Route::post('/save-recontratacion', [DjController::class, 'saveRecontratacion']);
             Route::post('/upload-foto-personal', [DjController::class, 'uploadFotoPersonal']);
+            Route::post('/upload-dni-personal', [DjController::class, 'uploadDniPersonal']);
             Route::get('get-tipo-doc/', [DjController::class, 'getTipoDoc']);
             Route::get('get-tipo-per/', [DjController::class, 'getTipoPer']);
             Route::get('reglas-edad/', [DjController::class, 'reglasEdad']);

@@ -604,6 +604,88 @@ class DjController extends Controller
         }
     }
 
+    /**
+     * Subir DNI (anverso y/o reverso) — mismo flujo que la foto del personal:
+     * Laravel → charge_file.php (IP pública) → acceso directo "Biblioteca Grafica" → 10.2
+     * DNI1_1 = ANVERSO, DNI2_1 = REVERSO (carpetas donde el visor ya busca {CODI}.jpg)
+     */
+    public function uploadDniPersonal(Request $request)
+    {
+        $request->validate([
+            'dni_anverso' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+            'dni_reverso' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+            'codi_pers'   => 'required|string',
+        ]);
+
+        try {
+            $codiPers = trim($request->input('codi_pers'));
+
+            if (!$request->hasFile('dni_anverso') && !$request->hasFile('dni_reverso')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se recibió ninguna imagen del DNI.',
+                ], 400);
+            }
+
+            // Nombre fijo: CODI_PERS.jpg (así lo muestra el visor existente)
+            $nameFile = $codiPers . '.jpg';
+
+            $pendientes = [];
+            if ($request->hasFile('dni_anverso')) {
+                $pendientes['anverso'] = ['file' => $request->file('dni_anverso'), 'ruta' => 'DNI1_1'];
+            }
+            if ($request->hasFile('dni_reverso')) {
+                $pendientes['reverso'] = ['file' => $request->file('dni_reverso'), 'ruta' => 'DNI2_1'];
+            }
+
+            $fallos = [];
+            foreach ($pendientes as $lado => $info) {
+                $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                    ->attach('archivo', file_get_contents($info['file']->getRealPath()), $nameFile)
+                    ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                        'nameFile' => $nameFile,
+                        'ruta'     => $info['ruta'],
+                    ]);
+
+                $proxyData = $response->json();
+                if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                    $fallos[] = $lado;
+                    Log::error('uploadDniPersonal: fallo en proxy', [
+                        'codi_pers' => $codiPers,
+                        'lado'      => $lado,
+                        'status'    => $response->status(),
+                        'body'      => $response->body(),
+                    ]);
+                }
+            }
+
+            if ($fallos) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El servidor de archivos rechazó la imagen del DNI (' . implode(', ', $fallos) . ').',
+                ], 500);
+            }
+
+            Log::info('uploadDniPersonal: DNI guardado', [
+                'codi_pers' => $codiPers,
+                'lados'     => array_keys($pendientes),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DNI guardado correctamente.',
+                'lados'   => array_keys($pendientes),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('uploadDniPersonal error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al subir el DNI: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
 
 

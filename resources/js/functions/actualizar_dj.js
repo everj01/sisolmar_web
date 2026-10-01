@@ -3985,9 +3985,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
-                    // Subir foto si fue seleccionada
+                    // Subir foto y DNI si fueron seleccionados
                     const fotoFile = inputFoto?.files?.[0];
                     const codiPersFoto = response.data.codi_pers || data.cod_postulante || '';
+                    const resDniDj = await subirDniDj(codiPersFoto);
                     if (fotoFile && codiPersFoto) {
                         try {
                             const fdFoto = new FormData();
@@ -4009,7 +4010,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
 
-                    Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    mensajeGuardadoDj(resDniDj, 'La Declaración Jurada se guardó correctamente.');
 
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
@@ -4748,7 +4749,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
-            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj();
 
             await cargarCatalogos();
             await cargarPaises();
@@ -4810,6 +4811,83 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 }
 
 // ── Catálogos ────────────────────────────────────────────────
+// ── DNI Anverso / Reverso: vista previa + subida al GUARDAR ─────────
+const djDniFiles = { anverso: null, reverso: null };
+
+function configDniInputsDj() {
+    // Modal "Subir DNI" (abrir/cerrar)
+    const modalDni = document.getElementById('modalDni');
+    document.getElementById('btnSubirDni')?.addEventListener('click', () => { if (modalDni) modalDni.style.display = 'flex'; });
+    document.getElementById('cerrarModalDni')?.addEventListener('click', () => { if (modalDni) modalDni.style.display = 'none'; });
+    const pares = [
+        ['btnDniAnverso', 'inputDniAnverso', 'prevDniAnverso', 'imgDniAnverso', 'clearDniAnverso', 'anverso'],
+        ['btnDniReverso', 'inputDniReverso', 'prevDniReverso', 'imgDniReverso', 'clearDniReverso', 'reverso'],
+    ];
+    pares.forEach(([btnId, inpId, prevId, imgId, clearId, lado]) => {
+        const btn = document.getElementById(btnId), inp = document.getElementById(inpId),
+              prev = document.getElementById(prevId), img = document.getElementById(imgId),
+              clear = document.getElementById(clearId);
+        if (!btn || !inp) return;
+        btn.addEventListener('click', () => inp.click());
+        inp.addEventListener('change', () => {
+            const f = inp.files?.[0];
+            if (!f) return;
+            djDniFiles[lado] = f;
+            if (img)  img.src = URL.createObjectURL(f);
+            if (prev) prev.style.display = 'block';
+        });
+        if (clear) clear.addEventListener('click', () => {
+            djDniFiles[lado] = null;
+            inp.value = '';
+            if (prev) prev.style.display = 'none';
+            if (img)  img.removeAttribute('src');
+        });
+    });
+}
+document.addEventListener('DOMContentLoaded', configDniInputsDj);
+
+function limpiarDniDj() {
+    djDniFiles.anverso = null;
+    djDniFiles.reverso = null;
+    ['inputDniAnverso', 'inputDniReverso'].forEach(id => { const i = document.getElementById(id); if (i) i.value = ''; });
+    ['prevDniAnverso', 'prevDniReverso'].forEach(id => { const p = document.getElementById(id); if (p) p.style.display = 'none'; });
+    const m = document.getElementById('modalDni');
+    if (m) m.style.display = 'none';
+}
+
+async function subirDniDj(codiPers) {
+    if (!codiPers) return { ok: true, sinDni: true };
+    if (!djDniFiles.anverso && !djDniFiles.reverso) return { ok: true, sinDni: true };
+    try {
+        const fd = new FormData();
+        fd.append('codi_pers', codiPers);
+        if (djDniFiles.anverso) fd.append('dni_anverso', djDniFiles.anverso);
+        if (djDniFiles.reverso) fd.append('dni_reverso', djDniFiles.reverso);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const res = await fetch(`${VITE_URL_APP}/api/dj/upload-dni-personal`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: fd,
+        });
+        const json = await res.json();
+        // Limpiar selección tras subir: nunca arrastrar el DNI de una persona a otra
+        if (json.success) limpiarDniDj();
+        return { ok: !!json.success, message: json.message };
+    } catch (err) {
+        console.warn('[ActualizarDJ] Error subiendo DNI:', err);
+        return { ok: false, message: 'Error de conexión al subir el DNI.' };
+    }
+}
+
+function mensajeGuardadoDj(resDni, textoOk) {
+    if (resDni && !resDni.sinDni && !resDni.ok) {
+        Swal.fire({ icon: 'warning', title: 'DJ guardada, pero falló el DNI', text: resDni.message || 'No se pudo subir el DNI.' });
+        return;
+    }
+    Swal.fire({ icon: 'success', title: '¡Éxito!', text: textoOk });
+}
+
 let aj_paisesData = [];
 
 async function cargarPaises() {
@@ -4922,6 +5000,7 @@ async function cargarDatosPersonales(codiPers, source = 'migracion') {
 
 // ── Llenar formulario ────────────────────────────────────────
 async function llenarFormulario(data) {
+    limpiarDniDj();   // pizarra limpia: no arrastrar DNI de otra persona
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
@@ -5763,7 +5842,7 @@ function limpiarSplitView() {
         tipoPersonalEsEspecial = false;
         poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
     }
-    aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+    aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj();
 
 }
 
@@ -6014,7 +6093,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
         }
-        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj();
 
         // Reset No Caduca checkbox y restore caduca
         const noCaducaReset = document.getElementById('no_caduca_dni');

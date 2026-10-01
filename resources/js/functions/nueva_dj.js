@@ -845,6 +845,7 @@ import Swal from 'sweetalert2';
             tipoUi.style.color = '';
         }
         ndj_aplicarSctr('');
+        ndj_limpiarDni();
 
         ['ndj_provincia_actual','ndj_distrito_actual','ndj_provincia_dni','ndj_distrito_dni','ndj_provincia_nac','ndj_distrito_nac']
             .forEach(id => { const s = $(id); if (s) s.innerHTML = '<option value="">—</option>'; });
@@ -1231,6 +1232,72 @@ import Swal from 'sweetalert2';
 
     // ============================================================
     // SUBIR FOTO AL PROXY (después de guardar)
+    // ── DNI Anverso / Reverso: vista previa + subida al GUARDAR ─────────
+    const ndjDniFiles = { anverso: null, reverso: null };
+
+    function ndj_configDniInputs() {
+        // Modal "Subir DNI" (abrir/cerrar)
+        const modalDni = $('ndj_modalDni');
+        $('ndj_btnSubirDni')?.addEventListener('click', () => { if (modalDni) modalDni.style.display = 'flex'; });
+        $('ndj_cerrarModalDni')?.addEventListener('click', () => { if (modalDni) modalDni.style.display = 'none'; });
+        const pares = [
+            ['ndj_btnDniAnverso', 'ndj_dni_anverso', 'ndj_prev_dni_anverso', 'ndj_img_dni_anverso', 'ndj_clear_dni_anverso', 'anverso'],
+            ['ndj_btnDniReverso', 'ndj_dni_reverso', 'ndj_prev_dni_reverso', 'ndj_img_dni_reverso', 'ndj_clear_dni_reverso', 'reverso'],
+        ];
+        pares.forEach(([btnId, inpId, prevId, imgId, clearId, lado]) => {
+            const btn = $(btnId), inp = $(inpId), prev = $(prevId), img = $(imgId), clear = $(clearId);
+            if (!btn || !inp) return;
+            btn.addEventListener('click', () => inp.click());
+            inp.addEventListener('change', () => {
+                const f = inp.files?.[0];
+                if (!f) return;
+                ndjDniFiles[lado] = f;
+                if (img)  img.src = URL.createObjectURL(f);
+                if (prev) prev.style.display = 'block';
+            });
+            if (clear) clear.addEventListener('click', () => {
+                ndjDniFiles[lado] = null;
+                inp.value = '';
+                if (prev) prev.style.display = 'none';
+                if (img)  img.removeAttribute('src');
+            });
+        });
+    }
+
+    function ndj_limpiarDni() {
+        ndjDniFiles.anverso = null;
+        ndjDniFiles.reverso = null;
+        ['ndj_dni_anverso', 'ndj_dni_reverso'].forEach(id => { const i = $(id); if (i) i.value = ''; });
+        ['ndj_prev_dni_anverso', 'ndj_prev_dni_reverso'].forEach(id => { const p = $(id); if (p) p.style.display = 'none'; });
+        const m = $('ndj_modalDni');
+        if (m) m.style.display = 'none';
+    }
+
+    async function ndj_subirDni(codiPers) {
+        if (!codiPers) return { ok: true, sinDni: true };
+        if (!ndjDniFiles.anverso && !ndjDniFiles.reverso) return { ok: true, sinDni: true };
+        try {
+            const fd = new FormData();
+            fd.append('codi_pers', codiPers);
+            if (ndjDniFiles.anverso) fd.append('dni_anverso', ndjDniFiles.anverso);
+            if (ndjDniFiles.reverso) fd.append('dni_reverso', ndjDniFiles.reverso);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            const res  = await fetch(`${VITE_URL_APP}/api/dj/upload-dni-personal`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                body:   fd,
+            });
+            const json = await res.json();
+            // Limpiar selección tras subir: nunca arrastrar el DNI de una persona a otra
+            if (json.success) ndj_limpiarDni();
+            return { ok: !!json.success, message: json.message };
+        } catch (err) {
+            console.warn('[NuevaDJ] Error subiendo DNI:', err);
+            return { ok: false, message: 'Error de conexión al subir el DNI.' };
+        }
+    }
+
     // ============================================================
     async function ndj_subirFoto(codiPers) {
         const fotoFile    = $('ndj_inputFoto')?.files?.[0];
@@ -1578,18 +1645,25 @@ import Swal from 'sweetalert2';
             const json = await res.json();
 
             if (json.success) {
-                // ── Subir foto si hay archivo nuevo seleccionado ──
+                // ── Subir foto y DNI si hay archivos nuevos seleccionados ──
                 const codiPers = json.codi_pers || body.cod_postulante || '';
                 const resFoto  = await ndj_subirFoto(codiPers);
+                const resDni   = await ndj_subirDni(codiPers);
 
-                if (!resFoto.sinFoto && !resFoto.ok) {
-                    // DJ guardado OK pero foto falló, mostrar alerta clara
+                const falloFoto = !resFoto.sinFoto && !resFoto.ok;
+                const falloDni  = !resDni.sinDni  && !resDni.ok;
+
+                if (falloFoto || falloDni) {
+                    // DJ guardado OK pero foto/DNI falló, mostrar alerta clara
+                    const partes = [];
+                    if (falloFoto) partes.push('la foto');
+                    if (falloDni)  partes.push('el DNI');
                     Swal.fire({
                         icon:  'warning',
-                        title: 'Datos guardados, pero falló la foto',
-                        html:  `<p style="color:#4b5563; font-size: 14px;">La Declaración Jurada se guardó correctamente, pero ocurrió un problema con el archivo de la foto.</p>
+                        title: 'Datos guardados, pero falló ' + partes.join(' y '),
+                        html:  `<p style="color:#4b5563; font-size: 14px;">La Declaración Jurada se guardó correctamente, pero ocurrió un problema con ${partes.join(' o ')}.</p>
                                <div style="background: #fff7ed; border: 1px solid #fdba74; padding: 10px; border-radius: 6px; margin-top: 10px;">
-                                   <span style="color:#b45309; font-weight: 600;">⚠️ ${resFoto.message || 'Error al conectar con el servidor de imágenes'}</span>
+                                   <span style="color:#b45309; font-weight: 600;">⚠️ ${(falloFoto ? resFoto.message : resDni.message) || 'Error al conectar con el servidor de imágenes'}</span>
                                </div>`,
                     });
                 } else {
@@ -1621,6 +1695,7 @@ import Swal from 'sweetalert2';
     document.addEventListener('DOMContentLoaded', function () {
 
         ndj_cargarReglasEdad();
+        ndj_configDniInputs();
         ndj_bloquearCampos(true);
         if (alertTipoPersonal) alertTipoPersonal.style.display = 'block';
 
