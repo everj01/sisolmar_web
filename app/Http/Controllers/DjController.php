@@ -513,6 +513,7 @@ class DjController extends Controller
 
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($nuevoCod, $data);
+            $this->aplicarAsigFami($nuevoCod, $data);
 
             // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
             $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
@@ -1258,6 +1259,7 @@ class DjController extends Controller
             unset($data['FECH_CESE'], $data['fecha_cese']);
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
+            $this->aplicarAsigFami($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, $source);
 
             // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
@@ -1425,7 +1427,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = str_starts_with($parentesco, 'HIJO')
+            $fechaNaci = preg_match('/^HIJ/i', $parentesco)
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -2778,7 +2780,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = str_starts_with($parentesco, 'HIJO')
+            $fechaNaci = preg_match('/^HIJ/i', $parentesco)
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -3684,6 +3686,172 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
 
     /**
+     * Subir DNI de HIJOS (anverso y/o reverso) → carpetas DNI1_HIJOS / DNI2_HIJOS
+     * Nombres: {CODI_PERS}_H{N}.jpg — H1/H2 = hijo 1 (anverso/reverso), H3/H4 = hijo 2, ...
+     * Recibe pares archivos[] + metas[] con formato "DNI1_HIJOS|00085_H1.jpg"
+     */
+    public function uploadDniHijos(Request $request)
+    {
+        $request->validate([
+            'codi_pers'  => 'required|string',
+            'archivos'   => 'required|array|min:1',
+            'archivos.*' => 'file|mimes:jpg,jpeg,png|max:2048',
+            'metas'      => 'required|array|min:1',
+            'metas.*'    => 'string',
+        ]);
+
+        try {
+            $codiPers = trim($request->input('codi_pers'));
+            $archivos = $request->file('archivos', []);
+            $metas    = $request->input('metas', []);
+
+            if (count($archivos) !== count($metas)) {
+                return response()->json(['success' => false, 'message' => 'La cantidad de archivos y destinos no coincide.'], 422);
+            }
+
+            $fallos = [];
+            foreach ($archivos as $i => $archivo) {
+                $meta = trim((string) ($metas[$i] ?? ''));
+                // Formato permitido: DNI1_HIJOS|CODI_H#.jpg (DNI1_HIJOS = anverso, DNI2_HIJOS = reverso)
+                if (!preg_match('/^(DNI1_HIJOS|DNI2_HIJOS)\|([A-Za-z0-9_\-]+\.jpg)$/i', $meta, $m)) {
+                    $fallos[] = $meta !== '' ? $meta : ('archivo #' . ($i + 1));
+                    continue;
+                }
+                $ruta     = strtoupper($m[1]);
+                $nameFile = $m[2];
+
+                $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                    ->attach('archivo', file_get_contents($archivo->getRealPath()), $nameFile)
+                    ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                        'nameFile' => $nameFile,
+                        'ruta'     => $ruta,
+                    ]);
+
+                $proxyData = $response->json();
+                if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                    $fallos[] = $nameFile;
+                    Log::error('uploadDniHijos: fallo en proxy', [
+                        'codi_pers' => $codiPers,
+                        'destino'   => $meta,
+                        'status'    => $response->status(),
+                        'body'      => $response->body(),
+                    ]);
+                }
+            }
+
+            if ($fallos) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudieron guardar algunos DNI: ' . implode(', ', $fallos),
+                ], 500);
+            }
+
+            Log::info('uploadDniHijos: DNI de hijos guardado', [
+                'codi_pers' => $codiPers,
+                'total'     => count($archivos),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DNI de los hijos guardado correctamente.',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('uploadDniHijos error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al subir el DNI de hijos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Consulta qué DNI de hijos YA existen en el servidor (para no volverlos a pedir).
+     * Recibe nombres[] tipo "00085_H1.jpg"; el lado se deduce: H impar = DNI1_HIJOS (anverso),
+     * H par = DNI2_HIJOS (reverso). Responde { nombre: true/false }.
+     */
+    public function getDniHijos(Request $request)
+    {
+        try {
+            $nombres = $request->get('nombres', []);
+            if (!is_array($nombres)) $nombres = [];
+
+            $resultado = [];
+            foreach ($nombres as $nombre) {
+                $nombre = trim((string) $nombre);
+                if ($nombre === '' || !preg_match('/_H(\d+)\.jpg$/i', $nombre, $m)) continue;
+                $numero = (int) $m[1];
+                $ruta   = ($numero % 2 === 1) ? 'DNI1_HIJOS' : 'DNI2_HIJOS';
+                $url    = "http://190.116.178.163/Biblioteca_Grafica/{$ruta}/{$nombre}";
+
+                $existe = false;
+                try {
+                    $existe = Http::timeout(5)->head($url)->successful();
+                } catch (\Exception $e) {
+                    $existe = false;
+                }
+                $resultado[$nombre] = $existe;
+            }
+
+            return response()->json(['success' => true, 'data' => $resultado]);
+        } catch (\Exception $e) {
+            Log::error('getDniHijos error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * ASIG_FAMI (si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
+     * 'SI' si registra al menos un HIJO menor de 18 años; en caso contrario 'NO'
+     * (sin hijos, o solo hijos mayores de edad).
+     */
+    private function aplicarAsigFami($codiPers, &$data)
+    {
+        $asig = 'NO';
+
+        $evaluar = function ($parentesco, $fechaNaci) use (&$asig) {
+            if (!preg_match('/^HIJ/i', trim((string) $parentesco))) return;
+            $f = trim((string) $fechaNaci);
+            if ($f === '') return;
+            try {
+                $nac = \Carbon\Carbon::createFromFormat('Y-m-d', substr($f, 0, 10));
+                if ($nac && $nac->age < 18) $asig = 'SI';
+            } catch (\Exception $e) {
+                // fecha inválida: no cuenta como menor de edad
+            }
+        };
+
+        $parentescos = $data['FAM_PARENTESCO'] ?? null;
+        $fechas      = $data['FAM_FECHA_NACI'] ?? null;
+
+        if (is_array($parentescos) && is_array($fechas)) {
+            foreach ($parentescos as $i => $p) {
+                $evaluar($p, $fechas[$i] ?? '');
+            }
+        } elseif (!empty($codiPers)) {
+            // Fallback: familias ya registradas en BD
+            $rows = DB::select(
+                "SELECT TIPO_RELA, CONVERT(varchar(10), FECH_NACI, 23) AS FECH_NACI
+                 FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?",
+                [$codiPers]
+            );
+            foreach ($rows as $r) {
+                $evaluar($r->TIPO_RELA ?? '', $r->FECH_NACI ?? '');
+            }
+        }
+
+        $data['ASIG_FAMI'] = $asig;
+
+        // Reflejar en la tabla maestra PERSONAL (DJ2026 se llena vía insertOrUpdate)
+        DB::update(
+            'UPDATE si_solm.dbo.PERSONAL SET ASIG_FAMI = ? WHERE CODI_PERS = ?',
+            [$asig, $codiPers]
+        );
+
+        Log::info('aplicarAsigFami', ['CODI_PERS' => $codiPers, 'ASIG_FAMI' => $asig]);
+    }
+
+    /**
      * Regla SCTR (columna SCRT en si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
      * - Operativo 4°/5° (01/03)  → 'SI' automático
      * - Administrativo 4°/5° (02/05) → 'SI' si el checkbox autorizar_sctr viene marcado, 'NO' si no
@@ -3946,6 +4114,7 @@ $tipotrab    = $tipoPer;
             // Actualizar DJ2026_PERSONAL con los datos de la recontratación (sucursal, fecha modificación, etc.)
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
+            $this->aplicarAsigFami($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
  
             DB::commit();

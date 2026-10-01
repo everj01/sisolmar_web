@@ -208,6 +208,38 @@
                                             </div>
                                         </div>
                                     </div>
+                                    {{-- Modal DNI del hijo: anverso/reverso con vista previa; se sube al presionar GUARDAR --}}
+                                    <div id="ndj_modalDniHijos" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+                                        <div style="background:#fff;border-radius:10px;padding:18px 20px;width:92%;max-width:460px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+                                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                                <strong style="font-size:14px;">DNI del hijo — <span id="ndj_dni_hijo_label"></span></strong>
+                                                <button type="button" id="ndj_cerrarModalDniHijos" title="Cerrar"
+                                                    style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
+                                            </div>
+                                            <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;">
+                                                <div style="text-align:center;">
+                                                    <button type="button" id="ndj_btnDniHijoAnverso" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI ANVERSO</button>
+                                                    <input type="file" id="ndj_inputDniHijoAnverso" accept="image/*" class="hidden" />
+                                                    <div id="ndj_prev_dni_hijo_anverso" style="display:none;margin-top:8px;position:relative;width:150px;">
+                                                        <img id="ndj_img_dni_hijo_anverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
+                                                        <button type="button" id="ndj_clear_dni_hijo_anverso" title="Quitar"
+                                                            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;">✕</button>
+                                                    </div>
+                                                </div>
+                                                <div style="text-align:center;">
+                                                    <button type="button" id="ndj_btnDniHijoReverso" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI REVERSO</button>
+                                                    <input type="file" id="ndj_inputDniHijoReverso" accept="image/*" class="hidden" />
+                                                    <div id="ndj_prev_dni_hijo_reverso" style="display:none;margin-top:8px;position:relative;width:150px;">
+                                                        <img id="ndj_img_dni_hijo_reverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
+                                                        <button type="button" id="ndj_clear_dni_hijo_reverso" title="Quitar"
+                                                            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;">✕</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <hr class="dj-divider">
                                     <div class="dj-grid-4">
                                         <div>
@@ -814,7 +846,7 @@
                                     <div id="ndj_familyContainer" style="display:flex;flex-direction:column;gap:8px;">
                                         {{-- fila inicial --}}
                                         <div class="ndj-family-row"
-                                            style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:end;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;">
+                                            style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:start;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;">
                                             <div>
                                                 <label class="dj-label">Parentesco</label>
                                                 <select name="ndj_parentesco[]" class="dj-select">
@@ -833,8 +865,15 @@
                                             <div class="ndj-family-date">
                                                 <label class="dj-label">Fecha de Nacimiento</label>
                                                 <input type="date" name="ndj_fechaNacimiento[]" class="dj-input">
+                                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                                                    <span class="ndj-family-age" style="display:none;font-size:11px;color:#2563eb;"></span>
+                                                    <button type="button" class="ndj-btn-dni-hijo dj-btn-sm"
+                                                        style="display:none;background:#eef2ff;color:#3730a3;border-radius:5px;">SUBIR DNI</button>
+                                                    <span class="ndj-dni-hijo-estado" style="display:none;font-size:10px;"></span>
+                                                </div>
                                             </div>
                                             <div>
+                                                <label class="dj-label" style="visibility:hidden;">.</label>
                                                 <button type="button" class="ndj-remove-family dj-btn-sm dj-btn-danger"
                                                     style="margin-bottom:1px;">Eliminar</button>
                                             </div>
