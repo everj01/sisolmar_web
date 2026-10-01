@@ -140,8 +140,7 @@
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
         style="background: rgba(36,39,70,0.45);">
 
-        {{-- 👇 CAMBIO APLICADO: max-w-40 reemplazado por max-w-md --}}
-        <div class="flex flex-col w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
+        <div class="flex flex-col w-full max-w-40 bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden transition-all duration-300"
             x-transition:enter="transition ease-out duration-300"
             x-transition:enter-start="opacity-0 scale-95 translate-y-4"
             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -235,6 +234,95 @@
                     </label>
                     <input type="date" x-model="selectedVencimiento"
                         class="w-full h-9 px-3 text-sm bg-white border border-default-200 rounded-lg text-default-900 placeholder-default-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                </div>
+
+                {{-- Certificados (selección múltiple) --}}
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-medium text-default-700">
+                            Certificados
+                            <span class="text-default-400 font-normal">(opcional, "Todos" para general)</span>
+                        </label>
+                        <button type="button" x-show="selectedCertificados.length > 0"
+                            @click="selectedCertificados = []; searchCertificado = ''"
+                            class="text-xs text-teal-500 hover:text-teal-800 font-medium transition-all cursor-pointer">
+                            Limpiar
+                        </button>
+                    </div>
+
+                    <div class="border border-default-200 rounded-lg overflow-hidden">
+
+                        {{-- Buscador + seleccionar todos --}}
+                        <div class="flex items-center gap-2 border-b border-default-200 bg-white px-3">
+                            <i class="ti ti-search text-default-400 text-sm shrink-0"></i>
+                            <input type="text" x-model="searchCertificado"
+                                placeholder="Buscar certificado..."
+                                class="flex-1 h-9 text-sm bg-transparent text-default-900 placeholder-default-400 border-0 ring-0 focus:ring-0 focus:outline-none shadow-none">
+                        </div>
+
+                        {{-- Lista de certificados --}}
+                        <div class="max-h-40 overflow-y-auto divide-y divide-default-100">
+                            <template x-if="loadingCertificados">
+                                <div class="flex items-center justify-center py-5 text-default-400 gap-2">
+                                    <i class="ti ti-loader animate-spin text-lg"></i>
+                                    <span class="text-sm">Cargando certificados...</span>
+                                </div>
+                            </template>
+
+                            <template x-if="!loadingCertificados">
+                                <div>
+                                    <template x-for="option in certificadosFiltrados" :key="option.CODIGO">
+                                        <label
+                                            class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-all"
+                                            :class="selectedCertificados.includes(String(option.CODIGO)) ? 'bg-teal-50' : 'hover:bg-default-100'">
+
+                                            <input type="checkbox" class="sr-only" :value="option.CODIGO"
+                                                :checked="selectedCertificados.includes(String(option.CODIGO))"
+                                                @change="toggleCertificado(option.CODIGO)">
+
+                                            {{-- Checkbox custom --}}
+                                            <div
+                                                class="w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-all"
+                                                :class="selectedCertificados.includes(String(option.CODIGO))
+                                                    ? 'bg-teal-500 border-teal-500'
+                                                    : 'bg-white border-default-300'">
+                                                <i class="ti ti-check text-white text-[11px]"
+                                                    x-show="selectedCertificados.includes(String(option.CODIGO))"></i>
+                                            </div>
+
+                                            <span class="text-sm transition-all truncate"
+                                                :class="selectedCertificados.includes(String(option.CODIGO)) ? 'text-teal-500 font-medium' : 'text-default-700'"
+                                                x-text="option.DESCRIPCION">
+                                            </span>
+                                        </label>
+                                    </template>
+
+                                    <div x-show="certificadosFiltrados.length === 0"
+                                        class="flex flex-col items-center justify-center py-5 text-default-400 gap-1.5">
+                                        <i class="ti ti-search-off text-lg"></i>
+                                        <span class="text-xs">Sin resultados para "<span
+                                                class="font-medium"
+                                                x-text="searchCertificado"></span>"</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{-- Chips de seleccionados --}}
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                        <template x-for="codigo in selectedCertificados" :key="codigo">
+                            <span
+                                class="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-teal-50 border border-teal-200 text-teal-500 text-[11px] font-medium max-w-[300px]">
+                                <span class="truncate" x-text="descripcionCertificado(codigo)"></span>
+                                <button type="button" @click="toggleCertificado(codigo)"
+                                    class="shrink-0 w-4 h-4 rounded-full hover:bg-default-200 flex items-center justify-center transition-all cursor-pointer"
+                                    title="Quitar">
+                                    <i class="ti ti-x text-[11px]"></i>
+                                </button>
+                            </span>
+                        </template>
+                    </div>
                 </div>
             </div>
 

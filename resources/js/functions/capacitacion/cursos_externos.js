@@ -23,15 +23,20 @@ export default document.addEventListener("alpine:init", () => {
 
         loadingSucursales: false,
         loadingTiposPers: false,
+        loadingCertificados: false,
 
         sucursales: [],
         tiposPers: [],
+        certificados: [],
 
         selectedSucursal: "",
         selectedTipoPersonal: "",
         selectedVigencia: "",
         selectedEstado: "",
         selectedVencimiento: "",
+
+        selectedCertificados: [],
+        searchCertificado: "",
 
         init() {
             window.addEventListener("abrir-cursos-portuarios", () => {
@@ -83,6 +88,76 @@ export default document.addEventListener("alpine:init", () => {
             }
         },
 
+        async cargarCertificados() {
+            this.loadingCertificados = true;
+            try {
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/obtener-certificados`,
+                );
+                this.certificados =
+                    data.success && Array.isArray(data.data) ? data.data : [];
+            } catch (e) {
+                console.error("Error al cargar certificados", e);
+                this.certificados = [];
+            } finally {
+                this.loadingCertificados = false;
+            }
+        },
+
+        /** Certificados que coinciden con el texto de búsqueda. */
+        get certificadosFiltrados() {
+            const term = (this.searchCertificado || "").trim().toLowerCase();
+            if (!term) return this.certificados;
+            return this.certificados.filter((c) =>
+                (c.DESCRIPCION || "").toLowerCase().includes(term),
+            );
+        },
+
+        get todosCertificadosSeleccionados() {
+            const visibles = this.certificadosFiltrados;
+            return (
+                visibles.length > 0 &&
+                visibles.every((c) =>
+                    this.selectedCertificados.includes(String(c.CODIGO)),
+                )
+            );
+        },
+
+        toggleCertificado(codigo) {
+            const valor = String(codigo);
+            const idx = this.selectedCertificados.indexOf(valor);
+            if (idx === -1) {
+                this.selectedCertificados.push(valor);
+            } else {
+                this.selectedCertificados.splice(idx, 1);
+            }
+        },
+
+        toggleTodosCertificados() {
+            if (this.todosCertificadosSeleccionados) {
+                const visibles = this.certificadosFiltrados.map((c) =>
+                    String(c.CODIGO),
+                );
+                this.selectedCertificados = this.selectedCertificados.filter(
+                    (codigo) => !visibles.includes(codigo),
+                );
+            } else {
+                const visibles = this.certificadosFiltrados.map((c) =>
+                    String(c.CODIGO),
+                );
+                this.selectedCertificados = [
+                    ...new Set([...this.selectedCertificados, ...visibles]),
+                ];
+            }
+        },
+
+        descripcionCertificado(codigo) {
+            const found = this.certificados.find(
+                (c) => String(c.CODIGO) === String(codigo),
+            );
+            return found ? found.DESCRIPCION : codigo;
+        },
+
         /** Traduce el valor 1/2 de los dropdowns SI/NO a texto legible. */
         _siNo(valor) {
             if (valor === "1") return "SI";
@@ -113,6 +188,14 @@ export default document.addEventListener("alpine:init", () => {
                 {
                     label: "Vencimiento",
                     valor: this.selectedVencimiento || "Sin fecha",
+                },
+                {
+                    label: "Certificados",
+                    valor:
+                        this.selectedCertificados.length === 0
+                            ? "Todos"
+                            : this.selectedCertificados.length +
+                              " seleccionados",
                 },
             ];
         },
@@ -152,6 +235,8 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedVigencia = "";
             this.selectedEstado = "";
             this.selectedVencimiento = "";
+            this.selectedCertificados = [];
+            this.searchCertificado = "";
         },
     }));
 });
