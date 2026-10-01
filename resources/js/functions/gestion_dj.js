@@ -1230,22 +1230,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // DNI obligatorio de los hijos (anverso y reverso)
-                const filasHijosDni = filasHijosDj();
-                for (let i = 0; i < filasHijosDni.length; i++) {
-                    const stH = estadoDniHijo(filasHijosDni[i]);
-                    const okA = !!(stH.anverso || stH.tieneAnverso);
-                    const okR = !!(stH.reverso || stH.tieneReverso);
-                    if (!okA || !okR) {
-                        const falta = (!okA && !okR) ? 'anverso y reverso' : (!okA ? 'anverso' : 'reverso');
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Falta el DNI del hijo ' + (i + 1),
-                            text: 'Debe subir el ' + falta + ' del DNI para continuar.',
-                            confirmButtonText: 'Entendido',
-                        });
-                        if (btnGuardar) btnGuardar.disabled = false;
-                        return;
+                // DNI obligatorio: solo para hijos MENORES de edad
+                // (la regla NO aplica para el rol ADMINS RRHH)
+                if (!esAdminRrhhDj()) {
+                    const filasHijosDni = filasHijosDj();
+                    for (let i = 0; i < filasHijosDni.length; i++) {
+                        const fechaH = filasHijosDni[i].querySelector('input[name="fechaNacimiento[]"]')?.value;
+                        if (!esMenorDeEdadDj(fechaH)) continue;   // solo menores de edad
+                        const stH = estadoDniHijo(filasHijosDni[i]);
+                        const okA = !!(stH.anverso || stH.tieneAnverso);
+                        const okR = !!(stH.reverso || stH.tieneReverso);
+                        if (!okA || !okR) {
+                            const falta = (!okA && !okR) ? 'anverso y reverso' : (!okA ? 'anverso' : 'reverso');
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Falta el DNI del hijo ' + (i + 1),
+                                text: 'Debe subir el ' + falta + ' del DNI para continuar.',
+                                confirmButtonText: 'Entendido',
+                            });
+                            if (btnGuardar) btnGuardar.disabled = false;
+                            return;
+                        }
                     }
                 }
 
@@ -2401,6 +2406,23 @@ function estadoDniHijo(fila) {
     return st;
 }
 
+// Regla DNI del hijo: OBLIGATORIO solo para menores de edad.
+// El rol ADMINS RRHH (tipo 17) está exento de la regla.
+function esMenorDeEdadDj(fecha) {
+    if (!fecha) return false;
+    const nac = new Date(String(fecha).slice(0, 10) + 'T00:00:00');
+    if (isNaN(nac)) return false;
+    const hoy = new Date();
+    let anios = hoy.getFullYear() - nac.getFullYear();
+    const m = hoy.getMonth() - nac.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) anios--;
+    return anios < 18;
+}
+
+function esAdminRrhhDj() {
+    return String(window.tipoUsuario ?? '').trim() === '17';
+}
+
 function actualizarEstadoDniHijo(fila) {
     const span = fila.querySelector('.dni-hijo-estado');
     if (!span) return;
@@ -2410,9 +2432,21 @@ function actualizarEstadoDniHijo(fila) {
     const okA = !!(st.anverso || st.tieneAnverso);
     const okR = !!(st.reverso || st.tieneReverso);
     span.style.display = '';
-    if (okA && okR)      { span.textContent = '✓ DNI completo';   span.style.color = '#16a34a'; }
-    else if (okA || okR) { span.textContent = '⚠ falta ' + (okA ? 'reverso' : 'anverso'); span.style.color = '#d97706'; }
-    else                 { span.textContent = '⚠ sin DNI (obligatorio)'; span.style.color = '#dc2626'; }
+    if (okA && okR) {
+        span.textContent = '✓ DNI completo';
+        span.style.color = '#16a34a';
+        return;
+    }
+    const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
+    const obligatorio = esMenorDeEdadDj(fecha) && !esAdminRrhhDj();
+    const detalle = (okA || okR) ? 'falta ' + (okA ? 'reverso' : 'anverso') : 'sin DNI';
+    if (obligatorio) {
+        span.textContent = '⚠ ' + detalle + ' (obligatorio)';
+        span.style.color = '#dc2626';
+    } else {
+        span.textContent = '○ ' + detalle + ' (opcional)';
+        span.style.color = '#9ca3af';
+    }
 }
 
 function actualizarExtrasFilaHijo(fila) {
