@@ -640,7 +640,7 @@
                                                     <span
                                                         style="font-size:10px;color:#9ca3af;margin-top:3px;">FOTO</span>
                                                     <img id="previewFoto" class="hidden" />
-                                                    <input type="file" id="inputFoto" accept="image/*" class="hidden" />
+                                                    <input type="file" id="inputFoto" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
                                                 </div>
                                                 <div style="display:flex;flex-direction:column;gap:5px;align-items:center;">
                                                     <div style="display:flex;gap:5px;">
@@ -667,7 +667,7 @@
                                                     <div style="text-align:center;">
                                                         <button type="button" id="btnDniAnverso" class="dj-btn-sm"
                                                             style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI ANVERSO</button>
-                                                        <input type="file" id="inputDniAnverso" accept="image/*" class="hidden" />
+                                                        <input type="file" id="inputDniAnverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
                                                         <div id="prevDniAnverso" style="display:none;margin-top:8px;position:relative;width:150px;">
                                                             <img id="imgDniAnverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
                                                             <button type="button" id="clearDniAnverso" title="Quitar"
@@ -677,7 +677,7 @@
                                                     <div style="text-align:center;">
                                                         <button type="button" id="btnDniReverso" class="dj-btn-sm"
                                                             style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI REVERSO</button>
-                                                        <input type="file" id="inputDniReverso" accept="image/*" class="hidden" />
+                                                        <input type="file" id="inputDniReverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
                                                         <div id="prevDniReverso" style="display:none;margin-top:8px;position:relative;width:150px;">
                                                             <img id="imgDniReverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
                                                             <button type="button" id="clearDniReverso" title="Quitar"
@@ -700,7 +700,7 @@
                                                     <div style="text-align:center;">
                                                         <button type="button" id="btnDniHijoAnverso" class="dj-btn-sm"
                                                             style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI ANVERSO</button>
-                                                        <input type="file" id="inputDniHijoAnverso" accept="image/*" class="hidden" />
+                                                        <input type="file" id="inputDniHijoAnverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
                                                         <div id="prevDniHijoAnverso" style="display:none;margin-top:8px;position:relative;width:150px;">
                                                             <img id="imgDniHijoAnverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
                                                             <button type="button" id="clearDniHijoAnverso" title="Quitar"
@@ -710,7 +710,7 @@
                                                     <div style="text-align:center;">
                                                         <button type="button" id="btnDniHijoReverso" class="dj-btn-sm"
                                                             style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI REVERSO</button>
-                                                        <input type="file" id="inputDniHijoReverso" accept="image/*" class="hidden" />
+                                                        <input type="file" id="inputDniHijoReverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
                                                         <div id="prevDniHijoReverso" style="display:none;margin-top:8px;position:relative;width:150px;">
                                                             <img id="imgDniHijoReverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
                                                             <button type="button" id="clearDniHijoReverso" title="Quitar"

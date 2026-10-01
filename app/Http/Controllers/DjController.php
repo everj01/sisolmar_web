@@ -547,8 +547,12 @@ class DjController extends Controller
     public function uploadFotoPersonal(Request $request)
     {
         $request->validate([
-            'foto'       => 'required|file|mimes:jpg,jpeg|max:1024', // 1 MB
+            'foto'       => 'required|file|mimes:jpg,jpeg|max:10240', // JPG, máx 10 MB
             'codi_pers'  => 'required|string',
+        ], [
+            'foto.required' => 'Debe seleccionar una foto.',
+            'foto.mimes'    => 'La foto debe ser una imagen JPG.',
+            'foto.max'      => 'La foto no debe superar los 10 MB.',
         ]);
     
         try {
@@ -613,9 +617,14 @@ class DjController extends Controller
     public function uploadDniPersonal(Request $request)
     {
         $request->validate([
-            'dni_anverso' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
-            'dni_reverso' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+            'dni_anverso' => 'nullable|file|mimes:jpg,jpeg|max:10240',
+            'dni_reverso' => 'nullable|file|mimes:jpg,jpeg|max:10240',
             'codi_pers'   => 'required|string',
+        ], [
+            'dni_anverso.mimes' => 'El DNI anverso debe ser una imagen JPG.',
+            'dni_anverso.max'   => 'El DNI anverso no debe superar los 10 MB.',
+            'dni_reverso.mimes' => 'El DNI reverso debe ser una imagen JPG.',
+            'dni_reverso.max'   => 'El DNI reverso no debe superar los 10 MB.',
         ]);
 
         try {
@@ -3695,9 +3704,12 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         $request->validate([
             'codi_pers'  => 'required|string',
             'archivos'   => 'required|array|min:1',
-            'archivos.*' => 'file|mimes:jpg,jpeg,png|max:2048',
+            'archivos.*' => 'file|mimes:jpg,jpeg|max:10240',
             'metas'      => 'required|array|min:1',
             'metas.*'    => 'string',
+        ], [
+            'archivos.*.mimes' => 'Las imágenes del DNI deben ser JPG.',
+            'archivos.*.max'   => 'Cada imagen del DNI no debe superar los 10 MB.',
         ]);
 
         try {
