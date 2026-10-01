@@ -6063,6 +6063,33 @@ class CapacitacionController extends Controller
             ], 500);
         }
     }
+    public function listarTiposPers(): JsonResponse {
+        try {
+            $tiposPers = DB::table('si_solm.dbo.ADMI_TIPO_PERSONAL')
+                ->select(
+                    'TIPE_CODIGO as CODIGO',
+                    'TIPE_DESCRIPCION AS DESCRIPCION'
+                )
+                ->orderBy('TIPE_CODIGO', 'ASC')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $tiposPers,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al listar tipos de pers.", [
+                "error" => $e->getMessage(),
+                "line" => $e->getLine(),
+                "file" => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }  
+    }
 
     public function obtenerPlanPCE(): JsonResponse
     {
