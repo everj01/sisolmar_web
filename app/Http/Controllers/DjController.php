@@ -3027,14 +3027,14 @@ class DjController extends Controller
                 CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
                 CODI_TIPO_DOCU, NRO_DOCU_IDEN,
                 {$toDate('FECH_NACI')},
-                FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
+                0, DEHA_OCUPACION, DEHA_EDAD,
                 USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
                 DEHA_SEXO, DEHA_MES_CONCEPCION,
                 {$toDate('DEHA_FECHA_ALTA')},
                 DEHA_TIPO_BAJA,
                 {$toDate('DEHA_FECHA_BAJA')},
                 DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
-                {$toDate('DEHA_VIGENCIA')},
+                'SI', -- DEHA_VIGENCIA: 'SI' predeterminado
                 DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
             FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
             WHERE CODI_PERS = ?
@@ -3062,14 +3062,14 @@ class DjController extends Controller
                 CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
                 CODI_TIPO_DOCU, NRO_DOCU_IDEN,
                 {$toDate('FECH_NACI')},
-                FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
+                0, DEHA_OCUPACION, DEHA_EDAD,
                 USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
                 DEHA_SEXO, DEHA_MES_CONCEPCION,
                 {$toDate('DEHA_FECHA_ALTA')},
                 DEHA_TIPO_BAJA,
                 {$toDate('DEHA_FECHA_BAJA')},
                 DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
-                {$toDate('DEHA_VIGENCIA')},
+                'SI', -- DEHA_VIGENCIA: 'SI' predeterminado
                 DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
             FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
             WHERE CODI_PERS = ?
@@ -3130,7 +3130,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             CODI_TIPO_DOCU,
             NRO_DOCU_IDEN,
             TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM(FECH_NACI)), ''), 103),
-            FALLECIDO,
+            0,
             DEHA_OCUPACION,
             DEHA_EDAD,
             USUA_CODIGO_REG,
@@ -3144,7 +3144,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM(DEHA_FECHA_BAJA)), ''), 103),
             DEHA_INCAPACIDAD,
             DEHA_RESOL_INCAPACIDAD,
-            TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM(DEHA_VIGENCIA)), ''), 103),
+            'SI', -- DEHA_VIGENCIA: 'SI' predeterminado
             DEHA_telefono,
             domicilio,
             DEHA_DEREHABI,
