@@ -1266,6 +1266,11 @@ class DjController extends Controller
                 unset($data['FECH_INGRE'], $data['fecha_ingreso_solmar']);
             }
             unset($data['FECH_CESE'], $data['fecha_cese']);
+            // Cargo: solo el rol ADMINS RRHH (tipo_rol 17) puede modificarlo;
+            // los demás roles conservan el CODI_CARG actual (el select viene bloqueado en UI)
+            if (session('tipo_rol') != 17) {
+                unset($data['cargo']);
+            }
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
             $this->aplicarAsigFami($codiPers, $data);

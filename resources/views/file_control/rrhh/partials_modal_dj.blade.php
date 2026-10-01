@@ -569,6 +569,12 @@
                                     <option value="">— Seleccionar —</option>
                                 </select>
                             </div>
+                            <div style="flex:1;min-width:240px;">
+                                <label class="dj-label">Cargo</label>
+                                <select id="cargo_ui" class="dj-select">
+                                    <option value="">— Seleccionar —</option>
+                                </select>
+                            </div>
                             <div id="wrap_sctr" style="display:none;min-width:130px;">
                                 <label class="dj-label">&nbsp;</label>
                                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;padding:7px 0;">

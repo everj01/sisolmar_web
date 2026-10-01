@@ -1842,6 +1842,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hidden) hidden.value = this.value;
         aplicarVisibilidadPorTipo(this.value);
         aplicarSctr(this.value);
+        // Refrescar CARGO según el nuevo tipo y limpiar la selección previa
+        filtrarCargos(this.value);
+        const cargoSel = document.getElementById('cargo_ui');
+        if (cargoSel) cargoSel.value = '';
+        const cargoHidden = document.getElementById('cargo');
+        if (cargoHidden) cargoHidden.value = '';
+    });
+
+    // CARGO: se guarda por código (hidden "cargo"); solo Admins RRHH puede editarlo
+    document.getElementById('cargo_ui')?.addEventListener('change', function () {
+        const hidden = document.getElementById('cargo');
+        if (hidden) hidden.value = this.value;
     });
 
     // No Caduca checkbox: bloquear/desbloquear caduca
@@ -2139,6 +2151,8 @@ async function cargarCargosDj() {
 async function filtrarCargos(tipoPersonal) {
     const sel = document.getElementById('cargo_ui');
     if (!sel) return;
+    // Solo el rol ADMINS RRHH (tipo 17) puede editar el cargo
+    sel.disabled = String(window.tipoUsuario ?? '').trim() !== '17';
     // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
     if (!window.allCargosDj || !window.allCargosDj.length) await cargarCargosDj();
     const operativos = ['01', '03', '06'];
