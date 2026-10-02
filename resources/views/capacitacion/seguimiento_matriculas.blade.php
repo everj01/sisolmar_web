@@ -1472,9 +1472,9 @@
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                         <p class="text-[10px] font-bold text-default-500 uppercase tracking-widest"
                             x-text="'DNI: ' + personal.dni">DNI: -</p>
-                        <span class="text-default-300">|</span>
-                        <p class="text-[10px] font-bold text-primary uppercase tracking-widest"
-                            x-text="'Código: ' + personal.codigo">Código: -</p>
+                        <!-- <span class="text-default-300">|</span> -->
+                        <!-- <p class="text-[10px] font-bold text-primary uppercase tracking-widest"
+                            x-text="'Código: ' + personal.codigo">Código: -</p> -->
                         <template x-if="personal.email">
                             <div class="flex items-center gap-x-2">
                                 <span class="text-default-300">|</span>
@@ -1482,7 +1482,7 @@
                                     x-text="personal.email"></p>
                                 <button type="button" @click="copiarCorreo(personal.email, $event)"
                                     class="inline-flex items-center justify-center w-5 h-5 rounded text-default-400 hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer shrink-0"
-                                    title="Copiar correo">
+                                    title="Copiar correo electrónico">
                                     <i class="ti ti-copy text-[10px]"></i>
                                 </button>
                             </div>
