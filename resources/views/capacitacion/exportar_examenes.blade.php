@@ -157,7 +157,7 @@
                         <div class="flex items-center gap-2 min-w-0">
                             <i class="ti ti-circle-check text-green-600 shrink-0"></i>
                             <span class="text-xs font-medium text-default-700 truncate">
-                                <span x-text="personalCompleto()"></span>/<span x-text="maxPersonal"></span> personas
+                                <span x-text="personalCompleto()"></span> persona(s)
                                 <span class="text-default-500 font-normal"
                                     x-text="'· ' + personalSeleccionadoDetalle.slice(0, 2).map(p => p.nombre_completo).join(', ') + (personalSeleccionadoDetalle.length > 2 ? '…' : '')"></span>
                             </span>
@@ -440,9 +440,7 @@
                         <div class="border rounded-xl px-3.5 py-3 flex items-center gap-3 transition-colors select-none"
                             :class="estaSeleccionado(persona)
                                 ? 'border-primary/40 bg-primary/5'
-                                : (seleccionadosPersonal.length >= maxPersonal
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : 'cursor-pointer hover:bg-default-50')"
+                                : 'cursor-pointer hover:bg-default-50'"
                             @click="toggleSeleccionarPersonal(persona)">
                             <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                                 :class="estaSeleccionado(persona) ? 'bg-primary text-white' : 'bg-green-500/10'">
@@ -479,21 +477,30 @@
                             <template x-if="seleccionadosPersonal.length > 0">
                                 <span><i class="ti ti-circle-check text-primary"></i>
                                     <span class="font-semibold text-default-700"
-                                        x-text="personalCompleto()"></span>/<span x-text="maxPersonal"></span>
-                                    personas seleccionadas
+                                        x-text="personalCompleto()"></span>
+                                    persona(s) seleccionada(s)
                                 </span>
                             </template>
                             <template x-if="seleccionadosPersonal.length === 0">
                                 <span>Ninguna persona seleccionada</span>
                             </template>
                         </p>
-                        <button type="button" @click="seleccionadosPersonal = []"
-                            :disabled="seleccionadosPersonal.length === 0"
-                            :class="seleccionadosPersonal.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-danger/30 hover:bg-danger/5 hover:text-danger'"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-default-200 text-xs font-semibold text-default-500 transition-colors">
-                            <i class="ti ti-trash text-sm"></i>
-                            Limpiar selección
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="seleccionarTodosFiltrados()"
+                                :disabled="personalFiltrado.length === 0"
+                                :class="personalFiltrado.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/30 hover:bg-primary/5 hover:text-primary'"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-default-200 text-xs font-semibold text-default-500 transition-colors">
+                                <i class="ti text-sm" :class="todosFiltradosSeleccionados ? 'ti-checkbox' : 'ti-square-check'"></i>
+                                <span x-text="todosFiltradosSeleccionados ? 'Deseleccionar filtrados' : 'Seleccionar todos (' + personalFiltrado.length + ')'"></span>
+                            </button>
+                            <button type="button" @click="seleccionadosPersonal = []"
+                                :disabled="seleccionadosPersonal.length === 0"
+                                :class="seleccionadosPersonal.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-danger/30 hover:bg-danger/5 hover:text-danger'"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-default-200 text-xs font-semibold text-default-500 transition-colors">
+                                <i class="ti ti-trash text-sm"></i>
+                                Limpiar selección
+                            </button>
+                        </div>
                     </div>
                     <div class="flex items-center justify-between gap-3" x-show="totalPaginasPersonal > 1">
                         <p class="text-xs text-default-500">

@@ -296,7 +296,6 @@ export default document.addEventListener("alpine:init", () => {
         personalPerPage: 6,
 
         seleccionadosPersonal: [],
-        maxPersonal: 5,
         exportandoPDF: false,
 
         mostrarPreview: false,
@@ -610,8 +609,38 @@ export default document.addEventListener("alpine:init", () => {
                 this.seleccionadosPersonal.splice(idx, 1);
                 return;
             }
-            if (this.seleccionadosPersonal.length >= this.maxPersonal) return;
             this.seleccionadosPersonal.push(clave);
+        },
+
+        // true si todos los personales filtrados (de todas las páginas) ya están seleccionados
+        get todosFiltradosSeleccionados() {
+            const lista = this.personalFiltrado;
+            return (
+                lista.length > 0 && lista.every((p) => this.estaSeleccionado(p))
+            );
+        },
+
+        // Selecciona todos los filtrados; si ya estaban todos, los deselecciona
+        seleccionarTodosFiltrados() {
+            const lista = this.personalFiltrado;
+            if (!lista.length) return;
+
+            if (this.todosFiltradosSeleccionados) {
+                const claves = new Set(lista.map((p) => this.clavePersonal(p)));
+                this.seleccionadosPersonal = this.seleccionadosPersonal.filter(
+                    (c) => !claves.has(c),
+                );
+                return;
+            }
+
+            const actuales = new Set(this.seleccionadosPersonal);
+            lista.forEach((p) => {
+                const clave = this.clavePersonal(p);
+                if (!actuales.has(clave)) {
+                    this.seleccionadosPersonal.push(clave);
+                    actuales.add(clave);
+                }
+            });
         },
 
         personalCompleto() {
