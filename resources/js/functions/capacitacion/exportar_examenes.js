@@ -9,6 +9,264 @@ function _cargarImagen(url) {
     });
 }
 
+// ====== CONFIGURACIÓN DEL PDF ======
+const ORIENTACION = "portrait"; // "portrait" | "landscape"
+const MARGEN = 12; // mm (más margen = tabla más angosta)
+const ESCALA_MIN = 0.5; // escala mínima de fuentes/paddings
+
+function _dibujarDetalle(doc, detalle, esc, ctx) {
+    const {
+        pageWidth,
+        margen,
+        anchoTabla,
+        anchoMitad,
+        logoSol,
+        logoAV,
+        medir,
+    } = ctx;
+    const s = (n) => n * esc;
+
+    // ====== CABECERA ======
+    let y = 7;
+    const logoAVWidth = 13;
+    const logoSolWidth = 22;
+
+    if (!medir) {
+        if (logoAV) {
+            const h = logoAVWidth * (logoAV.height / logoAV.width);
+            doc.addImage(logoAV, "PNG", margen, y, logoAVWidth, h);
+        }
+        if (logoSol) {
+            const h = logoSolWidth * (logoSol.height / logoSol.width);
+            doc.addImage(
+                logoSol,
+                "PNG",
+                pageWidth - margen - logoSolWidth,
+                y,
+                logoSolWidth,
+                h,
+            );
+        }
+    }
+
+    const anchoTitulo = pageWidth - margen * 2 - logoAVWidth - logoSolWidth - 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(20, 40, 80);
+    doc.text(
+        (detalle.course_name || "CURSO").toUpperCase(),
+        pageWidth / 2,
+        y + 6,
+        { align: "center", maxWidth: anchoTitulo },
+    );
+
+    y += 16;
+
+    // ====== DATOS DEL ALUMNO ======
+    const fsDatos = s(7.5);
+    const labelStyle = {
+        fontStyle: "bold",
+        fillColor: [225, 232, 245],
+        halign: "center",
+        fontSize: fsDatos,
+    };
+    const valueStyle = { halign: "center", fontSize: fsDatos };
+
+    doc.autoTable({
+        startY: y,
+        theme: "grid",
+        tableWidth: anchoTabla,
+        styles: {
+            fontSize: fsDatos,
+            cellPadding: s(0.8),
+            valign: "middle",
+            lineColor: [20, 40, 80],
+            lineWidth: 0.12,
+            textColor: [20, 20, 20],
+        },
+        body: [
+            [
+                { content: "Alumno", styles: labelStyle },
+                {
+                    content: (detalle.full_name || "—").toUpperCase(),
+                    colSpan: 3,
+                    styles: { ...valueStyle, fontStyle: "bold" },
+                },
+                { content: "DNI", styles: labelStyle },
+                { content: detalle.dni || "—", styles: valueStyle },
+            ],
+            [
+                { content: "Fecha", styles: labelStyle },
+                { content: detalle.attempt_date || "—", styles: valueStyle },
+                { content: "Duración", styles: labelStyle },
+                { content: detalle.duration || "—", styles: valueStyle },
+                { content: "Intento", styles: labelStyle },
+                {
+                    content: String(detalle.attempt_number ?? "—"),
+                    styles: valueStyle,
+                },
+            ],
+            [
+                { content: "Inicio", styles: labelStyle },
+                { content: detalle.start_time || "—", styles: valueStyle },
+                { content: "Término", styles: labelStyle },
+                { content: detalle.end_time || "—", styles: valueStyle },
+                { content: "% Aprob.", styles: labelStyle },
+                {
+                    content:
+                        detalle.passing_percentage != null
+                            ? `${detalle.passing_percentage}%`
+                            : "—",
+                    styles: valueStyle,
+                },
+            ],
+            [
+                { content: "NOTA", styles: labelStyle },
+                {
+                    content:
+                        detalle.obtained_grade != null
+                            ? `${detalle.obtained_grade} / 20`
+                            : "—",
+                    styles: { ...valueStyle, fontStyle: "bold" },
+                },
+                { content: "Correctas", styles: labelStyle },
+                {
+                    content: String(detalle.correct_answers ?? "—"),
+                    styles: { ...valueStyle, fontStyle: "bold" },
+                },
+                { content: "Incorrectas", styles: labelStyle },
+                {
+                    content: String(detalle.incorrect_answers ?? "—"),
+                    styles: {
+                        ...valueStyle,
+                        fontStyle: "bold",
+                        textColor: [180, 0, 0],
+                    },
+                },
+            ],
+        ],
+        columnStyles: {
+            0: { cellWidth: anchoTabla * 0.14 },
+            1: { cellWidth: anchoTabla * 0.22 },
+            2: { cellWidth: anchoTabla * 0.14 },
+            3: { cellWidth: anchoTabla * 0.22 },
+            4: { cellWidth: anchoTabla * 0.14 },
+            5: { cellWidth: anchoTabla * 0.14 },
+        },
+        margin: { left: margen, right: margen, bottom: 9 },
+    });
+
+    y = doc.lastAutoTable.finalY + s(2);
+
+    // ====== PREGUNTAS ======
+    const preguntas = Array.isArray(detalle.questions_answers)
+        ? detalle.questions_answers
+        : [];
+    const letras = ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+    preguntas.forEach((q, i) => {
+        const opciones =
+            Array.isArray(q.options) && q.options.length ? q.options : ["—"];
+
+        const buildCell = (opt, idx) => {
+            if (opt === undefined) {
+                return {
+                    content: "",
+                    styles: { fillColor: [255, 255, 255], lineWidth: 0 },
+                };
+            }
+            const esSel = q.response === opt;
+            return {
+                content: `${letras[idx] || "-"}) ${opt}`,
+                styles: {
+                    fontStyle: esSel ? "bold" : "normal",
+                    textColor: [40, 40, 40],
+                    fillColor: esSel ? [235, 235, 235] : [255, 255, 255],
+                    cellPadding: {
+                        top: s(0.5),
+                        bottom: s(0.5),
+                        left: 3,
+                        right: 1.5,
+                    },
+                },
+            };
+        };
+
+        const bodyOpciones = [];
+        for (let j = 0; j < opciones.length; j += 2) {
+            bodyOpciones.push([
+                buildCell(opciones[j], j),
+                buildCell(opciones[j + 1], j + 1),
+            ]);
+        }
+
+        doc.autoTable({
+            startY: y,
+            theme: "grid",
+            tableWidth: anchoTabla,
+            head: [
+                [
+                    {
+                        content: `${i + 1}. ${q.question || "—"}`,
+                        colSpan: 2,
+                        styles: {
+                            fillColor: [225, 235, 250],
+                            textColor: [20, 40, 80],
+                            fontStyle: "bold",
+                            fontSize: s(7.8),
+                            halign: "left",
+                            valign: "middle",
+                            cellPadding: {
+                                top: s(0.9),
+                                bottom: s(0.9),
+                                left: 3,
+                                right: 3,
+                            },
+                            lineColor: [180, 195, 215],
+                            lineWidth: 0.12,
+                        },
+                    },
+                ],
+            ],
+            body: bodyOpciones,
+            columnStyles: {
+                0: { cellWidth: anchoMitad },
+                1: { cellWidth: anchoMitad },
+            },
+            styles: {
+                fontSize: s(7),
+                cellPadding: s(0.5),
+                lineColor: [200, 210, 225],
+                lineWidth: 0.1,
+                valign: "middle",
+                overflow: "linebreak",
+                minCellHeight: s(3.5),
+            },
+            margin: { left: margen, right: margen, bottom: 9 },
+            rowPageBreak: "avoid",
+        });
+
+        y = doc.lastAutoTable.finalY + s(0.8);
+    });
+
+    return y;
+}
+
+// Busca la escala más grande con la que el examen entra en 1 sola hoja
+function _calcularEscala(jsPDF, detalle, ctxBase) {
+    for (let esc = 1; esc >= ESCALA_MIN; esc -= 0.05) {
+        const tmp = new jsPDF({
+            orientation: ORIENTACION,
+            unit: "mm",
+            format: "a4",
+        });
+        _dibujarDetalle(tmp, detalle, esc, { ...ctxBase, medir: true });
+        if (tmp.getNumberOfPages() === 1) return esc;
+    }
+    return ESCALA_MIN;
+}
+
 export default document.addEventListener("alpine:init", () => {
     Alpine.data("exportExamenes", () => ({
         cursos: [],
@@ -40,6 +298,11 @@ export default document.addEventListener("alpine:init", () => {
         seleccionadosPersonal: [],
         maxPersonal: 5,
         exportandoPDF: false,
+
+        mostrarPreview: false,
+        pdfUrl: null,
+        pdfNombre: null,
+        pdfDoc: null,
 
         async init() {
             await Promise.all([this.cargarCursos(), this.cargarPersonal()]);
@@ -430,7 +693,7 @@ export default document.addEventListener("alpine:init", () => {
                 }
 
                 if (exitos.length > 0) {
-                    await this.generarPdfReporte(exitos);
+                    await this.generarPreviewPdf(exitos);
                 }
 
                 if (fallidos.length > 0) {
@@ -457,7 +720,7 @@ export default document.addEventListener("alpine:init", () => {
             }
         },
 
-        async generarPdfReporte(detalles) {
+        async generarPreviewPdf(detalles) {
             const { jsPDF } = window.jspdf;
 
             if (!jsPDF) {
@@ -470,355 +733,45 @@ export default document.addEventListener("alpine:init", () => {
             }
 
             const doc = new jsPDF({
-                orientation: "portrait",
+                orientation: ORIENTACION,
                 unit: "mm",
                 format: "a4",
             });
             const pageWidth = doc.internal.pageSize.getWidth();
-            const margen = 14;
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            const margen = MARGEN;
+            const anchoTabla = pageWidth - margen * 2;
+            const anchoMitad = anchoTabla / 2;
 
             const logoSol = await _cargarImagen(
                 "/sisolmar/images/logo_sol.png",
             );
             const logoAV = await _cargarImagen("/sisolmar/images/AV.png");
 
+            const ctx = {
+                pageWidth,
+                margen,
+                anchoTabla,
+                anchoMitad,
+                logoSol,
+                logoAV,
+                medir: false,
+            };
+
+            // Una hoja por persona: se calcula la mayor escala que cabe en 1 página
             detalles.forEach((detalle, index) => {
                 if (index > 0) doc.addPage();
-
-                let y = 16;
-
-                const logoAVWidth = 22;
-                const logoSolWidth = 36;
-                const gapTitulo = 6;
-
-                if (logoAV) {
-                    const logoHeight =
-                        logoAVWidth * (logoAV.height / logoAV.width);
-                    const offsetAV = 5;
-                    doc.addImage(
-                        logoAV,
-                        "PNG",
-                        margen,
-                        y - offsetAV,
-                        logoAVWidth,
-                        logoHeight,
-                    );
-                }
-
-                if (logoSol) {
-                    const logoHeight =
-                        logoSolWidth * (logoSol.height / logoSol.width);
-                    doc.addImage(
-                        logoSol,
-                        "PNG",
-                        pageWidth - margen - logoSolWidth,
-                        y,
-                        logoSolWidth,
-                        logoHeight,
-                    );
-                }
-
-                const anchoDisponible =
-                    pageWidth -
-                    margen * 2 -
-                    logoAVWidth -
-                    logoSolWidth -
-                    gapTitulo * 2;
-
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(14);
-                doc.setTextColor(20, 40, 80);
-                doc.text(
-                    (detalle.course_name || "CURSO").toUpperCase(),
-                    pageWidth / 2,
-                    y + 10,
-                    { align: "center", maxWidth: anchoDisponible },
-                );
-
-                y += 19;
-
-                // --- TABLA DE DATOS DEL ALUMNO ---
-                doc.autoTable({
-                    startY: y,
-                    theme: "grid",
-                    styles: {
-                        fontSize: 8,
-                        cellPadding: 1.3,
-                        valign: "middle",
-                        lineColor: [20, 40, 80],
-                        lineWidth: 0.2,
-                        textColor: [20, 20, 20],
-                    },
-                    body: [
-                        [
-                            {
-                                content: "Alumno",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: (
-                                    detalle.full_name || "—"
-                                ).toUpperCase(),
-                                colSpan: 3,
-                                styles: { fontStyle: "bold", halign: "center" },
-                            },
-                            {
-                                content: "DNI",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: detalle.dni || "—",
-                                styles: { halign: "center" },
-                            },
-                        ],
-                        [
-                            {
-                                content: "Fecha",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: detalle.attempt_date || "—",
-                                styles: { halign: "center" },
-                            },
-                            {
-                                content: "Hora de Inicio",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: detalle.start_time || "—",
-                                styles: { halign: "center" },
-                            },
-                            {
-                                content: "Hora de Término",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: detalle.end_time || "—",
-                                styles: { halign: "center" },
-                            },
-                        ],
-                        [
-                            {
-                                content: "Duración",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: detalle.duration || "—",
-                                colSpan: 5,
-                                styles: { halign: "center" },
-                            },
-                        ],
-                        [
-                            {
-                                content: "NOTA",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content:
-                                    detalle.obtained_grade != null
-                                        ? `${detalle.obtained_grade} de 20`
-                                        : "—",
-                                styles: { fontStyle: "bold", halign: "center" },
-                            },
-                            {
-                                content: "N° Intento",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: String(detalle.attempt_number ?? "—"),
-                                styles: { halign: "center" },
-                            },
-                            {
-                                content: "% Aprobatorio",
-                                rowSpan: 2,
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                    valign: "middle",
-                                },
-                            },
-                            {
-                                content:
-                                    detalle.passing_percentage != null
-                                        ? `${detalle.passing_percentage}%`
-                                        : "—",
-                                rowSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            },
-                        ],
-                        [
-                            {
-                                content: "Correctas",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [225, 232, 245],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: String(detalle.correct_answers ?? "—"),
-                                styles: { halign: "center" },
-                            },
-                            {
-                                content: "Incorrectas",
-                                styles: {
-                                    fontStyle: "bold",
-                                    fillColor: [255, 225, 225],
-                                    halign: "center",
-                                },
-                            },
-                            {
-                                content: String(
-                                    detalle.incorrect_answers ?? "—",
-                                ),
-                                styles: {
-                                    halign: "center",
-                                    textColor: [180, 0, 0],
-                                    fontStyle: "bold",
-                                },
-                            },
-                            {
-                                content: "",
-                                colSpan: 2,
-                                styles: { fillColor: [255, 255, 255] },
-                            },
-                        ],
-                    ],
-                    columnStyles: {
-                        0: { cellWidth: 26 },
-                        1: { cellWidth: 32 },
-                        2: { cellWidth: 30 },
-                        3: { cellWidth: 32 },
-                        4: { cellWidth: 30 },
-                        5: { cellWidth: "auto" },
-                    },
-                    margin: { left: margen, right: margen },
-                });
-
-                y = doc.lastAutoTable.finalY + 2;
-
-                // --- PREGUNTAS: una tabla independiente por pregunta ---
-                const preguntas = Array.isArray(detalle.questions_answers)
-                    ? detalle.questions_answers
-                    : [];
-
-                if (preguntas.length > 0) {
-                    const letras = ["a", "b", "c", "d", "e", "f", "g", "h"];
-
-                    preguntas.forEach((q, i) => {
-                        const opciones =
-                            Array.isArray(q.options) && q.options.length
-                                ? q.options
-                                : ["—"];
-
-                        const bodyOpciones = opciones.map((opt, j) => {
-                            const letra = letras[j] || "-";
-                            const esSeleccionada = q.response === opt;
-                            return [
-                                {
-                                    content: `${letra}) ${opt}`,
-                                    styles: {
-                                        fontStyle: esSeleccionada
-                                            ? "bold"
-                                            : "normal",
-                                        textColor: [40, 40, 40],
-                                        fillColor: esSeleccionada
-                                            ? [235, 235, 235]
-                                            : [255, 255, 255],
-                                        cellPadding: {
-                                            top: 0.8,
-                                            bottom: 0.8,
-                                            left: 7,
-                                            right: 2,
-                                        },
-                                    },
-                                },
-                            ];
-                        });
-
-                        doc.autoTable({
-                            startY: y,
-                            theme: "grid",
-                            head: [
-                                [
-                                    {
-                                        content: `${i + 1}. ${q.question || "—"}`,
-                                        styles: {
-                                            fillColor: [225, 235, 250],
-                                            textColor: [20, 40, 80],
-                                            fontStyle: "bold",
-                                            fontSize: 7.5,
-                                            halign: "left",
-                                            valign: "middle",
-                                            cellPadding: {
-                                                top: 1.5,
-                                                bottom: 1.5,
-                                                left: 4,
-                                                right: 4,
-                                            },
-                                            lineColor: [180, 195, 215],
-                                            lineWidth: 0.2,
-                                        },
-                                    },
-                                ],
-                            ],
-                            body: bodyOpciones,
-                            styles: {
-                                fontSize: 7,
-                                cellPadding: 1,
-                                lineColor: [200, 210, 225],
-                                lineWidth: 0.15,
-                                valign: "middle",
-                                overflow: "linebreak",
-                            },
-                            margin: { left: margen, right: margen },
-                            rowPageBreak: "avoid",
-                        });
-
-                        y = doc.lastAutoTable.finalY + 1.5;
-                    });
-                }
+                const esc = _calcularEscala(jsPDF, detalle, ctx);
+                _dibujarDetalle(doc, detalle, esc, ctx);
             });
 
-            // --- PIE DE PÁGINA (con fecha AM/PM) ---
+            // ====== PIE DE PÁGINA ======
             const totalPaginas = doc.getNumberOfPages();
             for (let i = 1; i <= totalPaginas; i++) {
                 doc.setPage(i);
                 doc.setFont("helvetica", "normal");
-                doc.setFontSize(8);
+                doc.setFontSize(6.5);
                 doc.setTextColor(140, 140, 140);
 
                 const fechaGeneracion = new Date().toLocaleString("es-PE", {
@@ -834,17 +787,17 @@ export default document.addEventListener("alpine:init", () => {
                 doc.text(
                     `Generado por Sisolmar Web · ${fechaGeneracion}`,
                     margen,
-                    290,
+                    pageHeight - 3,
                 );
                 doc.text(
                     `Página ${i} de ${totalPaginas}`,
                     pageWidth - margen,
-                    290,
+                    pageHeight - 3,
                     { align: "right" },
                 );
             }
 
-            // --- NOMBRE DINÁMICO DEL ARCHIVO ---
+            // ====== NOMBRE DINÁMICO DEL ARCHIVO ======
             const hoy = new Date();
             const dd = String(hoy.getDate()).padStart(2, "0");
             const mm = String(hoy.getMonth() + 1).padStart(2, "0");
@@ -873,7 +826,28 @@ export default document.addEventListener("alpine:init", () => {
                 nombreArchivo = `REPORTE_EXAMENES - ${courseName} - ${fechaStr}.pdf`;
             }
 
-            doc.save(nombreArchivo);
+            // ====== PREVIEW ======
+            const blob = doc.output("blob");
+            if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+            this.pdfUrl = URL.createObjectURL(blob);
+            this.pdfNombre = nombreArchivo;
+            this.pdfDoc = doc;
+            this.mostrarPreview = true;
+        },
+
+        descargarPdf() {
+            if (!this.pdfDoc) return;
+            this.pdfDoc.save(this.pdfNombre || "reporte.pdf");
+        },
+
+        cerrarPreview() {
+            this.mostrarPreview = false;
+            if (this.pdfUrl) {
+                URL.revokeObjectURL(this.pdfUrl);
+                this.pdfUrl = null;
+            }
+            this.pdfDoc = null;
+            this.pdfNombre = null;
         },
     }));
 });

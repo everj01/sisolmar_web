@@ -174,8 +174,8 @@
                     ? 'bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/25 cursor-pointer active:scale-[0.98]'
                     : 'bg-default-100 text-default-400 cursor-not-allowed'"
                 class="inline-flex items-center justify-center gap-2 px-5 h-11 rounded-xl text-sm font-bold transition-all shrink-0">
-                <i class="ti text-lg" :class="exportandoPDF ? 'ti-loader animate-spin' : 'ti-file-type-pdf'"></i>
-                <span x-text="exportandoPDF ? 'Generando PDF...' : 'Exportar'"></span>
+                <i class="ti text-lg" :class="exportandoPDF ? 'ti-loader animate-spin' : 'ti-eye'"></i>
+                <span x-text="exportandoPDF ? 'Generando...' : 'Previsualizar'"></span>
             </button>
         </div>
     </div>
@@ -525,6 +525,53 @@
         </div>
     </div>
 
+    {{-- Modal de vista previa del PDF --}}
+    <div x-show="mostrarPreview" x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        @keydown.escape.window="cerrarPreview()">
+
+        <div class="absolute inset-0 bg-default-900/60 backdrop-blur-sm" @click="cerrarPreview()"></div>
+
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden"
+            @click.stop>
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-6 py-4 border-b border-default-200 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <i class="ti ti-file-type-pdf text-xl text-primary"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold text-default-900 leading-tight">Vista previa del reporte</h3>
+                        <p class="text-xs text-default-500 truncate" x-text="pdfNombre"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" @click="descargarPdf()"
+                        class="inline-flex items-center gap-2 px-4 h-10 rounded-xl bg-primary hover:bg-primary/90 text-white text-sm font-bold transition-all shadow-md shadow-primary/25 active:scale-[0.98]">
+                        <i class="ti ti-download text-base"></i>
+                        Descargar PDF
+                    </button>
+                    <button type="button" @click="cerrarPreview()"
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-default-200 text-default-500 hover:bg-default-100 transition-colors">
+                        <i class="ti ti-x text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Visor PDF --}}
+            <div class="flex-1 bg-default-100 min-h-0">
+                <template x-if="pdfUrl">
+                    <iframe :src="pdfUrl" class="w-full h-full border-0" title="Vista previa del PDF"></iframe>
+                </template>
+            </div>
+        </div>
+    </div>
 
 </div>
 
