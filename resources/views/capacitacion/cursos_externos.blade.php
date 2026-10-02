@@ -1,4 +1,4 @@
-@extends('layouts.vertical', ['title' => 'Cursos externos'])
+﻿@extends('layouts.vertical', ['title' => 'Cursos externos'])
 @section('css')
 <style>
     [x-cloak] {
@@ -31,6 +31,14 @@
 
     .thin-scroll::-webkit-scrollbar-thumb:hover {
         background: rgba(148, 163, 184, .6);
+    }
+
+    /* Elimina cualquier borde/outline/anillo del buscador de certificados */
+    #modal-reporte-certificados input[x-model="searchCertificado"] {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
     }
 </style>
 @endsection
@@ -106,18 +114,18 @@
             <div class="relative p-6 flex flex-col h-full">
                 <div class="flex items-start justify-between mb-5">
                     <div class="w-12 h-12 rounded-xl bg-teal-500 flex items-center justify-center shadow-md">
-                        <i class="ti ti-anchor text-xl text-white"></i>
+                        <i class="ti ti-certificate text-xl text-white"></i>
                     </div>
                     <span
                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-50 text-teal-500 text-[10px] font-bold uppercase tracking-wider">
-                        <i class="ti ti-anchor text-[9px]"></i>
-                        Portuarios
+                        <i class="ti ti-certificate text-[9px]"></i>
+                        Certificados
                     </span>
                 </div>
 
-                <h3 class="text-base font-bold text-default-900 mb-2">Cursos portuarios</h3>
+                <h3 class="text-base font-bold text-default-900 mb-2">Reporte de Certificados</h3>
                 <p class="text-sm text-default-500 leading-relaxed mb-4">
-                    Consulte el estado de los cursos portuarios del personal, incluyendo vigencia,
+                    Consulte el estado de los certificados del personal, incluyendo vigencia,
                     estado y fecha de vencimiento.
                 </p>
 
@@ -128,7 +136,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <i class="ti ti-check text-xs text-teal-500 shrink-0"></i>
-                        <span class="text-xs text-default-600">Vigencia y estado del curso portuario</span>
+                        <span class="text-xs text-default-600">Vigencia y estado del certificado</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <i class="ti ti-check text-xs text-teal-500 shrink-0"></i>
@@ -136,7 +144,7 @@
                     </div>
                 </div>
 
-                <button type="button" @click="abrirModalCursosPortuarios()"
+                <button type="button" @click="abrirModalReporteCertificados()"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-teal-500 text-white text-sm font-semibold hover:bg-teal-600 transition-colors w-full cursor-pointer">
                     <i class="ti ti-arrow-right text-sm"></i>
                     Generar un reporte
@@ -145,8 +153,8 @@
         </div>
     </div>
 
-    {{-- Modal Reporte de Cursos Portuarios --}}
-    <div id="modal-cursos-portuarios" x-data="modalCursosPortuarios" x-show="open" x-cloak
+    {{-- Modal Reporte de Certificados --}}
+    <div id="modal-reporte-certificados" x-data="modalReporteCertificados" x-show="open" x-cloak
         @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
@@ -166,11 +174,11 @@
             <div class="flex justify-between items-start py-5 px-6 border-b border-default-100 shrink-0">
                 <div class="flex items-center gap-3.5">
                     <div class="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center text-white shadow-sm shrink-0">
-                        <i class="ti text-lg" :class="view === 'results' ? 'ti-users' : 'ti-anchor'"></i>
+                        <i class="ti text-lg" :class="view === 'results' ? 'ti-users' : 'ti-certificate'"></i>
                     </div>
                     <div>
                         <h3 class="text-[15px] font-semibold text-default-900 leading-tight"
-                            x-text="view === 'results' ? 'Personal encontrado' : 'Reporte de cursos portuarios'"></h3>
+                            x-text="view === 'results' ? 'Personal encontrado' : 'Reporte de Certificados'"></h3>
                         <p class="text-xs text-default-500 mt-0.5"
                             x-text="view === 'results'
                                 ? 'Resultado del reporte generado'
@@ -249,7 +257,7 @@
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="text-xs font-medium text-default-700">
                             Certificados
-                            <span class="text-default-400 font-normal">(opcional, máximo <span x-text="MAX_CERTIFICADOS"></span>)</span>
+                            <span class="text-default-400 font-normal">(máximo <span x-text="MAX_CERTIFICADOS"></span>)</span>
                         </label>
                         <div class="flex items-center gap-3">
                             <span class="text-[11px] font-medium"
@@ -266,13 +274,38 @@
                         </div>
                     </div>
 
+                    {{-- Toggle: solo certificados portuarios --}}
+                    <label class="flex items-center justify-between gap-3 mb-2 px-3 py-2 rounded-lg border border-default-200 bg-default-50 cursor-pointer hover:bg-default-100 transition-colors">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="ti ti-anchor text-teal-600 text-sm shrink-0"></i>
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-default-800 leading-tight">
+                                    Solo certificados portuarios
+                                </p>
+                                <p class="text-[10.5px] text-default-500 leading-tight mt-0.5">
+                                    Por defecto se muestran los certificados generales
+                                </p>
+                            </div>
+                        </div>
+                        <div class="relative shrink-0">
+                            <input type="checkbox" class="sr-only"
+                                :checked="soloPortuarios"
+                                @change="toggleSoloPortuarios()">
+                            <div class="w-9 h-5 rounded-full transition-colors"
+                                :class="soloPortuarios ? 'bg-teal-500' : 'bg-default-300'">
+                            </div>
+                            <div class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"
+                                :class="soloPortuarios ? 'translate-x-4' : 'translate-x-0'">
+                            </div>
+                        </div>
+                    </label>
+
                     <div class="border border-default-200 rounded-lg overflow-hidden">
-                        <div class="flex items-center gap-2 border-b border-default-200 bg-white px-3">
+                        <div class="flex items-center gap-2 bg-white px-3">
                             <i class="ti ti-search text-default-400 text-sm shrink-0"></i>
                             <input type="text" x-model="searchCertificado"
                                 placeholder="Buscar certificado..."
-                                class="flex-1 h-9 text-sm bg-transparent text-default-900 placeholder-default-400 border-0 ring-0 shadow-none appearance-none
-                                       focus:!border-0 focus:!ring-0 focus:!outline-none focus:!shadow-none">
+                                class="flex-1 h-9 text-sm bg-transparent text-default-900 placeholder-default-400 border-0 ring-0 focus:ring-0 focus:outline-none shadow-none">
                         </div>
 
                         <div x-show="limiteAlcanzado"

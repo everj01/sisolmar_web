@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import ExcelJS from "exceljs";
@@ -17,6 +17,9 @@ function _escapeHtml(valor) {
 
 /** Máximo de certificados que se pueden seleccionar. */
 const MAX_CERTIFICADOS = 5;
+
+/** Códigos de certificados considerados "portuarios". */
+const CERTIFICADOS_PORTUARIOS = ["25", "26", "35", "36", "42"];
 
 /** Columnas del reporte PDF. */
 const PDF_COLUMNAS = [
@@ -76,12 +79,12 @@ function _estilizarFilaExcel(sheet, numeroFila, totalColumnas, fillArgb) {
 
 export default document.addEventListener("alpine:init", () => {
     Alpine.data("cursosExternosApp", () => ({
-        abrirModalCursosPortuarios() {
-            window.dispatchEvent(new CustomEvent("abrir-cursos-portuarios"));
+        abrirModalReporteCertificados() {
+            window.dispatchEvent(new CustomEvent("abrir-reporte-certificados"));
         },
     }));
 
-    Alpine.data("modalCursosPortuarios", () => ({
+    Alpine.data("modalReporteCertificados", () => ({
         open: false,
         /** 'filters' | 'results' */
         view: "filters",
@@ -105,6 +108,7 @@ export default document.addEventListener("alpine:init", () => {
 
         selectedCertificados: [],
         searchCertificado: "",
+        soloPortuarios: false,
 
         // Datos del reporte
         reporteData: [],
@@ -122,7 +126,7 @@ export default document.addEventListener("alpine:init", () => {
         exportandoExcel: false,
 
         init() {
-            window.addEventListener("abrir-cursos-portuarios", () => {
+            window.addEventListener("abrir-reporte-certificados", () => {
                 this.abrir();
             });
         },
@@ -194,15 +198,52 @@ export default document.addEventListener("alpine:init", () => {
          * ========================================================= */
 
         get certificadosFiltrados() {
+            // 1) Filtro por tipo (portuarios / generales)
+            let lista = this.certificados;
+
+            if (this.soloPortuarios) {
+                // Solo portuarios
+                lista = lista.filter((c) =>
+                    CERTIFICADOS_PORTUARIOS.includes(String(c.CODIGO)),
+                );
+            } else {
+                // Excluir portuarios de la lista general
+                lista = lista.filter(
+                    (c) => !CERTIFICADOS_PORTUARIOS.includes(String(c.CODIGO)),
+                );
+            }
+
+            // 2) Filtro por término de búsqueda
             const term = (this.searchCertificado || "").trim().toLowerCase();
-            if (!term) return this.certificados;
-            return this.certificados.filter((c) =>
+            if (!term) return lista;
+
+            return lista.filter((c) =>
                 (c.DESCRIPCION || "").toLowerCase().includes(term),
             );
         },
 
         get limiteAlcanzado() {
             return this.selectedCertificados.length >= this.MAX_CERTIFICADOS;
+        },
+
+        toggleSoloPortuarios() {
+            this.soloPortuarios = !this.soloPortuarios;
+
+            // Si activamos "solo portuarios", quitamos de la selección
+            // cualquier certificado que ya no aplique.
+            if (this.soloPortuarios) {
+                this.selectedCertificados = this.selectedCertificados.filter(
+                    (codigo) =>
+                        CERTIFICADOS_PORTUARIOS.includes(String(codigo)),
+                );
+            } else {
+                // Si desactivamos, quitamos los portuarios de la selección
+                // (porque ya no están visibles en la lista general).
+                this.selectedCertificados = this.selectedCertificados.filter(
+                    (codigo) =>
+                        !CERTIFICADOS_PORTUARIOS.includes(String(codigo)),
+                );
+            }
         },
 
         toggleCertificado(codigo) {
@@ -429,7 +470,8 @@ export default document.addEventListener("alpine:init", () => {
 
             if (this.activeTipo !== null) {
                 personas = personas.filter(
-                    (p) => String(p.TIPO || "Sin tipo").trim() === this.activeTipo,
+                    (p) =>
+                        String(p.TIPO || "Sin tipo").trim() === this.activeTipo,
                 );
             }
 
@@ -534,7 +576,7 @@ export default document.addEventListener("alpine:init", () => {
                 console.log("[Reporte] payload →", payload);
 
                 const { data } = await axios.post(
-                    `${VITE_URL_APP}/api/cursos-externos/reporte-portuarios`,
+                    `${VITE_URL_APP}/api/cursos-externos/reporte-certificados`,
                     payload,
                 );
 
@@ -676,7 +718,7 @@ export default document.addEventListener("alpine:init", () => {
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(13);
                 doc.setTextColor(36, 39, 70);
-                doc.text("REPORTE DE CURSOS PORTUARIOS", pageWidth / 2, 13, {
+                doc.text("REPORTE DE CERTIFICADOS", pageWidth / 2, 13, {
                     align: "center",
                 });
 
@@ -853,9 +895,7 @@ export default document.addEventListener("alpine:init", () => {
                     hoy.getFullYear(),
                 ].join("-");
 
-                doc.save(
-                    `REPORTE_CURSOS_PORTUARIOS_${fechaArchivo}.pdf`,
-                );
+                doc.save(`REPORTE_CERTIFICADOS_${fechaArchivo}.pdf`);
             } catch (e) {
                 console.error("Error al exportar el PDF", e);
                 Swal.fire({
@@ -891,7 +931,7 @@ export default document.addEventListener("alpine:init", () => {
                 workbook.creator = "Sisolmar Web";
                 workbook.created = new Date();
 
-                const sheet = workbook.addWorksheet("Cursos Portuarios");
+                const sheet = workbook.addWorksheet("Certificados");
 
                 const totalColumnas = PDF_COLUMNAS.length;
                 const ultimaColumna = _letraColumnaExcel(totalColumnas);
@@ -901,7 +941,7 @@ export default document.addEventListener("alpine:init", () => {
                 /* ---------- Encabezado del documento ---------- */
                 const filaTitulo = sheet.getRow(1);
                 filaTitulo.height = 26;
-                filaTitulo.getCell(1).value = "REPORTE DE CURSOS PORTUARIOS";
+                filaTitulo.getCell(1).value = "REPORTE DE CERTIFICADOS";
                 filaTitulo.getCell(1).font = {
                     bold: true,
                     size: 14,
@@ -985,8 +1025,7 @@ export default document.addEventListener("alpine:init", () => {
                             const filaTipo = sheet.getRow(fila);
                             filaTipo.height = 18;
                             const celdaTipo = filaTipo.getCell(1);
-                            celdaTipo.value =
-                                `${tipo.tipo.toUpperCase()}   ·   ${tipo.total} personal(es)`;
+                            celdaTipo.value = `${tipo.tipo.toUpperCase()}   ·   ${tipo.total} personal(es)`;
                             celdaTipo.font = {
                                 bold: true,
                                 size: 10,
@@ -997,7 +1036,9 @@ export default document.addEventListener("alpine:init", () => {
                                 horizontal: "left",
                                 indent: 1,
                             };
-                            sheet.mergeCells(`A${fila}:${ultimaColumna}${fila}`);
+                            sheet.mergeCells(
+                                `A${fila}:${ultimaColumna}${fila}`,
+                            );
                             fila++;
 
                             // Cabecera de la tabla
@@ -1087,10 +1128,7 @@ export default document.addEventListener("alpine:init", () => {
                     hoy.getFullYear(),
                 ].join("-");
 
-                saveAs(
-                    blob,
-                    `REPORTE_CURSOS_PORTUARIOS_${fechaArchivo}.xlsx`,
-                );
+                saveAs(blob, `REPORTE_CERTIFICADOS_${fechaArchivo}.xlsx`);
             } catch (e) {
                 console.error("Error al exportar el Excel", e);
                 Swal.fire({
@@ -1122,6 +1160,7 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedVencimiento = "";
             this.selectedCertificados = [];
             this.searchCertificado = "";
+            this.soloPortuarios = false;
             this.reporteData = [];
             this.activeCertificado = null;
             this.activeSucursal = null;

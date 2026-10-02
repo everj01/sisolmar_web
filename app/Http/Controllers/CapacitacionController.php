@@ -6091,7 +6091,8 @@ class CapacitacionController extends Controller
         }  
     }
 
-    public function listarCertificados(): JsonResponse {
+    public function listarCertificados(): JsonResponse
+    {
         try {
             $certificados = DB::table('si_solm.dbo.REDO_REQUISITOS')
                 ->select(
@@ -6107,6 +6108,35 @@ class CapacitacionController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error("Error al listar los certificados.", [
+                "error" => $e->getMessage(),
+                "line" => $e->getLine(),
+                "file" => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function listarCertificadosPortuarios(): JsonResponse {
+        try {
+            $certificados = DB::table('si_solm.dbo.REDO_REQUISITOS')
+                ->select(
+                    'REQU_CODIGO AS CODIGO',
+                    'REQU_DESCRIPCION AS DESCRIPCION'
+                )
+                ->whereIn('REQU_CODIGO', [26, 36, 35, 25, 42])
+                ->orderBy('REQU_DESCRIPCION', 'ASC')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $certificados,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al listar los certificados portuarios.", [
                 "error" => $e->getMessage(),
                 "line" => $e->getLine(),
                 "file" => $e->getFile(),
