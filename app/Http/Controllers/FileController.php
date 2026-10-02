@@ -632,7 +632,7 @@ class FileController extends Controller
 
         // Helper: llama el SP con todos sus parámetros
         $exec = fn($vig, $pag, $fils) => DB::select(
-            'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026]
+            'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026_V2]
                 @usuario=?, @codEmpresa=?, @vigencia=?, @codSucursal=?, @pagina=?, @filasPorPag=?',
             [$usuario, '01', $vig, $codSucursal, $pag, $fils]
         );
