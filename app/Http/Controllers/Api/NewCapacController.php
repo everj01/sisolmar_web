@@ -17,6 +17,7 @@ class NewCapacController extends Controller
                 ->leftJoin('sw_capacitacion_tipo_curso as tc', 'tc.codigo', '=', 'c.tipo_curso')
                 ->leftJoin('sw_capacitacion_areas as a', 'a.codigo', '=', 'c.area_conocimiento')
                 ->select(
+                    'c.codigo',
                     'c.codigo_curso',
                     'c.nombre',
                     'c.categoria',
@@ -27,8 +28,18 @@ class NewCapacController extends Controller
                     'c.habilitado',
                 )
                 ->orderBy('c.codigo_curso')
-                ->get()
-                ->map(function ($row) {
+                ->get();
+
+            $vigentes = DB::table('sw_cursos_programacion')
+                ->whereIn('cod_curso', $cursos->pluck('codigo')->all())
+                ->where('estado_periodo', 'VIGENTE')
+                ->where('habilitado', 1)
+                ->pluck('cod_curso')
+                ->map(fn($v) => (int) $v)
+                ->flip();
+
+            $cursos = $cursos
+                ->map(function ($row) use ($vigentes) {
                     return [
                         'CURS_COD' => (string) $row->codigo_curso,
                         'CURS_NOMBRE' => $row->nombre,
@@ -45,6 +56,7 @@ class NewCapacController extends Controller
                             ? Carbon::parse($row->fecha_creacion)->format('Y-m-d')
                             : null,
                         'CURS_HABILITADO' => (bool) $row->habilitado,
+                        'CURS_TIENE_VIGENTE' => isset($vigentes[(int) $row->codigo]),
                     ];
                 })
                 ->values();

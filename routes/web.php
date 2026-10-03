@@ -19,7 +19,6 @@ use App\Http\Controllers\Api\NewCapacController;
 use App\Mail\AlertaCaducidadMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Broadcast;
 
 
 Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -365,5 +364,3 @@ Route::get('/debug-permisos', function () {
 })->middleware('auth');
 
 require __DIR__.'/auth.php';
-
-Broadcast::routes(['middleware' => ['web']]);

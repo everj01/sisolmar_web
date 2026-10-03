@@ -73,19 +73,25 @@ document.addEventListener("DOMContentLoaded", () => {
         window.abrirModalAperturaNew(cod);
     };
 
-    // Editar abre modal; aperturar abre modal; aplazar / deshabilitar (próximamente)
-    function botonesAccionVisual(cod) {
+    // Editar abre modal; aperturar abre modal (bloqueado si ya tiene VIGENTE); aplazar / deshabilitar (próximamente)
+    function botonesAccionVisual(cod, tieneVigente) {
         const safeCod = String(cod ?? "").replace(/'/g, "\\'");
+        const btnAperturar = tieneVigente
+            ? `<button type="button" disabled title="Ya tiene un periodo VIGENTE activo"
+                class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed">
+                <i class="bx bx-calendar-star text-base pointer-events-none"></i>
+            </button>`
+            : `<button type="button" title="Aperturar curso" onclick="window.solicitarAperturaCursoNew('${safeCod}')"
+                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
+                <i class="bx bx-calendar-star text-base pointer-events-none"></i>
+            </button>`;
         return `
         <div class="flex items-center justify-center gap-1.5">
             <button type="button" title="Editar curso" onclick="window.solicitarEdicionCursoNew('${safeCod}')"
                 class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
                 <i class="bx bxs-edit text-base pointer-events-none"></i>
             </button>
-            <button type="button" title="Aperturar curso" onclick="window.solicitarAperturaCursoNew('${safeCod}')"
-                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
-                <i class="bx bx-calendar-star text-base pointer-events-none"></i>
-            </button>
+            ${btnAperturar}
             <button type="button" title="Aplazar curso (próximamente)"
                 class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors">
                 <i class="bx bx-time-five text-base pointer-events-none"></i>
@@ -182,7 +188,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 width: 190,
                 hozAlign: "center",
                 headerSort: false,
-                formatter: (cell) => botonesAccionVisual(cell.getData()?.CURS_COD),
+                formatter: (cell) => {
+                    const d = cell.getData() || {};
+                    return botonesAccionVisual(d.CURS_COD, d.CURS_TIENE_VIGENTE === true);
+                },
                 // Intencionalmente sin cellClick: botones solo visuales por ahora
             },
         ],

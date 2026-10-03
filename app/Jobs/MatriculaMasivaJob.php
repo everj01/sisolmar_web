@@ -2,8 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Events\MatriculaMasivaProgreso;
-use App\Events\MatriculaMasivaFinalizada;
 use App\Mail\MatriculaMasivaResumenMail;
 use App\Models\Matricula;
 use App\Models\Personal;
@@ -149,15 +147,6 @@ class MatriculaMasivaJob implements ShouldQueue
         if ($this->notificarEmail && $resumen['total'] > 10) {
             $this->notificarCoordinador($curso->nombre, $resumen);
         }
-
-        event(new MatriculaMasivaFinalizada(
-            usuarioId: $this->usuarioId,
-            jobId: $jobId,
-            curso: $curso->nombre,
-            total: $resumen['total'],
-            enviados: $resumen['enviados'],
-            fallidos: $resumen['fallidos'],
-        ));
     }
 
     private function marcarSeguimiento(string $jobId, array $datos): void
@@ -363,8 +352,6 @@ class MatriculaMasivaJob implements ShouldQueue
         $matriculados     = [];
 
         $jobId            = $this->cursoCodigo . '_' . $this->programacionCodigo;
-        $intervalo        = max(1, (int) round($totalPersonas * 0.01));
-        $ultimoPorcentaje = -1;
 
         try {
             foreach (array_chunk($personalIds, 100) as $chunk) {
@@ -378,27 +365,6 @@ class MatriculaMasivaJob implements ShouldQueue
 
                     if ($enviados > $antes) {
                         $matriculados[] = $codPersonal;
-                    }
-
-                    $debeEmitir = $procesados <= 5
-                        || $procesados % $intervalo === 0
-                        || $procesados === $totalPersonas;
-
-                    if ($debeEmitir) {
-                        $porcentaje = round(($procesados / $totalPersonas) * 100);
-
-                        if ($porcentaje !== $ultimoPorcentaje) {
-                            $ultimoPorcentaje = $porcentaje;
-
-                            event(new MatriculaMasivaProgreso(
-                                usuarioId: $this->usuarioId,
-                                jobId: $jobId,
-                                curso: $curso->nombre,
-                                procesados: $procesados,
-                                total: $totalPersonas,
-                                porcentaje: $porcentaje,
-                            ));
-                        }
                     }
                 }
 
