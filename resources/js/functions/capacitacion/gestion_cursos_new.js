@@ -218,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             {
                 title: "Acciones",
-                width: 190,
+                field: "ACCIONES",
                 hozAlign: "center",
                 headerHozAlign: "center",
                 headerSort: false,
