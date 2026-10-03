@@ -94,13 +94,22 @@
                             x-text="esDirigidoOtros ? 'Matrícula manual' : 'Matrícula automática'"></p>
                         <p class="text-sm mt-1" :class="esDirigidoOtros ? 'text-amber-700' : 'text-blue-700'">
                             <template x-if="!esDirigidoOtros">
-                                <span>Se matriculará automáticamente al <strong x-text="dirigidoLabel"></strong> de <strong x-text="sucursalLabel"></strong>.</span>
+                                <span>Se matriculará automáticamente a <strong x-text="dirigidoLabel"></strong> en <strong x-text="sucursalLabel"></strong>.</span>
                             </template>
                             <template x-if="esDirigidoOtros">
                                 <span>Deberás matricular manualmente al personal en <strong>Matrículas</strong> (<span x-text="sucursalLabel"></span>).</span>
                             </template>
                         </p>
                     </div>
+
+                    {{-- Aviso por correo --}}
+                    <label class="mt-4 flex items-start gap-2.5 p-3 rounded-xl border border-default-100 bg-default-50/60 cursor-pointer select-none">
+                        <input id="napNotificar" type="checkbox" x-model="notificarCorreo" class="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <span>
+                            <span class="block text-sm font-semibold text-default-800">Avisar por correo al finalizar</span>
+                            <span class="block text-xs text-default-500 mt-0.5">Se notificará al coordinador cuando termine la matrícula masiva (solo si son más de 10 personas).</span>
+                        </span>
+                    </label>
 
                 </div>
 

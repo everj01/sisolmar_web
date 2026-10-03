@@ -175,6 +175,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
         Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
         Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
+        Route::get('/matriculas-masivas/{jobId}', [CapacitacionController::class, 'estadoMatriculaMasiva']);
         Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
         Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
         Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);

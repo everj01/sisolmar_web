@@ -80,6 +80,7 @@ window.formAperturaNew = function () {
         fechaInicio: "",
         fechaFin: "",
         incluirAutomatico: true,
+        notificarCorreo: false,
 
         get fechaMinima() {
             const t = new Date();
@@ -220,6 +221,7 @@ window.formAperturaNew = function () {
                     sucursal_codigo: "",
                     cliente_id: "",
                     area_codigo: "",
+                    notificar_email: this.notificarCorreo,
                 };
                 if (this.requiereFechaFin) payload.fecha_final = this.fechaFin;
                 const res = await axios.post(`${VITE_URL_APP}/api/cursos/programacion-manual`, payload, { headers });
@@ -229,10 +231,10 @@ window.formAperturaNew = function () {
                         toast: true,
                         position: "top-end",
                         showConfirmButton: false,
-                        timer: 3000,
+                        timer: 3500,
                         timerProgressBar: true,
                         icon: "success",
-                        title: res.data.message || "Curso aperturado correctamente",
+                        title: (res.data.message || "Curso aperturado correctamente") + (this.notificarCorreo ? " Se avisará por correo al coordinador al finalizar." : ""),
                     });
                     if (window.tablaCursosNew) {
                         try {

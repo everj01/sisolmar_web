@@ -684,6 +684,10 @@
 
         <!-- Footer -->
         <div class="flex justify-end items-center gap-3 px-6 py-4 border-t border-default-100 shrink-0 bg-default-50/50">
+            <label class="mr-auto flex items-center gap-2 text-xs font-medium text-default-500 cursor-pointer select-none" title="Se avisará al coordinador por correo al finalizar (solo si son más de 10 personas)">
+                <input type="checkbox" id="chkNotificarMatricula" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
+                Avisar por correo al finalizar
+            </label>
             <button type="button" @click="cerrar()"
                 class="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-white border border-default-200 text-default-700 text-sm font-medium rounded-lg shadow-sm hover:bg-default-50 transition cursor-pointer">
                 Cerrar

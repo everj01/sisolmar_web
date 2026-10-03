@@ -901,17 +901,19 @@ document.addEventListener("DOMContentLoaded", () => {
                                 Swal.fire({ title: 'Matriculando personal...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
                                 try {
+                                    const notificar = document.getElementById('chkNotificarMatricula')?.checked || false;
                                     const resp = await axios.post(
                                         `${VITE_URL_APP}/capacitacion/save-matricula`,
                                         {
                                             cursoId: String(cId),
                                             programacionId: String(progId),
                                             personalIds,
+                                            notificar_email: notificar,
                                         },
                                     );
                                     Swal.close();
                                     if (resp.data.success) {
-                                        await Swal.fire({ icon: 'success', title: '¡Solicitud enviada!', text: 'Recibirá una notificación sobre el progreso en tiempo real de la matriculación', confirmButtonColor: '#6366f1' });
+                                        await Swal.fire({ icon: 'success', title: '¡Solicitud enviada!', text: 'La matriculación fue enviada a procesamiento.' + (notificar ? ' Se avisará por correo al coordinador al finalizar.' : ''), confirmButtonColor: '#6366f1' });
                                     } else {
                                         await Swal.fire({ icon: 'error', title: 'Error', text: resp.data.message || 'Error desconocido', confirmButtonColor: '#6366f1' });
                                     }

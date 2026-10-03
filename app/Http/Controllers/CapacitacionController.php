@@ -2185,13 +2185,14 @@ class CapacitacionController extends Controller
             }
 
             $this->actualizarCursoMoodle($curso, $startTimestamp, $endTimestamp);
-            $this->realizarMatriculacion($curso, (string)$newCode);
+            $jobId = $this->realizarMatriculacion($curso, (string)$newCode, $request->boolean('notificar_email'));
 
             DB::commit();
 
             return response()->json([
                 "success" => true,
                 "message" => "Programación creada correctamente.",
+                "job_id" => $jobId,
             ]);
         } catch (\Exception $e) {
 
@@ -2240,7 +2241,7 @@ class CapacitacionController extends Controller
         }
     }
 
-    private function realizarMatriculacion($curso, string $newCode): void
+    private function realizarMatriculacion($curso, string $newCode, bool $notificarEmail = false): ?string
     {
         try {
             $tipoDesc = strtoupper(trim($curso->tipo_curso_descripcion ?? ""));
@@ -2250,20 +2251,24 @@ class CapacitacionController extends Controller
                 ($tipoDesc === "PCA" && (string)$curso->dirigido_a !== "0");
 
             if (!$debeMatricular) {
-                return;
+                return null;
             }
 
             dispatch(MatriculaMasivaJob::porTipoCurso(
                 $curso->codigo,
                 $newCode,
                 Auth::id(),
-                $curso->sucursal
+                $curso->sucursal,
+                $notificarEmail
             ))->onQueue('training');
+
+            return $curso->codigo . '_' . $newCode;
         } catch (\Throwable $e) {
             Log::error("Error en matriculación automática al crear programación", [
                 "curso_id" => $curso->codigo,
                 "error" => $e->getMessage(),
             ]);
+            return null;
         }
     }
 
@@ -2599,6 +2604,7 @@ class CapacitacionController extends Controller
         $cursoId = $request->cursoId;
         $programacionId = $request->programacionId;
         $personalIds = $request->personalIds;
+        $notificarEmail = $request->boolean('notificar_email');
 
         $usuarioId = Auth::id();
 
@@ -2609,11 +2615,37 @@ class CapacitacionController extends Controller
             ], 401);
         }
 
-        dispatch(MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId))->onQueue('training');
+        dispatch(MatriculaMasivaJob::estandar($cursoId, $programacionId, $personalIds, $usuarioId, null, $notificarEmail))->onQueue('training');
 
         return response()->json([
             "success" => true,
             "message" => "La matriculación fue enviada a procesamiento.",
+            "job_id" => $cursoId . '_' . $programacionId,
+        ]);
+    }
+
+    public function estadoMatriculaMasiva(string $jobId): JsonResponse
+    {
+        $job = DB::table('matricula_masiva_jobs')->where('job_id', $jobId)->first();
+
+        if (!$job) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró el proceso de matriculación.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'job_id' => $job->job_id,
+                'curso' => $job->curso_nombre,
+                'estado' => $job->estado,
+                'total' => (int) $job->total,
+                'procesados' => (int) $job->procesados,
+                'enviados' => (int) $job->enviados,
+                'fallidos' => (int) $job->fallidos,
+            ],
         ]);
     }
 
