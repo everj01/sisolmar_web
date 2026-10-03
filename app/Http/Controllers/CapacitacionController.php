@@ -3219,6 +3219,11 @@ class CapacitacionController extends Controller
     public function vistaGestionCursos(): View
     {
         $dirigidos = Consulta::obtenerDirigidos();
+
+        if (auth()->user()->usuario === 'EMONTERO') {
+            return view("capacitacion.gestion_cursos_new", compact("dirigidos"));
+        }
+
         return view("capacitacion.gestion_cursos", compact("dirigidos"));
     }
 

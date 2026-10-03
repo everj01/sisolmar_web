@@ -15,6 +15,7 @@ use App\Http\Controllers\RoutingController;
 use App\Http\Controllers\UbicacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\ActualizacionesDjController;
+use App\Http\Controllers\Api\NewCapacController;
 use App\Mail\AlertaCaducidadMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -211,6 +212,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-plan-pce', [CapacitacionController::class, 'obtenerPlanPCE']);
         Route::get('/obtener-plan-pca/{codCliente}', [CapacitacionController::class, 'obtenerPlanPCA']);
         Route::get('/obtener-cursos-por-plan/{tipo_curso}', [CapacitacionController::class, 'obtenerCursosPorPlan']);
+        Route::get('/obtener-cursos-new', [NewCapacController::class, 'obtenerCursos']);
         Route::get('/obtener-tipos-curso', [CapacitacionController::class, 'obtenerTiposDeCurso']);
         Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
         Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);

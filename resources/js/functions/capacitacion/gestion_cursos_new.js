@@ -1,0 +1,233 @@
+import { TabulatorFull as Tabulator } from "tabulator-tables";
+import "tabulator-tables/dist/css/tabulator_simple.min.css";
+
+document.addEventListener("DOMContentLoaded", () => {
+    const elTabla = document.getElementById("tblCursosNew");
+    if (!elTabla) return;
+
+    const elements = {
+        search: document.getElementById("buscarCursoNew"),
+        filtroPlan: document.getElementById("filtroPlanCursoNew"),
+        filtroTipo: document.getElementById("filtroTipoCursoNew"),
+        filtroEstado: document.getElementById("filtroEstadoCursoNew"),
+        btnLimpiar: document.getElementById("btnLimpiarFiltrosCursosNew"),
+        statTotal: document.getElementById("statTotalCursos"),
+    };
+
+    const state = { term: "", plan: "", tipo: "", estado: "" };
+
+    const esLocale = {
+        pagination: {
+            page_size: "Filas por página",
+            first: "Primero",
+            last: "Último",
+            prev: "Anterior",
+            next: "Siguiente",
+            counter: { showing: "Mostrando", of: "de", rows: "filas", pages: "páginas" },
+        },
+        data: { loading: "Cargando...", error: "Error al cargar los datos" },
+    };
+
+    const estilosTipo = {
+        INDUCCIÓN: "bg-sky-500/10 text-sky-600",
+        CHARLA: "bg-amber-500/10 text-amber-600",
+        CAPACITACIÓN: "bg-primary/10 text-primary",
+        ENTRENAMIENTO: "bg-emerald-500/10 text-emerald-600",
+        "SIMULACROS DE EMERGENCIA": "bg-rose-500/10 text-rose-600",
+    };
+
+    const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    // Solo visual: sin handlers reales (los botones no ejecutan acciones todavía)
+    function botonesAccionVisual() {
+        return `
+        <div class="flex items-center justify-center gap-1.5">
+            <button type="button" title="Editar curso (próximamente)"
+                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
+                <i class="bx bxs-edit text-base pointer-events-none"></i>
+            </button>
+            <button type="button" title="Aperturar curso (próximamente)"
+                class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
+                <i class="bx bx-calendar-star text-base pointer-events-none"></i>
+            </button>
+            <button type="button" title="Aplazar curso (próximamente)"
+                class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors">
+                <i class="bx bx-time-five text-base pointer-events-none"></i>
+            </button>
+            <button type="button" title="Deshabilitar curso (próximamente)"
+                class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors">
+                <i class="bx bx-trash text-base pointer-events-none"></i>
+            </button>
+        </div>`;
+    }
+
+    const table = new Tabulator("#tblCursosNew", {
+        ajaxURL: `${VITE_URL_APP}/api/obtener-cursos-new`,
+        ajaxResponse(_url, _params, res) {
+            const rows = Array.isArray(res) ? res : (res?.data ?? []);
+            if (elements.statTotal) {
+                const total = res?.total ?? rows.length;
+                elements.statTotal.textContent = total;
+            }
+            return rows;
+        },
+        layout: "fitColumns",
+        placeholder: "No se encontraron cursos",
+        pagination: "local",
+        paginationSize: 5,
+        paginationSizeSelector: [5, 15, 25, 50],
+        paginationCounter: "rows",
+        locale: "es-es",
+        langs: { "es-es": esLocale },
+        rowFormatter(row) {
+            const d = row.getData();
+            if (d.CURS_HABILITADO === false || d.CURS_HABILITADO === 0) {
+                row.getElement().classList.add("tabulator-row-disabled");
+            }
+        },
+        columns: [
+            {
+                title: "Nombre de curso",
+                field: "CURS_NOMBRE",
+                minWidth: 250,
+                headerSort: true,
+                formatter: (cell) =>
+                    `<span style="font-weight:500; color:#111827;">${esc(cell.getValue()) || "—"}</span>`,
+            },
+            {
+                title: "Tipo",
+                field: "CURS_TIPO",
+                width: 200,
+                headerSort: true,
+                formatter(cell) {
+                    const v = cell.getValue() || "—";
+                    const cls = estilosTipo[v] || "bg-gray-500/10 text-gray-600";
+                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls}">${esc(v)}</span>`;
+                },
+            },
+            {
+                title: "Plan",
+                field: "CURS_PLAN_CAPAC_NOMBRE",
+                width: 110,
+                hozAlign: "center",
+                headerSort: true,
+                formatter: (cell) =>
+                    `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">${esc(cell.getValue()) || "—"}</span>`,
+            },
+            {
+                title: "Sist. gestión",
+                field: "CURS_SIST_GESTION_NOMBRE",
+                width: 130,
+                hozAlign: "center",
+                headerSort: true,
+                formatter: (cell) =>
+                    `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-600">${esc(cell.getValue()) || "—"}</span>`,
+            },
+            {
+                title: "Creación",
+                field: "CURS_CREADO_FECHA",
+                width: 130,
+                hozAlign: "center",
+                headerSort: true,
+                formatter: (cell) =>
+                    `<span style="font-size:12px; font-weight:600; color:#374151;">${esc(cell.getValue()) || "—"}</span>`,
+            },
+            {
+                title: "Estado",
+                field: "CURS_HABILITADO",
+                width: 140,
+                hozAlign: "center",
+                headerSort: true,
+                formatter(cell) {
+                    const hab = cell.getValue();
+                    return hab
+                        ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Habilitado</span>`
+                        : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/10 text-gray-500"><span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Deshabilitado</span>`;
+                },
+            },
+            {
+                title: "Acciones",
+                width: 190,
+                hozAlign: "center",
+                headerSort: false,
+                formatter: () => botonesAccionVisual(),
+                // Intencionalmente sin cellClick: botones solo visuales por ahora
+            },
+        ],
+    });
+
+    window.tablaCursosNew = table;
+
+    table.on("dataLoaded", (rows) => {
+        const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort();
+
+        if (elements.filtroPlan) {
+            const actual = elements.filtroPlan.value;
+            elements.filtroPlan.innerHTML =
+                `<option value="">Todos los planes</option>` +
+                uniq(rows.map((r) => r.CURS_PLAN_CAPAC_NOMBRE))
+                    .map((v) => `<option value="${esc(v)}">${esc(v)}</option>`)
+                    .join("");
+            elements.filtroPlan.value = actual;
+        }
+        if (elements.filtroTipo) {
+            const actual = elements.filtroTipo.value;
+            elements.filtroTipo.innerHTML =
+                `<option value="">Todos los tipos</option>` +
+                uniq(rows.map((r) => r.CURS_TIPO))
+                    .map((v) => `<option value="${esc(v)}">${esc(v)}</option>`)
+                    .join("");
+            elements.filtroTipo.value = actual;
+        }
+    });
+
+    function aplicarFiltros() {
+        const { term, plan, tipo, estado } = state;
+        if (term || plan || tipo || estado !== "") {
+            table.setFilter((data) => {
+                if (plan && (data.CURS_PLAN_CAPAC_NOMBRE || "") !== plan) return false;
+                if (tipo && (data.CURS_TIPO || "") !== tipo) return false;
+                if (estado !== "" && String(data.CURS_HABILITADO ? 1 : 0) !== estado) return false;
+                if (term) {
+                    const nom = String(data.CURS_NOMBRE || "").toLowerCase();
+                    if (!nom.includes(term)) return false;
+                }
+                return true;
+            });
+        } else {
+            table.clearFilter();
+        }
+    }
+
+    let searchT;
+    elements.search?.addEventListener("input", function () {
+        clearTimeout(searchT);
+        searchT = setTimeout(() => {
+            state.term = (this.value || "").trim().toLowerCase();
+            aplicarFiltros();
+        }, 250);
+    });
+    elements.filtroPlan?.addEventListener("change", function () {
+        state.plan = this.value;
+        aplicarFiltros();
+    });
+    elements.filtroTipo?.addEventListener("change", function () {
+        state.tipo = this.value;
+        aplicarFiltros();
+    });
+    elements.filtroEstado?.addEventListener("change", function () {
+        state.estado = this.value;
+        aplicarFiltros();
+    });
+    elements.btnLimpiar?.addEventListener("click", () => {
+        state.term = "";
+        state.plan = "";
+        state.tipo = "";
+        state.estado = "";
+        if (elements.search) elements.search.value = "";
+        if (elements.filtroPlan) elements.filtroPlan.value = "";
+        if (elements.filtroTipo) elements.filtroTipo.value = "";
+        if (elements.filtroEstado) elements.filtroEstado.value = "";
+        table.clearFilter();
+    });
+});
