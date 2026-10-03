@@ -60,6 +60,165 @@ window.cerrarModalAperturaNew = () => {
     window.dispatchEvent(new CustomEvent("close-modal-apertura-new"));
 };
 
+// ── Extender plazo (misma lógica que modalApertura/modalAplazarCurso original) ──
+// Endpoints: GET obtener-curso-new/{cod} (PK + programación VIGENTE),
+// POST cursos/aplazar-curso (actualiza fecha fin del curso y de matriculados, incl. Moodle).
+window.abrirModalAplazarNew = (cursCod) => {
+    if (cursCod) window.__pendingAplazarNew = String(cursCod);
+    const el = document.getElementById("formAplazarNewRoot");
+    if (el && window.Alpine) {
+        try {
+            const data = window.Alpine.$data(el);
+            if (data && typeof data.abrir === "function") {
+                data.abrir(cursCod);
+                return;
+            }
+        } catch (e) {
+            console.warn("Aplazar: no se pudo usar Alpine.$data, uso evento", e);
+        }
+    }
+    window.dispatchEvent(new CustomEvent("open-modal-aplazar-new", { detail: { codigo: cursCod } }));
+};
+
+window.cerrarModalAplazarNew = () => {
+    window.dispatchEvent(new CustomEvent("close-modal-aplazar-new"));
+};
+
+window.formAplazarNew = function () {
+    return {
+        showModal: false,
+        cargando: false,
+        guardando: false,
+        error: "",
+        errorFecha: "",
+        codigoPk: "",
+        cursoNombre: "",
+        programacion: null,
+        fechaNuevaFin: "",
+        fechaValida: false,
+
+        get fechaMinima() {
+            if (!this.programacion?.fecha_final) return "";
+            return String(this.programacion.fecha_final).slice(0, 10);
+        },
+        fmtFecha(v) {
+            if (!v) return "—";
+            const p = String(v).slice(0, 10).split("-");
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : v;
+        },
+        get extensionDias() {
+            if (!this.programacion?.fecha_final || !this.fechaNuevaFin) return 0;
+            const d = Math.round((new Date(this.fechaNuevaFin) - new Date(String(this.programacion.fecha_final).slice(0, 10))) / 86400000);
+            return d > 0 ? d : 0;
+        },
+
+        validarFecha() {
+            this.errorFecha = "";
+            this.fechaValida = false;
+            if (!this.fechaNuevaFin || !this.programacion) return;
+            if (this.extensionDias <= 0) {
+                this.errorFecha = "La nueva fecha de fin debe ser posterior a la fecha actual de fin.";
+                return;
+            }
+            this.fechaValida = true;
+        },
+
+        async abrir(cursCod) {
+            const cod = cursCod || window.__pendingAplazarNew;
+            if (!cod) return;
+            window.__pendingAplazarNew = null;
+            this.error = "";
+            this.errorFecha = "";
+            this.fechaNuevaFin = "";
+            this.fechaValida = false;
+            this.programacion = null;
+            this.showModal = true;
+            document.body.style.overflow = "hidden";
+            this.cargando = true;
+            try {
+                const res = await axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`);
+                const curso = res?.data?.data;
+                if (!res?.data?.success || !curso) throw new Error("No se pudo cargar el curso.");
+                const vigente = (curso.CURS_PROGRAMACIONES || []).find(
+                    (p) => String(p.estado_periodo || "").toUpperCase() === "VIGENTE"
+                );
+                if (!vigente) {
+                    this.showModal = false;
+                    document.body.style.overflow = "";
+                    Swal.fire("Sin programación vigente", "Solo se puede extender el plazo de un curso con periodo VIGENTE.", "warning");
+                    return;
+                }
+                this.codigoPk = curso.CURS_PK ? String(curso.CURS_PK) : "";
+                this.cursoNombre = curso.CURS_NOMBRE || "";
+                this.programacion = vigente;
+            } catch (e) {
+                console.error("Error abriendo extender plazo:", e);
+                this.error = "No se pudo cargar la programación del curso.";
+            } finally {
+                this.cargando = false;
+            }
+        },
+        cerrar() {
+            this.showModal = false;
+            document.body.style.overflow = "";
+            window.dispatchEvent(new CustomEvent("close-modal-aplazar-new"));
+        },
+
+        async guardarExtension() {
+            this.validarFecha();
+            if (!this.fechaValida || !this.fechaNuevaFin || this.guardando) return;
+            this.guardando = true;
+            try {
+                const res = await axios.post(`${VITE_URL_APP}/api/cursos/aplazar-curso`, {
+                    cod_curso: this.codigoPk,
+                    nueva_fecha_final: this.fechaNuevaFin,
+                });
+                if (res.data?.success) {
+                    this.cerrar();
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        icon: "success",
+                        title: res.data.message || "Plazo extendido correctamente",
+                    });
+                    if (window.tablaCursosNew) {
+                        try {
+                            await window.tablaCursosNew.setData(`${VITE_URL_APP}/api/obtener-cursos-new`);
+                        } catch {}
+                    }
+                } else {
+                    Swal.fire("No se pudo extender", res.data?.message || "Error al procesar la solicitud.", "error");
+                }
+            } catch (err) {
+                console.error("Error al extender plazo:", err);
+                Swal.fire("Error de Servidor", err.response?.data?.message || "Ocurrió un problema de conectividad con el servidor.", "error");
+            } finally {
+                this.guardando = false;
+            }
+        },
+
+        init() {
+            window.addEventListener("open-modal-aplazar-new", (e) => {
+                const c = e.detail?.codigo || window.__pendingAplazarNew;
+                if (c) this.abrir(c);
+            });
+            window.addEventListener("close-modal-aplazar-new", () => {
+                this.showModal = false;
+                document.body.style.overflow = "";
+            });
+            if (window.__pendingAplazarNew && !this.showModal) {
+                const c = window.__pendingAplazarNew;
+                window.__pendingAplazarNew = null;
+                this.abrir(c);
+            }
+            this.$watch("fechaNuevaFin", () => this.validarFecha());
+        },
+    };
+};
+
 window.formAperturaNew = function () {
     return {
         showModal: false,

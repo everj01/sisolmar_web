@@ -73,33 +73,62 @@ document.addEventListener("DOMContentLoaded", () => {
         window.abrirModalAperturaNew(cod);
     };
 
-    // Editar abre modal; aperturar abre modal (bloqueado si ya tiene VIGENTE); aplazar / deshabilitar (próximamente)
+    window.solicitarAplazarCursoNew = (cod) => {
+        if (!cod || typeof window.abrirModalAplazarNew !== "function") {
+            if (!cod) return;
+            window.__pendingAplazarNew = String(cod);
+            window.dispatchEvent(new CustomEvent("open-modal-aplazar-new", { detail: { codigo: String(cod) } }));
+            return;
+        }
+        window.abrirModalAplazarNew(cod);
+    };
+
+    // Editar y deshabilitar bloqueados si ya tiene VIGENTE; aperturar igual; aplazar / deshabilitar (próximamente)
     function botonesAccionVisual(cod, tieneVigente) {
         const safeCod = String(cod ?? "").replace(/'/g, "\\'");
+        const bloqueado = "btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed";
+        const btnEditar = tieneVigente
+            ? `<button type="button" disabled title="No se puede editar: tiene un periodo VIGENTE activo"
+                class="${bloqueado}">
+                <i class="bx bxs-edit text-base pointer-events-none"></i>
+            </button>`
+            : `<button type="button" title="Editar curso" onclick="window.solicitarEdicionCursoNew('${safeCod}')"
+                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
+                <i class="bx bxs-edit text-base pointer-events-none"></i>
+            </button>`;
         const btnAperturar = tieneVigente
             ? `<button type="button" disabled title="Ya tiene un periodo VIGENTE activo"
-                class="btn btn-sm rounded bg-gray-100/50 text-gray-400 cursor-not-allowed">
+                class="${bloqueado}">
                 <i class="bx bx-calendar-star text-base pointer-events-none"></i>
             </button>`
             : `<button type="button" title="Aperturar curso" onclick="window.solicitarAperturaCursoNew('${safeCod}')"
                 class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
                 <i class="bx bx-calendar-star text-base pointer-events-none"></i>
             </button>`;
-        return `
-        <div class="flex items-center justify-center gap-1.5">
-            <button type="button" title="Editar curso" onclick="window.solicitarEdicionCursoNew('${safeCod}')"
-                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
-                <i class="bx bxs-edit text-base pointer-events-none"></i>
-            </button>
-            ${btnAperturar}
-            <button type="button" title="Aplazar curso (próximamente)"
-                class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors">
-                <i class="bx bx-time-five text-base pointer-events-none"></i>
-            </button>
-            <button type="button" title="Deshabilitar curso (próximamente)"
+        const btnEliminar = tieneVigente
+            ? `<button type="button" disabled title="No se puede deshabilitar: tiene un periodo VIGENTE activo"
+                class="${bloqueado}">
+                <i class="bx bx-trash text-base pointer-events-none"></i>
+            </button>`
+            : `<button type="button" title="Deshabilitar curso (próximamente)"
                 class="btn btn-sm rounded bg-danger/10 text-danger hover:bg-danger hover:text-white transition-colors">
                 <i class="bx bx-trash text-base pointer-events-none"></i>
-            </button>
+            </button>`;
+        const btnAplazar = tieneVigente
+            ? `<button type="button" title="Extender plazo del curso" onclick="window.solicitarAplazarCursoNew('${safeCod}')"
+                class="btn btn-sm rounded bg-success/10 text-success hover:bg-success hover:text-white transition-colors">
+                <i class="bx bx-time-five text-base pointer-events-none"></i>
+            </button>`
+            : `<button type="button" disabled title="Solo disponible con un periodo VIGENTE activo"
+                class="${bloqueado}">
+                <i class="bx bx-time-five text-base pointer-events-none"></i>
+            </button>`;
+        return `
+        <div class="flex items-center justify-center gap-1.5">
+            ${btnEditar}
+            ${btnAperturar}
+            ${btnAplazar}
+            ${btnEliminar}
         </div>`;
     }
 
@@ -113,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             return rows;
         },
-        layout: "fitColumns",
+        layout: "fitDataFill",
         placeholder: "No se encontraron cursos",
         pagination: "local",
         paginationSize: 5,
@@ -145,6 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 field: "CURS_TIPO",
                 width: 200,
                 headerSort: true,
+                headerHozAlign: "center",
+                hozAlign: "center",
                 formatter(cell) {
                     const v = cell.getValue() || "—";
                     const cls = estilosTipo[v] || "bg-gray-500/10 text-gray-600";
@@ -156,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 field: "CURS_PLAN_CAPAC_NOMBRE",
                 width: 110,
                 hozAlign: "center",
+                headerHozAlign: "center",
                 headerSort: true,
                 formatter: (cell) =>
                     `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">${esc(cell.getValue()) || "—"}</span>`,
@@ -174,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 field: "CURS_CREADO_FECHA",
                 width: 130,
                 hozAlign: "center",
+                headerHozAlign: "center",
                 headerSort: true,
                 sorter: (a, b, aRow, bRow) => {
                     const isoA = aRow.getData().CURS_CREADO_FECHA_ISO || fechaAISO(a);
@@ -187,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 title: "Acciones",
                 width: 190,
                 hozAlign: "center",
+                headerHozAlign: "center",
                 headerSort: false,
                 formatter: (cell) => {
                     const d = cell.getData() || {};

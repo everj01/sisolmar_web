@@ -36,6 +36,11 @@
         color: #64748b !important;
     }
     .tabulator-col-sorter { color: #94a3b8 !important; }
+    /* Encabezados centrados: Tipo / Plan / Creación / Acciones */
+    .tabulator-header .tabulator-col[tabulator-field="CURS_TIPO"] .tabulator-col-title,
+    .tabulator-header .tabulator-col[tabulator-field="CURS_PLAN_CAPAC_NOMBRE"] .tabulator-col-title,
+    .tabulator-header .tabulator-col[tabulator-field="CURS_CREADO_FECHA"] .tabulator-col-title,
+    .tabulator-header .tabulator-col:last-child .tabulator-col-title { text-align: center !important; }
     .tabulator-tableholder { overflow-x: auto !important; overflow-y: hidden !important; scrollbar-width: thin; scrollbar-color: rgba(100,116,139,.35) transparent; }
     .tabulator-tableholder::-webkit-scrollbar { height: 8px; }
     .tabulator-tableholder::-webkit-scrollbar-track { background: transparent; }
@@ -247,6 +252,9 @@
 
     {{-- Modal: aperturar curso --}}
     @include('capacitacion.partials.form_curso_apertura_new_modal')
+
+    {{-- Modal: extender plazo --}}
+    @include('capacitacion.partials.form_curso_aplazar_new_modal')
 </div>
 @endsection
 
