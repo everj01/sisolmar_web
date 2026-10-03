@@ -63,7 +63,17 @@ document.addEventListener("DOMContentLoaded", () => {
         window.dispatchEvent(new CustomEvent("open-modal-edicion-new", { detail: { codigo: String(cod) } }));
     };
 
-    // Solo visual: editar (abre modal) + aperturar / aplazar / deshabilitar (próximamente)
+    window.solicitarAperturaCursoNew = (cod) => {
+        if (!cod || typeof window.abrirModalAperturaNew !== "function") {
+            if (!cod) return;
+            window.__pendingAperturaNew = String(cod);
+            window.dispatchEvent(new CustomEvent("open-modal-apertura-new", { detail: { codigo: String(cod) } }));
+            return;
+        }
+        window.abrirModalAperturaNew(cod);
+    };
+
+    // Editar abre modal; aperturar abre modal; aplazar / deshabilitar (próximamente)
     function botonesAccionVisual(cod) {
         const safeCod = String(cod ?? "").replace(/'/g, "\\'");
         return `
@@ -72,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
                 <i class="bx bxs-edit text-base pointer-events-none"></i>
             </button>
-            <button type="button" title="Aperturar curso (próximamente)"
+            <button type="button" title="Aperturar curso" onclick="window.solicitarAperturaCursoNew('${safeCod}')"
                 class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
                 <i class="bx bx-calendar-star text-base pointer-events-none"></i>
             </button>

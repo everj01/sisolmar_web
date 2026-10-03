@@ -244,6 +244,9 @@
 
     {{-- Modal simple: editar curso inactivo --}}
     @include('capacitacion.partials.form_curso_edit_new_modal')
+
+    {{-- Modal: aperturar curso --}}
+    @include('capacitacion.partials.form_curso_apertura_new_modal')
 </div>
 @endsection
 

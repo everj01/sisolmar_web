@@ -36,6 +36,253 @@ window.cerrarModalRegistroNew = () => {
     window.dispatchEvent(new CustomEvent("close-modal-registro-new"));
 };
 
+// ── Apertura de curso (misma lógica que modalApertura de la vista original) ──
+// Endpoints: GET obtener-curso-new/{cod} (datos + regla), GET capacitacion/combos-apertura,
+// POST cursos/programacion-manual. Agrega feedback de vigencia/renovación.
+window.abrirModalAperturaNew = (cursCod) => {
+    if (cursCod) window.__pendingAperturaNew = String(cursCod);
+    const el = document.getElementById("formAperturaNewRoot");
+    if (el && window.Alpine) {
+        try {
+            const data = window.Alpine.$data(el);
+            if (data && typeof data.abrir === "function") {
+                data.abrir(cursCod);
+                return;
+            }
+        } catch (e) {
+            console.warn("Apertura: no se pudo usar Alpine.$data, uso evento", e);
+        }
+    }
+    window.dispatchEvent(new CustomEvent("open-modal-apertura-new", { detail: { codigo: cursCod } }));
+};
+
+window.cerrarModalAperturaNew = () => {
+    window.dispatchEvent(new CustomEvent("close-modal-apertura-new"));
+};
+
+window.formAperturaNew = function () {
+    return {
+        showModal: false,
+        cargando: false,
+        guardando: false,
+        error: "",
+        codigoPk: "",
+        codigoLocal: "",
+        cursoNombre: "",
+        planNombre: "",
+        tipoCursoId: "",
+        dirigidoA: "",
+        frecuencia: "",
+        esPeriodico: true,
+        fechaInicio: "",
+        fechaFin: "",
+        incluirAutomatico: true,
+        selectedSucursal: "",
+        selectedCliente: "",
+        selectedArea: "",
+        listaDNIPaste: "",
+        combos: { sucursales: [], clientes: [], areas: [] },
+        // Arrays legacy (misma validación que el modal original)
+        clientesAsignados: [],
+        areasAsignadas: [],
+
+        get fechaMinima() {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+        },
+        get esDirigidoOtros() {
+            return String(this.dirigidoA) === "OTROS" || String(this.dirigidoA) === "0";
+        },
+        get dirigidoLabel() {
+            const labels = { 1: "todo el personal", 2: "personal administrativo", 3: "personal operativo" };
+            return labels[String(this.dirigidoA)] || "";
+        },
+        get requiereFechaFin() {
+            return !this.esPeriodico || String(this.frecuencia).toUpperCase() === "PERSONALIZADO";
+        },
+        // ── Feedback de vigencia (réplica del cálculo del backend) ──
+        fechaFinEstimada() {
+            if (!this.fechaInicio) return "";
+            if (this.requiereFechaFin) return this.fechaFin || "";
+            const [y, m, d] = this.fechaInicio.split("-").map(Number);
+            const fin = new Date(y, m - 1, d);
+            const f = String(this.frecuencia).toUpperCase();
+            if (f === "ANUAL") fin.setFullYear(fin.getFullYear() + 1);
+            else if (f === "SEMESTRAL") fin.setMonth(fin.getMonth() + 6);
+            else if (f === "CUATRIMESTRAL") fin.setMonth(fin.getMonth() + 4);
+            else if (f === "TRIMESTRAL") fin.setMonth(fin.getMonth() + 3);
+            else if (f === "BIMESTRAL") fin.setMonth(fin.getMonth() + 2);
+            else fin.setMonth(fin.getMonth() + 1); // MENSUAL y resto
+            return `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, "0")}-${String(fin.getDate()).padStart(2, "0")}`;
+        },
+        fmtFecha(v) {
+            if (!v) return "—";
+            const p = String(v).slice(0, 10).split("-");
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : v;
+        },
+        get diasDuracion() {
+            const fin = this.fechaFinEstimada();
+            if (!this.fechaInicio || !fin) return 0;
+            return Math.round((new Date(fin) - new Date(this.fechaInicio)) / 86400000);
+        },
+        get fechaRenovacion() {
+            const fin = this.fechaFinEstimada();
+            if (!fin) return "";
+            const d = new Date(fin);
+            d.setDate(d.getDate() + 1);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        },
+        get renovacionAutomatica() {
+            return this.esPeriodico && String(this.frecuencia).toUpperCase() !== "PERSONALIZADO";
+        },
+        get fechasValidas() {
+            if (!this.fechaInicio) return false;
+            if (this.requiereFechaFin) {
+                if (!this.fechaFin || this.fechaInicio > this.fechaFin) return false;
+            }
+            return true;
+        },
+
+        async abrir(cursCod) {
+            const cod = cursCod || window.__pendingAperturaNew;
+            if (!cod) return;
+            window.__pendingAperturaNew = null;
+            this.error = "";
+            this.showModal = true;
+            document.body.style.overflow = "hidden";
+            this.cargando = true;
+            try {
+                const [cursoRes, combosRes] = await Promise.all([
+                    axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`),
+                    axios.get(`${VITE_URL_APP}/api/capacitacion/combos-apertura`).catch(() => null),
+                ]);
+                const curso = cursoRes?.data?.data;
+                if (!cursoRes?.data?.success || !curso) throw new Error("No se pudo cargar el curso.");
+                this.codigoPk = curso.CURS_PK ? String(curso.CURS_PK) : "";
+                this.codigoLocal = curso.CURS_COD || String(cod);
+                this.cursoNombre = curso.CURS_NOMBRE || "";
+                this.planNombre = curso.CURS_PLAN_CAPAC_NOMBRE || "—";
+                this.tipoCursoId = curso.CURS_PLAN_COD ? String(curso.CURS_PLAN_COD) : "";
+                this.dirigidoA = curso.CURS_DIRIGIDO_A != null ? String(curso.CURS_DIRIGIDO_A) : "";
+                this.frecuencia = curso.CURS_FRECUENCIA || "";
+                this.esPeriodico = curso.CURS_ES_PERIODICO !== false;
+                if (combosRes?.data?.success) {
+                    this.combos = {
+                        sucursales: combosRes.data.sucursales || [],
+                        clientes: combosRes.data.clientes || [],
+                        areas: combosRes.data.areas || [],
+                    };
+                }
+                this.selectedSucursal = "";
+                this.selectedCliente = "";
+                this.selectedArea = "";
+                this.listaDNIPaste = "";
+                this.fechaInicio = this.fechaMinima;
+                this.fechaFin = "";
+            } catch (e) {
+                console.error("Error abriendo apertura:", e);
+                this.error = "No se pudo cargar la información del curso.";
+            } finally {
+                this.cargando = false;
+            }
+        },
+        cerrar() {
+            this.showModal = false;
+            document.body.style.overflow = "";
+            window.dispatchEvent(new CustomEvent("close-modal-apertura-new"));
+        },
+
+        async guardarApertura() {
+            // Mismas validaciones que el modal original
+            if (!this.esPeriodico) {
+                if (!this.fechaInicio || !this.fechaFin) {
+                    Swal.fire("Atención", "Debe seleccionar fecha de inicio y fecha de fin.", "warning");
+                    return;
+                }
+                if (this.fechaInicio > this.fechaFin) {
+                    Swal.fire("Atención", "La fecha de inicio no puede ser mayor a la fecha de fin.", "warning");
+                    return;
+                }
+            } else if (!this.fechaInicio) {
+                Swal.fire("Atención", "Debe seleccionar una fecha de inicio.", "warning");
+                return;
+            }
+            if (this.requiereFechaFin && String(this.frecuencia).toUpperCase() === "PERSONALIZADO" && !this.fechaFin) {
+                Swal.fire("Atención", "Con frecuencia personalizada debe indicar la fecha de fin.", "warning");
+                return;
+            }
+            const dnis = this.listaDNIPaste.trim()
+                ? this.listaDNIPaste.split(/\n|,|;/).map((d) => d.trim()).filter((d) => d.length > 0)
+                : [];
+            if (this.tipoCursoId == "6" && this.clientesAsignados.length === 0 && dnis.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un cliente o pegar una lista de DNIs.", "warning");
+                return;
+            }
+            if (this.tipoCursoId == "7" && this.areasAsignadas.length === 0 && dnis.length === 0) {
+                Swal.fire("Atención", "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.", "warning");
+                return;
+            }
+            this.guardando = true;
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+                const headers = { "Content-Type": "application/json" };
+                if (csrf) headers["X-CSRF-TOKEN"] = csrf;
+                const payload = {
+                    cod_curso: this.codigoPk,
+                    fecha_inicio: this.fechaInicio,
+                    incluir_automatico: this.incluirAutomatico,
+                    sucursal_codigo: this.selectedSucursal,
+                    cliente_id: this.selectedCliente,
+                    area_codigo: this.selectedArea,
+                };
+                if (this.requiereFechaFin) payload.fecha_final = this.fechaFin;
+                if (dnis.length > 0) payload.dnis = dnis;
+                const res = await axios.post(`${VITE_URL_APP}/api/cursos/programacion-manual`, payload, { headers });
+                if (res.data?.success) {
+                    this.cerrar();
+                    Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        icon: "success",
+                        title: res.data.message || "Curso aperturado correctamente",
+                    });
+                    if (window.tablaCursosNew) {
+                        try {
+                            await window.tablaCursosNew.setData(`${VITE_URL_APP}/api/obtener-cursos-new`);
+                        } catch {}
+                    }
+                } else {
+                    Swal.fire("No se pudo aperturar", res.data?.message || "Error al procesar la solicitud.", "error");
+                }
+            } catch (err) {
+                console.error("Error aperturando curso:", err);
+                Swal.fire("Error de Servidor", err.response?.data?.message || "Ocurrió un problema de conectividad con el servidor.", "error");
+            } finally {
+                this.guardando = false;
+            }
+        },
+
+        init() {
+            window.addEventListener("open-modal-apertura-new", (e) => {
+                const c = e.detail?.codigo || window.__pendingAperturaNew;
+                if (c) this.abrir(c);
+            });
+            window.addEventListener("close-modal-apertura-new", () => {
+                this.showModal = false;
+                document.body.style.overflow = "";
+            });
+            if (window.__pendingAperturaNew && !this.showModal) {
+                const c = window.__pendingAperturaNew;
+                window.__pendingAperturaNew = null;
+                this.abrir(c);
+            }
+        },
+    };
+};
+
 window.formCursoNew = function () {
     return {
         // ── Modal / pasos ──
