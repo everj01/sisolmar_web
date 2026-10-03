@@ -168,55 +168,69 @@
 
     {{-- Card tabla --}}
     <div class="rounded-2xl border border-default-200/60 bg-white shadow-sm p-6">
-        <div class="flex flex-col gap-3 mb-4">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div>
-                <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
-                <p class="text-xs text-default-500 mt-1">Listado consumido desde <span class="font-mono font-semibold">/api/obtener-cursos-new</span></p>
-            </div>
-            <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full lg:w-auto">
-                <div class="relative sm:flex-none sm:min-w-[220px]">
-                    <i class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
-                    <input id="buscarCursoNew" placeholder="Buscar por nombre..."
-                        class="w-full sm:w-64 pl-8 pr-3 py-2 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+        <div class="flex flex-col gap-4 mb-4">
+            {{-- Título + buscador --}}
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
                 </div>
-                <select id="filtroPlanCursoNew"
-                    class="w-full sm:w-48 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
-                    <option value="">Todos los planes</option>
-                </select>
-                <select id="filtroTipoCursoNew"
-                    class="w-full sm:w-56 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
-                    <option value="">Todos los tipos</option>
-                </select>
-                <select id="filtroEstadoCursoNew"
-                    class="w-full sm:w-48 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
-                    <option value="">Todos los estados</option>
-                    <option value="1">Habilitados</option>
-                    <option value="0">Deshabilitados</option>
-                </select>
-                <button id="btnLimpiarFiltrosCursosNew" type="button"
-                    class="h-10 px-4 inline-flex items-center justify-center gap-1.5 bg-default-100 text-default-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-default-200 transition">
-                    <i class="ti ti-filter-off text-sm"></i>
-                    Limpiar
-                </button>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+                    <div class="relative flex-1 sm:flex-none">
+                        <i class="ti ti-search absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-default-400 pointer-events-none"></i>
+                        <input id="buscarCursoNew" placeholder="Buscar por nombre..."
+                            class="w-full sm:w-64 h-10 pl-8 pr-3 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                    </div>
+                    <button id="btnLimpiarFiltrosCursosNew" type="button"
+                        class="h-10 px-4 inline-flex items-center justify-center gap-1.5 bg-default-100 text-default-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-default-200 transition whitespace-nowrap">
+                        <i class="ti ti-filter-off text-sm"></i>
+                        Limpiar filtros
+                    </button>
+                </div>
             </div>
-        </div>
-        <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full lg:justify-end border-t border-default-100 pt-3">
-            <select id="filtroAnioCursoNew"
-                class="w-full sm:w-44 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
-                <option value="">Todos los años</option>
-            </select>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="filtroDesdeCursoNew" class="text-xs font-semibold text-default-500 whitespace-nowrap">Desde</label>
-                <input id="filtroDesdeCursoNew" type="date"
-                    class="w-full sm:w-44 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+
+            {{-- Filtros organizados --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 rounded-xl bg-default-50/60 border border-default-100 p-3">
+                <div class="flex flex-col gap-1.5">
+                    <label for="filtroPlanCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Plan</label>
+                    <select id="filtroPlanCursoNew"
+                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                        <option value="">Todos los planes</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="filtroTipoCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Tipo</label>
+                    <select id="filtroTipoCursoNew"
+                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                        <option value="">Todos los tipos</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="filtroEstadoCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Estado</label>
+                    <select id="filtroEstadoCursoNew"
+                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                        <option value="">Todos los estados</option>
+                        <option value="1">Habilitados</option>
+                        <option value="0">Deshabilitados</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="filtroAnioCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Año</label>
+                    <select id="filtroAnioCursoNew"
+                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                        <option value="">Todos los años</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="filtroDesdeCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Desde</label>
+                    <input id="filtroDesdeCursoNew" type="date"
+                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="filtroHastaCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Hasta</label>
+                    <input id="filtroHastaCursoNew" type="date"
+                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                </div>
             </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="filtroHastaCursoNew" class="text-xs font-semibold text-default-500 whitespace-nowrap">Hasta</label>
-                <input id="filtroHastaCursoNew" type="date"
-                    class="w-full sm:w-44 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
-            </div>
-        </div>
         </div>
         <div id="tblCursosNew" class="w-full"></div>
     </div>
