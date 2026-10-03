@@ -56,10 +56,23 @@ document.addEventListener("DOMContentLoaded", () => {
         return iso ? iso.slice(0, 4) : "";
     }
 
-    // Solo visual: aperturar / aplazar / deshabilitar (sin editar: la edición es por clic en fila)
-    function botonesAccionVisual() {
+    // Dispatcher desacoplado: la tabla no depende del JS del modal.
+    // Guarda el pedido en cola (por si Alpine aún no inicializa) y avisa por evento.
+    window.solicitarEdicionCursoNew = (cod) => {
+        if (!cod) return;
+        window.__pendingEdicionNew = String(cod);
+        window.dispatchEvent(new CustomEvent("open-modal-edicion-new", { detail: { codigo: String(cod) } }));
+    };
+
+    // Solo visual: editar (abre modal) + aperturar / aplazar / deshabilitar (próximamente)
+    function botonesAccionVisual(cod) {
+        const safeCod = String(cod ?? "").replace(/'/g, "\\'");
         return `
         <div class="flex items-center justify-center gap-1.5">
+            <button type="button" title="Editar curso" onclick="window.solicitarEdicionCursoNew('${safeCod}')"
+                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
+                <i class="bx bxs-edit text-base pointer-events-none"></i>
+            </button>
             <button type="button" title="Aperturar curso (próximamente)"
                 class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
                 <i class="bx bx-calendar-star text-base pointer-events-none"></i>
@@ -103,12 +116,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         },
         rowClick(e, row) {
-            // Los botones de acción no abren edición (hoy son solo visuales)
+            // Los botones de acción tienen su propio onclick; el clic en fila también abre edición
             if (e?.target?.closest?.("button")) return;
-            const d = row.getData();
-            if (d?.CURS_COD && typeof window.abrirModalEdicionNew === "function") {
-                window.abrirModalEdicionNew(d.CURS_COD);
-            }
+            window.solicitarEdicionCursoNew(row.getData()?.CURS_COD);
         },
         columns: [
             {
@@ -180,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 width: 190,
                 hozAlign: "center",
                 headerSort: false,
-                formatter: () => botonesAccionVisual(),
+                formatter: (cell) => botonesAccionVisual(cell.getData()?.CURS_COD),
                 // Intencionalmente sin cellClick: botones solo visuales por ahora
             },
         ],

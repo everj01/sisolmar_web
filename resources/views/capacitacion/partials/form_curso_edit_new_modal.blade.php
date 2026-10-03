@@ -3,7 +3,7 @@
       IDs con prefijo nedi para no colisionar con el wizard de registro. --}}
 <div id="modalEditarCursoNew" class="contents">
     <div x-data="formCursoEditNew()" id="formCursoEditNewRoot" x-init="init()"
-        @open-modal-edicion-new.window="abrir($event.detail.codigo)" @close-modal-edicion-new.window="showModal = false">
+        @close-modal-edicion-new.window="showModal = false">
 
         <div x-show="showModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center p-4"
             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"

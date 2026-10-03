@@ -610,6 +610,7 @@ window.formCursoNew = function () {
 // o todas están CERRADAS. Campos editables: nombre, descripción, tipo,
 // responsable, periódico, frecuencia, sistema (PCE) y área responsable.
 window.abrirModalEdicionNew = (cod) => {
+    if (cod) window.__pendingEdicionNew = String(cod);
     const el = document.getElementById("formCursoEditNewRoot");
     if (el && window.Alpine) {
         try {
@@ -679,6 +680,11 @@ window.formCursoEditNew = function () {
         },
 
         async abrir(cod) {
+            // Si otro pedido quedó en cola y este abrir ya lo atiende, limpiar la cola
+            if (cod && String(window.__pendingEdicionNew || "") === String(cod)) window.__pendingEdicionNew = null;
+            else if (!cod && window.__pendingEdicionNew) cod = window.__pendingEdicionNew;
+            if (!cod) return;
+            window.__pendingEdicionNew = null;
             this.codigo = cod;
             this.error = "";
             this.showModal = true;
@@ -827,11 +833,20 @@ window.formCursoEditNew = function () {
             }
         },
         init() {
-            window.addEventListener("open-modal-edicion-new", (e) => this.abrir(e.detail?.codigo));
+            window.addEventListener("open-modal-edicion-new", (e) => {
+                const c = e.detail?.codigo || window.__pendingEdicionNew;
+                if (c) this.abrir(c);
+            });
             window.addEventListener("close-modal-edicion-new", () => {
                 this.showModal = false;
                 document.body.style.overflow = "";
             });
+            // Si el pedido llegó antes de que Alpine inicializara, atenderlo ahora
+            if (window.__pendingEdicionNew && !this.showModal) {
+                const c = window.__pendingEdicionNew;
+                window.__pendingEdicionNew = null;
+                this.abrir(c);
+            }
             this.$watch("areaConocimiento", (val) => {
                 if (!this.esPCU && this.showModal && !this.cargando) this.cargarAreasResponsables(val);
             });
