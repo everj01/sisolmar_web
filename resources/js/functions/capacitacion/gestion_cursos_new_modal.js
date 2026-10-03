@@ -72,19 +72,12 @@ window.formAperturaNew = function () {
         planNombre: "",
         tipoCursoId: "",
         dirigidoA: "",
+        dirigidoNombre: "",
         frecuencia: "",
         esPeriodico: true,
         fechaInicio: "",
         fechaFin: "",
         incluirAutomatico: true,
-        selectedSucursal: "",
-        selectedCliente: "",
-        selectedArea: "",
-        listaDNIPaste: "",
-        combos: { sucursales: [], clientes: [], areas: [] },
-        // Arrays legacy (misma validación que el modal original)
-        clientesAsignados: [],
-        areasAsignadas: [],
 
         get fechaMinima() {
             const t = new Date();
@@ -94,6 +87,7 @@ window.formAperturaNew = function () {
             return String(this.dirigidoA) === "OTROS" || String(this.dirigidoA) === "0";
         },
         get dirigidoLabel() {
+            if (this.dirigidoNombre) return this.dirigidoNombre.toLowerCase();
             const labels = { 1: "todo el personal", 2: "personal administrativo", 3: "personal operativo" };
             return labels[String(this.dirigidoA)] || "";
         },
@@ -152,10 +146,7 @@ window.formAperturaNew = function () {
             document.body.style.overflow = "hidden";
             this.cargando = true;
             try {
-                const [cursoRes, combosRes] = await Promise.all([
-                    axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`),
-                    axios.get(`${VITE_URL_APP}/api/capacitacion/combos-apertura`).catch(() => null),
-                ]);
+                const cursoRes = await axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`);
                 const curso = cursoRes?.data?.data;
                 if (!cursoRes?.data?.success || !curso) throw new Error("No se pudo cargar el curso.");
                 this.codigoPk = curso.CURS_PK ? String(curso.CURS_PK) : "";
@@ -164,19 +155,9 @@ window.formAperturaNew = function () {
                 this.planNombre = curso.CURS_PLAN_CAPAC_NOMBRE || "—";
                 this.tipoCursoId = curso.CURS_PLAN_COD ? String(curso.CURS_PLAN_COD) : "";
                 this.dirigidoA = curso.CURS_DIRIGIDO_A != null ? String(curso.CURS_DIRIGIDO_A) : "";
+                this.dirigidoNombre = curso.CURS_DIRIGIDO_NOMBRE || "";
                 this.frecuencia = curso.CURS_FRECUENCIA || "";
                 this.esPeriodico = curso.CURS_ES_PERIODICO !== false;
-                if (combosRes?.data?.success) {
-                    this.combos = {
-                        sucursales: combosRes.data.sucursales || [],
-                        clientes: combosRes.data.clientes || [],
-                        areas: combosRes.data.areas || [],
-                    };
-                }
-                this.selectedSucursal = "";
-                this.selectedCliente = "";
-                this.selectedArea = "";
-                this.listaDNIPaste = "";
                 this.fechaInicio = this.fechaMinima;
                 this.fechaFin = "";
             } catch (e) {
@@ -211,17 +192,7 @@ window.formAperturaNew = function () {
                 Swal.fire("Atención", "Con frecuencia personalizada debe indicar la fecha de fin.", "warning");
                 return;
             }
-            const dnis = this.listaDNIPaste.trim()
-                ? this.listaDNIPaste.split(/\n|,|;/).map((d) => d.trim()).filter((d) => d.length > 0)
-                : [];
-            if (this.tipoCursoId == "6" && this.clientesAsignados.length === 0 && dnis.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un cliente o pegar una lista de DNIs.", "warning");
-                return;
-            }
-            if (this.tipoCursoId == "7" && this.areasAsignadas.length === 0 && dnis.length === 0) {
-                Swal.fire("Atención", "Debe seleccionar al menos un área operativa o pegar una lista de DNIs.", "warning");
-                return;
-            }
+            // Apertura siempre automática (sin personalización de criterios)
             this.guardando = true;
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
@@ -230,13 +201,12 @@ window.formAperturaNew = function () {
                 const payload = {
                     cod_curso: this.codigoPk,
                     fecha_inicio: this.fechaInicio,
-                    incluir_automatico: this.incluirAutomatico,
-                    sucursal_codigo: this.selectedSucursal,
-                    cliente_id: this.selectedCliente,
-                    area_codigo: this.selectedArea,
+                    incluir_automatico: true,
+                    sucursal_codigo: "",
+                    cliente_id: "",
+                    area_codigo: "",
                 };
                 if (this.requiereFechaFin) payload.fecha_final = this.fechaFin;
-                if (dnis.length > 0) payload.dnis = dnis;
                 const res = await axios.post(`${VITE_URL_APP}/api/cursos/programacion-manual`, payload, { headers });
                 if (res.data?.success) {
                     this.cerrar();

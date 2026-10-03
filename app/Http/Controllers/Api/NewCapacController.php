@@ -161,6 +161,20 @@ class NewCapacController extends Controller
                 }
             }
 
+            $dirigidoNombre = null;
+            $dirigidoCodigo = $row->dirigido_a !== null ? (string) $row->dirigido_a : null;
+            if ($dirigidoCodigo === 'OTROS' || $dirigidoCodigo === '0') {
+                $dirigidoNombre = 'Otros';
+            } elseif ($dirigidoCodigo !== null && is_numeric($dirigidoCodigo)) {
+                try {
+                    $dirigidoNombre = DB::table('sw_cursos_dirigido')
+                        ->where('codigo', (int) $dirigidoCodigo)
+                        ->value('nombre');
+                } catch (\Exception $e) {
+                    $dirigidoNombre = null;
+                }
+            }
+
             $categoria = isset($row->categoria) ? (int) $row->categoria : null;
 
             return response()->json([
@@ -184,6 +198,7 @@ class NewCapacController extends Controller
                     'CURS_ES_PERIODICO' => (bool) $row->es_periodico,
                     'CURS_FRECUENCIA' => $row->frecuencia,
                     'CURS_DIRIGIDO_A' => $row->dirigido_a !== null ? (string) $row->dirigido_a : null,
+                    'CURS_DIRIGIDO_NOMBRE' => $dirigidoNombre,
                     'CURS_SUCURSAL' => $row->sucursal,
                     'CURS_SUCURSALES' => $sucursales,
                     'CURS_HABILITADO' => (bool) $row->habilitado,

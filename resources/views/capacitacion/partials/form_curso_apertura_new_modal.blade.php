@@ -102,54 +102,6 @@
                         </p>
                     </div>
 
-                    {{-- Criterios de selección --}}
-                    <div x-show="!incluirAutomatico" x-transition class="mt-4 bg-default-50/60 border border-default-100 rounded-xl p-4">
-                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-default-100">
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-default-500">Criterios de selección</p>
-                            <label class="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-default-200 cursor-pointer">
-                                <span class="text-[10px] font-bold text-default-500 uppercase">Automático</span>
-                                <input type="checkbox" x-model="incluirAutomatico" class="form-switch scale-75">
-                            </label>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Cliente</label>
-                                <select x-model="selectedCliente" class="w-full text-sm rounded-lg border-gray-300 py-2 focus:ring-primary focus:border-primary">
-                                    <option value="">-- Todos --</option>
-                                    <template x-for="item in combos.clientes" :key="item.codigo">
-                                        <option :value="item.codigo" x-text="item.nombre"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Sede / Sucursal</label>
-                                <select x-model="selectedSucursal" class="w-full text-sm rounded-lg border-gray-300 py-2 focus:ring-primary focus:border-primary">
-                                    <option value="">-- Todas --</option>
-                                    <template x-for="item in combos.sucursales" :key="item.codigo">
-                                        <option :value="item.codigo" x-text="item.nombre"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Área / Sistema de gestión</label>
-                                <select x-model="selectedArea" class="w-full text-sm rounded-lg border-gray-300 py-2 focus:ring-primary focus:border-primary">
-                                    <option value="">-- Todas --</option>
-                                    <template x-for="item in combos.areas" :key="item.codigo">
-                                        <option :value="item.codigo" x-text="item.nombre"></option>
-                                    </template>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div x-show="!incluirAutomatico" x-transition class="mt-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">(Opcional) Pegar lista de DNIs</label>
-                        <textarea x-model="listaDNIPaste" rows="3" placeholder="Uno por línea…"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"></textarea>
-                    </div>
-                    <label x-show="incluirAutomatico" class="mt-4 flex items-center gap-2 text-xs font-medium text-default-500 cursor-pointer">
-                        <input type="checkbox" :checked="!incluirAutomatico" @change="incluirAutomatico = !$event.target.checked" class="rounded border-gray-300">
-                        Personalizar criterios de matrícula (cliente / sede / DNIs)
-                    </label>
                 </div>
 
                 {{-- Footer --}}
