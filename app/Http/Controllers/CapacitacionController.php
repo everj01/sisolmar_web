@@ -685,6 +685,35 @@ class CapacitacionController extends Controller
     public function saveCurso(Request $request): JsonResponse
     {
         try {
+            Log::info('saveCurso - archivos recibidos', [
+                'content_length'      => $request->header('Content-Length'),
+                'post_max_size'       => ini_get('post_max_size'),
+                'upload_max_filesize' => ini_get('upload_max_filesize'),
+                'max_input_time'      => ini_get('max_input_time'),
+                'max_execution_time'  => ini_get('max_execution_time'),
+                'has_portada'         => $request->hasFile('image_portada'),
+                'has_afiche'          => $request->hasFile('image_afiche'),
+                'portada_error'       => $request->hasFile('image_portada')
+                    ? $request->file('image_portada')->getError()
+                    : null,
+                'portada_size'        => $request->hasFile('image_portada')
+                    ? $request->file('image_portada')->getSize()
+                    : null,
+                'portada_mime'        => $request->hasFile('image_portada')
+                    ? $request->file('image_portada')->getMimeType()
+                    : null,
+                'afiche_error'        => $request->hasFile('image_afiche')
+                    ? $request->file('image_afiche')->getError()
+                    : null,
+                'afiche_size'         => $request->hasFile('image_afiche')
+                    ? $request->file('image_afiche')->getSize()
+                    : null,
+                'afiche_mime'         => $request->hasFile('image_afiche')
+                    ? $request->file('image_afiche')->getMimeType()
+                    : null,
+                'all_files'           => array_keys($request->allFiles()),
+            ]);
+
             $validator = Validator::make($request->all(), [
                 "nombre" => "required|string|max:100",
                 "tipo_curso" =>
@@ -726,6 +755,17 @@ class CapacitacionController extends Controller
             });
 
             if ($validator->fails()) {
+                Log::warning('saveCurso - validación fallida', [
+                    'errors'    => $validator->errors()->toArray(),
+                    'all_files' => array_keys($request->allFiles()),
+                    'file_errors' => [
+                        'portada' => $request->hasFile('image_portada')
+                            ? $request->file('image_portada')->getError() : 'no_file',
+                        'afiche'  => $request->hasFile('image_afiche')
+                            ? $request->file('image_afiche')->getError() : 'no_file',
+                    ],
+                ]);
+                
                 return response()->json(
                     [
                         "success" => false,
@@ -3252,11 +3292,7 @@ class CapacitacionController extends Controller
     {
         $dirigidos = Consulta::obtenerDirigidos();
 
-        if (auth()->user()->usuario === 'EMONTERO') {
-            return view("capacitacion.gestion_cursos_new", compact("dirigidos"));
-        }
-
-        return view("capacitacion.gestion_cursos", compact("dirigidos"));
+        return view("capacitacion.gestion_cursos_new", compact("dirigidos"));
     }
 
     public function vistaCursosSucamec(): View
