@@ -94,10 +94,10 @@
                             x-text="esDirigidoOtros ? 'Matrícula manual' : 'Matrícula automática'"></p>
                         <p class="text-sm mt-1" :class="esDirigidoOtros ? 'text-amber-700' : 'text-blue-700'">
                             <template x-if="!esDirigidoOtros">
-                                <span>Se matriculará automáticamente al <strong x-text="dirigidoLabel"></strong>.</span>
+                                <span>Se matriculará automáticamente al <strong x-text="dirigidoLabel"></strong> de <strong x-text="sucursalLabel"></strong>.</span>
                             </template>
                             <template x-if="esDirigidoOtros">
-                                <span>Deberás matricular manualmente al personal en <strong>Matrículas</strong>.</span>
+                                <span>Deberás matricular manualmente al personal en <strong>Matrículas</strong> (<span x-text="sucursalLabel"></span>).</span>
                             </template>
                         </p>
                     </div>

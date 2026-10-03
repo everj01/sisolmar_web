@@ -73,6 +73,8 @@ window.formAperturaNew = function () {
         tipoCursoId: "",
         dirigidoA: "",
         dirigidoNombre: "",
+        sucursalCodigo: "",
+        sucursalNombre: "",
         frecuencia: "",
         esPeriodico: true,
         fechaInicio: "",
@@ -90,6 +92,10 @@ window.formAperturaNew = function () {
             if (this.dirigidoNombre) return this.dirigidoNombre.toLowerCase();
             const labels = { 1: "todo el personal", 2: "personal administrativo", 3: "personal operativo" };
             return labels[String(this.dirigidoA)] || "";
+        },
+        get sucursalLabel() {
+            if (String(this.sucursalCodigo).toUpperCase() === "TODAS" || !this.sucursalCodigo) return "todas las sucursales";
+            return `la sucursal ${this.sucursalNombre || this.sucursalCodigo}`;
         },
         get requiereFechaFin() {
             return !this.esPeriodico || String(this.frecuencia).toUpperCase() === "PERSONALIZADO";
@@ -146,7 +152,10 @@ window.formAperturaNew = function () {
             document.body.style.overflow = "hidden";
             this.cargando = true;
             try {
-                const cursoRes = await axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`);
+                const [cursoRes, sucRes] = await Promise.all([
+                    axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`),
+                    axios.get(`${VITE_URL_APP}/api/obtener-sucursales`).catch(() => null),
+                ]);
                 const curso = cursoRes?.data?.data;
                 if (!cursoRes?.data?.success || !curso) throw new Error("No se pudo cargar el curso.");
                 this.codigoPk = curso.CURS_PK ? String(curso.CURS_PK) : "";
@@ -156,6 +165,12 @@ window.formAperturaNew = function () {
                 this.tipoCursoId = curso.CURS_PLAN_COD ? String(curso.CURS_PLAN_COD) : "";
                 this.dirigidoA = curso.CURS_DIRIGIDO_A != null ? String(curso.CURS_DIRIGIDO_A) : "";
                 this.dirigidoNombre = curso.CURS_DIRIGIDO_NOMBRE || "";
+                this.sucursalCodigo = curso.CURS_SUCURSAL != null ? String(curso.CURS_SUCURSAL) : "";
+                this.sucursalNombre = "";
+                if (this.sucursalCodigo && this.sucursalCodigo.toUpperCase() !== "TODAS" && sucRes?.data?.success) {
+                    const match = (sucRes.data.data || []).find((s) => String(s.Codigo) === this.sucursalCodigo);
+                    if (match) this.sucursalNombre = match.Sucursal || "";
+                }
                 this.frecuencia = curso.CURS_FRECUENCIA || "";
                 this.esPeriodico = curso.CURS_ES_PERIODICO !== false;
                 this.fechaInicio = this.fechaMinima;
