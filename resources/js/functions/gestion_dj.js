@@ -1902,6 +1902,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // País de nacimiento: reevalúa la regla de Dep/Prov/Dist
+    // (DNI + país ≠ PERU → se ocultan). limpiarCampos = true porque es
+    // un cambio manual del usuario.
+    document.getElementById('aj_pais')?.addEventListener('change', function () {
+        aplicarUbigeoNacimiento(true);
+    });
+
     }); // fin DOMContentLoaded
 
 // ============================================================
@@ -2096,13 +2103,43 @@ async function setPaisGest(codigo) {
     sel.value = String(codigo ?? '').trim();
 }
 
-// ── Regla: Carnet de Extranjería (0035) → oculta Dep/Prov/Dist de Nacimiento ──
-function aplicarExtranjeriaNacimiento(codTipoDoc) {
-    const esExtranjeria = String(codTipoDoc ?? '').trim() === '0035';
+// ── Regla de Dep/Prov/Dist de la card "País de Nacimiento" ──
+// Se ocultan si:
+//   • Tipo de documento = Carnet de Extranjería (0035), o
+//   • Tipo de documento = DNI (0034) y el País de Nacimiento NO es PERU.
+const DJ_COD_DNI       = '0034';          // si_solm.dbo.TIPO_DOCUMENTO → DNI
+const DJ_COD_CE        = '0035';          // si_solm.dbo.TIPO_DOCUMENTO → CARNET EXTRANJERIA
+const DJ_PAIS_PERU     = '2007000156';    // si_solm.dbo.ADMI_PAIS → PERU
+let   codTipoDocDjActual = '';
+
+// limpiarCampos = true solo cuando el usuario cambia el país a mano
+// (no al cargar datos existentes, para no perder lo guardado).
+function aplicarUbigeoNacimiento(limpiarCampos = false) {
+    const pais = String(document.getElementById('aj_pais')?.value ?? '').trim();
+
+    const esExtranjeria   = codTipoDocDjActual === DJ_COD_CE;
+    const esDniExtranjero = codTipoDocDjActual === DJ_COD_DNI && pais !== '' && pais !== DJ_PAIS_PERU;
+    const ocultar         = esExtranjeria || esDniExtranjero;
+
     ['aj_wrap_departamento_nac', 'aj_wrap_provincia_nac', 'aj_wrap_distrito_nac'].forEach(id => {
         const w = document.getElementById(id);
-        if (w) w.style.display = esExtranjeria ? 'none' : '';
+        if (w) w.style.display = ocultar ? 'none' : '';
     });
+
+    if (ocultar && limpiarCampos) {
+        ['departamento_nac', 'provincia_nac', 'distrito_nac'].forEach(id => {
+            const s = document.getElementById(id);
+            if (s) s.value = '';
+        });
+    }
+}
+
+// Se llama al cargar los datos de la DJ o al resetear el modal.
+// Guarda el tipo de documento (el modal de edición no tiene ese select,
+// así que viene en data.CODI_TIPO_DOCU) y aplica la regla.
+function aplicarExtranjeriaNacimiento(codTipoDoc) {
+    codTipoDocDjActual = String(codTipoDoc ?? '').trim();
+    aplicarUbigeoNacimiento(false);
 }
 
 async function cargarCatalogos(source = 'migracion') {
@@ -2266,7 +2303,7 @@ async function llenarFormulario(data) {
 
     // País de nacimiento (columna NACIONALIDAD de PERSONAL → datalist de países)
     await cargarPaisesGest();
-    setPaisGest(data.NACIONALIDAD ? String(data.NACIONALIDAD).trim() : '');
+    await setPaisGest(data.NACIONALIDAD ? String(data.NACIONALIDAD).trim() : '');
     aplicarExtranjeriaNacimiento(data.CODI_TIPO_DOCU ? String(data.CODI_TIPO_DOCU).trim() : '');
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');

@@ -268,6 +268,11 @@ import Swal from 'sweetalert2';
     const NDJ_READONLY_IDS = ['ndj_tipo_documento', 'ndj_nro_documento'];
     const NDJ_ALERT_IDS    = [];
 
+    // Códigos fijos de la regla de Dep/Prov/Dist de la card "País de Nacimiento"
+    const NDJ_COD_DNI   = '0034';          // si_solm.dbo.TIPO_DOCUMENTO → DNI
+    const NDJ_COD_CE    = '0035';          // si_solm.dbo.TIPO_DOCUMENTO → CARNET EXTRANJERIA
+    const NDJ_PAIS_PERU = '2007000156';    // si_solm.dbo.ADMI_PAIS → PERU
+
     // Regla cambio Tipo de Personal (Operativo ↔ Administrativo)
     const NDJ_TIPO_GRUPO_OPERATIVO      = ['01', '03'];
     const NDJ_TIPO_GRUPO_ADMINISTRATIVO = ['02', '05'];
@@ -924,20 +929,28 @@ import Swal from 'sweetalert2';
         sel.value = codigo || '';
     }
 
-    // Regla: si TIPO DE DOCUMENTO es CARNET DE EXTRANJERÍA, se ocultan
-    // Departamento / Provincia / Distrito de la sección País de Nacimiento.
+    // ── Regla de Dep/Prov/Dist de la card "País de Nacimiento" ────────────
+    // Se ocultan si:
+    //   • Tipo de documento = Carnet de Extranjería (0035), o
+    //   • Tipo de documento = DNI (0034) y el País de Nacimiento NO es PERU.
+    // Como quedan ocultos, la validación de camposReq los salta sola
+    // (offsetParent === null) → dejan de ser obligatorios.
+    //
     // limpiarCampos = true solo cuando el usuario cambia el select manualmente
     // (no limpiar al cargar datos existentes para no perder info guardada).
     function ndj_toggleUbigeoNacimiento(limpiarCampos = false) {
-        const sel = $('ndj_tipo_documento');
-        if (!sel) return;
-        const txt = (sel.options[sel.selectedIndex]?.text || '').toUpperCase();
-        const esCarnetExtranjeria = txt.includes('EXTRANJERIA') || txt.includes('EXTRANJERÍA');
+        const tipoDoc = String($('ndj_tipo_documento')?.value ?? '').trim();
+        const pais    = String($('ndj_pais')?.value ?? '').trim();
+
+        const esExtranjeria   = tipoDoc === NDJ_COD_CE;
+        const esDniExtranjero = tipoDoc === NDJ_COD_DNI && pais !== '' && pais !== NDJ_PAIS_PERU;
+        const ocultar         = esExtranjeria || esDniExtranjero;
+
         ['ndj_wrap_departamento_nac', 'ndj_wrap_provincia_nac', 'ndj_wrap_distrito_nac'].forEach(id => {
             const wrap = $(id);
-            if (wrap) wrap.style.display = esCarnetExtranjeria ? 'none' : '';
+            if (wrap) wrap.style.display = ocultar ? 'none' : '';
         });
-        if (esCarnetExtranjeria && limpiarCampos) {
+        if (ocultar && limpiarCampos) {
             ['ndj_departamento_nac', 'ndj_provincia_nac', 'ndj_distrito_nac'].forEach(id => {
                 const s = $(id);
                 if (s) s.value = '';
@@ -947,7 +960,7 @@ import Swal from 'sweetalert2';
         // Se guarda como NULL si se deja vacío.
         const apMat = $('ndj_apellido_materno');
         if (apMat) {
-            apMat.placeholder = esCarnetExtranjeria ? 'Apellido materno (opcional)' : 'Apellido materno';
+            apMat.placeholder = esExtranjeria ? 'Apellido materno (opcional)' : 'Apellido materno';
         }
     }
 
@@ -2287,8 +2300,12 @@ import Swal from 'sweetalert2';
         $('ndj_departamento_nac')?.addEventListener('change',    function () { ndj_cargarProvincias(this.value,'ndj_provincia_nac','ndj_distrito_nac'); });
         $('ndj_provincia_nac')?.addEventListener('change',       function () { ndj_cargarDistritos(this.value,'ndj_distrito_nac'); });
 
-        // País: sincronizar código al escribir/seleccionar
-        // (el select de país ya guarda el código directamente)
+        // País de nacimiento: reevalúa la regla de Dep/Prov/Dist
+        // (DNI + país ≠ PERU → se ocultan y dejan de ser obligatorios).
+        // limpiarCampos = true porque es un cambio manual del usuario.
+        $('ndj_pais')?.addEventListener('change', function () {
+            ndj_toggleUbigeoNacimiento(true);
+        });
 
         // Familiar empresa / SUCAMEC / Clase brevete
         $('ndj_familiar_empresa')?.addEventListener('change', function () { $('ndj_div_familiar_interno')?.classList.toggle('hidden', this.value !== 'SI'); });
