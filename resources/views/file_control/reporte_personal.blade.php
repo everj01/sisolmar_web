@@ -75,22 +75,10 @@
                 <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
                     <label class="text-sm font-medium text-gray-700">Tipo:</label>
                     <select id="filtroTipo" class="form-select text-sm w-48 px-3 py-1.5 border border-gray-300 rounded-lg bg-white">
-                        @if($tipoPerLimitar == 0)
-                            <option value="">Todos</option>
-                            <option value="OPER 4°">Operativo 4°</option>
-                            <option value="OPER 5°">Operativo 5°</option>
-                            <option value="ADM 4°">Administrativo 4°</option>
-                            <option value="ADM 5°">Administrativo 5°</option>
-                            <option value="ESP">Especiales</option>
-                        @elseif($tipoPerLimitar == 1)
-                            <option value="">Todos</option>
-                            <option value="ADM 4°">Administrativo 4°</option>
-                            <option value="ADM 5°">Administrativo 5°</option>
-                        @elseif($tipoPerLimitar == 2)
-                            <option value="">Todos</option>
-                            <option value="OPER 4°">Operativo 4°</option>
-                            <option value="OPER 5°">Operativo 5°</option>
-                        @endif
+                        <option value="">Todos</option>
+                        <option value="OPER 4°">Operativo 4°</option>
+                        <option value="OPER 5°" selected>Operativo 5°</option>
+                        <option value="ESP">Especiales</option>
                     </select>
                 </div>
 

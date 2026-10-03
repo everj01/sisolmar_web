@@ -627,34 +627,34 @@ class FileController extends Controller
         $codSucursal = $request->get('codSucursal', '0');
         $usuario     = session('usuario') ?? '0';
 
-        $isTodos        = !$vigencia;
-        $needsPhpFilter = $search !== '' || $tipo_per;
+        $isTodos = !$vigencia;
 
-        // Helper: llama el SP con todos sus parámetros
+        // Etiqueta del filtro (del blade) -> código crudo de PERS_TIPOTRAB.
+        // Se compara sin el carácter 'grados' para no depender de la codificación.
+        $tipoCod = match (true) {
+            str_starts_with((string) $tipo_per, 'OPER 4') => '01',
+            str_starts_with((string) $tipo_per, 'OPER 5') => '03',
+            (string) $tipo_per === 'ESP'                  => '06',
+            default                                       => '',
+        };
+
+        // Helper: llama al SP V4 con todos sus parámetros
         $exec = fn($vig, $pag, $fils) => DB::select(
-            'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026_V2]
-                @usuario=?, @codEmpresa=?, @vigencia=?, @codSucursal=?, @pagina=?, @filasPorPag=?',
-            [$usuario, '01', $vig, $codSucursal, $pag, $fils]
+            'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026_V4]
+                @usuario=?, @codEmpresa=?, @vigencia=?, @codSucursal=?, @tipo_cod=?, @pagina=?, @filasPorPag=?',
+            [$usuario, '01', $vig, $codSucursal, $tipoCod, $pag, $fils]
         );
 
-        // ── Cards: solo responden a sucursal + tipo_per (sin vigencia ni búsqueda) ──
-        if (!$tipo_per) {
-            // Sin tipo_per: SP da el total con una sola fila (ligero)
-            $cVI = $exec('SI', 1, 1);
-            $cNO = $exec('NO', 1, 1);
-            $totalVigentes = !empty($cVI) ? (int) $cVI[0]->totalRegistros : 0;
-            $totalCesados  = !empty($cNO) ? (int) $cNO[0]->totalRegistros : 0;
-            $allVI = null; $allNO = null;
-        } else {
-            // Con tipo_per: traer todo y contar en PHP (los datos se reusan abajo)
-            $allVI = $exec('SI', 1, 99999);
-            $allNO = $exec('NO', 1, 99999);
-            $totalVigentes = count(array_filter($allVI, fn($d) => trim($d->tipoPer ?? '') === trim($tipo_per)));
-            $totalCesados  = count(array_filter($allNO, fn($d) => trim($d->tipoPer ?? '') === trim($tipo_per)));
-        }
+        // ── Cards: UNA sola llamada ligera (@filasPorPag = 0) que devuelve
+        //    totalVigentes y totalCesados juntos, ya filtrados por tipo/sucursal.
+        //    Antes costaba 2 llamadas completas de datos (una de ellas descartada). ──
+        $cards         = $exec($vigencia ?: 'SI', 1, 0);
+        $totalVigentes = !empty($cards) ? (int) ($cards[0]->totalVigentes ?? 0) : 0;
+        $totalCesados  = !empty($cards) ? (int) ($cards[0]->totalCesados  ?? 0) : 0;
 
-        // ── Caso ideal: sin filtros PHP ni TODOS → SP pagina todo ──
-        if (!$isTodos && !$tipo_per && $search === '') {
+        // ── Caso ideal: sin búsqueda y con vigencia elegida → el SP pagina solo.
+        //    Ya no se excluye cuando hay tipo_per: el filtro de tipo va en SQL. ──
+        if (!$isTodos && $search === '') {
             $rows     = $exec($vigencia, $page, $size);
             $total    = !empty($rows) ? (int) $rows[0]->totalRegistros : 0;
             $lastPage = max(1, (int) ceil($total / $size));
@@ -667,24 +667,11 @@ class FileController extends Controller
             ]);
         }
 
-        // ── Necesita filtro PHP: usar datos ya cargados o traerlos ──
-        if ($allVI === null) {
-            $allVI = $exec('SI', 1, 99999);
-            $allNO = $exec('NO', 1, 99999);
-        }
-
-        // Combinar según vigencia seleccionada
-        $data = match(true) {
-            $isTodos           => array_merge($allVI, $allNO),
-            $vigencia === 'SI' => $allVI,
-            default            => $allNO,
-        };
-
-        // Filtro tipo_per (PHP)
-        if ($tipo_per) {
-            $data = array_values(array_filter($data, fn($d) =>
-                trim($d->tipoPer ?? '') === trim($tipo_per)
-            ));
+        // ── Solo cuando hay búsqueda (o TODOS): traer todo y filtrar en PHP ──
+        $vigencias = $isTodos ? ['SI', 'NO'] : [$vigencia];
+        $data      = [];
+        foreach ($vigencias as $v) {
+            $data = array_merge($data, $exec($v, 1, 99999));
         }
 
         // Filtro búsqueda (PHP — no afecta los cards)
