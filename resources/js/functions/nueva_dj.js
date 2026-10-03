@@ -763,8 +763,12 @@ import Swal from 'sweetalert2';
     function ndj_bloquearCampos(bloquear) {
         document.querySelectorAll('#modalNuevaDJ input:not(#ndj_filtroSucursal):not(#ndj_tipo_personal):not(#ndj_usuario):not(#ndj_cod_postulante), #modalNuevaDJ select:not(#ndj_filtroSucursal):not(#ndj_tipo_personal), #modalNuevaDJ textarea')
             .forEach(el => el.disabled = bloquear);
-        btnGuardar.disabled = bloquear;
-        if (bloquear) btnGuardar.style.display = 'none';
+        // btnGuardar solo existe donde se incluye el modal (Gestión DJ).
+        // En Actualizar DJ este archivo se carga sin el modal → botón null.
+        if (btnGuardar) {
+            btnGuardar.disabled = bloquear;
+            if (bloquear) btnGuardar.style.display = 'none';
+        }
         const _lugar = $('ndj_lugar_smo');
         const _presto = $('ndj_presto_smo');
         if (!bloquear && _lugar && _presto) {

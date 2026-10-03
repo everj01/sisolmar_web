@@ -1031,7 +1031,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Carga inicial (como 'Todos' es el por defecto, traerá activos y cesados juntos)
-    getPersonal();
+    // Se espera a 'tableBuilt' porque Tabulator 6 crea la tabla con setTimeout interno:
+    // llamar getPersonal() (y su tblPersonas.alert) antes provoca el warning
+    // "Table Not Initialized - Calling the alert function before the table is initialized".
+    tblPersonas.on('tableBuilt', () => getPersonal());
 
     document.getElementById('btnGenerarSeleccionadosPEN')?.addEventListener('click', async function () {
         const seleccionadas = tblPersonas.getSelectedRows();
