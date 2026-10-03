@@ -56,14 +56,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return iso ? iso.slice(0, 4) : "";
     }
 
-    // Solo visual: sin handlers reales (los botones no ejecutan acciones todavía)
+    // Solo visual: aperturar / aplazar / deshabilitar (sin editar: la edición es por clic en fila)
     function botonesAccionVisual() {
         return `
         <div class="flex items-center justify-center gap-1.5">
-            <button type="button" title="Editar curso (próximamente)"
-                class="btn btn-sm rounded bg-info/10 text-info hover:bg-info hover:text-white transition-colors">
-                <i class="bx bxs-edit text-base pointer-events-none"></i>
-            </button>
             <button type="button" title="Aperturar curso (próximamente)"
                 class="btn btn-sm rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
                 <i class="bx bx-calendar-star text-base pointer-events-none"></i>
@@ -99,8 +95,19 @@ document.addEventListener("DOMContentLoaded", () => {
         langs: { "es-es": esLocale },
         rowFormatter(row) {
             const d = row.getData();
+            const el = row.getElement();
+            el.style.cursor = "pointer";
+            el.setAttribute("title", "Clic para editar el curso");
             if (d.CURS_HABILITADO === false || d.CURS_HABILITADO === 0) {
-                row.getElement().classList.add("tabulator-row-disabled");
+                el.classList.add("tabulator-row-disabled");
+            }
+        },
+        rowClick(e, row) {
+            // Los botones de acción no abren edición (hoy son solo visuales)
+            if (e?.target?.closest?.("button")) return;
+            const d = row.getData();
+            if (d?.CURS_COD && typeof window.abrirModalEdicionNew === "function") {
+                window.abrirModalEdicionNew(d.CURS_COD);
             }
         },
         columns: [

@@ -605,6 +605,240 @@ window.formCursoNew = function () {
     };
 };
 
+// ── Edición (modal simple, solo cursos inactivos) ──
+// Regla: VIGENTE o PENDIENTE bloquean. Solo editable si no hay programación
+// o todas están CERRADAS. Campos editables: nombre, descripción, tipo,
+// responsable, periódico, frecuencia, sistema (PCE) y área responsable.
+window.abrirModalEdicionNew = (cod) => {
+    const el = document.getElementById("formCursoEditNewRoot");
+    if (el && window.Alpine) {
+        try {
+            const data = window.Alpine.$data(el);
+            if (data && typeof data.abrir === "function") {
+                data.abrir(cod);
+                return;
+            }
+        } catch (e) {
+            console.warn("Edición: no se pudo usar Alpine.$data, uso evento", e);
+        }
+    }
+    window.dispatchEvent(new CustomEvent("open-modal-edicion-new", { detail: { codigo: cod } }));
+};
+
+window.cerrarModalEdicionNew = () => {
+    window.dispatchEvent(new CustomEvent("close-modal-edicion-new"));
+};
+
+window.formCursoEditNew = function () {
+    return {
+        showModal: false,
+        cargando: false,
+        guardando: false,
+        error: "",
+        codigo: "",
+        planNombre: "—",
+        tipoCursoCodigo: "",
+        estadoProg: "",
+        // editables
+        nombre: "",
+        descripcion: "",
+        categoria: "",
+        codResponsable: "",
+        personalJefaturas: [],
+        esPeriodico: false,
+        frecuencia: "",
+        sistemas: [],
+        areaConocimiento: "",
+        areasResponsables: [],
+        areaResponsable: "",
+        codMoodleArea: "",
+        lastSistemaId: null,
+        _original: {},
+
+        get esPCU() {
+            return String(this.tipoCursoCodigo) === "6";
+        },
+        get areaBloqueada() {
+            return !this.esPCU && !this.areaConocimiento;
+        },
+        get formularioCompleto() {
+            if (!this.nombre.trim() || !this.categoria || !this.codResponsable || !this.areaResponsable) return false;
+            if (!this.esPCU && !this.areaConocimiento) return false;
+            if (this.esPeriodico && !this.frecuencia) return false;
+            return true;
+        },
+        get hayCambios() {
+            const o = this._original || {};
+            return ["nombre", "descripcion", "categoria", "codResponsable", "esPeriodico", "frecuencia", "areaConocimiento", "areaResponsable"]
+                .some((k) => String(this[k] ?? "") !== String(o[k] ?? ""));
+        },
+        get tituloBoton() {
+            if (!this.formularioCompleto) return "Completa los campos obligatorios (*)";
+            if (!this.hayCambios) return "Sin cambios por guardar";
+            return "";
+        },
+
+        async abrir(cod) {
+            this.codigo = cod;
+            this.error = "";
+            this.showModal = true;
+            document.body.style.overflow = "hidden";
+            this.cargando = true;
+            try {
+                const [cursoRes, progRes, sistRes, jefRes] = await Promise.all([
+                    axios.get(`${VITE_URL_APP}/api/get-curso-id/${cod}`),
+                    axios.get(`${VITE_URL_APP}/api/get-curso-programacion/${cod}`).catch(() => null),
+                    axios.get(`${VITE_URL_APP}/api/obtener-capacitacion-sistemas`).catch(() => null),
+                    axios.get(`${VITE_URL_APP}/api/listar-jefaturas`).catch(() => null),
+                ]);
+                const curso = cursoRes?.data?.curso;
+                if (!cursoRes?.data?.success || !curso) {
+                    throw new Error("No se pudo cargar el curso.");
+                }
+                // ── Regla de negocio: bloquear VIGENTE / PENDIENTE ──
+                const progs = progRes?.data?.programaciones || [];
+                const estados = progs.map((p) => String(p.estado_periodo || "").toUpperCase());
+                const hasVigente = estados.includes("VIGENTE") || curso.tiene_vigente === true;
+                const hasPendiente = estados.includes("PENDIENTE");
+                if (hasVigente || hasPendiente) {
+                    this.showModal = false;
+                    document.body.style.overflow = "";
+                    Swal.fire(
+                        "No se puede editar",
+                        hasVigente
+                            ? "El curso tiene una programación VIGENTE (aperturado). Solo se editan cursos inactivos."
+                            : "El curso tiene una programación PENDIENTE. Solo se editan cursos inactivos (solo CERRADOS o sin programación).",
+                        "warning"
+                    );
+                    return;
+                }
+                this.estadoProg = progs.length === 0 ? "Sin programación" : "Solo programaciones cerradas";
+
+                // ── Combos ──
+                if (sistRes?.data) {
+                    const arr = Array.isArray(sistRes.data) ? sistRes.data : [];
+                    this.sistemas = arr.map((a) => ({ codigo: a.codigo, descripcion: a.abreviatura || a.descripcion }));
+                }
+                if (jefRes?.data) this.personalJefaturas = jefRes.data.personal || [];
+
+                // ── Datos del curso ──
+                this.planNombre = curso.tipo_curso?.descripcion || "—";
+                this.tipoCursoCodigo = curso.tipo_curso?.codigo ? String(curso.tipo_curso.codigo) : String(curso.tipo_curso || "");
+                this.nombre = curso.nombre || "";
+                this.descripcion = curso.descripcion || "";
+                this.categoria = curso.categoria != null ? String(curso.categoria) : "";
+                this.codResponsable = curso.cod_responsable ? String(curso.cod_responsable) : "";
+                this.esPeriodico = Number(curso.es_periodico) === 1;
+                this.frecuencia = curso.frecuencia || "";
+                this.areaConocimiento = curso.area_conocimiento ? String(curso.area_conocimiento) : "";
+                this.codMoodleArea = curso.cod_moodle_area || "";
+
+                // Áreas responsables según plan
+                if (this.esPCU) {
+                    try {
+                        const r = await axios.get(`${VITE_URL_APP}/api/obtener-areas`);
+                        if (r.data?.success) this.areasResponsables = r.data.areas || [];
+                    } catch {}
+                    this.lastSistemaId = null;
+                } else if (this.areaConocimiento) {
+                    await this.cargarAreasResponsables(this.areaConocimiento, true);
+                } else {
+                    this.areasResponsables = [];
+                }
+                this.areaResponsable = curso.area != null ? String(curso.area) : "";
+
+                this._original = {
+                    nombre: this.nombre,
+                    descripcion: this.descripcion,
+                    categoria: this.categoria,
+                    codResponsable: this.codResponsable,
+                    esPeriodico: this.esPeriodico,
+                    frecuencia: this.frecuencia,
+                    areaConocimiento: this.areaConocimiento,
+                    areaResponsable: this.areaResponsable,
+                };
+            } catch (e) {
+                console.error("Error abriendo edición:", e);
+                this.error = "No se pudo cargar la información del curso.";
+            } finally {
+                this.cargando = false;
+            }
+        },
+        cerrar() {
+            this.showModal = false;
+            document.body.style.overflow = "";
+            window.dispatchEvent(new CustomEvent("close-modal-edicion-new"));
+        },
+        async cargarAreasResponsables(sistemaId, forzar = false) {
+            if (!sistemaId) {
+                this.areasResponsables = [];
+                this.areaResponsable = "";
+                this.lastSistemaId = null;
+                return;
+            }
+            if (!forzar && String(sistemaId) === String(this.lastSistemaId)) return;
+            this.areaResponsable = "";
+            this.areasResponsables = [];
+            try {
+                this.lastSistemaId = sistemaId;
+                const res = await axios.get(`${VITE_URL_APP}/api/obtener-areas-por-sistema/${sistemaId}`);
+                if (res.data?.success) this.areasResponsables = res.data.areas || [];
+            } catch (e) {
+                console.error("Error cargando áreas responsables:", e);
+                this.lastSistemaId = null;
+            }
+        },
+        async guardar(e) {
+            e?.preventDefault?.();
+            if (!this.formularioCompleto || !this.hayCambios || this.guardando) return;
+            const o = this._original || {};
+            const changed = (k) => String(this[k] ?? "") !== String(o[k] ?? "");
+            const fd = new FormData();
+            if (changed("nombre")) fd.append("nombre", this.nombre);
+            if (changed("descripcion")) fd.append("descripcion", this.descripcion);
+            if (changed("categoria")) fd.append("categoria", this.categoria);
+            if (changed("codResponsable")) fd.append("cod_responsable", this.codResponsable);
+            if (changed("areaConocimiento") && !this.esPCU) fd.append("area_conocimiento", this.areaConocimiento);
+            if (changed("areaResponsable")) fd.append("area_responsable", this.areaResponsable);
+            if (this.codMoodleArea) fd.append("cod_moodle_area", this.codMoodleArea);
+            fd.append("es_periodico", this.esPeriodico ? 1 : 0);
+            if (changed("frecuencia")) fd.append("frecuencia", this.frecuencia);
+            this.guardando = true;
+            try {
+                const res = await axios.post(`${VITE_URL_APP}/api/actualizar-curso/${this.codigo}`, fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                if (res.data?.success) {
+                    Swal.fire("Éxito", res.data.message || "Curso actualizado correctamente", "success");
+                    this.cerrar();
+                    if (window.tablaCursosNew) {
+                        try {
+                            await window.tablaCursosNew.setData(`${VITE_URL_APP}/api/obtener-cursos-new`);
+                        } catch {}
+                    }
+                } else {
+                    Swal.fire("Error", res.data?.message || "No se pudo actualizar el curso", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire("Error", "Ocurrió un problema al actualizar el curso", "error");
+            } finally {
+                this.guardando = false;
+            }
+        },
+        init() {
+            window.addEventListener("open-modal-edicion-new", (e) => this.abrir(e.detail?.codigo));
+            window.addEventListener("close-modal-edicion-new", () => {
+                this.showModal = false;
+                document.body.style.overflow = "";
+            });
+            this.$watch("areaConocimiento", (val) => {
+                if (!this.esPCU && this.showModal && !this.cargando) this.cargarAreasResponsables(val);
+            });
+        },
+    };
+};
+
 // Modal simple de revisión Word para la vista nueva (solo lectura/confirmación)
 window.modalExamenWordNew = function () {
     return {

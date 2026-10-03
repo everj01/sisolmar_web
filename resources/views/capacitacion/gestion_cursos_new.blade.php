@@ -173,6 +173,7 @@
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div>
                     <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
+                    <p class="text-xs text-default-400 mt-0.5">Clic en una fila para editar el curso (solo inactivos).</p>
                 </div>
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
                     <div class="relative flex-1 sm:flex-none">
@@ -249,6 +250,9 @@
 
     {{-- Modal wizard: registrar curso --}}
     @include('capacitacion.partials.form_curso_new_wizard')
+
+    {{-- Modal simple: editar curso inactivo --}}
+    @include('capacitacion.partials.form_curso_edit_new_modal')
 </div>
 @endsection
 
