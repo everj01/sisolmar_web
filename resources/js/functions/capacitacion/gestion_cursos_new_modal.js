@@ -637,6 +637,7 @@ window.formCursoEditNew = function () {
         guardando: false,
         error: "",
         codigo: "",
+        codigoPk: "",
         planNombre: "—",
         tipoCursoCodigo: "",
         estadoProg: "",
@@ -691,21 +692,19 @@ window.formCursoEditNew = function () {
             document.body.style.overflow = "hidden";
             this.cargando = true;
             try {
-                const [cursoRes, progRes, sistRes, jefRes] = await Promise.all([
-                    axios.get(`${VITE_URL_APP}/api/get-curso-id/${cod}`),
-                    axios.get(`${VITE_URL_APP}/api/get-curso-programacion/${cod}`).catch(() => null),
+                const [cursoRes, sistRes, jefRes] = await Promise.all([
+                    axios.get(`${VITE_URL_APP}/api/obtener-curso-new/${cod}`),
                     axios.get(`${VITE_URL_APP}/api/obtener-capacitacion-sistemas`).catch(() => null),
                     axios.get(`${VITE_URL_APP}/api/listar-jefaturas`).catch(() => null),
                 ]);
-                const curso = cursoRes?.data?.curso;
+                const curso = cursoRes?.data?.data;
                 if (!cursoRes?.data?.success || !curso) {
                     throw new Error("No se pudo cargar el curso.");
                 }
                 // ── Regla de negocio: bloquear VIGENTE / PENDIENTE ──
-                const progs = progRes?.data?.programaciones || [];
-                const estados = progs.map((p) => String(p.estado_periodo || "").toUpperCase());
-                const hasVigente = estados.includes("VIGENTE") || curso.tiene_vigente === true;
-                const hasPendiente = estados.includes("PENDIENTE");
+                const progs = curso.CURS_PROGRAMACIONES || [];
+                const hasVigente = curso.CURS_TIENE_VIGENTE === true;
+                const hasPendiente = curso.CURS_TIENE_PENDIENTE === true;
                 if (hasVigente || hasPendiente) {
                     this.showModal = false;
                     document.body.style.overflow = "";
@@ -727,17 +726,18 @@ window.formCursoEditNew = function () {
                 }
                 if (jefRes?.data) this.personalJefaturas = jefRes.data.personal || [];
 
-                // ── Datos del curso ──
-                this.planNombre = curso.tipo_curso?.descripcion || "—";
-                this.tipoCursoCodigo = curso.tipo_curso?.codigo ? String(curso.tipo_curso.codigo) : String(curso.tipo_curso || "");
-                this.nombre = curso.nombre || "";
-                this.descripcion = curso.descripcion || "";
-                this.categoria = curso.categoria != null ? String(curso.categoria) : "";
-                this.codResponsable = curso.cod_responsable ? String(curso.cod_responsable) : "";
-                this.esPeriodico = Number(curso.es_periodico) === 1;
-                this.frecuencia = curso.frecuencia || "";
-                this.areaConocimiento = curso.area_conocimiento ? String(curso.area_conocimiento) : "";
-                this.codMoodleArea = curso.cod_moodle_area || "";
+                // ── Datos del curso (claves CURS_ de la API nueva) ──
+                this.codigoPk = curso.CURS_PK ? String(curso.CURS_PK) : "";
+                this.planNombre = curso.CURS_PLAN_CAPAC_NOMBRE || "—";
+                this.tipoCursoCodigo = curso.CURS_PLAN_COD ? String(curso.CURS_PLAN_COD) : "";
+                this.nombre = curso.CURS_NOMBRE || "";
+                this.descripcion = curso.CURS_DESCRIPCION || "";
+                this.categoria = curso.CURS_CATEGORIA != null ? String(curso.CURS_CATEGORIA) : "";
+                this.codResponsable = curso.CURS_COD_RESPONSABLE ? String(curso.CURS_COD_RESPONSABLE) : "";
+                this.esPeriodico = curso.CURS_ES_PERIODICO === true;
+                this.frecuencia = curso.CURS_FRECUENCIA || "";
+                this.areaConocimiento = curso.CURS_SIST_GESTION_COD ? String(curso.CURS_SIST_GESTION_COD) : "";
+                this.codMoodleArea = curso.CURS_COD_MOODLE_AREA || "";
 
                 // Áreas responsables según plan
                 if (this.esPCU) {
@@ -751,7 +751,7 @@ window.formCursoEditNew = function () {
                 } else {
                     this.areasResponsables = [];
                 }
-                this.areaResponsable = curso.area != null ? String(curso.area) : "";
+                this.areaResponsable = curso.CURS_AREA_RESPONSABLE != null ? String(curso.CURS_AREA_RESPONSABLE) : "";
 
                 this._original = {
                     nombre: this.nombre,
@@ -811,7 +811,7 @@ window.formCursoEditNew = function () {
             if (changed("frecuencia")) fd.append("frecuencia", this.frecuencia);
             this.guardando = true;
             try {
-                const res = await axios.post(`${VITE_URL_APP}/api/actualizar-curso/${this.codigo}`, fd, {
+                const res = await axios.post(`${VITE_URL_APP}/api/actualizar-curso/${this.codigoPk || this.codigo}`, fd, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
                 if (res.data?.success) {

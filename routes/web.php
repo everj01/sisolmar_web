@@ -213,6 +213,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-plan-pca/{codCliente}', [CapacitacionController::class, 'obtenerPlanPCA']);
         Route::get('/obtener-cursos-por-plan/{tipo_curso}', [CapacitacionController::class, 'obtenerCursosPorPlan']);
         Route::get('/obtener-cursos-new', [NewCapacController::class, 'obtenerCursos']);
+        Route::get('/obtener-curso-new/{codigoCurso}', [NewCapacController::class, 'obtenerCurso']);
         Route::get('/obtener-tipos-curso', [CapacitacionController::class, 'obtenerTiposDeCurso']);
         Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
         Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
