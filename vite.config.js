@@ -93,6 +93,7 @@ export default defineConfig({
                 /* CAPACITACION */
                 "resources/js/functions/capacitacion/gestion_cursos.js",
                 "resources/js/functions/capacitacion/gestion_cursos_new.js",
+                "resources/js/functions/capacitacion/gestion_cursos_new_modal.js",
                 "resources/js/functions/capacitacion/gestion_cursos_file.js",
                 "resources/js/functions/capacitacion/gestion_matricula.js",
                 "resources/js/functions/capacitacion/gestion_programacion.js",

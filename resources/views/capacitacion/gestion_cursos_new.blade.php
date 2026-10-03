@@ -180,6 +180,11 @@
                         <input id="buscarCursoNew" placeholder="Buscar por nombre..."
                             class="w-full sm:w-64 h-10 pl-8 pr-3 text-sm border border-default-200 rounded-lg !bg-white !text-default-700 placeholder:text-default-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
                     </div>
+                    <button type="button" onclick="window.abrirModalRegistroNew()"
+                        class="h-10 px-4 inline-flex items-center justify-center gap-1.5 bg-primary text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-primary-700 transition whitespace-nowrap">
+                        <i class="ti ti-plus text-sm"></i>
+                        Crear un curso
+                    </button>
                     <button id="btnLimpiarFiltrosCursosNew" type="button"
                         class="h-10 px-4 inline-flex items-center justify-center gap-1.5 bg-default-100 text-default-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-default-200 transition whitespace-nowrap">
                         <i class="ti ti-filter-off text-sm"></i>
@@ -234,9 +239,19 @@
         </div>
         <div id="tblCursosNew" class="w-full"></div>
     </div>
+
+    {{-- Catálogo "Dirigido a" para el wizard (el resto de combos llega por API al abrir el modal) --}}
+    @isset($dirigidos)
+    <script>
+        window.dirigidosNew = {{ Js::from($dirigidos->map(fn($d) => ['codigo' => $d->codigo, 'texto' => $d->texto])->values()->toArray()) }};
+    </script>
+    @endisset
+
+    {{-- Modal wizard: registrar curso --}}
+    @include('capacitacion.partials.form_curso_new_wizard')
 </div>
 @endsection
 
 @section('script')
-@vite(['resources/js/functions/capacitacion/gestion_cursos_new.js'])
+@vite(['resources/js/functions/capacitacion/gestion_cursos_new.js', 'resources/js/functions/capacitacion/gestion_cursos_new_modal.js'])
 @endsection
