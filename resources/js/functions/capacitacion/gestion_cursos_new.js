@@ -10,11 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
         filtroPlan: document.getElementById("filtroPlanCursoNew"),
         filtroTipo: document.getElementById("filtroTipoCursoNew"),
         filtroEstado: document.getElementById("filtroEstadoCursoNew"),
+        filtroAnio: document.getElementById("filtroAnioCursoNew"),
+        filtroDesde: document.getElementById("filtroDesdeCursoNew"),
+        filtroHasta: document.getElementById("filtroHastaCursoNew"),
         btnLimpiar: document.getElementById("btnLimpiarFiltrosCursosNew"),
         statTotal: document.getElementById("statTotalCursos"),
     };
 
-    const state = { term: "", plan: "", tipo: "", estado: "" };
+    const state = { term: "", plan: "", tipo: "", estado: "", anio: "", desde: "", hasta: "" };
 
     const esLocale = {
         pagination: {
@@ -37,6 +40,21 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    // Fecha creación: API envía "dd/mm/YYYY" (display) + "YYYY-MM-DD" (ISO). Normalizar a ISO para filtrar/ordenar.
+    function fechaAISO(v) {
+        if (!v) return "";
+        const s = String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+        const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) return `${m[3]}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`;
+        return "";
+    }
+
+    function anioDe(data) {
+        const iso = data.CURS_CREADO_FECHA_ISO || fechaAISO(data.CURS_CREADO_FECHA);
+        return iso ? iso.slice(0, 4) : "";
+    }
 
     // Solo visual: sin handlers reales (los botones no ejecutan acciones todavía)
     function botonesAccionVisual() {
@@ -129,6 +147,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 width: 130,
                 hozAlign: "center",
                 headerSort: true,
+                sorter: (a, b, aRow, bRow) => {
+                    const isoA = aRow.getData().CURS_CREADO_FECHA_ISO || fechaAISO(a);
+                    const isoB = bRow.getData().CURS_CREADO_FECHA_ISO || fechaAISO(b);
+                    return String(isoA || "").localeCompare(String(isoB || ""));
+                },
                 formatter: (cell) =>
                     `<span style="font-size:12px; font-weight:600; color:#374151;">${esc(cell.getValue()) || "—"}</span>`,
             },
@@ -179,15 +202,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     .join("");
             elements.filtroTipo.value = actual;
         }
+        if (elements.filtroAnio) {
+            const actual = elements.filtroAnio.value;
+            const anios = [...new Set(rows.map(anioDe).filter(Boolean))].sort().reverse();
+            elements.filtroAnio.innerHTML =
+                `<option value="">Todos los años</option>` +
+                anios.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+            if (actual && anios.includes(actual)) elements.filtroAnio.value = actual;
+        }
     });
 
     function aplicarFiltros() {
-        const { term, plan, tipo, estado } = state;
-        if (term || plan || tipo || estado !== "") {
+        const { term, plan, tipo, estado, anio, desde, hasta } = state;
+        if (term || plan || tipo || estado !== "" || anio || desde || hasta) {
             table.setFilter((data) => {
                 if (plan && (data.CURS_PLAN_CAPAC_NOMBRE || "") !== plan) return false;
                 if (tipo && (data.CURS_TIPO || "") !== tipo) return false;
                 if (estado !== "" && String(data.CURS_HABILITADO ? 1 : 0) !== estado) return false;
+                if (anio && anioDe(data) !== anio) return false;
+                if (desde || hasta) {
+                    const iso = data.CURS_CREADO_FECHA_ISO || fechaAISO(data.CURS_CREADO_FECHA);
+                    if (!iso) return false;
+                    if (desde && iso < desde) return false;
+                    if (hasta && iso > hasta) return false;
+                }
                 if (term) {
                     const nom = String(data.CURS_NOMBRE || "").toLowerCase();
                     if (!nom.includes(term)) return false;
@@ -219,15 +257,33 @@ document.addEventListener("DOMContentLoaded", () => {
         state.estado = this.value;
         aplicarFiltros();
     });
+    elements.filtroAnio?.addEventListener("change", function () {
+        state.anio = this.value;
+        aplicarFiltros();
+    });
+    elements.filtroDesde?.addEventListener("change", function () {
+        state.desde = this.value;
+        aplicarFiltros();
+    });
+    elements.filtroHasta?.addEventListener("change", function () {
+        state.hasta = this.value;
+        aplicarFiltros();
+    });
     elements.btnLimpiar?.addEventListener("click", () => {
         state.term = "";
         state.plan = "";
         state.tipo = "";
         state.estado = "";
+        state.anio = "";
+        state.desde = "";
+        state.hasta = "";
         if (elements.search) elements.search.value = "";
         if (elements.filtroPlan) elements.filtroPlan.value = "";
         if (elements.filtroTipo) elements.filtroTipo.value = "";
         if (elements.filtroEstado) elements.filtroEstado.value = "";
+        if (elements.filtroAnio) elements.filtroAnio.value = "";
+        if (elements.filtroDesde) elements.filtroDesde.value = "";
+        if (elements.filtroHasta) elements.filtroHasta.value = "";
         table.clearFilter();
     });
 });

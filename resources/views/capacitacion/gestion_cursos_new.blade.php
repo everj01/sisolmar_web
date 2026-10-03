@@ -6,12 +6,6 @@
 
     body { background: #f8fafc; }
 
-    .card-hover { transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
-    .card-hover:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 30px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.04);
-    }
-
     .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(100,116,139,.35) transparent; }
     .custom-scrollbar::-webkit-scrollbar { width: 7px; height: 7px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -50,7 +44,6 @@
         background: #ffffff !important;
         border-left: none !important; border-right: none !important;
         border-bottom: 1px solid #f8fafc !important;
-        transition: background .18s ease, transform .18s ease, box-shadow .18s ease !important;
     }
     .tabulator-row:last-child { border-bottom: none !important; }
     .tabulator-row:hover {
@@ -93,7 +86,7 @@
         font-size: 12px !important; font-weight: 700 !important;
         transition: all .18s ease !important;
     }
-    .tabulator-footer .tabulator-page:hover:not(.active) { background: #f8fafc !important; border-color: #cbd5e1 !important; transform: translateY(-1px); }
+    .tabulator-footer .tabulator-page:hover:not(.active) { background: #f8fafc !important; border-color: #cbd5e1 !important; }
     .tabulator-footer .tabulator-page.active {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
         border-color: #1d4ed8 !important; color: #ffffff !important;
@@ -174,8 +167,9 @@
     </div>
 
     {{-- Card tabla --}}
-    <div class="rounded-2xl border border-default-200/60 bg-white shadow-sm p-6 card-hover">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+    <div class="rounded-2xl border border-default-200/60 bg-white shadow-sm p-6">
+        <div class="flex flex-col gap-3 mb-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
                 <h2 class="text-base font-bold text-default-900">Cursos registrados</h2>
                 <p class="text-xs text-default-500 mt-1">Listado consumido desde <span class="font-mono font-semibold">/api/obtener-cursos-new</span></p>
@@ -206,6 +200,23 @@
                     Limpiar
                 </button>
             </div>
+        </div>
+        <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full lg:justify-end border-t border-default-100 pt-3">
+            <select id="filtroAnioCursoNew"
+                class="w-full sm:w-44 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+                <option value="">Todos los años</option>
+            </select>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="filtroDesdeCursoNew" class="text-xs font-semibold text-default-500 whitespace-nowrap">Desde</label>
+                <input id="filtroDesdeCursoNew" type="date"
+                    class="w-full sm:w-44 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="filtroHastaCursoNew" class="text-xs font-semibold text-default-500 whitespace-nowrap">Hasta</label>
+                <input id="filtroHastaCursoNew" type="date"
+                    class="w-full sm:w-44 h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
+            </div>
+        </div>
         </div>
         <div id="tblCursosNew" class="w-full"></div>
     </div>

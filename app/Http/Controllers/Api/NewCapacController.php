@@ -41,6 +41,9 @@ class NewCapacController extends Controller
                         'CURS_CREADO_FECHA' => $row->fecha_creacion
                             ? Carbon::parse($row->fecha_creacion)->format('d/m/Y')
                             : null,
+                        'CURS_CREADO_FECHA_ISO' => $row->fecha_creacion
+                            ? Carbon::parse($row->fecha_creacion)->format('Y-m-d')
+                            : null,
                         'CURS_HABILITADO' => (bool) $row->habilitado,
                     ];
                 })
