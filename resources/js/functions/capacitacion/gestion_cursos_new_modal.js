@@ -44,6 +44,8 @@ window.formCursoNew = function () {
         totalPasos: 3,
         cargandoCombos: false,
         combosError: "",
+        puntosCarga: 3,
+        intervaloCarga: null,
 
         // ── Paso 1: datos generales ──
         nombre: "",
@@ -151,7 +153,12 @@ window.formCursoNew = function () {
             );
         },
         get puedeAvanzarPaso1() {
-            return this.nombre.trim().length > 0 && !!this.categoria && !!this.codResponsable;
+            const base = this.nombre.trim().length > 0 && !!this.categoria && !!this.codResponsable;
+            if (!base) return false;
+            // Si es periódico, la frecuencia es obligatoria (incluye PERSONALIZADO sin fechas extra:
+            // las fechas se definen al aperturar el curso).
+            if (this.esPeriodico && !this.frecuencia) return false;
+            return true;
         },
         get puedeAvanzarPaso2() {
             if (!this.tipoCurso || !this.areaResponsable || !this.sucursal || !this.dirigido) return false;
@@ -194,14 +201,33 @@ window.formCursoNew = function () {
         },
 
         // ── Apertura / cierre ──
+        get textoCarga() {
+            return "Cargando información" + ".".repeat(this.puntosCarga);
+        },
+        iniciarTextoCarga() {
+            this.puntosCarga = 3;
+            if (this.intervaloCarga) clearInterval(this.intervaloCarga);
+            this.intervaloCarga = setInterval(() => {
+                this.puntosCarga = this.puntosCarga <= 1 ? 3 : this.puntosCarga - 1;
+            }, 400);
+        },
+        detenerTextoCarga() {
+            if (this.intervaloCarga) {
+                clearInterval(this.intervaloCarga);
+                this.intervaloCarga = null;
+            }
+        },
         async abrir() {
             this.limpiarCampos();
             this.paso = 1;
             this.showModal = true;
             document.body.style.overflow = "hidden";
+            this.iniciarTextoCarga();
             await this.cargarCombosIniciales();
+            this.detenerTextoCarga();
         },
         cerrar() {
+            this.detenerTextoCarga();
             this.showModal = false;
             document.body.style.overflow = "";
             window.dispatchEvent(new CustomEvent("close-modal-registro-new"));
@@ -259,6 +285,9 @@ window.formCursoNew = function () {
                 return;
             }
             if (String(sistemaId) === String(this.lastSistemaId)) return;
+            // Al cambiar de sistema, se invalida el área elegida hasta cargar la nueva lista
+            this.areaResponsable = "";
+            this.areasResponsables = [];
             try {
                 this.lastSistemaId = sistemaId;
                 const res = await axios.get(`${VITE_URL_APP}/api/obtener-areas-por-sistema/${sistemaId}`);
@@ -550,7 +579,9 @@ window.formCursoNew = function () {
                 this.paso = 1;
                 this.showModal = true;
                 document.body.style.overflow = "hidden";
+                this.iniciarTextoCarga();
                 await this.cargarCombosIniciales();
+                this.detenerTextoCarga();
             });
             window.addEventListener("close-modal-registro-new", () => {
                 this.showModal = false;

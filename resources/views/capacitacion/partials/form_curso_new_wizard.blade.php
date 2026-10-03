@@ -10,9 +10,17 @@
             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
             style="background: rgba(36,39,70,0.45);">
 
-            <div class="flex flex-col shadow-2xl rounded-2xl overflow-hidden w-full max-w-5xl border border-default-200 bg-white max-h-[90vh]"
+            <div class="relative flex flex-col shadow-2xl rounded-2xl overflow-hidden w-full max-w-5xl border border-default-200 bg-white max-h-[90vh]"
                 x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95 translate-y-4"
                 x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+
+                {{-- Loader total: ocupa todo el modal hasta terminar la precarga --}}
+                <div x-show="cargandoCombos" x-transition.opacity
+                    class="absolute inset-0 z-30 bg-white flex flex-col items-center justify-center gap-4 p-8 text-center">
+                    <span class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></span>
+                    <p class="text-base font-bold text-default-900 min-w-[240px]" x-text="textoCarga">Cargando información...</p>
+                    <p class="text-xs text-default-500 font-medium max-w-sm">Estamos trayendo sucursales, áreas responsables, planes de capacitación y responsables. En un momento continuamos.</p>
+                </div>
 
                 {{-- Header + stepper --}}
                 <div class="px-6 pt-5 pb-4 border-b border-default-100 bg-gradient-to-r from-white to-default-50/40 shrink-0">
@@ -41,10 +49,6 @@
                                 <div x-show="n < 3" class="h-0.5 flex-1 rounded-full" :class="n < paso ? 'bg-emerald-400' : 'bg-default-100'"></div>
                             </div>
                         </template>
-                    </div>
-                    <div x-show="cargandoCombos" class="mt-3 flex items-center gap-2 text-xs font-semibold text-primary">
-                        <span class="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></span>
-                        Cargando sucursales, áreas, planes y responsables…
                     </div>
                     <div x-show="combosError" class="mt-3 text-xs font-semibold text-red-600" x-text="combosError"></div>
                 </div>
@@ -101,7 +105,7 @@
                             <input id="nregPeriodico" type="checkbox" x-model="esPeriodico" @click.stop class="form-switch scale-110 cursor-pointer">
                         </div>
                         <div x-show="esPeriodico" x-transition>
-                            <label for="nregFrecuencia" class="text-sm font-medium text-gray-800 inline-block mb-1">Frecuencia</label>
+                            <label for="nregFrecuencia" class="text-sm font-medium text-gray-800 inline-block mb-1">Frecuencia <span class="text-red-500">*</span></label>
                             <select id="nregFrecuencia" x-model="frecuencia"
                                 class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/50 outline-none">
                                 <option value="">Seleccione la frecuencia…</option>
@@ -113,6 +117,7 @@
                                 <option value="ANUAL">Anual</option>
                                 <option value="PERSONALIZADO">Fecha personalizada</option>
                             </select>
+                            <p x-show="!frecuencia" class="text-[11px] text-amber-600 font-medium mt-1">Elige una frecuencia para continuar al siguiente paso.</p>
                         </div>
                     </div>
 
@@ -179,13 +184,16 @@
                             <div>
                                 <label for="nregAreaResp" class="text-sm font-medium text-gray-800 inline-block mb-1">Área responsable <span class="text-red-500">*</span></label>
                                 <select id="nregAreaResp" x-model="areaResponsable"
+                                    :disabled="tipoCurso != '6' && !areaConocimiento"
+                                    :class="(tipoCurso != '6' && !areaConocimiento) ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-white'"
                                     @change="codMoodleArea = (areasResponsables.find(a => String(a.codArea) === String(areaResponsable)) || {}).codModdle || ''"
-                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
                                     <option value="">Seleccione área…</option>
                                     <template x-for="o in areasResponsables" :key="o.codArea">
                                         <option :value="o.codArea" x-text="o.Area || o.nombre || o.descripcion"></option>
                                     </template>
                                 </select>
+                                <p x-show="tipoCurso != '6' && !areaConocimiento" class="text-[11px] text-default-400 font-medium mt-1">Primero selecciona un sistema de gestión para desbloquear este campo.</p>
                             </div>
                             <div>
                                 <label for="nregSucursal" class="text-sm font-medium text-gray-800 inline-block mb-1">Sucursal <span class="text-red-500">*</span></label>
