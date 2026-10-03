@@ -27,17 +27,11 @@
                 <div class="px-6 pt-5 pb-4 border-b border-default-100 bg-gradient-to-r from-white to-default-50/40 shrink-0">
                     <div class="flex justify-between items-start gap-4">
                         <div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <h3 class="text-xl font-bold text-default-900">Editar curso</h3>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600"
-                                    x-text="estadoProg || 'Inactivo'"></span>
-                            </div>
+                            <h3 class="text-xl font-bold text-default-900">Editar curso</h3>
                             <p class="text-sm text-default-500 mt-1">
                                 Código <span class="font-mono font-bold" x-text="codigo"></span>
                                 <span class="text-default-300 mx-1">·</span>
                                 Plan <span class="font-semibold" x-text="planNombre"></span>
-                                <span class="text-default-300 mx-1">·</span>
-                                El plan, la sucursal, el dirigido y la evaluación no se editan aquí.
                             </p>
                         </div>
                         <button type="button" @click="cerrar()"

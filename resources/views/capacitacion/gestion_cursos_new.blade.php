@@ -195,7 +195,7 @@
             </div>
 
             {{-- Filtros organizados --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 rounded-xl bg-default-50/60 border border-default-100 p-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 rounded-xl bg-default-50/60 border border-default-100 p-3">
                 <div class="flex flex-col gap-1.5">
                     <label for="filtroPlanCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Plan</label>
                     <select id="filtroPlanCursoNew"
@@ -208,15 +208,6 @@
                     <select id="filtroTipoCursoNew"
                         class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
                         <option value="">Todos los tipos</option>
-                    </select>
-                </div>
-                <div class="flex flex-col gap-1.5">
-                    <label for="filtroEstadoCursoNew" class="text-[11px] font-bold uppercase tracking-wider text-default-500">Estado</label>
-                    <select id="filtroEstadoCursoNew"
-                        class="w-full h-10 px-3 text-sm text-default-700 bg-white border border-default-200 rounded-lg shadow-sm outline-none transition hover:border-default-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/10">
-                        <option value="">Todos los estados</option>
-                        <option value="1">Habilitados</option>
-                        <option value="0">Deshabilitados</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-1.5">
