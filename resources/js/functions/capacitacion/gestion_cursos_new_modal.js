@@ -239,6 +239,7 @@ window.formAperturaNew = function () {
         fechaInicio: "",
         fechaFin: "",
         incluirAutomatico: true,
+        matricularAutomaticamente: true,
         notificarCorreo: false,
 
         get fechaMinima() {
@@ -335,6 +336,10 @@ window.formAperturaNew = function () {
                 this.esPeriodico = curso.CURS_ES_PERIODICO !== false;
                 this.fechaInicio = this.fechaMinima;
                 this.fechaFin = "";
+                // Por defecto matricular; si es OTROS siempre será manual
+                this.matricularAutomaticamente = true;
+                this.incluirAutomatico = true;
+                this.notificarCorreo = false;
             } catch (e) {
                 console.error("Error abriendo apertura:", e);
                 this.error = "No se pudo cargar la información del curso.";
@@ -367,16 +372,18 @@ window.formAperturaNew = function () {
                 Swal.fire("Atención", "Con frecuencia personalizada debe indicar la fecha de fin.", "warning");
                 return;
             }
-            // Apertura siempre automática (sin personalización de criterios)
+            // Apertura con opción de matrícula automática (switch del modal)
             this.guardando = true;
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
                 const headers = { "Content-Type": "application/json" };
                 if (csrf) headers["X-CSRF-TOKEN"] = csrf;
+                const matricular = this.esDirigidoOtros ? false : !!this.matricularAutomaticamente;
                 const payload = {
                     cod_curso: this.codigoPk,
                     fecha_inicio: this.fechaInicio,
-                    incluir_automatico: true,
+                    incluir_automatico: matricular,
+                    matricular_automatico: matricular,
                     sucursal_codigo: "",
                     cliente_id: "",
                     area_codigo: "",
@@ -393,7 +400,7 @@ window.formAperturaNew = function () {
                         timer: 3500,
                         timerProgressBar: true,
                         icon: "success",
-                        title: (res.data.message || "Curso aperturado correctamente") + (this.notificarCorreo ? " Se avisará por correo al coordinador al finalizar." : ""),
+                        title: (res.data.message || "Curso aperturado correctamente") + (matricular && this.notificarCorreo ? " Se avisará por correo al coordinador al finalizar." : ""),
                     });
                     if (window.tablaCursosNew) {
                         try {

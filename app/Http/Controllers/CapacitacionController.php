@@ -2225,13 +2225,21 @@ class CapacitacionController extends Controller
             }
 
             $this->actualizarCursoMoodle($curso, $startTimestamp, $endTimestamp);
-            $jobId = $this->realizarMatriculacion($curso, (string)$newCode, $request->boolean('notificar_email'));
+            // Switch del modal: si el usuario decide no matricular, solo se crea la programación
+            $quiereMatricula = $request->has('incluir_automatico') || $request->has('matricular_automatico')
+                ? ($request->boolean('incluir_automatico', true) && $request->boolean('matricular_automatico', true))
+                : true;
+            $jobId = $quiereMatricula
+                ? $this->realizarMatriculacion($curso, (string)$newCode, $request->boolean('notificar_email'))
+                : null;
 
             DB::commit();
 
             return response()->json([
                 "success" => true,
-                "message" => "Programación creada correctamente.",
+                "message" => $quiereMatricula
+                    ? "Programación creada correctamente."
+                    : "Programación creada correctamente (sin matrícula automática).",
                 "job_id" => $jobId,
             ]);
         } catch (\Exception $e) {

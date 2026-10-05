@@ -89,12 +89,31 @@
 
                     {{-- Matrícula --}}
                     <div class="mt-4 rounded-xl border p-4"
-                        :class="esDirigidoOtros ? 'bg-amber-50/50 border-amber-100' : 'bg-blue-50/50 border-blue-100'">
-                        <p class="text-sm font-bold" :class="esDirigidoOtros ? 'text-amber-800' : 'text-blue-800'"
-                            x-text="esDirigidoOtros ? 'Matrícula manual' : 'Matrícula automática'"></p>
-                        <p class="text-sm mt-1" :class="esDirigidoOtros ? 'text-amber-700' : 'text-blue-700'">
-                            <template x-if="!esDirigidoOtros">
+                        :class="(!matricularAutomaticamente || esDirigidoOtros) ? 'bg-amber-50/50 border-amber-100' : 'bg-blue-50/50 border-blue-100'">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-bold" :class="(!matricularAutomaticamente || esDirigidoOtros) ? 'text-amber-800' : 'text-blue-800'"
+                                x-text="esDirigidoOtros ? 'Matrícula manual' : (matricularAutomaticamente ? 'Matrícula automática' : 'Solo programación')"></p>
+                            {{-- Switch: matricular o no automáticamente (solo si aplica) --}}
+                            <label x-show="!esDirigidoOtros" class="inline-flex items-center gap-2 cursor-pointer select-none shrink-0">
+                                <span class="text-[11px] font-bold uppercase tracking-wider"
+                                    :class="matricularAutomaticamente ? 'text-blue-700' : 'text-default-400'"
+                                    x-text="matricularAutomaticamente ? 'Matricular: Sí' : 'Matricular: No'"></span>
+                                <button type="button" role="switch" :aria-checked="matricularAutomaticamente.toString()"
+                                    @click="matricularAutomaticamente = !matricularAutomaticamente"
+                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    :class="matricularAutomaticamente ? 'bg-primary' : 'bg-gray-300'">
+                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                                        :class="matricularAutomaticamente ? 'translate-x-6' : 'translate-x-1'"></span>
+                                </button>
+                                <input id="napMatricularAuto" type="checkbox" x-model="matricularAutomaticamente" class="sr-only">
+                            </label>
+                        </div>
+                        <p class="text-sm mt-1" :class="(!matricularAutomaticamente || esDirigidoOtros) ? 'text-amber-700' : 'text-blue-700'">
+                            <template x-if="!esDirigidoOtros && matricularAutomaticamente">
                                 <span>Se matriculará automáticamente a <strong x-text="dirigidoLabel"></strong> en <strong x-text="sucursalLabel"></strong>.</span>
+                            </template>
+                            <template x-if="!esDirigidoOtros && !matricularAutomaticamente">
+                                <span>Solo se creará la programación <strong>sin matrícula automática</strong>. Podrás matricular luego manualmente en <strong>Matrículas</strong> (<span x-text="sucursalLabel"></span>).</span>
                             </template>
                             <template x-if="esDirigidoOtros">
                                 <span>Deberás matricular manualmente al personal en <strong>Matrículas</strong> (<span x-text="sucursalLabel"></span>).</span>
@@ -102,9 +121,10 @@
                         </p>
                     </div>
 
-                    {{-- Aviso por correo --}}
-                    <label class="mt-4 flex items-start gap-2.5 p-3 rounded-xl border border-default-100 bg-default-50/60 cursor-pointer select-none">
-                        <input id="napNotificar" type="checkbox" x-model="notificarCorreo" class="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    {{-- Aviso por correo (solo tiene efecto con matrícula automática) --}}
+                    <label class="mt-4 flex items-start gap-2.5 p-3 rounded-xl border border-default-100 bg-default-50/60 select-none"
+                        :class="(!matricularAutomaticamente || esDirigidoOtros) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'">
+                        <input id="napNotificar" type="checkbox" x-model="notificarCorreo" :disabled="!matricularAutomaticamente || esDirigidoOtros" class="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
                         <span>
                             <span class="block text-sm font-semibold text-default-800">Avisar por correo al finalizar</span>
                             <span class="block text-xs text-default-500 mt-0.5">Se notificará al coordinador cuando termine la matrícula masiva (solo si son más de 10 personas).</span>
