@@ -316,9 +316,9 @@ document.addEventListener('DOMContentLoaded', function () {
         paginationSize: 20,
         rowFormatter: function (row) {
             const d = row.getData();
-            if (d.SIP_CAMBIO !== 'Ok') {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            const el = row.getElement();
+            el.classList.toggle('rep-cesado', d.SIP_CAMBIO !== 'Ok');
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         // --- AQUÍ TRADUCIMOS EL PAGINADOR ---
@@ -847,9 +847,9 @@ document.addEventListener('DOMContentLoaded', function () {
         paginationSize: 20,
         rowFormatter: function (row) {
             const d = row.getData();
-            if ((d.migrado || '').toUpperCase().trim() !== 'SI') {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            const el = row.getElement();
+            el.classList.toggle('rep-cesado', (d.migrado || '').toUpperCase().trim() !== 'SI');
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
@@ -1341,10 +1341,10 @@ document.addEventListener('DOMContentLoaded', function () {
         selectable: true,
         rowFormatter: function (row) {
             const d = row.getData();
+            const el = row.getElement();
             const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
-            if (!gen) {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            el.classList.toggle('rep-cesado', !gen);
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
@@ -1514,8 +1514,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnGen) {
             btnGen.disabled = !sel;
             btnGen.className = sel
-                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors'
-                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+                ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-indigo-600 text-white border border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700'
+                : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-indigo-100 text-indigo-400 border border-indigo-200 cursor-not-allowed';
         }
         if (btnQuitar) {
             btnQuitar.disabled = !sel;
@@ -2262,13 +2262,14 @@ document.addEventListener('DOMContentLoaded', function () {
         langs: { es: { pagination: { first: 'Primero', prev: 'Anterior', next: 'Siguiente', last: 'Último' } } },
 
         rowFormatter: function (row) {
-            const d = row.getData();
-            if (d.tiene_folio_25 != 1) {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            } else if (d.PERS_VIGENCIA !== 'SI') {
-                row.getElement().style.backgroundColor = '#ffe5e5';
-                row.getElement().style.color = '#7a1f1f';
-            }
+            const d   = row.getData();
+            const el  = row.getElement();
+            const mal = d.tiene_folio_25 != 1;
+            const noV = d.PERS_VIGENCIA !== 'SI';
+            el.classList.toggle('rep-cesado', mal);
+            el.classList.toggle('rep-alerta', !mal && noV);
+            el.style.removeProperty('background-color');
+            el.style.removeProperty('color');
         },
 
         columns: [
@@ -2649,9 +2650,9 @@ document.addEventListener('DOMContentLoaded', function () {
         rowFormatter: function (row) {
             const d = row.getData();
             const dj = d.djSubido || d.djsubido || d.DJSUBIDO;
-            if (dj !== 'SI') {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            const el = row.getElement();
+            el.classList.toggle('rep-cesado', dj !== 'SI');
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
@@ -4750,6 +4751,92 @@ document.addEventListener('DOMContentLoaded', function () {
             lugarSmoEl.value = '';
         }
     });
+
+// ── Sistema visual: barras de las cards, indicadores de filas y limpiar búsqueda ──
+(function () {
+    // 1) Barras de proporción de las 3 tarjetas de contadores
+    const gruposCards = [
+        ['countTotalE1', 'countActualizadosE1', 'countSinActualizarE1', 'barTotalE1', 'barActualizadosE1', 'barSinActualizarE1'],
+        ['contadorTotalE2', 'contadorFiltradoE2', 'contadorSinVerificarE2', 'barTotalE2', 'barVerificadosE2', 'barSinVerificarE2'],
+        ['contadorTotalE3', 'contadorGeneradosE3', 'contadorPendientesE3', 'barTotalE3', 'barGeneradosE3', 'barPendientesE3'],
+    ];
+    const leerNum = id => {
+        const el = document.getElementById(id);
+        return el ? (parseInt(String(el.textContent).replace(/[^\d]/g, ''), 10) || 0) : 0;
+    };
+    const ponerBarra = (id, w) => { const el = document.getElementById(id); if (el) el.style.width = w; };
+    const pintarBarras = () => {
+        gruposCards.forEach(g => {
+            const total = leerNum(g[0]);
+            const pct = n => (total > 0 ? Math.max(n > 0 ? 4 : 0, Math.round((n / total) * 100)) : 0);
+            ponerBarra(g[3], total > 0 ? '100%' : '0%');
+            ponerBarra(g[4], pct(leerNum(g[1])) + '%');
+            ponerBarra(g[5], pct(leerNum(g[2])) + '%');
+        });
+    };
+    gruposCards.forEach(g => {
+        [g[0], g[1], g[2]].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el || typeof MutationObserver === 'undefined') return;
+            new MutationObserver(pintarBarras).observe(el, { childList: true, characterData: true, subtree: true });
+        });
+    });
+    pintarBarras();
+
+    // 2) Indicador "Mostrando X–Y de Z" bajo cada tabla
+    const mapaInfo = {
+        '#tblEtapa1': 'tblInfoE1',
+        '#tblPersonasVerificado': 'tblInfoE2',
+        '#tblPersonasEtapa3': 'tblInfoE3',
+        '#tblPersonas_E4C': 'tblInfoE4C',
+        '#tblPersonasEtapa4': 'tblInfoE4',
+        '#tblPersonasMigrado': 'tblInfoMIG',
+    };
+    Object.keys(mapaInfo).forEach(sel => {
+        const info = document.getElementById(mapaInfo[sel]);
+        if (!info || typeof Tabulator.findTable !== 'function') return;
+        const instancias = Tabulator.findTable(sel);
+        const tbl = instancias && instancias[0];
+        if (!tbl) return;
+        let timer = null;
+        const pintarInfo = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                const activas = tbl.getRows('active').length;
+                if (!activas) { info.innerHTML = '<b>0</b> filas'; return; }
+                const pagina = tbl.getPage();
+                if (pagina === 'all') { info.innerHTML = 'Mostrando <b>' + activas + '</b> filas'; return; }
+                const size = tbl.getPageSize() || 20;
+                const totalPag = Math.ceil(activas / size);
+                const desde = ((pagina || 1) - 1) * size + 1;
+                const hasta = Math.min((pagina || 1) * size, activas);
+                info.innerHTML = 'Mostrando <b>' + desde + '–' + hasta + '</b> de <b>' + activas + '</b> filas' +
+                    (totalPag > 1 ? ' · Página <b>' + pagina + '</b>/' + totalPag : '');
+            }, 0);
+        };
+        ['dataLoaded', 'pageLoaded', 'dataFiltered', 'pageSizeChanged', 'renderComplete'].forEach(ev => {
+            tbl.on(ev, pintarInfo);
+        });
+        pintarInfo();
+    });
+
+    // 3) Botones "Limpiar búsqueda" de las etapas
+    [['btnLimpiarBusquedaE1', 'buscarPersonalE1'], ['btnLimpiarBusquedaE2', 'buscarPersonalE2'], ['btnLimpiarBusquedaE3', 'buscarPersonalE3']]
+        .forEach(par => {
+            const btn = document.getElementById(par[0]);
+            const inp = document.getElementById(par[1]);
+            if (!btn || !inp) return;
+            const alternar = () => btn.classList.toggle('hidden', !inp.value);
+            inp.addEventListener('input', alternar);
+            btn.addEventListener('click', () => {
+                inp.value = '';
+                btn.classList.add('hidden');
+                inp.dispatchEvent(new Event('input'));
+                inp.focus();
+            });
+            alternar();
+        });
+})();
 
 }); // fin DOMContentLoaded
 

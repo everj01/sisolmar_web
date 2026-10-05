@@ -431,21 +431,17 @@ document.addEventListener('DOMContentLoaded', function () {
         locale: "es",
         rowFormatter: function(row) {
             const data = row.getData();
-            
-            // Descomenta esta línea un segundo para ver en la consola si "vigencia" sí está llegando:
-            // console.log("Revisando a:", data.nombres, "- Vigencia:", data.vigencia);
-            
-            if (data.vigencia && data.vigencia.toString().trim().toUpperCase() === 'NO') {
-                const colorRojito = "#fef2f2"; // bg-red-50 de Tailwind
+            const cesado = !!(data.vigencia && data.vigencia.toString().trim().toUpperCase() === 'NO');
+            const el = row.getElement();
 
-                // 1. Pintamos la fila base
-                row.getElement().style.setProperty("background-color", colorRojito, "important");
-                
-                // 2. 🔥 EL HACK: Pintamos cada celda individualmente para ganarle al CSS de Tabulator
-                row.getCells().forEach(cell => {
-                    cell.getElement().style.setProperty("background-color", colorRojito, "important");
-                });
-            }
+            // Estado visual: blanco por defecto, rojo si esta cesado.
+            el.classList.toggle('rep-cesado', cesado);
+
+            // Limpia fondos inline heredados (el antiguo "hack" de pintar cada celda)
+            el.style.removeProperty('background-color');
+            row.getCells().forEach(function(cell) {
+                cell.getElement().style.removeProperty('background-color');
+            });
         },
 
         langs: {
@@ -619,8 +615,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btn) {
             btn.disabled = !sel;
             btn.className = sel
-                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors'
-                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+                ? 'ml-auto inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white border border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700'
+                : 'ml-auto inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-100 text-indigo-400 border border-indigo-200 cursor-not-allowed';
         }
     });
 
@@ -991,6 +987,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (document.getElementById('countTotalPen')) document.getElementById('countTotalPen').textContent = total;
         if (document.getElementById('countVigentesPen')) document.getElementById('countVigentesPen').textContent = vigentes;
         if (document.getElementById('countNoVigentesPen')) document.getElementById('countNoVigentesPen').textContent = noVigentes;
+
+        // Barras de proporcion respecto al total
+        const pctBarra = n => (total > 0 ? Math.max(n > 0 ? 4 : 0, Math.round((n / total) * 100)) : 0);
+        const barTot = document.getElementById('barTotalPen');
+        const barVig = document.getElementById('barVigentesPen');
+        const barNo  = document.getElementById('barNoVigentesPen');
+        if (barTot) barTot.style.width = total > 0 ? '100%' : '0%';
+        if (barVig) barVig.style.width = pctBarra(vigentes) + '%';
+        if (barNo)  barNo.style.width  = pctBarra(noVigentes) + '%';
     }
 
     document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
@@ -1153,6 +1158,43 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Page size
     pageSizeSelect?.addEventListener("change", function () { tblPersonas.setPageSize(parseInt(this.value)); });
+
+    // ── Indicador "Mostrando X–Y de Z" bajo la tabla ─────────────────────
+    const tblInfoPEN = document.getElementById('tblInfoPEN');
+    let tblInfoPENTimer = null;
+    function actualizarInfoFilasPEN() {
+        if (!tblInfoPEN) return;
+        clearTimeout(tblInfoPENTimer);
+        tblInfoPENTimer = setTimeout(function () {
+            if (!tblInfoPEN) return;
+            const activas = tblPersonas.getRows('active').length;
+            if (!activas) { tblInfoPEN.innerHTML = '<b>0</b> filas'; return; }
+            const pagina = tblPersonas.getPage();
+            if (pagina === 'all') { tblInfoPEN.innerHTML = 'Mostrando <b>' + activas + '</b> filas'; return; }
+            const size     = tblPersonas.getPageSize() || 20;
+            const totalPag = Math.ceil(activas / size);
+            const desde    = ((pagina || 1) - 1) * size + 1;
+            const hasta    = Math.min((pagina || 1) * size, activas);
+            tblInfoPEN.innerHTML = 'Mostrando <b>' + desde + '–' + hasta + '</b> de <b>' + activas + '</b> filas' +
+                (totalPag > 1 ? ' · Página <b>' + pagina + '</b>/' + totalPag : '');
+        }, 0);
+    }
+    ['dataLoaded', 'pageLoaded', 'dataFiltered', 'pageSizeChanged', 'renderComplete'].forEach(function (ev) {
+        tblPersonas.on(ev, actualizarInfoFilasPEN);
+    });
+
+    // ── Botón "Limpiar búsqueda" ─────────────────────────────────────────
+    const btnLimpiarBusquedaPEN = document.getElementById('btnLimpiarBusquedaPEN');
+    if (btnLimpiarBusquedaPEN && buscarPersonalInput) {
+        const alternarLimpiar = () => btnLimpiarBusquedaPEN.classList.toggle('hidden', !buscarPersonalInput.value);
+        buscarPersonalInput.addEventListener('input', alternarLimpiar);
+        btnLimpiarBusquedaPEN.addEventListener('click', function () {
+            buscarPersonalInput.value = '';
+            btnLimpiarBusquedaPEN.classList.add('hidden');
+            buscarPersonalInput.dispatchEvent(new Event('input'));
+            buscarPersonalInput.focus();
+        });
+    }
 
     btnPrevisualizar?.addEventListener("click", async function (e) {
         e.preventDefault();

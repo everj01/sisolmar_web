@@ -24,6 +24,160 @@
             background-color: #2563eb !important; /* Azul Tailwind */
             color: #ffffff !important;
         }
+
+        /* ════════════════════════════════════════════════════════════
+           SISTEMA VISUAL COMPARTIDO (Reporte Personal)
+           ════════════════════════════════════════════════════════════ */
+
+        /* ── Tabla ──────────────────────────────────────────────────────── */
+        #tblPersonas .tabulator-cell,
+        #tblPersonasCN .tabulator-cell,
+        #tblPersonasMigrado .tabulator-cell { font-size: 0.8125rem; }
+
+        #tblPersonas .tabulator-row,
+        #tblPersonasCN .tabulator-row,
+        #tblPersonasMigrado .tabulator-row {
+            transition: background-color .15s ease, box-shadow .15s ease;
+        }
+
+        /* Base: todas las filas blancas (sin zebra) */
+        #tblPersonas .tabulator-row,
+        #tblPersonasCN .tabulator-row,
+        #tblPersonasMigrado .tabulator-row { background-color: #ffffff; }
+
+        /* Cesados: rojo */
+        #tblPersonas .tabulator-row.rep-cesado,
+        #tblPersonasCN .tabulator-row.rep-cesado,
+        #tblPersonasMigrado .tabulator-row.rep-cesado { background-color: #fee2e2; }
+
+        /* Hover: igual que Reporte Personal (color de fila, un solo acento a la izquierda) */
+        #tblPersonas .tabulator-row:hover,
+        #tblPersonasCN .tabulator-row:hover,
+        #tblPersonasMigrado .tabulator-row:hover {
+            background-color: #eef4ff !important;
+            box-shadow: inset 3px 0 0 0 #2563eb;
+        }
+        #tblPersonas .tabulator-row.rep-cesado:hover,
+        #tblPersonasCN .tabulator-row.rep-cesado:hover,
+        #tblPersonasMigrado .tabulator-row.rep-cesado:hover {
+            background-color: #fecaca !important;
+            box-shadow: inset 3px 0 0 0 #dc2626;
+        }
+
+        /* La selección por checkbox sigue viéndose (gana sobre el hover) */
+        #tblPersonas .tabulator-row.tabulator-selected,
+        #tblPersonasCN .tabulator-row.tabulator-selected,
+        #tblPersonasMigrado .tabulator-row.tabulator-selected { background-color: #9abcea; }
+        #tblPersonas .tabulator-row.tabulator-selected:hover,
+        #tblPersonasCN .tabulator-row.tabulator-selected:hover,
+        #tblPersonasMigrado .tabulator-row.tabulator-selected:hover { background-color: #769bcc; }
+
+        #tblPersonas .tabulator-header,
+        #tblPersonasCN .tabulator-header,
+        #tblPersonasMigrado .tabulator-header {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 2px solid #e2e8f0;
+        }
+        #tblPersonas .tabulator-header .tabulator-col,
+        #tblPersonasCN .tabulator-header .tabulator-col,
+        #tblPersonasMigrado .tabulator-header .tabulator-col {
+            background: transparent;
+            border-right-color: #e9eef5;
+        }
+        #tblPersonas .tabulator-header .tabulator-col .tabulator-header-content,
+        #tblPersonasCN .tabulator-header .tabulator-col .tabulator-header-content,
+        #tblPersonasMigrado .tabulator-header .tabulator-col .tabulator-header-content {
+            font-weight: 700;
+            color: #475569;
+            font-size: .7rem;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+        #tblPersonas .tabulator-placeholder-wrapper,
+        #tblPersonasCN .tabulator-placeholder-wrapper,
+        #tblPersonasMigrado .tabulator-placeholder-wrapper {
+            display: flex; align-items: center; justify-content: center;
+            gap: .5rem; color: #94a3b8; font-size: .875rem;
+        }
+
+        /* ── Cards de totales ───────────────────────────────────────────── */
+        .rep-card {
+            position: relative;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: .75rem;
+            padding: .65rem .85rem;
+            min-width: 118px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+            transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+        }
+        .rep-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, .10);
+        }
+        .rep-card .rep-label {
+            display: flex; align-items: center; gap: .35rem;
+            font-size: 9px; font-weight: 800; letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+        .rep-card .rep-value {
+            display: block;
+            font-size: 1.35rem; line-height: 1.15; font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+        .rep-bar {
+            margin-top: .35rem;
+            height: 5px; width: 100%;
+            background: #e5e7eb;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .rep-bar > i {
+            display: block; height: 100%; width: 0;
+            border-radius: 999px;
+            transition: width .8s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        /* ── Barra de filtros ───────────────────────────────────────────── */
+        .rep-toolbar {
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: .75rem;
+            padding: .75rem .85rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        }
+        .rep-toolbar .form-select,
+        .rep-toolbar .form-input,
+        .rep-toolbar input[type="text"] {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: .5rem;
+            font-size: .8125rem;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .rep-toolbar .form-select:focus,
+        .rep-toolbar .form-input:focus,
+        .rep-toolbar input[type="text"]:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+            outline: none;
+        }
+        /* @tailwindcss/forms pisa las utilidades de padding: se fija a mano */
+        #buscarPersonal, #buscar { padding: .5rem 2.25rem; }
+        #filtroCargoPEN { padding: .5rem 2.25rem .5rem .75rem; }
+
+        /* ── Fila de resumen bajo la tabla ──────────────────────────────── */
+        .rep-footline {
+            border-top: 1px dashed #e5e7eb;
+            margin-top: .75rem;
+            padding-top: .65rem;
+        }
+        .rep-footline .rep-info {
+            font-size: .75rem; color: #64748b;
+            font-variant-numeric: tabular-nums;
+        }
+        .rep-footline .rep-info b { color: #0f172a; font-weight: 700; }
     </style>
 @endsection
 
@@ -40,28 +194,50 @@
                             <i class='bx bx-id-card text-2xl mr-2'></i> REGISTRO DE PERSONAL (DJ)
                         </h4>
                     </div>
-                    <div class="flex gap-2">
-                        <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px] shadow-sm">
-                            <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
-                            <span id="countTotalPen" class="text-lg font-bold text-blue-700">0</span>
+                    <div class="flex flex-wrap gap-2.5">
+                        {{-- Total --}}
+                        <div class="rep-card">
+                            <div class="rep-label text-slate-400">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Total
+                            </div>
+                            <span id="countTotalPen" class="rep-value text-slate-800">0</span>
+                            <div class="rep-bar bg-slate-100"><i id="barTotalPen" class="bg-slate-500"></i></div>
                         </div>
-                        <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px] shadow-sm">
-                            <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
-                            <span id="countVigentesPen" class="text-lg font-bold text-green-700">0</span>
+
+                        {{-- Vigentes --}}
+                        <div class="rep-card" style="border-color:#bbf7d0;">
+                            <div class="rep-label text-emerald-600">
+                                <i class='bx bx-check-circle'></i> Vigentes
+                            </div>
+                            <span id="countVigentesPen" class="rep-value text-emerald-700">0</span>
+                            <div class="rep-bar bg-emerald-100"><i id="barVigentesPen" class="bg-emerald-500"></i></div>
                         </div>
-                        <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[90px] shadow-sm">
-                            <span class="block text-[9px] text-red-600 font-bold uppercase">No Vigentes</span>
-                            <span id="countNoVigentesPen" class="text-lg font-bold text-red-700">0</span>
+
+                        {{-- No Vigentes --}}
+                        <div class="rep-card" style="border-color:#fecaca;">
+                            <div class="rep-label text-red-500">
+                                <i class='bx bx-x-circle'></i> No Vigentes
+                            </div>
+                            <span id="countNoVigentesPen" class="rep-value text-red-600">0</span>
+                            <div class="rep-bar bg-red-100"><i id="barNoVigentesPen" class="bg-red-400"></i></div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {{-- CONTROLES COMUNES --}}
-            <div class="w-full px-5 py-2 mt-2 flex justify-between items-center">
-                <input type="text" id="buscarPersonal" placeholder="Buscar por nombre o DNI..."
-                    class="w-48 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm uppercase"
-                    style="width: 50%;  max-width: 450px; min-width: 200px;" autocomplete="off" />
+            <div class="w-full px-5 pt-4">
+                <div class="rep-toolbar">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative flex-1 min-w-[220px] max-w-[420px]">
+                            <i class='bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none'></i>
+                            <input type="text" id="buscarPersonal" placeholder="Buscar por nombre o DNI..."
+                                class="w-full text-sm uppercase" autocomplete="off" />
+                            <button type="button" id="btnLimpiarBusquedaPEN" title="Limpiar búsqueda"
+                                class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600 transition-colors">
+                                <i class='bx bx-x-circle text-lg'></i>
+                            </button>
+                        </div>
 
                 <!-- <button type="button" id="btnDescargarDJs"
                         class="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-primary rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors">
@@ -74,7 +250,7 @@
                         DJ Unificado
 
                     </button> -->
-                <div class="flex flex-col gap-2">
+                <div class="ml-auto flex flex-wrap items-center gap-2">
                     <!-- <button type="button" id="btnNuevaDJ"
                         class="btn rounded-full bg-primary/25 text-primary hover:bg-primary hover:text-white flex items-center gap-1 px-4 py-1"
                         data-hs-overlay="#modalDjGestion">
@@ -102,19 +278,14 @@
                         <span>Extraer Firma y Huella</span>
                     </button>
                 </div>
-                
-            </div>
+                    </div>
 
-            {{-- TABLA PESTAÑA 1: sin columna Migrado --}}
-            <div id="panelPendiente" class="w-full px-5 py-2 mt-1">
-
-                {{-- FILTROS EN CARD --}}
-                <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <div class="flex flex-wrap items-center gap-5">
+                    {{-- Fila 2: filtros (misma tarjeta que la búsqueda) --}}
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pt-3 border-t border-slate-200">
 
                         {{-- Sucursal --}}
                         <div class="flex items-center gap-2">
-                            <label class="text-sm font-medium text-gray-700">Sucursal:</label>
+                            <label for="filtroSucursalPEN" class="flex items-center gap-2 text-sm font-medium text-gray-600"><i class='bx bx-building text-gray-400 text-lg'></i>Sucursal</label>
                             <select id="filtroSucursalPEN"
                                 class="form-select text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 @if(! $restringirSucursalesGestionDj && count($sucursalesGestionDj) > 1)
@@ -130,8 +301,8 @@
                         </div>
 
                         {{-- Tipo --}}
-                        <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
-                            <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                        <div class="flex items-center gap-2">
+                            <label for="filtroTipoPerPEN" class="flex items-center gap-2 text-sm font-medium text-gray-600"><i class='bx bx-category text-gray-400 text-lg'></i>Tipo</label>
                             <select id="filtroTipoPerPEN" class="form-select text-sm w-44 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 <option value="" @selected($filtrosInicialesGestionDj['tipo'] === '')>Todos</option>
                                 <option value="OPERATIVO 4°">Operativo 4°</option>
@@ -144,7 +315,7 @@
 
                         {{-- Cargo --}}
                         <div class="flex items-center gap-2 w-80"> <!-- Ampliado a w-80 -->
-                            <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Cargo:</label>
+                            <label for="filtroCargoPEN" class="flex items-center gap-2 text-sm font-medium text-gray-600 whitespace-nowrap"><i class='bx bx-briefcase text-gray-400 text-lg'></i>Cargo</label>
                             <div class="flex-1 relative" id="custom-select-cargo">
                                 <input type="text" id="filtroCargoPEN" placeholder="Todos" autocomplete="off"
                                     class="form-input text-sm w-full pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white cursor-text" />
@@ -162,8 +333,8 @@
                         </div>
 
                         {{-- Estado (Vigencia) --}}
-                        <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
-                            <label class="text-sm font-medium text-gray-700">Estado:</label>
+                        <div class="flex items-center gap-2">
+                            <label for="filtroVigenciaPEN" class="flex items-center gap-2 text-sm font-medium text-gray-600"><i class='bx bx-time text-gray-400 text-lg'></i>Estado</label>
                             <select id="filtroVigenciaPEN" class="form-select text-sm w-36 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
                                 <option value="" @selected($filtrosInicialesGestionDj['vigencia'] === '')>Todos</option>
                                 <option value="SI" @selected($filtrosInicialesGestionDj['vigencia'] === 'SI')>Activos</option>
@@ -171,31 +342,37 @@
                             </select>
                         </div>
 
-                    </div>
-
                     {{-- Botón generar seleccionados --}}
                     @if($tipoUsuario != 9 && $tipoUsuario != 8)
                     <button type="button" id="btnGenerarSeleccionadosPEN" disabled
-                        class="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors">
+                        class="ml-auto inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-100 text-indigo-400 border border-indigo-200 cursor-not-allowed">
                         <i class='bx bxs-file-pdf text-base'></i>
                         Generar DJ (<span id="countSelPEN">0</span>)
                     </button>
                     @endif
+                    </div>
                 </div>
+            </div>
 
-                <div id="tblPersonas" class="w-full mt-2"></div>
+            {{-- TABLA PESTAÑA 1: sin columna Migrado --}}
+            <div id="panelPendiente" class="w-full px-5 py-2 mt-1">
 
-                <div class="flex items-center gap-2 mt-3">
-                    <label for="page-size" class="text-sm text-gray-600">Mostrar</label>
-                    <select id="page-size"
-                        class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <span class="text-sm text-gray-600">registros</span>
+                <div id="tblPersonas" class="w-full mt-2 rounded-lg overflow-hidden border border-gray-200"></div>
+
+                <div class="rep-footline flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <label for="page-size" class="text-sm text-gray-600">Mostrar</label>
+                        <select id="page-size"
+                            class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="text-sm text-gray-600">registros</span>
+                    </div>
+                    <div class="rep-info" id="tblInfoPEN"></div>
                 </div>
             </div>
 
@@ -317,19 +494,22 @@
         <div class="flex-1 border-t border-gray-200"></div>
     </div>
 
-    <div id="tblPersonasMigrado" class="w-full"></div>
+    <div id="tblPersonasMigrado" class="w-full rounded-lg overflow-hidden border border-gray-200"></div>
 
-    <div class="flex items-center gap-2 mt-3">
-        <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
-        <select id="page-size-migrado" 
-            class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="20" selected>20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-        </select>
-        <span class="text-sm text-gray-600">registros</span>
+    <div class="rep-footline flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+            <label for="page-size-migrado" class="text-sm text-gray-600">Mostrar</label>
+            <select id="page-size-migrado" 
+                class="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="text-sm text-gray-600">registros</span>
+        </div>
+        <div class="rep-info" id="tblInfoMIG"></div>
     </div>
 
 </div>
@@ -340,13 +520,22 @@
 
     <div id="divCoincidencias" class="grid lg:grid-cols-1 gap-6 mt-8 hidden">
         <div class="card overflow-hidden">
-            <div class="card-header">
-                <h4 class="card-title">Listado de COINCIDENCIAS</h4>
+            <div class="card-header border-b border-gray-100 py-4 px-5">
+                <h4 class="text-lg font-bold text-primary uppercase flex items-center">
+                    <i class='bx bx-git-compare text-2xl mr-2'></i> Listado de COINCIDENCIAS
+                </h4>
             </div>
-            <div class="w-full px-5 py-2 mt-3">
-                <input type="text" id="buscar" placeholder="Buscar..."
-                    class="w-40 px-3 py-1 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 transition-all text-sm" />
-                <div id="tblPersonasCN" class="w-full mt-8"></div>
+            <div class="w-full px-5 pt-4 pb-4">
+                <div class="rep-toolbar">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative flex-1 min-w-[220px] max-w-[420px]">
+                            <i class='bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none'></i>
+                            <input type="text" id="buscar" placeholder="Buscar..."
+                                class="w-full text-sm" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+                <div id="tblPersonasCN" class="w-full mt-4 rounded-lg overflow-hidden border border-gray-200"></div>
             </div>
         </div>
     </div>
