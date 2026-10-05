@@ -26,43 +26,43 @@
            ════════════════════════════════════════════════════════════ */
 
         /* ── Tablas ─────────────────────────────────────────────────────── */
-        .tbl-listado .tabulator-cell { font-size: 0.8125rem; }
-        .tbl-listado .tabulator-row {
+        .tbl-listado.tabulator .tabulator-cell { font-size: 0.8125rem; }
+        .tbl-listado.tabulator .tabulator-row {
             transition: background-color .15s ease, box-shadow .15s ease;
             background-color: #ffffff;               /* base: blanco, sin zebra */
         }
-        .tbl-listado .tabulator-row.rep-cesado { background-color: #fee2e2; }
-        .tbl-listado .tabulator-row.rep-alerta { background-color: #fecaca; }
+        .tbl-listado.tabulator .tabulator-row.rep-cesado { background-color: #fee2e2; }
+        .tbl-listado.tabulator .tabulator-row.rep-alerta { background-color: #fecaca; }
 
-        .tbl-listado .tabulator-row:hover {
+        .tbl-listado.tabulator .tabulator-row:hover {
             background-color: #eef4ff !important;
             box-shadow: inset 3px 0 0 0 #2563eb;
         }
-        .tbl-listado .tabulator-row.rep-cesado:hover,
-        .tbl-listado .tabulator-row.rep-alerta:hover {
+        .tbl-listado.tabulator .tabulator-row.rep-cesado:hover,
+        .tbl-listado.tabulator .tabulator-row.rep-alerta:hover {
             background-color: #fecaca !important;
             box-shadow: inset 3px 0 0 0 #dc2626;
         }
         /* la selección por checkbox sigue viéndose */
-        .tbl-listado .tabulator-row.tabulator-selected { background-color: #9abcea; }
-        .tbl-listado .tabulator-row.tabulator-selected:hover { background-color: #769bcc; }
+        .tbl-listado.tabulator .tabulator-row.tabulator-selected { background-color: #9abcea; }
+        .tbl-listado.tabulator .tabulator-row.tabulator-selected:hover { background-color: #769bcc; }
 
-        .tbl-listado .tabulator-header {
+        .tbl-listado.tabulator .tabulator-header {
             background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
             border-bottom: 2px solid #e2e8f0;
         }
-        .tbl-listado .tabulator-header .tabulator-col {
+        .tbl-listado.tabulator .tabulator-header .tabulator-col {
             background: transparent;
             border-right-color: #e9eef5;
         }
-        .tbl-listado .tabulator-header .tabulator-col .tabulator-header-content {
+        .tbl-listado.tabulator .tabulator-header .tabulator-col .tabulator-header-content {
             font-weight: 700;
             color: #475569;
             font-size: .7rem;
             letter-spacing: .05em;
             text-transform: uppercase;
         }
-        .tbl-listado .tabulator-placeholder-wrapper {
+        .tbl-listado.tabulator .tabulator-placeholder-wrapper {
             display: flex; align-items: center; justify-content: center;
             gap: .5rem; color: #94a3b8; font-size: .875rem;
         }
@@ -132,6 +132,8 @@
         }
         /* @tailwindcss/forms pisa las utilidades de padding */
         .rep-toolbar input[type="text"] { padding: .5rem .75rem; }
+        /* Los buscadores llevan la lupa a la izquierda: se reserva su ancho */
+        #buscarPersonalE1, #buscarPersonalE2, #buscarPersonalE3 { padding: .5rem 2.25rem; }
 
         /* ── Pies de tabla ──────────────────────────────────────────────── */
         .rep-footline {
@@ -287,7 +289,7 @@
                             </div>
                         </div>
 
-                        <div id="tblEtapa1" class="w-full tbl-listado rounded-lg overflow-hidden border border-gray-200"></div>
+                        <div id="tblEtapa1" class="w-full mt-6 tbl-listado rounded-lg overflow-hidden border border-gray-200"></div>
 
                         <div class="rep-footline flex items-center gap-2 mt-3">
                             <label for="page-size-etapa1" class="text-sm text-gray-600">Mostrar</label>
