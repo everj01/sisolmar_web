@@ -288,22 +288,42 @@ document.addEventListener("DOMContentLoaded", () => {
                     headerSort: false,
                     formatter(cell) {
                         const sinVigente = !cell.getData()?.Vigente;
-                        const base = 'border-radius:6px; padding:6px 12px; font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s;';
-                        const matStyle = sinVigente
-                            ? `background:#e9eaf3; color:#a3a6bb; border:none; cursor:not-allowed; ${base}`
-                            : `background:#4f46e5; color:#fff; border:none; cursor:pointer; ${base}`;
-                        const desStyle = sinVigente
-                            ? `background:#e9eaf3; color:#a3a6bb; border:1px solid #e0e2ef; cursor:not-allowed; ${base}`
-                            : `background:#fff; color:#dc2626; border:1px solid #fecaca; cursor:pointer; ${base}`;
                         const bloqueado = sinVigente ? 'disabled title="El curso no tiene una programación vigente"' : '';
+                        const estiloBloqueado = sinVigente ? 'opacity:.45; cursor:not-allowed;' : 'cursor:pointer;';
                         return `
                         <div style="display:flex; gap:6px; justify-content:center;">
-                            <button class="btn-matricular-curso" ${bloqueado} style="${matStyle}">
-                                <i class="${sinVigente ? 'ti ti-user-off' : 'ti ti-user-plus'}" style="font-size: 14px;"></i>
+                            <button class="btn-matricular-curso" ${bloqueado} style="
+                                background: #4f46e5;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 6px 12px;
+                                font-size: 12px;
+                                font-weight: 500;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                transition: all 0.2s;
+                                ${estiloBloqueado}
+                            ">
+                                <i class="ti ti-user-plus" style="font-size: 14px;"></i>
                                 Matricular
                             </button>
-                            <button class="btn-desmatricular-curso" ${bloqueado} style="${desStyle}">
-                                <i class="${sinVigente ? 'ti ti-user-x' : 'ti ti-user-minus'}" style="font-size: 14px;"></i>
+                            <button class="btn-desmatricular-curso" ${bloqueado} style="
+                                background: #fff;
+                                color: #dc2626;
+                                border: 1px solid #fecaca;
+                                border-radius: 6px;
+                                padding: 6px 12px;
+                                font-size: 12px;
+                                font-weight: 500;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                transition: all 0.2s;
+                                ${estiloBloqueado}
+                            ">
+                                <i class="ti ti-user-minus" style="font-size: 14px;"></i>
                                 Desmatricular
                             </button>
                         </div>
@@ -405,92 +425,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
-    function conteoSeleccionados() {
-        const table = window.tabulatorPersonalMatriculado;
-        const data = table ? table.getData() || [] : [];
-        return data.filter(d => d._seleccionado && !d._matriculado).length;
-    }
-
     function updateMatricularButton() {
-        const count = conteoSeleccionados();
         const btn = document.getElementById('btnGuardarMatriculas');
-        if (btn) {
-            btn.innerHTML = `<i class="ti ti-user-plus"></i> Confirmar matrícula (${count})`;
-            const progVigente = window._programacionVigente?.codigo || '';
-            btn.disabled = count === 0 || !progVigente;
+        if (!btn) return;
+        if ((window._activeTab || 'por-matricular') === 'matriculados') {
+            btn.innerHTML = '<i class="ti ti-user-plus"></i> Matricular personal (0)';
+            btn.disabled = true;
+            btn.style.display = 'none';
+            return;
         }
-        const btnSig = document.getElementById('btnSiguienteModal');
-        if (btnSig) {
-            btnSig.innerHTML = `Continuar (${count}) <i class="ti ti-arrow-right"></i>`;
-        }
-    }
-
-    function datosModalActual() {
-        const modalEl = document.getElementById('modal-lista-matriculados');
-        return modalEl?._x_dataStack?.[0] || {};
-    }
-
-    window.prepararConfirmacionMatricula = function (silencioso = false) {
+        btn.style.display = '';
         const table = window.tabulatorPersonalMatriculado;
-        const data = table ? table.getData() || [] : [];
-        const sel = data.filter(d => d._seleccionado && !d._matriculado);
-        if (!sel.length && !silencioso) {
-            Swal.fire({ icon: 'warning', title: 'Sin selección', text: 'Seleccione al menos una persona. Puede usar "Seleccionar filtrados" para elegir todo el grupo y luego quitar excepciones.', confirmButtonColor: '#6366f1' });
-            return false;
+        if (!table) {
+            btn.innerHTML = '<i class="ti ti-user-plus"></i> Matricular personal (0)';
+            btn.disabled = true;
+            return;
         }
-        const cont = document.getElementById('contenidoConfirmacion');
-        if (cont) {
-            const comp = datosModalActual();
-            const prog = window._programacionVigente || {};
-            const avisa = sel.length > 10;
-            const filas = sel.map(p => {
-                const cod = String(p.codigo || p.dni || p.id || '');
-                const nom = (p.nombre_completo || 'Sin nombre').replace(/</g, '&lt;');
-                const dni = (p.dni || '—').replace(/</g, '&lt;');
-                const suc = (p.sucursal || '—').replace(/</g, '&lt;');
-                return `<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white border border-default-200/60">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-default-800 truncate">${nom}</p>
-                        <p class="text-[11px] text-default-400">DNI: <span class="font-mono">${dni}</span> <span class="mx-1">|</span> ${suc}</p>
-                    </div>
-                    <button type="button" onclick="window.quitarSeleccionadoMat('${cod}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer" title="Quitar de la selección">
-                        <i class="ti ti-x text-sm"></i>
-                    </button>
-                </div>`;
-            }).join('');
-            cont.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div class="p-4 rounded-xl bg-default-50 border border-default-200/60">
-                        <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest">Curso</p>
-                        <p class="text-sm font-bold text-default-900 mt-1">${String(comp.nombre || '—').replace(/</g, '&lt;')}</p>
-                    </div>
-                    <div class="p-4 rounded-xl bg-default-50 border border-default-200/60">
-                        <p class="text-[10px] font-bold text-default-400 uppercase tracking-widest">Programación vigente</p>
-                        <p class="text-sm font-bold text-default-900 mt-1">N° ${prog.codigo || '—'}</p>
-                    </div>
-                    <div class="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                        <p class="text-[10px] font-bold text-primary uppercase tracking-widest">A matricular</p>
-                        <p class="text-sm font-bold text-primary mt-1">${sel.length} persona(s)</p>
-                        <p class="text-[11px] text-default-500 mt-1">${avisa ? 'Se avisará al coordinador por correo al finalizar (más de 10).' : 'Sin aviso por correo (10 o menos).'}</p>
-                    </div>
-                </div>
-                <div>
-                    <p class="text-[11px] font-bold text-default-400 uppercase tracking-widest mb-2">Seleccionados (${sel.length})</p>
-                    ${sel.length ? `<div class="flex flex-col gap-2 max-h-[320px] overflow-y-auto custom-scrollbar">${filas}</div>` : '<p class="text-sm text-default-400">Sin seleccionados. Vuelva atrás para elegir personal.</p>'}
-                </div>`;
-        }
-        return true;
-    };
-
-    window.quitarSeleccionadoMat = function (codigo) {
-        const table = window.tabulatorPersonalMatriculado;
-        const rows = table ? table.getRows() : [];
-        const row = rows.find(r => String(r.getData().codigo || r.getData().dni || r.getData().id) === String(codigo));
-        if (row) row.update({ _seleccionado: false });
-        updateMatricularButton();
-        actualizarBotonSeleccionarFiltrados();
-        window.prepararConfirmacionMatricula(true);
-    };
+        const data = table.getData() || [];
+        let count = 0;
+        data.forEach(d => {
+            if (d._seleccionado && !d._matriculado) count++;
+        });
+        btn.innerHTML = `<i class="ti ti-user-plus"></i> Matricular personal (${count})`;
+        const progVigente = window._programacionVigente?.codigo || '';
+        btn.disabled = count === 0 || !progVigente;
+    }
 
     window.limpiarModalMatriculados = function() {
         if (typeof window._detenerTextoLoader === 'function') window._detenerTextoLoader();
@@ -574,6 +533,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const btnSel = document.getElementById('btnSeleccionarFiltrados');
         if (btnSel) btnSel.style.display = modo === 'por-matricular' ? '' : 'none';
+        const lblNotif = document.getElementById('lblNotificarMatricula');
+        if (lblNotif) lblNotif.style.display = modo === 'por-matricular' ? '' : 'none';
     }
 
     window.setTabMatricula = function (tab) {
@@ -1028,7 +989,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 Swal.fire({ title: 'Matriculando personal...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
                                 try {
-                                    const notificar = personalIds.length > 10;
+                                    const notificar = document.getElementById('chkNotificarMatricula')?.checked || false;
                                     const resp = await axios.post(
                                         `${VITE_URL_APP}/capacitacion/save-matricula`,
                                         {
