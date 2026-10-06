@@ -197,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ajaxResponse: function (url, params, response) {
                 return response.Cursos;
             },
-            layout: "fitColumns",
+            layout: "fitDataFill",
             placeholder: "No hay cursos disponibles...",
             pagination: "local",
             paginationSize: 5,
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     title: "Nombre de curso",
                     field: "Nombre",
-                    width: 375,
+                    minWidth: 280,
                     formatter(cell) {
                         const val = cell.getValue();
                         return `<span style="font-weight:500; color:#111827;">${val ?? "—"}</span>`;
@@ -233,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     title: "Responsable",
                     field: "Responsable",
-                    width: 375,
+                    width: 280,
                     headerSort: true,
                     formatter(cell) {
                         const val = cell.getValue();
@@ -250,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     title: "Matriculados",
                     field: "Total_Matriculados",
-                    width: 160,
+                    width: 130,
                     hozAlign: "center",
                     headerSort: true,
                     formatter(cell) {
@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     title: "Creación",
                     field: "Fecha_Creacion",
-                    width: 150,
+                    width: 130,
                     hozAlign: "center",
                     headerSort: true,
                     formatter(cell) {
@@ -283,8 +283,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 {
                     title: "Acciones",
-                    width: 260,
                     hozAlign: "center",
+                    headerHozAlign: "center",
                     headerSort: false,
                     formatter(cell) {
                         return `
@@ -461,8 +461,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = '<option value="">' + (id.includes('Cliente') ? 'Todos' : id.includes('Sucursal') ? 'Todas' : id.includes('Cargo') ? 'Todos' : 'Todos') + '</option>';
         });
-        document.getElementById('cntMatriculados').textContent = '0';
-        document.getElementById('cntSinMatricular').textContent = '0';
+        const cntInfo = document.getElementById('txtConteoPersonal');
+        if (cntInfo) cntInfo.textContent = '';
         const btn = document.getElementById('btnGuardarMatriculas');
         if (btn) {
             btn.innerHTML = '<i class="ti ti-user-plus"></i> Matricular personal (0)';
@@ -473,12 +473,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function actualizarContadores() {
         const table = window.tabulatorPersonalMatriculado;
         const data = table ? table.getData() || [] : [];
-        const matriculados = data.filter(d => d._matriculado).length;
-        const sinMatricular = data.filter(d => !d._matriculado).length;
-        const elM = document.getElementById('cntMatriculados');
-        const elS = document.getElementById('cntSinMatricular');
-        if (elM) elM.textContent = matriculados;
-        if (elS) elS.textContent = sinMatricular;
+        const modo = window._activeTab || 'por-matricular';
+        const el = document.getElementById('txtConteoPersonal');
+        if (el) el.textContent = modo === 'matriculados'
+            ? `${data.length} persona(s) matriculada(s)`
+            : `${data.length} persona(s) disponible(s) para matricular`;
     }
 
     function getRowsFiltradosVisibles() {
@@ -509,19 +508,19 @@ document.addEventListener("DOMContentLoaded", () => {
     window._activeTab = window._activeTab || 'por-matricular';
 
     function refreshTabsUI() {
-        const tab = window._activeTab || 'por-matricular';
-        const btnPor = document.getElementById('tabPorMatricular');
-        const btnMat = document.getElementById('tabMatriculados');
-        const activeCls = ["bg-amber-50", "border-amber-200", "text-amber-700"];
-        const idleCls = ["bg-white", "border-default-200", "text-default-500"];
-        [[btnPor, tab === 'por-matricular'], [btnMat, tab === 'matriculados']].forEach(([btn, isActive]) => {
-            if (!btn) return;
-            btn.classList.remove(...activeCls, ...idleCls);
-            btn.classList.add(...(isActive ? activeCls : idleCls));
-            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
+        const modo = window._activeTab || 'por-matricular';
+        const badge = document.getElementById('badgeModoMatricula');
+        const txt = document.getElementById('txtModoMatricula');
+        if (badge && txt) {
+            const esMat = modo === 'matriculados';
+            txt.textContent = esMat ? 'Matriculados' : 'Por matricular';
+            badge.className = 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border ' +
+                (esMat ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-amber-50 border-amber-200 text-amber-700');
+            const icon = badge.querySelector('i');
+            if (icon) icon.className = esMat ? 'ti ti-users text-sm' : 'ti ti-user-plus text-sm';
+        }
         const btnSel = document.getElementById('btnSeleccionarFiltrados');
-        if (btnSel) btnSel.style.display = tab === 'por-matricular' ? '' : 'none';
+        if (btnSel) btnSel.style.display = modo === 'por-matricular' ? '' : 'none';
     }
 
     window.setTabMatricula = function (tab) {
@@ -579,27 +578,35 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             window._matriculadosData = matriculadosData;
 
-            const selectedCodProg = slcProg?.value || '';
-            const filteredMatriculados = selectedCodProg
-                ? matriculadosData.filter(m => String(m.cod_programacion || m.Cod_Programacion || '').toString().trim() === selectedCodProg)
-                : [];
-            const matriculadosSet = new Set(filteredMatriculados.map(m => String(m.cod_personal || m.Id_Personal || m.id || m.Id)));
-
             const responsableCodigo = alpineComponent?.codResponsable;
-            const tableData = personalData
-                .filter(p => String(p.codigo) !== String(responsableCodigo))
-                .map(p => {
-                const personalId = String(p.codigo || p.dni || p.id);
-                const match = filteredMatriculados.find(m => String(m.cod_personal || m.Id_Personal || m.id || m.Id) === personalId);
-                const yaMatriculado = !!match;
-                return {
-                    ...p,
-                    _matriculado: yaMatriculado,
-                    _seleccionado: yaMatriculado,
-                    _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null,
-                    _estado: match ? (match.estado || match.Estado || 'MATRICULADO') : null
-                };
-            });
+            const modoModal = window._activeTab || 'por-matricular';
+            window._personalBase = personalData
+                .filter(p => String(p.codigo) !== String(responsableCodigo));
+
+            // Solo la población del modo: sin matricular (matricular) o matriculados (desmatricular)
+            const construirFilas = () => {
+                const codProg = document.getElementById('slcProgramacion')?.value || '';
+                const filtrados = codProg
+                    ? (window._matriculadosData || []).filter(m => String(m.cod_programacion || m.Cod_Programacion || '').trim() === codProg)
+                    : [];
+                return (window._personalBase || [])
+                    .map(p => {
+                        const personalId = String(p.codigo || p.dni || p.id);
+                        const match = filtrados.find(m => String(m.cod_personal || m.Id_Personal || m.id || m.Id) === personalId);
+                        const yaMatriculado = !!match;
+                        return {
+                            ...p,
+                            _matriculado: yaMatriculado,
+                            _seleccionado: false,
+                            _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null,
+                            _estado: match ? (match.estado || match.Estado || 'MATRICULADO') : null
+                        };
+                    })
+                    .filter(r => modoModal === 'matriculados' ? r._matriculado : !r._matriculado);
+            };
+
+            const tableData = construirFilas();
+            window._reconstruirFilasPersonal = construirFilas;
 
             const unique = (field) => [...new Set(tableData.map(d => d[field]).filter(Boolean))].sort();
             fillSelect("slcFiltroCliente", unique("cliente"), "Todos los clientes");
@@ -617,7 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         "#tblPersonalMatriculado",
                         {
                             data: tableData,
-                            layout: "fitDataStretch",
+                            layout: "fitDataFill",
                             pagination: "local",
                             paginationSize: 10,
                             langs: { "es-es": esLocale },
@@ -794,13 +801,14 @@ document.addEventListener("DOMContentLoaded", () => {
                                                 const resp = await axios.post(`${VITE_URL_APP}/api/capacitacion/desmatricular-usuario`, { codPersonal, cursoId });
                                                 Swal.close();
                                                 if (resp.data.success) {
-                                                    const row = cell.getRow();
-                                                    row.update({
-                                                        _matriculado: false,
-                                                        _seleccionado: false,
-                                                        _estado: null,
-                                                        _fecha_matricula: null,
-                                                    });
+                                                    const progActual = document.getElementById('slcProgramacion')?.value || '';
+                                                    if (Array.isArray(window._matriculadosData)) {
+                                                        window._matriculadosData = window._matriculadosData.filter(m =>
+                                                            !(String(m.cod_personal || m.Id_Personal || m.id || m.Id) === codPersonal &&
+                                                              String(m.cod_programacion || m.Cod_Programacion || '').trim() === String(progActual).trim())
+                                                        );
+                                                    }
+                                                    cell.getRow().delete();
                                                     await Swal.fire({ icon: 'success', title: 'Desmatriculado', text: 'El personal fue desmatriculado correctamente.', confirmButtonColor: '#6366f1', timer: 2000, showConfirmButton: false });
                                                     updateMatricularButton();
                                                     actualizarContadores();
@@ -851,10 +859,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             const car = document.getElementById("slcFiltroCargo")?.value;
                             const tip = document.getElementById("slcFiltroTipoTrabajador")?.value;
                             const term = window._searchTerm || '';
-                            const tab = window._activeTab || 'por-matricular';
 
+                            // El dataset ya viene filtrado por modo (ver construirFilas); aquí solo filtros secundarios + búsqueda
                             const filters = [];
-                            filters.push({ field: "_matriculado", type: "=", value: tab === 'matriculados' });
                             if (cli) filters.push({ field: "cliente", type: "=", value: cli });
                             if (suc) filters.push({ field: "sucursal", type: "=", value: suc });
                             if (car) filters.push({ field: "cargo", type: "=", value: car });
@@ -894,8 +901,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             });
                         }
 
-                        document.getElementById('tabPorMatricular')?.addEventListener('click', () => window.setTabMatricula('por-matricular'));
-                        document.getElementById('tabMatriculados')?.addEventListener('click', () => window.setTabMatricula('matriculados'));
+                        // Sin tabs: el modo lo define el botón de origen (Matricular / Desmatricular) y filtra el dataset
 
                         ["slcFiltroCliente", "slcFiltroSucursal", "slcFiltroCargo", "slcFiltroTipoTrabajador"].forEach(id => {
                             document.getElementById(id)?.addEventListener('change', aplicarFiltrosCombinados);
@@ -903,29 +909,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         // Programación change → re-seleccionar filas
                         slcProg.onchange = function() {
-                            const codProg = this.value;
                             const selectedOpt = this.options[this.selectedIndex];
                             window._selectedProgramacionEstado = selectedOpt ? selectedOpt.dataset.estado : '';
-                            const filtered = codProg
-                                ? (window._matriculadosData || []).filter(m => String(m.cod_programacion || m.Cod_Programacion || '').toString().trim() === codProg)
-                                : [];
-                            const allRows = window.tabulatorPersonalMatriculado?.getRows(true) || [];
-                            allRows.forEach(row => {
-                                const d = row.getData();
-                                const personalId = String(d.codigo || d.dni || d.id);
-                                const match = filtered.find(m => String(m.cod_personal || m.Id_Personal || m.id || m.Id) === personalId);
-                                const yaMatriculado = !!match;
-                                row.update({
-                                    _matriculado: yaMatriculado,
-                                    _seleccionado: yaMatriculado,
-                                    _fecha_matricula: match ? match.fecha_matricula || match.Fecha_Matricula || null : null,
-                                    _estado: match ? (match.estado || match.Estado || 'MATRICULADO') : null
-                                });
-                            });
-                            updateMatricularButton();
-                            actualizarContadores();
-                            if (typeof window._aplicarFiltrosMatricula === 'function') window._aplicarFiltrosMatricula();
-                            actualizarBotonSeleccionarFiltrados();
+                            if (typeof window._reconstruirFilasPersonal === 'function' && window.tabulatorPersonalMatriculado) {
+                                window.tabulatorPersonalMatriculado.setData(window._reconstruirFilasPersonal()).then(() => {
+                                    updateMatricularButton();
+                                    actualizarContadores();
+                                    actualizarBotonSeleccionarFiltrados();
+                                }).catch(() => {});
+                            } else {
+                                updateMatricularButton();
+                                actualizarContadores();
+                                actualizarBotonSeleccionarFiltrados();
+                            }
                         };
                         // Sincronizar filas por si el usuario cambió dropdown antes de que la tabla estuviera lista
                         if (slcProg.value) slcProg.onchange();

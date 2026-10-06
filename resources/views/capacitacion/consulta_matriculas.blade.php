@@ -646,18 +646,13 @@
                 </div>
             </div>
 
-            <!-- Tabs Por matricular / Matriculados -->
-            <div class="flex flex-wrap items-center gap-2 mb-4" id="tabsMatricula" role="tablist">
-                <button type="button" id="tabPorMatricular" role="tab"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700 transition">
+            <!-- Modo del modal: Por matricular / Matriculados -->
+            <div class="flex flex-wrap items-center gap-2 mb-4" id="infoModoMatricula">
+                <span id="badgeModoMatricula" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700">
                     <i class="ti ti-user-plus text-sm"></i>
-                    <span>Por matricular (<span id="cntSinMatricular">0</span>)</span>
-                </button>
-                <button type="button" id="tabMatriculados" role="tab"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white border border-default-200 text-xs font-semibold text-default-500 transition hover:bg-default-50">
-                    <i class="ti ti-users text-sm"></i>
-                    <span>Matriculados (<span id="cntMatriculados">0</span>)</span>
-                </button>
+                    <span id="txtModoMatricula">Por matricular</span>
+                </span>
+                <span id="txtConteoPersonal" class="text-xs text-default-500 font-medium"></span>
                 <button type="button" id="btnSeleccionarFiltrados" class="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 text-primary text-xs font-semibold shadow-sm hover:bg-primary/10 transition disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="ti ti-checks text-sm"></i>
                     <span>Seleccionar filtrados (0)</span>
