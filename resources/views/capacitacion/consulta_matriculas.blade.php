@@ -592,13 +592,13 @@
                 </div>
             </div>
 
-            <!-- Programación -->
-            <div class="flex flex-col gap-1 bg-default-50 border border-default-200/60 rounded-xl px-4 py-2">
-                <p class="text-[11px] font-semibold text-default-400 uppercase tracking-widest mb-2">Programaciones vigentes, pendientes y finalizadas del curso</p>
-                <select id="slcProgramacion"
-                    class="w-full px-2.5 text-xs border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                    <option value="">Seleccione una programación</option>
-                </select>
+            <!-- Programación vigente -->
+            <div class="flex flex-col gap-1 bg-default-50 border border-default-200/60 rounded-xl px-4 py-3">
+                <p class="text-[11px] font-semibold text-default-400 uppercase tracking-widest">Programación vigente del curso</p>
+                <div id="infoProgramacionVigente" class="flex items-center gap-2 text-sm font-semibold text-default-900">
+                    <i class="ti ti-calendar-event text-primary"></i>
+                    <span id="txtProgramacionVigente">—</span>
+                </div>
             </div>
 
             <!-- Filtros -->
@@ -646,13 +646,8 @@
                 </div>
             </div>
 
-            <!-- Modo del modal: Por matricular / Matriculados -->
+            <!-- Acciones de selección -->
             <div class="flex flex-wrap items-center gap-2 mb-4" id="infoModoMatricula">
-                <span id="badgeModoMatricula" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700">
-                    <i class="ti ti-user-plus text-sm"></i>
-                    <span id="txtModoMatricula">Por matricular</span>
-                </span>
-                <span id="txtConteoPersonal" class="text-xs text-default-500 font-medium"></span>
                 <button type="button" id="btnSeleccionarFiltrados" class="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 text-primary text-xs font-semibold shadow-sm hover:bg-primary/10 transition disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="ti ti-checks text-sm"></i>
                     <span>Seleccionar filtrados (0)</span>
@@ -672,7 +667,7 @@
                     x-transition:leave-end="opacity-0"
                     class="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
                     <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <span class="mt-3 text-sm font-semibold text-primary tracking-wide">Cargando personal...</span>
+                    <span class="mt-3 text-sm font-semibold text-primary tracking-wide" x-text="loadingText">Cargando personal...</span>
                 </div>
 
                 <div id="tblPersonalMatriculado" class="w-full min-h-[400px]"></div>
@@ -681,7 +676,7 @@
 
         <!-- Footer -->
         <div class="flex justify-end items-center gap-3 px-6 py-4 border-t border-default-100 shrink-0 bg-default-50/50">
-            <label class="mr-auto flex items-center gap-2 text-xs font-medium text-default-500 cursor-pointer select-none" title="Se avisará al coordinador por correo al finalizar (solo si son más de 10 personas)">
+            <label id="lblNotificarMatricula" class="mr-auto flex items-center gap-2 text-xs font-medium text-default-500 cursor-pointer select-none" title="Se avisará al coordinador por correo al finalizar (solo si son más de 10 personas)">
                 <input type="checkbox" id="chkNotificarMatricula" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
                 Avisar por correo al finalizar
             </label>
@@ -702,6 +697,7 @@
         return {
             open: false,
             isLoading: false,
+            loadingText: 'Cargando personal...',
             cursoId: null,
             nombre: '',
             area: '',
@@ -721,14 +717,13 @@
                 this.descripcion = data.Descripcion || '';
                 this.codResponsable = data.Cod_Responsable || '';
 
-                if (window.cargarDatosModalMatriculados) {
-                    window.cargarDatosModalMatriculados(this.cursoId, this);
-                }
+                if (window._iniciarTextoLoader) window._iniciarTextoLoader(this);
             },
 
             cerrar() {
                 this.open = false;
                 this.isLoading = false;
+                if (window._detenerTextoLoader) window._detenerTextoLoader();
                 if (window.limpiarModalMatriculados) window.limpiarModalMatriculados();
             },
         }

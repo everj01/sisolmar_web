@@ -333,25 +333,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         e.stopPropagation();
                         const data = cell.getRow().getData();
 
-                        // Ambos flujos resuelven la programación vigente primero
-                        let progVigente = null;
-                        try {
-                            Swal.fire({ title: 'Verificando programación vigente...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                            const progResp = await axios.get(`${VITE_URL_APP}/api/cursos/obtener-prog-actual/${data.LocalId}`);
-                            Swal.close();
-                            progVigente = progResp.data?.success ? progResp.data?.data : null;
-                        } catch (err) {
-                            Swal.close();
-                            console.error(err);
-                            await Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar la programación del curso.', confirmButtonColor: '#6366f1' });
-                            return;
-                        }
-
-                        if (!progVigente || String(progVigente.estado_periodo || '').toUpperCase() !== 'VIGENTE') {
-                            await Swal.fire({ icon: 'warning', title: 'Sin programación vigente', text: 'El curso no tiene una programación vigente. Cree una programación antes de gestionar matrículas.', confirmButtonColor: '#6366f1' });
-                            return;
-                        }
-
                         window._activeTab = btnMat ? 'por-matricular' : 'matriculados';
 
                         const modalEl = document.getElementById(
@@ -359,12 +340,36 @@ document.addEventListener("DOMContentLoaded", () => {
                         );
                         const alpineComponent = modalEl?._x_dataStack?.[0];
 
-                        if (alpineComponent?.mostrar) {
-                            alpineComponent.mostrar(data);
-                        } else {
+                        if (!alpineComponent?.mostrar) {
                             console.warn(
                                 "No se encontró el componente Alpine del modal",
                             );
+                            return;
+                        }
+
+                        // Abrir el modal de inmediato con loader animado
+                        alpineComponent.mostrar(data);
+
+                        // Resolver la programación vigente primero
+                        let progVigente = null;
+                        try {
+                            const progResp = await axios.get(`${VITE_URL_APP}/api/cursos/obtener-prog-actual/${data.LocalId}`);
+                            progVigente = progResp.data?.success ? progResp.data?.data : null;
+                        } catch (err) {
+                            console.error(err);
+                            alpineComponent.cerrar();
+                            await Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar la programación del curso.', confirmButtonColor: '#6366f1' });
+                            return;
+                        }
+
+                        if (!progVigente || String(progVigente.estado_periodo || '').toUpperCase() !== 'VIGENTE') {
+                            alpineComponent.cerrar();
+                            await Swal.fire({ icon: 'warning', title: 'Sin programación vigente', text: 'El curso no tiene una programación vigente. Cree una programación antes de gestionar matrículas.', confirmButtonColor: '#6366f1' });
+                            return;
+                        }
+
+                        if (window.cargarDatosModalMatriculados) {
+                            window.cargarDatosModalMatriculados(alpineComponent.cursoId, alpineComponent);
                         }
                     },
                 },
@@ -436,13 +441,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (d._seleccionado && !d._matriculado) count++;
         });
         btn.innerHTML = `<i class="ti ti-user-plus"></i> Matricular personal (${count})`;
-        const slcProg = document.getElementById('slcProgramacion');
-        const slcVal = slcProg?.value;
-        const esVigente = window._selectedProgramacionEstado === 'VIGENTE';
-        btn.disabled = count === 0 || !slcVal || !esVigente;
+        const progVigente = window._programacionVigente?.codigo || '';
+        btn.disabled = count === 0 || !progVigente;
     }
 
     window.limpiarModalMatriculados = function() {
+        if (typeof window._detenerTextoLoader === 'function') window._detenerTextoLoader();
         if (window.tabulatorPersonalMatriculado) {
             window.tabulatorPersonalMatriculado.destroy();
             window.tabulatorPersonalMatriculado = null;
@@ -456,7 +460,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (txtBuscar) { txtBuscar.value = ''; }
         const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
         if (btnLimpiar) { btnLimpiar.style.display = 'none'; }
-        document.getElementById('slcProgramacion').innerHTML = '<option value="">Seleccione...</option>';
+        window._programacionVigente = null;
+        const txtProg = document.getElementById('txtProgramacionVigente');
+        if (txtProg) txtProg.textContent = '—';
         ['slcFiltroCliente', 'slcFiltroSucursal', 'slcFiltroCargo', 'slcFiltroTipoTrabajador'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = '<option value="">' + (id.includes('Cliente') ? 'Todos' : id.includes('Sucursal') ? 'Todas' : id.includes('Cargo') ? 'Todos' : 'Todos') + '</option>';
@@ -521,6 +527,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const btnSel = document.getElementById('btnSeleccionarFiltrados');
         if (btnSel) btnSel.style.display = modo === 'por-matricular' ? '' : 'none';
+        const lblNotif = document.getElementById('lblNotificarMatricula');
+        if (lblNotif) lblNotif.style.display = modo === 'por-matricular' ? '' : 'none';
     }
 
     window.setTabMatricula = function (tab) {
@@ -544,6 +552,24 @@ document.addEventListener("DOMContentLoaded", () => {
         actualizarBotonSeleccionarFiltrados();
     };
 
+    window._iniciarTextoLoader = function (comp) {
+        window._detenerTextoLoader();
+        const base = 'Cargando personal y programación vigente';
+        let n = 3;
+        if (comp) comp.loadingText = base + '.'.repeat(n);
+        window._loaderDotsTimer = setInterval(() => {
+            n = n === 1 ? 3 : n - 1;
+            if (comp) comp.loadingText = base + '.'.repeat(n);
+        }, 500);
+    };
+
+    window._detenerTextoLoader = function () {
+        if (window._loaderDotsTimer) {
+            clearInterval(window._loaderDotsTimer);
+            window._loaderDotsTimer = null;
+        }
+    };
+
     window.cargarDatosModalMatriculados = async function(cursoId, alpineComponent) {
         if (!cursoId) return;
 
@@ -554,27 +580,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const personalData = res.data.personal || [];
             const matriculadosData = res.data.matriculados || res.data.Matriculados || [];
 
-            const slcProg = document.getElementById('slcProgramacion');
-            if (slcProg) {
-                slcProg.innerHTML = '<option value="">Seleccione una programación...</option>';
-                let firstVigente = null;
-                programaciones.forEach(p => {
-                    const opt = document.createElement('option');
-                    const codProg = (p.codigo_programacion || p.cod_programacion || p.codigo || '').toString().trim();
-                    opt.value = codProg;
-                    const fInicio = formatDate(p.fecha_inicio);
-                    const fFinal = formatDate(p.fecha_final);
-                    const estado = p.estado_periodo || p.estado || '';
-                    opt.textContent = `Programación ${codProg} | ${fInicio} - ${fFinal} (${estado})`;
-                    opt.dataset.estado = estado;
-                    if (estado === 'VIGENTE' && !firstVigente) {
-                        firstVigente = codProg;
-                    }
-                    slcProg.appendChild(opt);
-                });
-                if (firstVigente) {
-                    slcProg.value = firstVigente;
-                }
+            // Ambos flujos operan siempre sobre la programación vigente
+            const progVigente = (programaciones || []).find(p =>
+                String(p.estado_periodo || p.estado || '').toUpperCase() === 'VIGENTE'
+            ) || null;
+            window._programacionVigente = progVigente ? {
+                codigo: String(progVigente.codigo_programacion || progVigente.cod_programacion || progVigente.codigo || '').trim(),
+                fecha_inicio: progVigente.fecha_inicio,
+                fecha_final: progVigente.fecha_final,
+                estado: progVigente.estado_periodo || progVigente.estado || 'VIGENTE',
+            } : null;
+
+            const txtProg = document.getElementById('txtProgramacionVigente');
+            if (txtProg) {
+                txtProg.textContent = window._programacionVigente
+                    ? `Programación ${window._programacionVigente.codigo} | ${formatDate(window._programacionVigente.fecha_inicio)} - ${formatDate(window._programacionVigente.fecha_final)} (${window._programacionVigente.estado})`
+                    : 'Sin programación vigente';
             }
             window._matriculadosData = matriculadosData;
 
@@ -585,7 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Solo la población del modo: sin matricular (matricular) o matriculados (desmatricular)
             const construirFilas = () => {
-                const codProg = document.getElementById('slcProgramacion')?.value || '';
+                const codProg = window._programacionVigente?.codigo || '';
                 const filtrados = codProg
                     ? (window._matriculadosData || []).filter(m => String(m.cod_programacion || m.Cod_Programacion || '').trim() === codProg)
                     : [];
@@ -801,7 +822,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                                 const resp = await axios.post(`${VITE_URL_APP}/api/capacitacion/desmatricular-usuario`, { codPersonal, cursoId });
                                                 Swal.close();
                                                 if (resp.data.success) {
-                                                    const progActual = document.getElementById('slcProgramacion')?.value || '';
+                                                    const progActual = window._programacionVigente?.codigo || '';
                                                     if (Array.isArray(window._matriculadosData)) {
                                                         window._matriculadosData = window._matriculadosData.filter(m =>
                                                             !(String(m.cod_personal || m.Id_Personal || m.id || m.Id) === codPersonal &&
@@ -907,24 +928,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             document.getElementById(id)?.addEventListener('change', aplicarFiltrosCombinados);
                         });
 
-                        // Programación change → re-seleccionar filas
-                        slcProg.onchange = function() {
-                            const selectedOpt = this.options[this.selectedIndex];
-                            window._selectedProgramacionEstado = selectedOpt ? selectedOpt.dataset.estado : '';
-                            if (typeof window._reconstruirFilasPersonal === 'function' && window.tabulatorPersonalMatriculado) {
-                                window.tabulatorPersonalMatriculado.setData(window._reconstruirFilasPersonal()).then(() => {
-                                    updateMatricularButton();
-                                    actualizarContadores();
-                                    actualizarBotonSeleccionarFiltrados();
-                                }).catch(() => {});
-                            } else {
-                                updateMatricularButton();
-                                actualizarContadores();
-                                actualizarBotonSeleccionarFiltrados();
-                            }
-                        };
-                        // Sincronizar filas por si el usuario cambió dropdown antes de que la tabla estuviera lista
-                        if (slcProg.value) slcProg.onchange();
+                        // Sin selector: siempre se opera sobre la programación vigente fija
 
                         const btnSeleccionarFiltrados = document.getElementById('btnSeleccionarFiltrados');
                         if (btnSeleccionarFiltrados) {
@@ -958,10 +962,10 @@ document.addEventListener("DOMContentLoaded", () => {
                                 const modalEl = document.getElementById('modal-lista-matriculados');
                                 const alpineComponent = modalEl?._x_dataStack?.[0];
                                 const cId = alpineComponent?.cursoId;
-                                const progId = slcProg?.value;
+                                const progId = window._programacionVigente?.codigo || '';
 
                                 if (!progId) {
-                                    Swal.fire({ icon: 'warning', title: 'Atención', text: 'Seleccione una programación', confirmButtonColor: '#6366f1' });
+                                    Swal.fire({ icon: 'warning', title: 'Atención', text: 'El curso no tiene una programación vigente', confirmButtonColor: '#6366f1' });
                                     return;
                                 }
 
@@ -1005,6 +1009,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         window.setTabMatricula(window._activeTab || 'por-matricular');
                         actualizarContadores();
+                        if (typeof window._detenerTextoLoader === 'function') window._detenerTextoLoader();
                         if (alpineComponent) alpineComponent.isLoading = false;
                     });
 
@@ -1014,6 +1019,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (error) {
             console.error("Error cargando datos del modal", error);
+            if (typeof window._detenerTextoLoader === 'function') window._detenerTextoLoader();
             if (alpineComponent) alpineComponent.isLoading = false;
         }
     };
