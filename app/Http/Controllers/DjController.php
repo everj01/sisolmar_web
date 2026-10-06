@@ -15,6 +15,12 @@ use App\Mail\ExcepcionEdadMail;
 
 class DjController extends Controller
 {
+    /**
+     * Rol "ADMINS RRHH" (sw_roles.codigo). Unico rol que puede autorizar
+     * excepciones de edad al registrar o editar una DJ.
+     */
+    private const ROL_ADMIN_RRHH = 17;
+
     public function generarPDF(Request $request)
     {
         $data = $request->all();
@@ -128,11 +134,9 @@ class DjController extends Controller
                 $edad = $fechaNacimientoCarbon->age;
                 $reglasEdad = $this->obtenerReglasEdad();
                 if ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima']) {
-                    $excepcionEdad = session('dj_excepcion_edad');
-                    $excepcionValida = is_array($excepcionEdad)
-                        && ($excepcionEdad['fecha_nacimiento'] ?? null) === $fechaNacimiento
-                        && (int) ($excepcionEdad['edad'] ?? -1) === $edad
-                        && ($excepcionEdad['usuario_autorizador'] ?? '') !== '';
+                    // Debe existir una excepción autorizada por un ADMIN RRHH
+                    // para esta misma fecha de nacimiento (se pide en cada registro).
+                    $excepcionValida = $this->excepcionEdadAutorizada($fechaNacimiento, $edad);
 
                     if (!$excepcionValida) {
                         DB::rollBack();
@@ -441,69 +445,19 @@ class DjController extends Controller
             );
 
             if (isset($excepcionValida) && $excepcionValida) {
-                $tipoExcepcion = $edad < $reglasEdad['minima'] ? 'MINIMA' : 'MAXIMA';
-                $codigoRegla = $edad < $reglasEdad['minima'] ? 377 : 176;
-                $excepcionEdad = session('dj_excepcion_edad');
-
-                $now = now()->format('Y-m-d H:i:s');
-                $fechaNac = \Carbon\Carbon::parse($fechaNacimiento)->format('Y-m-d');
-                $fechaAuto = \Carbon\Carbon::parse($excepcionEdad['fecha_autorizacion'])->format('Y-m-d H:i:s');
-
-                $codPersonal = addslashes((string) $nuevoCod);
-                $dniVal      = addslashes((string) $dni);
-                $tipoExc     = addslashes((string) $tipoExcepcion);
-                $usuReg      = addslashes((string) (session('usuario') ?? '0'));
-                $usuAutor    = addslashes((string) $excepcionEdad['usuario_autorizador']);
-
-                DB::connection('sqlsrv')->unprepared(
-                    "INSERT INTO sisolm_web.dbo.sw_dj_excepciones_edad 
-                        (cod_personal, dni, fecha_nacimiento, edad_calculada, tipo_excepcion, 
-                         codigo_valo_unitario, edad_minima, edad_maxima, usuario_registro, 
-                         usuario_autorizador, fecha_autorizacion, fecha_registro) 
-                     VALUES ('$codPersonal', '$dniVal', CONVERT(date,'$fechaNac',23), $edad, '$tipoExc', $codigoRegla, {$reglasEdad['minima']}, {$reglasEdad['maxima']}, '$usuReg', '$usuAutor', CONVERT(datetime,'$fechaAuto',121), CONVERT(datetime,'$now',121))"
+                // Auditoria + notificacion a RRHH (tabla sw_dj_excepciones_edad)
+                $this->registrarExcepcionEdad(
+                    (string) $nuevoCod,
+                    (string) $dni,
+                    $fechaNacimiento,
+                    (int) $edad,
+                    $reglasEdad,
+                    $data,
+                    $tipotrab,
+                    $sucursal
                 );
-
-                session()->forget('dj_excepcion_edad');
-
-                $nombreCompleto = trim(($data['nombre1'] ?? '') . ' ' . ($data['nombre2'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
-
-                // Resolver tipo trabajador
-                $tipoTrabNombre = $tipotrab;
-                if (!empty($tipotrab)) {
-                    $tipoRow = DB::connection('sqlsrv')->selectOne(
-                        "SELECT TIPE_DESCRIPCION FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?",
-                        [$tipotrab]
-                    );
-                    $tipoTrabNombre = $tipoRow->TIPE_DESCRIPCION ?? $tipotrab;
-                }
-
-                // Resolver sucursal
-                $sucursalNombre = $sucursal;
-                if (!empty($sucursal)) {
-                    $sucRow = DB::connection('sqlsrv')->selectOne(
-                        "SELECT SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WHERE SUCU_CODIGO = ?",
-                        [$sucursal]
-                    );
-                    $sucursalNombre = $sucRow->SUCU_ABREVIATURA ?? $sucursal;
-                }
-
-                $datosCorreo = [
-                    'nombre'               => $nombreCompleto,
-                    'dni'                  => $dni,
-                    'fecha_nacimiento'     => $fechaNacimiento,
-                    'edad'                 => $edad,
-                    'tipo_excepcion'       => $tipoExcepcion,
-                    'edad_minima'          => $reglasEdad['minima'],
-                    'edad_maxima'          => $reglasEdad['maxima'],
-                    'tipo_trabajador'      => $tipoTrabNombre,
-                    'sucursal'             => $sucursalNombre,
-                    'usuario_registro'     => session('usuario') ?? 'N/A',
-                    'usuario_autorizador'  => $excepcionEdad['usuario_autorizador'],
-                    'fecha_autorizacion'   => $excepcionEdad['fecha_autorizacion'],
-                ];
-
-                Mail::to('rrhh@solsecurity.pe')->send(new ExcepcionEdadMail($datosCorreo));
             }
+
  
             // Familiares y Teléfonos
             $this->saveFamiliaresTemp($nuevoCod, $data);
@@ -1247,6 +1201,45 @@ class DjController extends Controller
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
+            // ── Validación de edad (igual que en Nueva DJ) ──────────────────
+            // Si la edad queda fuera del rango se exige una excepción autorizada por
+            // un ADMIN RRHH (rol tipo_rol 17). Se pide en cada edición.
+            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
+            $fechaNacimiento = trim((string) ($data['fecha_nacimiento'] ?? ''));
+            $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
+
+            if (!$fechaNacimientoCarbon) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'La fecha de nacimiento es obligatoria y debe tener formato válido.'], 422);
+            }
+
+            $fechaNacimiento = $fechaNacimientoCarbon->format('Y-m-d');
+
+            if ($fechaNacimientoCarbon->isToday() || $fechaNacimientoCarbon->isFuture()) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'La fecha de nacimiento debe ser anterior a hoy.'], 422);
+            }
+
+            $edad = $fechaNacimientoCarbon->age;
+            $reglasEdad = $this->obtenerReglasEdad();
+            $excepcionValidaEdad = false;
+
+            if (!$exentoValidaciones && ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima'])) {
+                $excepcionValidaEdad = $this->excepcionEdadAutorizada($fechaNacimiento, $edad);
+
+                if (!$excepcionValidaEdad) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "La edad calculada ({$edad} años) está fuera del rango permitido de {$reglasEdad['minima']} a {$reglasEdad['maxima']} años.",
+                        'edad_fuera_rango' => true,
+                        'edad' => $edad,
+                        'edad_minima' => $reglasEdad['minima'],
+                        'edad_maxima' => $reglasEdad['maxima'],
+                    ], 422);
+                }
+            }
+
             $source = $request->input('source', 'migracion');
 
             // ✅ 1. SOLO MARCAR COMO MIGRADO en sw_MIGRA_PERSONAL (NO actualizar otros campos)
@@ -1296,6 +1289,20 @@ class DjController extends Controller
 
             // ✅ 7. MIGRAR TELÉFONOS → si_solm.dbo.TELEFONO
             $this->migrarTelefonos($codiPers);
+
+            // Auditoria de excepción de edad (si la hubo en esta edición)
+            if (!empty($excepcionValidaEdad)) {
+                $this->registrarExcepcionEdad(
+                    (string) $codiPers,
+                    (string) $dni,
+                    $fechaNacimiento,
+                    (int) $edad,
+                    $reglasEdad,
+                    $data,
+                    $tipoPer,
+                    $sucursalSel
+                );
+            }
 
             DB::commit();
 
@@ -4437,24 +4444,20 @@ $tipotrab    = $tipoPer;
 
     public function validarExcepcionEdad(Request $request)
     {
-        $usuario = trim($request->input('usuario', ''));
+        $usuario = strtoupper(trim($request->input('usuario', '')));
         $clave = (string) $request->input('clave', '');
         $fechaNacimiento = trim($request->input('fecha_nacimiento', ''));
 
         if ($usuario === '' || $clave === '' || $fechaNacimiento === '') {
             return response()->json([
                 'success' => false,
+                'code' => 'datos_incompletos',
                 'message' => 'Usuario, contraseña y fecha de nacimiento son obligatorios.',
             ], 422);
         }
 
-        if ($usuario !== (string) (session('usuario') ?? '')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debe validar la contraseña del usuario actualmente logueado.',
-            ], 422);
-        }
-
+        // La cuenta ingresada puede ser DISTINTA a la del usuario que registra la DJ:
+        // quien autoriza debe ser un ADMIN RRHH (rol tipo_rol = 17).
         $user = DB::table('sw_usuarios')
             ->where('usuario', $usuario)
             ->where('habilitado', 1)
@@ -4464,18 +4467,17 @@ $tipotrab    = $tipoPer;
         if (!$user || !Hash::check($clave, $hashAlmacenado)) {
             return response()->json([
                 'success' => false,
+                'code' => 'clave_invalida',
                 'message' => 'La contraseña no es válida.',
             ], 422);
         }
 
-        $tienePermiso = DB::connection('sqlsrv')->selectOne(
-            "SELECT 1 FROM sisolm_web.dbo.sw_permisos_excepcion_edad WHERE usuario = ? AND habilitado = 1",
-            [$usuario]
-        );
-        if (!$tienePermiso) {
+        // Solo el rol ADMINS RRHH (tipo_rol 17) puede autorizar excepciones de edad.
+        if ((int) $user->tipo_rol !== self::ROL_ADMIN_RRHH) {
             return response()->json([
                 'success' => false,
-                'message' => 'No tiene permiso para registrar excepciones de edad.',
+                'code' => 'sin_rol_admin_rrhh',
+                'message' => 'La cuenta ingresada no tiene el rol ADMINS RRHH. Un administrador de RRHH debe autorizar la excepción.',
             ], 403);
         }
 
@@ -4529,6 +4531,11 @@ $tipotrab    = $tipoPer;
 
     public function getUsuariosExcepcionEdad()
     {
+        $denegado = $this->denegadoSiNoEsAdminRrhh();
+        if ($denegado !== null) {
+            return $denegado;
+        }
+
         try {
             $usuarios = DB::connection('sqlsrv')->select(
                 "SELECT u.usuario, u.nombre_1, u.apellido_1,
@@ -4548,6 +4555,11 @@ $tipotrab    = $tipoPer;
 
     public function saveUsuariosExcepcionEdad(Request $request)
     {
+        $denegado = $this->denegadoSiNoEsAdminRrhh();
+        if ($denegado !== null) {
+            return $denegado;
+        }
+
         try {
             $usuarios = $request->input('usuarios', []);
 
@@ -4573,6 +4585,137 @@ $tipotrab    = $tipoPer;
             Log::error('Error al guardar usuarios excepción edad: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * ¿La cuenta tiene el rol ADMINS RRHH?
+     */
+    private function esAdminRrhh(string $usuario): bool
+    {
+        $usuario = strtoupper(trim($usuario));
+        if ($usuario === '') {
+            return false;
+        }
+
+        $fila = DB::table('sw_usuarios')
+            ->where('usuario', $usuario)
+            ->where('habilitado', 1)
+            ->first();
+
+        return $fila !== null && (int) $fila->tipo_rol === self::ROL_ADMIN_RRHH;
+    }
+
+    /**
+     * Determina si hay una excepción de edad válida para la fecha/edad indicadas.
+     *
+     * Solo se acepta la autorización validada en el modal (sesión 'dj_excepcion_edad')
+     * y, además, se exige que quien autorizó siga teniendo el rol ADMINS RRHH.
+     * La autorización se pide en cada registro Y en cada edición de la DJ.
+     */
+    private function excepcionEdadAutorizada(string $fechaNacimiento, int $edad): bool
+    {
+        $excepcionEdad = session('dj_excepcion_edad');
+        $sesionValida = is_array($excepcionEdad)
+            && ($excepcionEdad['fecha_nacimiento'] ?? null) === $fechaNacimiento
+            && (int) ($excepcionEdad['edad'] ?? -1) === $edad
+            && ($excepcionEdad['usuario_autorizador'] ?? '') !== '';
+
+        return $sesionValida && $this->esAdminRrhh((string) $excepcionEdad['usuario_autorizador']);
+    }
+
+    /**
+     * Devuelve una respuesta 403 si quien hace la petición no es ADMIN RRHH.
+     * Se usa para proteger los endpoints de administración de excepciones de edad.
+     */
+    private function denegadoSiNoEsAdminRrhh(): ?\Illuminate\Http\JsonResponse
+    {
+        if ($this->esAdminRrhh((string) (session('usuario') ?? ''))) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'code' => 'sin_rol_admin_rrhh',
+            'message' => 'Solo un usuario con rol ADMINS RRHH puede administrar los permisos de excepción de edad.',
+        ], 403);
+    }
+
+    /**
+     * Registra la auditoría de la excepción de edad y notifica a RRHH.
+     * Se ejecuta dentro de la transacción, después de guardar el personal.
+     */
+    private function registrarExcepcionEdad(
+        string $codPersonal,
+        string $dni,
+        string $fechaNacimiento,
+        int $edad,
+        array $reglasEdad,
+        array $data,
+        ?string $tipoTrab,
+        ?string $sucursal
+    ): void {
+        $excepcionEdad = session('dj_excepcion_edad');
+        $tipoExcepcion = $edad < $reglasEdad['minima'] ? 'MINIMA' : 'MAXIMA';
+        $codigoRegla   = $edad < $reglasEdad['minima'] ? 377 : 176;
+
+        $now       = now()->format('Y-m-d H:i:s');
+        $fechaNac  = \Carbon\Carbon::parse($fechaNacimiento)->format('Y-m-d');
+        $fechaAuto = \Carbon\Carbon::parse($excepcionEdad['fecha_autorizacion'])->format('Y-m-d H:i:s');
+
+        $codPersonalQ = addslashes((string) $codPersonal);
+        $dniVal       = addslashes((string) $dni);
+        $tipoExc      = addslashes((string) $tipoExcepcion);
+        $usuReg       = addslashes((string) (session('usuario') ?? '0'));
+        $usuAutor     = addslashes((string) ($excepcionEdad['usuario_autorizador'] ?? ''));
+
+        DB::connection('sqlsrv')->unprepared(
+            "INSERT INTO sisolm_web.dbo.sw_dj_excepciones_edad 
+                (cod_personal, dni, fecha_nacimiento, edad_calculada, tipo_excepcion, 
+                 codigo_valo_unitario, edad_minima, edad_maxima, usuario_registro, 
+                 usuario_autorizador, fecha_autorizacion, fecha_registro) 
+             VALUES ('$codPersonalQ', '$dniVal', CONVERT(date,'$fechaNac',23), $edad, '$tipoExc', $codigoRegla, {$reglasEdad['minima']}, {$reglasEdad['maxima']}, '$usuReg', '$usuAutor', CONVERT(datetime,'$fechaAuto',121), CONVERT(datetime,'$now',121))"
+        );
+
+        session()->forget('dj_excepcion_edad');
+
+        $nombreCompleto = trim(($data['nombre1'] ?? '') . ' ' . ($data['nombre2'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
+
+        // Resolver tipo trabajador
+        $tipoTrabNombre = $tipoTrab;
+        if (!empty($tipoTrab)) {
+            $tipoRow = DB::connection('sqlsrv')->selectOne(
+                'SELECT TIPE_DESCRIPCION FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?',
+                [$tipoTrab]
+            );
+            $tipoTrabNombre = $tipoRow->TIPE_DESCRIPCION ?? $tipoTrab;
+        }
+
+        // Resolver sucursal
+        $sucursalNombre = $sucursal;
+        if (!empty($sucursal)) {
+            $sucRow = DB::connection('sqlsrv')->selectOne(
+                'SELECT SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WHERE SUCU_CODIGO = ?',
+                [$sucursal]
+            );
+            $sucursalNombre = $sucRow->SUCU_ABREVIATURA ?? $sucursal;
+        }
+
+        $datosCorreo = [
+            'nombre'              => $nombreCompleto,
+            'dni'                 => $dni,
+            'fecha_nacimiento'    => $fechaNacimiento,
+            'edad'                => $edad,
+            'tipo_excepcion'      => $tipoExcepcion,
+            'edad_minima'         => $reglasEdad['minima'],
+            'edad_maxima'         => $reglasEdad['maxima'],
+            'tipo_trabajador'     => $tipoTrabNombre,
+            'sucursal'            => $sucursalNombre,
+            'usuario_registro'    => session('usuario') ?? 'N/A',
+            'usuario_autorizador' => $excepcionEdad['usuario_autorizador'] ?? '',
+            'fecha_autorizacion'  => $excepcionEdad['fecha_autorizacion'] ?? null,
+        ];
+
+        Mail::to('rrhh@solsecurity.pe')->send(new ExcepcionEdadMail($datosCorreo));
     }
 
     private function parsearFechaNacimiento(string $fecha): ?\Carbon\Carbon

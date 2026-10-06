@@ -922,7 +922,7 @@
                 <h3 id="tituloModalExcepcionEdad" class="text-lg font-bold text-gray-900">
                     Registrar excepción de edad
                 </h3>
-                <p class="text-sm text-gray-500 font-medium mt-0.5">Autorización de usuario especial</p>
+                <p class="text-sm text-gray-500 font-medium mt-0.5">Autorización de ADMIN RRHH</p>
             </div>
             <button type="button" id="ndj_btnCerrarExcepcionEdad"
                 class="text-gray-500 hover:text-gray-700 transition-colors" aria-label="Cerrar">
@@ -931,15 +931,16 @@
         </div>
 
         <div class="px-5 py-5 space-y-5">
-            <p class="text-sm text-center text-gray-500 bg-amber-50 p-2 rounded-lg border border-amber-100">
-                Esta operación requiere las credenciales de un usuario autorizado para registrar excepciones de edad.
+            <p class="text-sm text-center text-gray-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                <strong class="font-bold">Importante:</strong> para continuar se requiere la cuenta y contraseña de un usuario con rol
+                <strong class="font-bold">ADMINS RRHH</strong>. Sin esta autorización <strong class="font-bold">no se puede registrar la DJ</strong>.
             </p>
 
             <div>
-                <label for="ndj_usuario_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Usuario</label>
-                <input type="text" id="ndj_usuario_excepcion" autocomplete="username"
+                <label for="ndj_usuario_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Cuenta ADMINS RRHH</label>
+                <input type="text" id="ndj_usuario_excepcion" autocomplete="off"
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                    placeholder="Usuario autorizado">
+                    placeholder="Ej: CPASTOR">
             </div>
             <div>
                 <label for="ndj_clave_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>

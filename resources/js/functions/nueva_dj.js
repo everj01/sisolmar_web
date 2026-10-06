@@ -77,7 +77,9 @@ import Swal from 'sweetalert2';
         const modal = $('modalExcepcionEdad');
         if (!modal) return;
 
-        $('ndj_usuario_excepcion').value = $('ndj_usuario')?.value || '';
+        // La cuenta a validar es la de un ADMIN RRHH, que suele ser OTRA persona
+        // distinta a la que está registrando la DJ: no se pre-carga nada.
+        $('ndj_usuario_excepcion').value = '';
         $('ndj_clave_excepcion').value = '';
 
         if (window.HSOverlay) HSOverlay.open(modal);
@@ -2233,6 +2235,9 @@ import Swal from 'sweetalert2';
 
                 if (!json.success) {
                     const titulosError = {
+                        datos_incompletos: 'Datos incompletos',
+                        clave_invalida: 'Contraseña incorrecta',
+                        sin_rol_admin_rrhh: 'Sin autorización',
                         fecha_nacimiento_invalida: 'Fecha inválida',
                         reglas_edad_no_disponibles: 'Configuración de edad',
                         excepcion_no_requerida: 'No requiere excepción',
@@ -2250,7 +2255,13 @@ import Swal from 'sweetalert2';
                 fechaExcepcionAutorizada = fechaNacimiento;
                 ndj_marcarEdadAutorizada($('ndj_fecha_nacimiento'));
                 ndj_cerrarModalExcepcionEdad();
-                await Swal.fire({ icon: 'success', title: 'Credenciales validadas', text: 'Ahora puede guardar la DJ con la excepción de edad.', timer: 1800, showConfirmButton: false });
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Autorización de ADMIN RRHH registrada',
+                    text: `Autorizado por ${usuario}. Ahora puede guardar la DJ con la excepción de edad.`,
+                    timer: 2200,
+                    showConfirmButton: false,
+                });
             } catch (error) {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo validar la autorización.', confirmButtonText: 'Entendido' });
             } finally {
