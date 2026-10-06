@@ -374,6 +374,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateMatricularButton() {
         const btn = document.getElementById('btnGuardarMatriculas');
         if (!btn) return;
+        if ((window._activeTab || 'por-matricular') === 'matriculados') {
+            btn.innerHTML = '<i class="ti ti-user-plus"></i> Matricular personal (0)';
+            btn.disabled = true;
+            btn.style.display = 'none';
+            return;
+        }
+        btn.style.display = '';
         const table = window.tabulatorPersonalMatriculado;
         if (!table) {
             btn.innerHTML = '<i class="ti ti-user-plus"></i> Matricular personal (0)';
@@ -400,7 +407,8 @@ document.addEventListener("DOMContentLoaded", () => {
         window._matriculadosData = [];
         window._searchTerm = '';
         window._estadoFilter = '';
-        document.querySelectorAll('.cnt-filter-btn').forEach(b => b.classList.remove('active'));
+        window._activeTab = 'por-matricular';
+        if (typeof window.setTabMatricula === 'function') window.setTabMatricula('por-matricular');
         const txtBuscar = document.getElementById('txtBuscarPersonal');
         if (txtBuscar) { txtBuscar.value = ''; }
         const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
@@ -454,6 +462,45 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         btn.disabled = count === 0;
     }
+
+    window._activeTab = window._activeTab || 'por-matricular';
+
+    function refreshTabsUI() {
+        const tab = window._activeTab || 'por-matricular';
+        const btnPor = document.getElementById('tabPorMatricular');
+        const btnMat = document.getElementById('tabMatriculados');
+        const activeCls = ["bg-amber-50", "border-amber-200", "text-amber-700"];
+        const idleCls = ["bg-white", "border-default-200", "text-default-500"];
+        [[btnPor, tab === 'por-matricular'], [btnMat, tab === 'matriculados']].forEach(([btn, isActive]) => {
+            if (!btn) return;
+            btn.classList.remove(...activeCls, ...idleCls);
+            btn.classList.add(...(isActive ? activeCls : idleCls));
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        const btnSel = document.getElementById('btnSeleccionarFiltrados');
+        if (btnSel) btnSel.style.display = tab === 'por-matricular' ? '' : 'none';
+    }
+
+    window.setTabMatricula = function (tab) {
+        window._activeTab = tab;
+        window._estadoFilter = '';
+        refreshTabsUI();
+        const table = window.tabulatorPersonalMatriculado;
+        if (table) {
+            try {
+                const col = table.getColumn('_seleccionado');
+                if (col) {
+                    if (tab === 'por-matricular') col.show();
+                    else col.hide();
+                }
+            } catch (e) { /* columna aún no lista */ }
+        }
+        if (table && typeof window._aplicarFiltrosMatricula === 'function') {
+            window._aplicarFiltrosMatricula();
+        }
+        updateMatricularButton();
+        actualizarBotonSeleccionarFiltrados();
+    };
 
     window.cargarDatosModalMatriculados = async function(cursoId, alpineComponent) {
         if (!cursoId) return;
@@ -714,6 +761,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                                     await Swal.fire({ icon: 'success', title: 'Desmatriculado', text: 'El personal fue desmatriculado correctamente.', confirmButtonColor: '#6366f1', timer: 2000, showConfirmButton: false });
                                                     updateMatricularButton();
                                                     actualizarContadores();
+                                                    if (typeof window._aplicarFiltrosMatricula === 'function') window._aplicarFiltrosMatricula();
+                                                    actualizarBotonSeleccionarFiltrados();
                                                 } else {
                                                     await Swal.fire({ icon: 'error', title: 'Error', text: resp.data.message || 'Error desconocido', confirmButtonColor: '#6366f1' });
                                                 }
@@ -759,15 +808,14 @@ document.addEventListener("DOMContentLoaded", () => {
                             const car = document.getElementById("slcFiltroCargo")?.value;
                             const tip = document.getElementById("slcFiltroTipoTrabajador")?.value;
                             const term = window._searchTerm || '';
-                            const est = window._estadoFilter || '';
+                            const tab = window._activeTab || 'por-matricular';
 
                             const filters = [];
+                            filters.push({ field: "_matriculado", type: "=", value: tab === 'matriculados' });
                             if (cli) filters.push({ field: "cliente", type: "=", value: cli });
                             if (suc) filters.push({ field: "sucursal", type: "=", value: suc });
                             if (car) filters.push({ field: "cargo", type: "=", value: car });
                             if (tip) filters.push({ field: "tipo_trabajador", type: "=", value: tip });
-                            if (est === "matriculados") filters.push({ field: "_matriculado", type: "=", value: true });
-                            if (est === "sin-matricular") filters.push({ field: "_matriculado", type: "=", value: false });
 
                             window.tabulatorPersonalMatriculado.clearFilter();
                             if (filters.length) window.tabulatorPersonalMatriculado.setFilter(filters);
@@ -783,6 +831,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                             actualizarBotonSeleccionarFiltrados();
                         }
+                        window._aplicarFiltrosMatricula = aplicarFiltrosCombinados;
 
                         const txtBuscar = document.getElementById('txtBuscarPersonal');
                         const btnLimpiarBusqueda = document.getElementById('btnLimpiarBusqueda');
@@ -802,20 +851,8 @@ document.addEventListener("DOMContentLoaded", () => {
                             });
                         }
 
-                        document.querySelectorAll('.cnt-filter-btn').forEach(btn => {
-                            btn.addEventListener('click', function() {
-                                const filter = this.dataset.filter;
-                                if (window._estadoFilter === filter) {
-                                    window._estadoFilter = '';
-                                    this.classList.remove('active');
-                                } else {
-                                    document.querySelectorAll('.cnt-filter-btn').forEach(b => b.classList.remove('active'));
-                                    window._estadoFilter = filter;
-                                    this.classList.add('active');
-                                }
-                                aplicarFiltrosCombinados();
-                            });
-                        });
+                        document.getElementById('tabPorMatricular')?.addEventListener('click', () => window.setTabMatricula('por-matricular'));
+                        document.getElementById('tabMatriculados')?.addEventListener('click', () => window.setTabMatricula('matriculados'));
 
                         ["slcFiltroCliente", "slcFiltroSucursal", "slcFiltroCargo", "slcFiltroTipoTrabajador"].forEach(id => {
                             document.getElementById(id)?.addEventListener('change', aplicarFiltrosCombinados);
@@ -844,6 +881,8 @@ document.addEventListener("DOMContentLoaded", () => {
                             });
                             updateMatricularButton();
                             actualizarContadores();
+                            if (typeof window._aplicarFiltrosMatricula === 'function') window._aplicarFiltrosMatricula();
+                            actualizarBotonSeleccionarFiltrados();
                         };
                         // Sincronizar filas por si el usuario cambió dropdown antes de que la tabla estuviera lista
                         if (slcProg.value) slcProg.onchange();
@@ -925,9 +964,8 @@ document.addEventListener("DOMContentLoaded", () => {
                             };
                         }
 
-                        updateMatricularButton();
+                        window.setTabMatricula(window._activeTab || 'por-matricular');
                         actualizarContadores();
-                        actualizarBotonSeleccionarFiltrados();
                         if (alpineComponent) alpineComponent.isLoading = false;
                     });
 
