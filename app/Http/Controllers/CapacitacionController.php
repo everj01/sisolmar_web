@@ -4598,7 +4598,7 @@ class CapacitacionController extends Controller
     {
         $cursosHabilitados = collect(
             DB::connection('sqlsrv')->select(
-                "SELECT [habilitado], [tipo_curso], [codigo_moodle], [codigo_curso], [codigo]
+                "SELECT [habilitado], [tipo_curso], [codigo_moodle], [codigo_curso], [codigo], [nombre], [fecha_creacion]
                 FROM [sisolm_web].[dbo].[sw_cursos]
                 WHERE [habilitado] = 1"
             )
@@ -4634,13 +4634,17 @@ class CapacitacionController extends Controller
 
                 $cursoHabilitado = $cursosHabilitados[$curso->course_id];
 
+                // sw_cursos tiene prioridad sobre Moodle para nombre y fecha_creacion
+                $nombreLocal = trim((string) ($cursoHabilitado->nombre ?? ''));
+
                 return [
+                    'cod_av'              => $curso->course_id,
                     'codigo'              => $cursoHabilitado->codigo_curso,
-                    'nombre'              => mb_strtoupper($curso->course_name),
+                    'nombre'              => $nombreLocal !== '' ? mb_strtoupper($nombreLocal) : mb_strtoupper($curso->course_name),
                     'tipo_curso'          => $tiposCurso[$cursoHabilitado->tipo_curso] ?? null,
                     'responsable'         => mb_strtoupper($curso->responsable),
                     'total_matriculados'  => (int) $curso->total_matriculados,
-                    'fecha_creacion'      => $curso->created_at,
+                    'fecha_creacion'      => $cursoHabilitado->fecha_creacion ?? $curso->created_at,
                     'vigente'             => isset($cursosConProgramacionVigente[(int) $cursoHabilitado->codigo]),
                 ];
             })
