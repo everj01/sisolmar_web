@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CursoProgramacion;
+use App\Models\Personal;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -30,10 +32,10 @@ class NewCapacController extends Controller
                 ->orderBy('c.codigo_curso')
                 ->get();
 
-            $vigentes = DB::table('sw_cursos_programacion')
+            $vigentes = CursoProgramacion::query()
+                ->habilitados()
+                ->vigentes()
                 ->whereIn('cod_curso', $cursos->pluck('codigo')->all())
-                ->where('estado_periodo', 'VIGENTE')
-                ->where('habilitado', 1)
                 ->pluck('cod_curso')
                 ->map(fn($v) => (int) $v)
                 ->flip();
@@ -119,19 +121,18 @@ class NewCapacController extends Controller
                 ], 404);
             }
 
-            $programaciones = DB::table('sw_cursos_programacion')
-                ->select(
+            $programaciones = CursoProgramacion::query()
+                ->habilitados()
+                ->delCurso($row->codigo)
+                ->orderBy('codigo_programacion')
+                ->get([
                     'codigo_programacion',
                     'periodo',
                     'fecha_inicio',
                     'fecha_final',
                     'estado_periodo',
                     'habilitado',
-                )
-                ->where('cod_curso', $row->codigo)
-                ->where('habilitado', 1)
-                ->orderBy('codigo_programacion')
-                ->get()
+                ])
                 ->map(function ($p) {
                     return [
                         'codigo_programacion' => (string) $p->codigo_programacion,
@@ -161,12 +162,13 @@ class NewCapacController extends Controller
             $responsableNombre = null;
             if (!empty($row->cod_responsable)) {
                 try {
-                    $resp = DB::connection('sqlsrv')->selectOne(
-                        "SELECT LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre
-                         FROM si_solm.dbo.PERSONAL
-                         WHERE CODI_PERS = ?",
-                        [$row->cod_responsable],
-                    );
+                    $resp = Personal::query()
+                        ->where('CODI_PERS', $row->cod_responsable)
+                        ->first([
+                            DB::raw(
+                                "LTRIM(RTRIM(APEL_1 + ' ' + ISNULL(APEL_2, '') + ' ' + NOMB_1 + ' ' + ISNULL(NOMB_2, ''))) as nombre"
+                            ),
+                        ]);
                     $responsableNombre = $resp->nombre ?? null;
                 } catch (\Exception $e) {
                     $responsableNombre = null;
