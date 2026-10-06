@@ -554,12 +554,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window._iniciarTextoLoader = function (comp) {
         window._detenerTextoLoader();
-        const base = 'Cargando personal y programación vigente';
+        const base = 'Cargando información';
         let n = 3;
-        if (comp) comp.loadingText = base + '.'.repeat(n);
+        if (comp) comp.loadingTitle = base + '.'.repeat(n);
         window._loaderDotsTimer = setInterval(() => {
             n = n === 1 ? 3 : n - 1;
-            if (comp) comp.loadingText = base + '.'.repeat(n);
+            if (comp) comp.loadingTitle = base + '.'.repeat(n);
         }, 500);
     };
 

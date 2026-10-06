@@ -539,13 +539,27 @@
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-7xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
+    <div class="relative flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-7xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
         x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+        <!-- Loader full-modal -->
+        <div x-show="isLoading"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="absolute inset-0 z-30 bg-white flex flex-col items-center justify-center text-center px-8">
+            <div class="w-12 h-12 rounded-full border-4 border-slate-200 border-t-slate-700 animate-spin"></div>
+            <p class="mt-5 text-base font-bold text-default-900" x-text="loadingTitle">Cargando información...</p>
+            <p class="mt-2 text-xs leading-5 text-default-400 max-w-md">Estamos trayendo la programación vigente y el personal del curso. En un momento continuamos.</p>
+        </div>
 
 
         <!-- Header -->
@@ -655,21 +669,7 @@
             </div>
 
             <!-- Tabla -->
-            <div class="border border-default-200/60 rounded-xl overflow-hidden shadow-sm bg-white relative">
-
-                <!-- Loader Overlay -->
-                <div x-show="isLoading"
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0"
-                    x-transition:enter-end="opacity-100"
-                    x-transition:leave="transition ease-in duration-200"
-                    x-transition:leave-start="opacity-100"
-                    x-transition:leave-end="opacity-0"
-                    class="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                    <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <span class="mt-3 text-sm font-semibold text-primary tracking-wide" x-text="loadingText">Cargando personal...</span>
-                </div>
-
+            <div class="border border-default-200/60 rounded-xl overflow-hidden shadow-sm bg-white">
                 <div id="tblPersonalMatriculado" class="w-full min-h-[400px]"></div>
             </div>
         </div>
@@ -697,7 +697,7 @@
         return {
             open: false,
             isLoading: false,
-            loadingText: 'Cargando personal...',
+            loadingTitle: 'Cargando información...',
             cursoId: null,
             nombre: '',
             area: '',
