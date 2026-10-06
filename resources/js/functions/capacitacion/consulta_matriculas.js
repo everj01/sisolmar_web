@@ -219,6 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     title: "Código",
                     field: "Codigo",
                     width: 100,
+                    visible: false,
                 },
                 {
                     title: "Nombre de curso",
@@ -282,34 +283,76 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 {
                     title: "Acciones",
-                    width: 200,
+                    width: 260,
                     hozAlign: "center",
                     headerSort: false,
                     formatter(cell) {
                         return `
-                        <button class="btn-detalle-curso" data-row-id="${cell.getRow().getIndex()}" style="
-                            background: #4f46e5;
-                            color: white;
-                            border: none;
-                            border-radius: 6px;
-                            padding: 6px 12px;
-                            font-size: 12px;
-                            font-weight: 500;
-                            cursor: pointer;
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 6px;
-                            transition: all 0.2s;
-                        ">
-                            <i class="ti ti-eye" style="font-size: 14px;"></i>
-                            Gestionar matrículas
-                        </button>
+                        <div style="display:flex; gap:6px; justify-content:center;">
+                            <button class="btn-matricular-curso" style="
+                                background: #4f46e5;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 6px 12px;
+                                font-size: 12px;
+                                font-weight: 500;
+                                cursor: pointer;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                transition: all 0.2s;
+                            ">
+                                <i class="ti ti-user-plus" style="font-size: 14px;"></i>
+                                Matricular
+                            </button>
+                            <button class="btn-desmatricular-curso" style="
+                                background: #fff;
+                                color: #dc2626;
+                                border: 1px solid #fecaca;
+                                border-radius: 6px;
+                                padding: 6px 12px;
+                                font-size: 12px;
+                                font-weight: 500;
+                                cursor: pointer;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                transition: all 0.2s;
+                            ">
+                                <i class="ti ti-user-minus" style="font-size: 14px;"></i>
+                                Desmatricular
+                            </button>
+                        </div>
                     `;
                     },
-                    cellClick: function (e, cell) {
+                    cellClick: async function (e, cell) {
+                        const btnMat = e.target?.closest?.('.btn-matricular-curso');
+                        const btnDes = e.target?.closest?.('.btn-desmatricular-curso');
+                        if (!btnMat && !btnDes) return;
                         e.stopPropagation();
-                        const row = cell.getRow();
-                        const data = row.getData();
+                        const data = cell.getRow().getData();
+
+                        // Ambos flujos resuelven la programación vigente primero
+                        let progVigente = null;
+                        try {
+                            Swal.fire({ title: 'Verificando programación vigente...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                            const progResp = await axios.get(`${VITE_URL_APP}/api/cursos/obtener-prog-actual/${data.LocalId}`);
+                            Swal.close();
+                            progVigente = progResp.data?.success ? progResp.data?.data : null;
+                        } catch (err) {
+                            Swal.close();
+                            console.error(err);
+                            await Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo verificar la programación del curso.', confirmButtonColor: '#6366f1' });
+                            return;
+                        }
+
+                        if (!progVigente || String(progVigente.estado_periodo || '').toUpperCase() !== 'VIGENTE') {
+                            await Swal.fire({ icon: 'warning', title: 'Sin programación vigente', text: 'El curso no tiene una programación vigente. Cree una programación antes de gestionar matrículas.', confirmButtonColor: '#6366f1' });
+                            return;
+                        }
+
+                        window._activeTab = btnMat ? 'por-matricular' : 'matriculados';
 
                         const modalEl = document.getElementById(
                             "modal-lista-matriculados",
