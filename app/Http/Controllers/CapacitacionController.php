@@ -3923,8 +3923,17 @@ class CapacitacionController extends Controller
             ")
             )->keyBy('codigo');
 
+            $programacionesVigentes = collect(
+                DB::select("
+                SELECT DISTINCT cod_curso
+                FROM sisolm_web.dbo.sw_cursos_programacion
+                WHERE habilitado = 1
+                AND estado_periodo = 'VIGENTE'
+            ")
+            )->pluck('cod_curso')->map(fn($v) => (int) $v)->flip();
+
             $cursos = collect($cursosRaw)
-                ->map(function ($c) use ($categories, $bdLocal, $sistemas, $clientes, $tiposCurso) {
+                ->map(function ($c) use ($categories, $bdLocal, $sistemas, $clientes, $tiposCurso, $programacionesVigentes) {
                     $cursoLocal = $bdLocal->get($c->course_id);
                     $sistema    = $cursoLocal ? $sistemas->get($cursoLocal->area_conocimiento) : null;
                     $cliente    = $cursoLocal
@@ -3956,6 +3965,7 @@ class CapacitacionController extends Controller
                         'Fecha_Inicio'       => strtotime($c->startdate)        ?? null,
                         'Fecha_Fin'          => strtotime($c->enddate)          ?? null,
                         'Fecha_Creacion'     => !empty($cursoLocal?->fecha_creacion) ? strtotime($cursoLocal->fecha_creacion) : (strtotime($c->created_at) ?? null),
+                        'Vigente'            => isset($programacionesVigentes[(int) ($cursoLocal?->codigo ?? 0)]),
                     ];
                 })
                 ->filter(fn($c) => $bdLocal->has($c['Id']))

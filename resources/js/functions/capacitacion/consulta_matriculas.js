@@ -287,9 +287,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     headerHozAlign: "center",
                     headerSort: false,
                     formatter(cell) {
+                        const sinVigente = !cell.getData()?.Vigente;
+                        const bloqueado = sinVigente ? 'disabled title="El curso no tiene una programación vigente"' : '';
+                        const estiloBloqueado = sinVigente ? 'opacity:.45; cursor:not-allowed;' : 'cursor:pointer;';
                         return `
                         <div style="display:flex; gap:6px; justify-content:center;">
-                            <button class="btn-matricular-curso" style="
+                            <button class="btn-matricular-curso" ${bloqueado} style="
                                 background: #4f46e5;
                                 color: white;
                                 border: none;
@@ -297,16 +300,16 @@ document.addEventListener("DOMContentLoaded", () => {
                                 padding: 6px 12px;
                                 font-size: 12px;
                                 font-weight: 500;
-                                cursor: pointer;
                                 display: inline-flex;
                                 align-items: center;
                                 gap: 6px;
                                 transition: all 0.2s;
+                                ${estiloBloqueado}
                             ">
                                 <i class="ti ti-user-plus" style="font-size: 14px;"></i>
                                 Matricular
                             </button>
-                            <button class="btn-desmatricular-curso" style="
+                            <button class="btn-desmatricular-curso" ${bloqueado} style="
                                 background: #fff;
                                 color: #dc2626;
                                 border: 1px solid #fecaca;
@@ -314,11 +317,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 padding: 6px 12px;
                                 font-size: 12px;
                                 font-weight: 500;
-                                cursor: pointer;
                                 display: inline-flex;
                                 align-items: center;
                                 gap: 6px;
                                 transition: all 0.2s;
+                                ${estiloBloqueado}
                             ">
                                 <i class="ti ti-user-minus" style="font-size: 14px;"></i>
                                 Desmatricular
@@ -332,6 +335,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (!btnMat && !btnDes) return;
                         e.stopPropagation();
                         const data = cell.getRow().getData();
+
+                        // Bloqueo preventivo: sin vigente no se opera
+                        if (!data?.Vigente) return;
 
                         window._activeTab = btnMat ? 'por-matricular' : 'matriculados';
 
