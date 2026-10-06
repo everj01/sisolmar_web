@@ -576,6 +576,38 @@
 
         <!-- Body -->
         <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+            <!-- Stepper del wizard (solo matricular) -->
+            <div x-show="esMatricular" class="flex items-center gap-2 mb-5">
+                <div class="flex items-center gap-2 flex-1">
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                        :class="paso >= 1 ? 'bg-primary text-white' : 'bg-default-100 text-default-400'">1</div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold" :class="paso >= 1 ? 'text-default-900' : 'text-default-400'">Resumen</p>
+                        <p class="text-[10px] text-default-400 truncate">Curso y vigente</p>
+                    </div>
+                </div>
+                <div class="w-8 h-px shrink-0" :class="paso >= 2 ? 'bg-primary' : 'bg-default-200'"></div>
+                <div class="flex items-center gap-2 flex-1">
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                        :class="paso >= 2 ? 'bg-primary text-white' : 'bg-default-100 text-default-400'">2</div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold" :class="paso >= 2 ? 'text-default-900' : 'text-default-400'">Personal</p>
+                        <p class="text-[10px] text-default-400 truncate">Selección masiva</p>
+                    </div>
+                </div>
+                <div class="w-8 h-px shrink-0" :class="paso >= 3 ? 'bg-primary' : 'bg-default-200'"></div>
+                <div class="flex items-center gap-2 flex-1">
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                        :class="paso >= 3 ? 'bg-primary text-white' : 'bg-default-100 text-default-400'">3</div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold" :class="paso >= 3 ? 'text-default-900' : 'text-default-400'">Confirmar</p>
+                        <p class="text-[10px] text-default-400 truncate">Resumen y lista</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 1: Resumen -->
+            <div x-show="esMatricular && paso === 1">
             <!-- Detalles del Curso -->
             <div class="bg-default-50/50 p-5 rounded-xl border border-default-200/60 mb-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="lg:col-span-4">
@@ -615,6 +647,11 @@
                 </div>
             </div>
 
+            </div>
+            <!-- Fin Paso 1 -->
+
+            <!-- Paso 2: Selección de personal (vista única en desmatricular) -->
+            <div x-show="!esMatricular || paso === 2">
             <!-- Filtros -->
             <div class="space-y-3 mb-3 mt-3">
                 <!-- Filtros secundarios -->
@@ -672,21 +709,32 @@
             <div class="border border-default-200/60 rounded-xl overflow-hidden shadow-sm bg-white">
                 <div id="tblPersonalMatriculado" class="w-full min-h-[400px]"></div>
             </div>
+            </div>
+            <!-- Fin Paso 2 -->
+
+            <!-- Paso 3: Confirmación -->
+            <div x-show="esMatricular && paso === 3">
+                <div id="contenidoConfirmacion" class="flex flex-col gap-4"></div>
+            </div>
         </div>
 
         <!-- Footer -->
         <div class="flex justify-end items-center gap-3 px-6 py-4 border-t border-default-100 shrink-0 bg-default-50/50">
-            <label id="lblNotificarMatricula" class="mr-auto flex items-center gap-2 text-xs font-medium text-default-500 cursor-pointer select-none" title="Se avisará al coordinador por correo al finalizar (solo si son más de 10 personas)">
-                <input type="checkbox" id="chkNotificarMatricula" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
-                Avisar por correo al finalizar
-            </label>
             <button type="button" @click="cerrar()"
                 class="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-white border border-default-200 text-default-700 text-sm font-medium rounded-lg shadow-sm hover:bg-default-50 transition cursor-pointer">
                 Cerrar
             </button>
-            <button type="button" id="btnGuardarMatriculas"
+            <button type="button" id="btnAtrasModal" @click="irPaso(paso - 1)" x-show="esMatricular && paso > 1"
+                class="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-white border border-default-200 text-default-700 text-sm font-medium rounded-lg shadow-sm hover:bg-default-50 transition cursor-pointer">
+                <i class="ti ti-arrow-left"></i> Atrás
+            </button>
+            <button type="button" id="btnSiguienteModal" @click="siguiente()" x-show="esMatricular && paso < 3"
                 class="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-primary text-white text-sm font-medium rounded-lg shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/30 transition cursor-pointer">
-                <i class="ti ti-user-plus"></i> Matricular personal (0)
+                Continuar (0) <i class="ti ti-arrow-right"></i>
+            </button>
+            <button type="button" id="btnGuardarMatriculas" x-show="esMatricular && paso === 3"
+                class="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-primary text-white text-sm font-medium rounded-lg shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/30 transition cursor-pointer">
+                <i class="ti ti-user-plus"></i> Confirmar matrícula (0)
             </button>
         </div>
     </div>
@@ -698,6 +746,8 @@
             open: false,
             isLoading: false,
             loadingTitle: 'Cargando información...',
+            paso: 1,
+            esMatricular: true,
             cursoId: null,
             nombre: '',
             area: '',
@@ -708,6 +758,8 @@
             mostrar(data) {
                 this.open = true;
                 this.isLoading = true;
+                this.paso = 1;
+                this.esMatricular = (window._activeTab !== 'matriculados');
 
                 this.cursoId = data.LocalId;
                 this.nombre = data.Nombre || '';
@@ -723,8 +775,25 @@
             cerrar() {
                 this.open = false;
                 this.isLoading = false;
+                this.paso = 1;
                 if (window._detenerTextoLoader) window._detenerTextoLoader();
                 if (window.limpiarModalMatriculados) window.limpiarModalMatriculados();
+            },
+
+            irPaso(n) {
+                this.paso = n;
+                this.$nextTick(() => {
+                    if (n === 2 && window.tabulatorPersonalMatriculado) {
+                        window.tabulatorPersonalMatriculado.redraw(true);
+                    }
+                });
+            },
+
+            siguiente() {
+                if (this.paso === 2) {
+                    if (window.prepararConfirmacionMatricula && !window.prepararConfirmacionMatricula()) return;
+                }
+                if (this.paso < 3) this.irPaso(this.paso + 1);
             },
         }
     }
