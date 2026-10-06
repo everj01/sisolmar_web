@@ -1822,18 +1822,10 @@ import Swal from 'sweetalert2';
             return;
         }
 
-        // Pregunta si no hay foto
-        const fotoSrc  = $('ndj_previewFoto')?.src?.trim() + '?v=' + (Math.floor(Math.random() * 900) + 100);
-        const tieneFoto = fotoSrc && !fotoSrc.endsWith('/') && !$('ndj_previewFoto')?.classList.contains('hidden');
-        if (!tieneFoto) {
-            const { isConfirmed } = await Swal.fire({
-                icon: 'question', title: '¿Continuar sin foto?',
-                text: 'No se ha registrado una foto. ¿Desea guardar de todas formas?',
-                showCancelButton: true, confirmButtonText: 'Sí, guardar sin foto',
-                cancelButtonText: 'Cancelar', confirmButtonColor: '#f59e0b',
-            });
-            if (!isConfirmed) return;
-        }
+        // La foto del personal ahora es OBLIGATORIA: se adjunta en la misma
+        // petición de guardado y el servidor valida antes de crear el personal
+        // (respuesta 422 "falta_foto"). Ya no se pregunta si se desea continuar
+        // sin foto.
 
         } // fin exentoValidaciones
         // ── Fin validaciones ─────────────────────────────────
@@ -1922,28 +1914,53 @@ import Swal from 'sweetalert2';
             PERS_CONTRATADO:       0,
         };
 
-        let url;
-        if (modoRecontratacion && codiPersRecontratacion) {
-            url = `${VITE_URL_APP}/api/dj/save-recontratacion`;
-            body.cod_postulante = codiPersRecontratacion;
+        const esRecontratacion = modoRecontratacion && codiPersRecontratacion;
+        const url = esRecontratacion
+            ? `${VITE_URL_APP}/api/dj/save-recontratacion`
+            : `${VITE_URL_APP}/api/dj/save-nueva-dj`;
+        if (esRecontratacion) body.cod_postulante = codiPersRecontratacion;
+
+        // Nueva DJ: el DNI (anverso + reverso) viaja ADJUNTO en esta misma petición,
+        // para que el servidor lo exija antes de crear el personal.
+        const csrfTokenSave = document.querySelector('[name=_token]')?.value || '';
+        let opciones;
+        if (esRecontratacion) {
+            opciones = {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfTokenSave },
+                body:    JSON.stringify(body),
+            };
         } else {
-            url = `${VITE_URL_APP}/api/dj/save-nueva-dj`;
+            const fd = new FormData();
+            Object.keys(body).forEach(k => {
+                const v = body[k];
+                if (v === undefined || v === null) return;
+                if (Array.isArray(v)) v.forEach(item => fd.append(`${k}[]`, item ?? ''));
+                else fd.append(k, v);
+            });
+            const fotoAdjuntaNueva = $('ndj_inputFoto')?.files?.[0] || null;
+            if (fotoAdjuntaNueva)    fd.append('foto', fotoAdjuntaNueva);
+            if (ndjDniFiles.anverso) fd.append('dni_anverso', ndjDniFiles.anverso);
+            if (ndjDniFiles.reverso) fd.append('dni_reverso', ndjDniFiles.reverso);
+            opciones = {
+                method:  'POST',
+                headers: { 'X-CSRF-TOKEN': csrfTokenSave, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body:    fd,
+            };
         }
 
         try {
             btnGuardar.disabled = true;
-            const res  = await fetch(url, {
-                method:  'POST',
-                headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': document.querySelector('[name=_token]')?.value || '' },
-                body:    JSON.stringify(body),
-            });
+            const res  = await fetch(url, opciones);
             const json = await res.json();
 
             if (json.success) {
-                // ── Subir foto y DNI si hay archivos nuevos seleccionados ──
+                // ── Subir foto y DNI de los hijos si hay archivos nuevos ──
+                // (el DNI del personal ya viajó dentro de esta misma petición,
+                //  salvo en recontratación que conserva la subida aparte)
                 const codiPers = json.codi_pers || body.cod_postulante || '';
-                const resFoto  = await ndj_subirFoto(codiPers);
-                const resDni   = await ndj_subirDni(codiPers);
+                const resFoto  = esRecontratacion ? await ndj_subirFoto(codiPers) : { ok: true, sinFoto: true };
+                const resDni   = esRecontratacion ? await ndj_subirDni(codiPers) : { ok: true, sinDni: true };
                 const resDniH  = await ndj_subirDniHijos(codiPers);
 
                 const falloFoto = !resFoto.sinFoto && !resFoto.ok;
@@ -1965,6 +1982,13 @@ import Swal from 'sweetalert2';
                                    <span style="color:#b45309; font-weight: 600;">⚠️ ${msjFallo}</span>
                                </div>`,
                     });
+                } else if (json.dni_pendiente || json.foto_pendiente) {
+                    // La DJ se guardó, pero el servidor de archivos no recibió algún archivo
+                    Swal.fire({
+                        icon:  'warning',
+                        title: 'Guardado, pendiente de subir',
+                        text:  json.message || 'La Declaración Jurada se guardó correctamente, pero quedaron archivos pendientes de subir.',
+                    });
                 } else {
                     Swal.fire({
                         icon:  'success',
@@ -1978,7 +2002,21 @@ import Swal from 'sweetalert2';
                 if (window.getPersonalSoloDJMigracion) window.getPersonalSoloDJMigracion();
 
             } else {
-                Swal.fire({ icon:'error', title:'Error', text: json.message || 'Error al guardar.' });
+                const faltaDocs = json.code === 'falta_dni' || json.code === 'falta_foto';
+                if (faltaDocs) {
+                    // Marcar en rojo lo que falte y abrir el modal de DNI si aplica
+                    if (json.falta_foto) $('ndj_inputFoto')?.classList.add('ring-2', 'ring-red-500');
+                    if (json.falta_anverso || json.falta_reverso) {
+                        ['ndj_dni_anverso', 'ndj_dni_reverso'].forEach(id => $(id)?.classList.add('ring-2', 'ring-red-500'));
+                        const modalDni = $('ndj_modalDni');
+                        if (modalDni) modalDni.style.display = 'flex';
+                    }
+                }
+                Swal.fire({
+                    icon:  'error',
+                    title: faltaDocs ? String(json.message || 'Falta ingresar foto').replace(/\.$/, '') : 'Error',
+                    text:  faltaDocs ? 'Debe completar los documentos requeridos para poder guardar la DJ.' : (json.message || 'Error al guardar.'),
+                });
             }
         } catch (err) {
             console.error('[NuevaDJ] Error al guardar:', err);

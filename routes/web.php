@@ -310,6 +310,8 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/save-recontratacion', [DjController::class, 'saveRecontratacion']);
             Route::post('/upload-foto-personal', [DjController::class, 'uploadFotoPersonal']);
             Route::post('/upload-dni-personal', [DjController::class, 'uploadDniPersonal']);
+            Route::get('/get-dni-personal', [DjController::class, 'getDniPersonal']);
+            Route::get('/get-foto-personal', [DjController::class, 'getFotoPersonal']);
             Route::post('/upload-dni-hijos', [DjController::class, 'uploadDniHijos']);
             Route::get('/get-dni-hijos', [DjController::class, 'getDniHijos']);
             Route::get('get-tipo-doc/', [DjController::class, 'getTipoDoc']);

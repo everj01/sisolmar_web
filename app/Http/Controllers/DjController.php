@@ -97,8 +97,52 @@ class DjController extends Controller
             $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
             $dni     = trim($request->input('dni', ''));
             $tipoPer = trim($request->input('tipo_personal', ''));
- 
+
+            // Siempre se leen: aunque el exento no esté obligado a adjuntarlos,
+            // si los envía se suben igual.
+            $fotoReq       = $request->file('foto');
+            $dniAnversoReq = $request->file('dni_anverso');
+            $dniReversoReq = $request->file('dni_reverso');
+
             if (!$exentoValidaciones) {
+                // ── Documentos obligatorios: foto del personal + DNI (anverso y reverso) ──
+                // Sin ellos no se crea el personal (solo exentos se lo saltan).
+                $faltanPartes = [];
+                if (!$fotoReq)                          $faltanPartes[] = 'foto del personal';
+                if (!$dniAnversoReq || !$dniReversoReq) $faltanPartes[] = 'foto del DNI';
+
+                if (!empty($faltanPartes)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success'        => false,
+                        'code'           => !$fotoReq ? 'falta_foto' : 'falta_dni',
+                        'message'        => 'Falta ingresar ' . implode(' y ', $faltanPartes) . '.',
+                        'falta_foto'     => !$fotoReq,
+                        'falta_anverso'  => !$dniAnversoReq,
+                        'falta_reverso'  => !$dniReversoReq,
+                    ], 422);
+                }
+
+                foreach ([$fotoReq, $dniAnversoReq, $dniReversoReq] as $archivo) {
+                    $extension = strtolower((string) $archivo->getClientOriginalExtension());
+                    if (!in_array($extension, ['jpg', 'jpeg'], true)) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'code'    => 'documento_invalido',
+                            'message' => 'La foto del personal y la del DNI deben ser imágenes JPG.',
+                        ], 422);
+                    }
+                    if ($archivo->getSize() > 10 * 1024 * 1024) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'code'    => 'documento_invalido',
+                            'message' => 'Cada imagen no debe superar los 10 MB.',
+                        ], 422);
+                    }
+                }
+
                 if (empty($dni)) {
                     return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
                 }
@@ -471,6 +515,14 @@ class DjController extends Controller
 
             // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
             $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
+
+            // ── Subir foto y DNI al servidor de archivos ──────────────────
+            // Si el servidor de archivos falla NO se bloquea el guardado: la DJ
+            // se guarda igual y se avisa qué quedó pendiente de subir.
+            $subidaFoto    = $this->subirFotoAlServidor($nuevoCod, $fotoReq);
+            $subidaDni     = $this->subirDniAlServidor($nuevoCod, $dniAnversoReq, $dniReversoReq);
+            $fotoPendiente = !$subidaFoto['ok'];
+            $dniPendiente  = !$subidaDni['ok'];
  
             DB::commit();
  
@@ -481,10 +533,19 @@ class DjController extends Controller
                 $this->enviarCorreoBienvenidaSip($data, $dni, $nuevoCod);
             }
 
+            $pendientesMsg = [];
+            if ($fotoPendiente) $pendientesMsg[] = 'la foto del personal';
+            if ($dniPendiente)  $pendientesMsg[] = 'el DNI';
+
             return response()->json([
-                'success'   => true,
-                'message'   => 'Declaración Jurada guardada correctamente.',
-                'codi_pers' => $nuevoCod,
+                'success'        => true,
+                'message'        => !empty($pendientesMsg)
+                    ? 'Declaración Jurada guardada correctamente, pero ' . implode(' y ', $pendientesMsg) . ' quedó pendiente de subir.'
+                    : 'Declaración Jurada guardada correctamente.',
+                'codi_pers'      => $nuevoCod,
+                'foto_pendiente' => $fotoPendiente,
+                'dni_pendiente'  => $dniPendiente,
+                'dni_faltan'     => $subidaDni['faltan'],
             ]);
  
         } catch (\Exception $e) {
@@ -1155,6 +1216,67 @@ class DjController extends Controller
 
             $data = $request->all();
 
+            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
+
+            // ── Documentos obligatorios: solo se exige lo que falte en el servidor ──
+            // Si el servidor de archivos no responde NO se bloquea el guardado.
+            // Los usuarios con "exento_validaciones" no están obligados a adjuntarlos.
+            $fotoReq       = $request->file('foto');
+            $dniAnversoReq = $request->file('dni_anverso');
+            $dniReversoReq = $request->file('dni_reverso');
+
+            if (!$exentoValidaciones) {
+                $estadoDni     = $this->dniPersonalEnServidor((string) $codiPers);
+                $estadoFoto    = $this->fotoPersonalEnServidor((string) $codiPers);
+
+                $faltaFoto = ($estadoFoto === false && !$fotoReq);
+
+                $faltanLados = [];
+                if ($estadoDni['consultado']) {
+                    if (!$estadoDni['anverso'] && !$dniAnversoReq) $faltanLados[] = 'anverso';
+                    if (!$estadoDni['reverso'] && !$dniReversoReq) $faltanLados[] = 'reverso';
+                }
+
+                $faltanPartes = [];
+                if ($faltaFoto)                  $faltanPartes[] = 'foto del personal';
+                if (!empty($faltanLados))        $faltanPartes[] = 'foto del DNI';
+
+                if (!empty($faltanPartes)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success'        => false,
+                        'code'           => $faltaFoto ? 'falta_foto' : 'falta_dni',
+                        'message'        => 'Falta ingresar ' . implode(' y ', $faltanPartes) . '.',
+                        'falta_foto'     => $faltaFoto,
+                        'falta_anverso'  => in_array('anverso', $faltanLados, true),
+                        'falta_reverso'  => in_array('reverso', $faltanLados, true),
+                    ], 422);
+                }
+            }
+
+            foreach ([$fotoReq, $dniAnversoReq, $dniReversoReq] as $archivo) {
+                if (!$archivo) {
+                    continue;
+                }
+                $extension = strtolower((string) $archivo->getClientOriginalExtension());
+                if (!in_array($extension, ['jpg', 'jpeg'], true)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'dni_invalido',
+                        'message' => 'La foto del DNI debe ser una imagen JPG.',
+                    ], 422);
+                }
+                if ($archivo->getSize() > 10 * 1024 * 1024) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'dni_invalido',
+                        'message' => 'Cada foto del DNI no debe superar los 10 MB.',
+                    ], 422);
+                }
+            }
+
             // Relacionar la sucursal seleccionada (SUCU_CODIGO) con la unidad operativa
             // UNID_OPER.UBICACION = SISO_SUCURSAL.SUCU_CODIGO → CODI_UNID_OPER
             $sucursalSel = strtoupper(trim($data['sucursal'] ?? ''));
@@ -1204,7 +1326,6 @@ class DjController extends Controller
             // ── Validación de edad (igual que en Nueva DJ) ──────────────────
             // Si la edad queda fuera del rango se exige una excepción autorizada por
             // un ADMIN RRHH (rol tipo_rol 17). Se pide en cada edición.
-            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
             $fechaNacimiento = trim((string) ($data['fecha_nacimiento'] ?? ''));
             $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
 
@@ -1304,6 +1425,14 @@ class DjController extends Controller
                 );
             }
 
+            // ── Subir foto y DNI al servidor de archivos ──────────────────
+            // Solo se sube lo adjuntado. Si el servidor de archivos falla NO se
+            // bloquea el guardado: se avisa qué quedó pendiente.
+            $subidaFoto    = $this->subirFotoAlServidor((string) $codiPers, $fotoReq);
+            $subidaDni     = $this->subirDniAlServidor((string) $codiPers, $dniAnversoReq, $dniReversoReq);
+            $fotoPendiente = !$subidaFoto['ok'];
+            $dniPendiente  = !$subidaDni['ok'];
+
             DB::commit();
 
             // === INICIO: ENVÍO DE CORREO AUTOMÁTICO ===
@@ -1341,9 +1470,18 @@ class DjController extends Controller
             \Illuminate\Support\Facades\Log::info("=== 5. FIN PROCESO DE CORREO ===");
             // === FIN: ENVÍO DE CORREO AUTOMÁTICO ===
 
+            $pendientesMsg = [];
+            if ($fotoPendiente) $pendientesMsg[] = 'la foto del personal';
+            if ($dniPendiente)  $pendientesMsg[] = 'el DNI';
+
             return response()->json([
-                'success' => true,
-                'message' => 'Declaración Jurada guardada y migrada correctamente',
+                'success'        => true,
+                'message'        => !empty($pendientesMsg)
+                    ? 'Declaración Jurada guardada y migrada correctamente, pero ' . implode(' y ', $pendientesMsg) . ' quedó pendiente de subir.'
+                    : 'Declaración Jurada guardada y migrada correctamente',
+                'foto_pendiente' => $fotoPendiente,
+                'dni_pendiente'  => $dniPendiente,
+                'dni_faltan'     => $subidaDni['faltan'],
             ]);
 
         } catch (\Exception $e) {
@@ -4716,6 +4854,198 @@ $tipotrab    = $tipoPer;
         ];
 
         Mail::to('rrhh@solsecurity.pe')->send(new ExcepcionEdadMail($datosCorreo));
+    }
+
+    /**
+     * Sube el DNI (anverso y/o reverso) al servidor de archivos.
+     * No lanza excepción: devuelve ['ok' => bool, 'faltan' => [lados fallidos]] y
+     * el llamador decide si el fallo bloquea el guardado o solo avisa.
+     */
+    private function subirDniAlServidor(?string $codiPers, $anverso = null, $reverso = null): array
+    {
+        $codiPers = trim((string) $codiPers);
+        $pendientes = [];
+        if ($anverso) $pendientes['anverso'] = ['file' => $anverso, 'ruta' => 'DNI1_1'];
+        if ($reverso) $pendientes['reverso'] = ['file' => $reverso, 'ruta' => 'DNI2_1'];
+
+        if ($codiPers === '' || empty($pendientes)) {
+            return ['ok' => empty($pendientes), 'faltan' => array_keys($pendientes)];
+        }
+
+        // Nombre fijo: CODI_PERS.jpg (así lo muestra el visor existente)
+        $nameFile = $codiPers . '.jpg';
+        $fallos   = [];
+
+        foreach ($pendientes as $lado => $info) {
+            try {
+                $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                    ->attach('archivo', file_get_contents($info['file']->getRealPath()), $nameFile)
+                    ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                        'nameFile' => $nameFile,
+                        'ruta'     => $info['ruta'],
+                    ]);
+
+                $proxyData = $response->json();
+                if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                    $fallos[] = $lado;
+                    Log::error('subirDniAlServidor: fallo en proxy', [
+                        'codi_pers' => $codiPers,
+                        'lado'      => $lado,
+                        'status'    => $response->status(),
+                        'body'      => $response->body(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                $fallos[] = $lado;
+                Log::error('subirDniAlServidor: excepcion', [
+                    'codi_pers' => $codiPers,
+                    'lado'      => $lado,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return ['ok' => empty($fallos), 'faltan' => $fallos];
+    }
+
+    /**
+     * Consulta al servidor de archivos qué caras del DNI del personal ya existen.
+     * Devuelve ['anverso' => bool, 'reverso' => bool, 'consultado' => bool].
+     * 'consultado' = false cuando el servidor de archivos no respondió; en ese caso
+     * NO se debe bloquear el guardado.
+     */
+    private function dniPersonalEnServidor(string $codiPers): array
+    {
+        $codiPers  = trim($codiPers);
+        $nombre    = $codiPers . '.jpg';
+        $resultado = ['anverso' => false, 'reverso' => false, 'consultado' => false];
+
+        if ($codiPers === '') {
+            return $resultado;
+        }
+
+        $consultado = true;
+        foreach (['anverso' => 'DNI1_1', 'reverso' => 'DNI2_1'] as $lado => $ruta) {
+            try {
+                $resultado[$lado] = Http::timeout(5)
+                    ->head("http://190.116.178.163/Biblioteca_Grafica/{$ruta}/{$nombre}")
+                    ->successful();
+            } catch (\Throwable $e) {
+                $resultado[$lado] = false;
+                $consultado       = false;
+            }
+        }
+
+        $resultado['consultado'] = $consultado;
+
+        return $resultado;
+    }
+
+    /**
+     * Indica qué caras del DNI del personal ya están en el servidor de archivos.
+     * GET /api/dj/get-dni-personal?codi_pers=XXXXX
+     */
+    public function getDniPersonal(Request $request)
+    {
+        $codiPers = trim((string) $request->get('codi_pers', ''));
+        if ($codiPers === '') {
+            return response()->json(['success' => false, 'message' => 'codi_pers es obligatorio.'], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $this->dniPersonalEnServidor($codiPers),
+        ]);
+    }
+
+    /**
+     * Indica si la foto del personal ya existe en el servidor de archivos.
+     * Devuelve true (existe), false (no existe) o null (no se pudo consultar:
+     * en ese caso NO se debe bloquear el guardado).
+     */
+    private function fotoPersonalEnServidor(string $codiPers): ?bool
+    {
+        $codiPers = trim($codiPers);
+        if ($codiPers === '') {
+            return null;
+        }
+
+        try {
+            return Http::timeout(5)
+                ->head("http://190.116.178.163/Biblioteca_Grafica/Fotos/{$codiPers}.jpg")
+                ->successful();
+        } catch (\Throwable $e) {
+            Log::warning('fotoPersonalEnServidor: sin respuesta del servidor de archivos', [
+                'codi_pers' => $codiPers,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Sube la foto del personal al servidor de archivos.
+     * No lanza excepción: devuelve ['ok' => bool, 'faltan' => [lados fallidos]].
+     */
+    private function subirFotoAlServidor(?string $codiPers, $foto): array
+    {
+        $codiPers = trim((string) $codiPers);
+        if (!$foto) {
+            return ['ok' => true, 'faltan' => []];
+        }
+        if ($codiPers === '') {
+            return ['ok' => false, 'faltan' => ['foto']];
+        }
+
+        // Nombre fijo: CODI_PERS.jpg
+        $nameFile = $codiPers . '.jpg';
+
+        try {
+            $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                ->attach('archivo', file_get_contents($foto->getRealPath()), $nameFile)
+                ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                    'nameFile' => $nameFile,
+                    'ruta'     => 'Fotos',
+                ]);
+
+            $proxyData = $response->json();
+            if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                Log::error('subirFotoAlServidor: fallo en proxy', [
+                    'codi_pers' => $codiPers,
+                    'status'    => $response->status(),
+                    'body'      => $response->body(),
+                ]);
+
+                return ['ok' => false, 'faltan' => ['foto']];
+            }
+        } catch (\Throwable $e) {
+            Log::error('subirFotoAlServidor: excepcion', [
+                'codi_pers' => $codiPers,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return ['ok' => false, 'faltan' => ['foto']];
+        }
+
+        return ['ok' => true, 'faltan' => []];
+    }
+
+    /**
+     * Indica si el personal ya tiene foto en el servidor de archivos.
+     * GET /api/dj/get-foto-personal?codi_pers=XXXXX
+     */
+    public function getFotoPersonal(Request $request)
+    {
+        $codiPers = trim((string) $request->get('codi_pers', ''));
+        if ($codiPers === '') {
+            return response()->json(['success' => false, 'message' => 'codi_pers es obligatorio.'], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => ['existe' => $this->fotoPersonalEnServidor($codiPers)],
+        ]);
     }
 
     private function parsearFechaNacimiento(string $fecha): ?\Carbon\Carbon

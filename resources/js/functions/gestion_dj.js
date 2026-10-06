@@ -1321,7 +1321,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log(esNuevaDJ ? '🆕 Nueva DJ' : '✏️ DJ Existente', payload);
 
 
-                const response = await axios.post(url, payload);
+                // El DNI (anverso + reverso) viaja ADJUNTO en esta misma petición,
+                // para que el servidor lo exija antes de crear/actualizar el personal.
+                const dniAdjuntoGest = { anverso: djDniFiles.anverso || null, reverso: djDniFiles.reverso || null };
+                const fotoAdjuntaGest = fotoSeleccionada || null;
+                const formDataSave = new FormData();
+                Object.keys(payload).forEach(k => {
+                    const v = payload[k];
+                    if (v === undefined || v === null) return;
+                    if (Array.isArray(v)) v.forEach(item => formDataSave.append(`${k}[]`, item ?? ''));
+                    else formDataSave.append(k, v);
+                });
+                if (fotoAdjuntaGest)        formDataSave.append('foto', fotoAdjuntaGest);
+                if (dniAdjuntoGest.anverso)  formDataSave.append('dni_anverso', dniAdjuntoGest.anverso);
+                if (dniAdjuntoGest.reverso) formDataSave.append('dni_reverso', dniAdjuntoGest.reverso);
+
+                const csrfTokenSave = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const response = await axios.post(url, formDataSave, {
+                    headers: { 'X-CSRF-TOKEN': csrfTokenSave, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                });
+
+                // El DNI ya viajó con el guardado: se limpia la selección para no volver a subirlo
+                if (dniAdjuntoGest.anverso || dniAdjuntoGest.reverso) limpiarDniDj();
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
@@ -1333,8 +1354,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const resDniDj0 = await subirDniDj(codiPersFoto);
                     const resDniHijos = await subirDniHijosDj(codiPersFoto);
                     const resDniDj = (!resDniDj0.sinDni && !resDniDj0.ok) ? resDniDj0
-                        : ((!resDniHijos.sinDni && !resDniHijos.ok) ? resDniHijos : { ok: true, sinDni: true });
-                    if (fotoFile && codiPersFoto) {
+                        : ((!resDniHijos.sinDni && !resDniHijos.ok) ? resDniHijos : { ok: true, sinDni: true, pendiente: !!(response.data.dni_pendiente || response.data.foto_pendiente) });
+                    if (fotoFile && codiPersFoto && !fotoAdjuntaGest) {
                         try {
                             const fdFoto = new FormData();
                             fdFoto.append('foto', fotoFile);
@@ -1385,7 +1406,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (error.response?.data?.message) msg = error.response.data.message;
                 else if (error.response?.data?.errors) msg = Object.values(error.response.data.errors).flat().join('<br>');
 
-                Swal.fire({ icon: 'error', title: 'Error', html: msg, zIndex: 99999 });
+                const dataErrGest = error.response?.data || {};
+                const faltaDocsGest = dataErrGest.code === 'falta_dni' || dataErrGest.code === 'falta_foto';
+                if (faltaDocsGest) {
+                    if (dataErrGest.falta_foto) {
+                        const inpFotoGest = document.getElementById('inputFoto');
+                        if (inpFotoGest) inpFotoGest.classList.add('ring-2', 'ring-red-500');
+                    }
+                    if (dataErrGest.falta_anverso || dataErrGest.falta_reverso) {
+                        ['inputDniAnverso', 'inputDniReverso'].forEach(id => document.getElementById(id)?.classList.add('ring-2', 'ring-red-500'));
+                        const modalDniGest = document.getElementById('modalDni');
+                        if (modalDniGest) modalDniGest.style.display = 'flex';
+                    }
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: faltaDocsGest ? String(dataErrGest.message || 'Falta ingresar foto').replace(/\.$/, '') : 'Error',
+                    html: faltaDocsGest ? 'Debe completar los documentos requeridos para poder guardar la DJ.' : msg,
+                    zIndex: 99999,
+                });
             } finally {
                 if (btnGuardar) btnGuardar.disabled = false;
             }
@@ -2102,6 +2142,11 @@ async function subirDniDj(codiPers) {
 }
 
 function mensajeGuardadoDj(resDni, textoOk) {
+    // La DJ se guardó pero el servidor de archivos no recibió el DNI
+    if (resDni && resDni.pendiente) {
+        Swal.fire({ icon: 'warning', title: 'Guardado, DNI pendiente', text: 'La Declaración Jurada se guardó correctamente, pero el DNI quedó pendiente de subir.' });
+        return;
+    }
     if (resDni && !resDni.sinDni && !resDni.ok) {
         Swal.fire({ icon: 'warning', title: 'DJ guardada, pero falló el DNI', text: resDni.message || 'No se pudo subir el DNI.' });
         return;
