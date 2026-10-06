@@ -268,6 +268,15 @@
                          <button type="button" id="btnAbrirReporte" class="btn rounded-full  bg-dark/25 text-dark hover:bg-dark hover:text-white flex items-center gap-1 px-4 py-1">
                             <i class='bx bx-file-find'></i> Reporte General
                         </button>
+                         {{-- Reporte de documentos: solo ADMINS RRHH (17) y SUPERUSUARIO (11) --}}
+                         @if($tipoUsuario == 17 || $tipoUsuario == 11)
+                         <button type="button" id="btnDocsPendientes"
+                             title="Personal vigente que aún no tiene foto o DNI. Clic = usa caché · Shift+Clic = re-escanear"
+                             class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white flex items-center gap-1 px-4 py-1">
+                             <i class='bx bx-download text-base'></i>
+                             <span>Sin foto / DNI</span>
+                         </button>
+                         @endif
                      </div>
                         
                     @endif

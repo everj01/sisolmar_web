@@ -3437,6 +3437,48 @@ document.getElementById('btnReporteActualizacion')?.addEventListener('click', as
     } catch { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos.' }); }
 });
 
+// ── Reporte de documentos faltantes (foto / DNI) de todos los vigentes ─────
+// Click normal   → usa el escaneo en caché (se refresca solo cada 6 horas)
+// Shift + click  → fuerza un re-escaneo completo (?refrescar=1)
+document.getElementById('btnDocsPendientes')?.addEventListener('click', async function (ev) {
+    const refrescar = ev.shiftKey;
+
+    Swal.fire({
+        title: 'Generando reporte de documentos…',
+        text: 'Se verifica la foto y el DNI de los 1.135 vigentes. ' +
+              (refrescar
+                ? 'Re-escaneando el servidor de archivos (~2 min).'
+                : 'Si es la primera vez puede tardar ~2 min; después es inmediato.'),
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const response = await axios.get(`${VITE_URL_APP}/api/dj/reporte/personal-documentos`, {
+            params: refrescar ? { refrescar: 1, solo_faltantes: 1 } : { solo_faltantes: 1 },
+            timeout: 0
+        });
+
+        const data = response.data;
+        if (!data?.url) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Respuesta inesperada del servidor.' });
+            return;
+        }
+
+        // Descarga directa navegando a la URL (evita problemas de AJAX con respuestas binarias)
+        const a = document.createElement('a');
+        a.href = data.url;
+        a.download = data.nombre || `Reporte_Documentos_Personal_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        Swal.close();
+    } catch {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar el reporte. Inténtalo de nuevo.' });
+    }
+});
+
 // Toggle colapsable DJ Anterior
 document.getElementById('headerDJAnterior')?.addEventListener('click', function () {
     const cuerpo = document.getElementById('cuerpoDJAnterior');
