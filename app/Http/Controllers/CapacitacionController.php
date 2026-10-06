@@ -3893,7 +3893,7 @@ class CapacitacionController extends Controller
 
             $bdLocal = collect(
                 DB::select("
-                SELECT codigo, codigo_curso, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable, cod_cliente
+                SELECT codigo, codigo_curso, nombre, codigo_moodle, area_conocimiento, area, tipo_curso, cod_responsable, cod_cliente, fecha_creacion
                 FROM sisolm_web.dbo.sw_cursos
                 WHERE habilitado = 1
             ")
@@ -3935,13 +3935,16 @@ class CapacitacionController extends Controller
                         ? $tiposCurso->get($cursoLocal->tipo_curso)
                         : null;
 
+                    // sw_cursos tiene prioridad sobre Moodle para nombre y fecha_creacion
+                    $nombreLocal = $cursoLocal ? trim((string) ($cursoLocal->nombre ?? '')) : '';
+
                     return [
                         'Id'                 => $c->course_id,
                         'LocalId'            => $cursoLocal->codigo ?? $c->course_idnumber ?? null,
                         'Codigo'             => $cursoLocal?->codigo_curso      ?? null,
                         'AreaId'             => $area->codModdle                ?? null,
                         'SistemaId'          => $cursoLocal?->area_conocimiento ?? null,
-                        'Nombre'             => mb_strtoupper($c->course_name),
+                        'Nombre'             => $nombreLocal !== '' ? mb_strtoupper($nombreLocal) : mb_strtoupper($c->course_name),
                         'Tipo'               => $tipoCurso?->descripcion         ?? 'Sin tipo',
                         'Area'               => $area->nombre                  ?? 'Sin área',
                         'Sistema'            => $sistema?->descripcion          ?? 'Sin sistema',
@@ -3952,7 +3955,7 @@ class CapacitacionController extends Controller
                         'Total_Matriculados' => (int) ($c->total_matriculados   ?? 0),
                         'Fecha_Inicio'       => strtotime($c->startdate)        ?? null,
                         'Fecha_Fin'          => strtotime($c->enddate)          ?? null,
-                        'Fecha_Creacion'     => strtotime($c->created_at)       ?? null,
+                        'Fecha_Creacion'     => !empty($cursoLocal?->fecha_creacion) ? strtotime($cursoLocal->fecha_creacion) : (strtotime($c->created_at) ?? null),
                     ];
                 })
                 ->filter(fn($c) => $bdLocal->has($c['Id']))
