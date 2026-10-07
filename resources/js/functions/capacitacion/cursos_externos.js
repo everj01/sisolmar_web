@@ -718,7 +718,7 @@ export default document.addEventListener("alpine:init", () => {
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(13);
                 doc.setTextColor(36, 39, 70);
-                doc.text("REPORTE DE CERTIFICADOS", pageWidth / 2, 13, {
+                doc.text("Reporte de Certificaciones", pageWidth / 2, 13, {
                     align: "center",
                 });
 
@@ -941,7 +941,7 @@ export default document.addEventListener("alpine:init", () => {
                 /* ---------- Encabezado del documento ---------- */
                 const filaTitulo = sheet.getRow(1);
                 filaTitulo.height = 26;
-                filaTitulo.getCell(1).value = "REPORTE DE CERTIFICADOS";
+                filaTitulo.getCell(1).value = "Reporte de Certificaciones";
                 filaTitulo.getCell(1).font = {
                     bold: true,
                     size: 14,

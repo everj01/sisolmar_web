@@ -123,7 +123,7 @@
                     </span>
                 </div>
 
-                <h3 class="text-base font-bold text-default-900 mb-2">Reporte de Certificados</h3>
+                <h3 class="text-base font-bold text-default-900 mb-2">Reporte de Certificaciones</h3>
                 <p class="text-sm text-default-500 leading-relaxed mb-4">
                     Consulte el estado de los certificados del personal, incluyendo vigencia,
                     estado y fecha de vencimiento.
@@ -153,7 +153,7 @@
         </div>
     </div>
 
-    {{-- Modal Reporte de Certificados --}}
+    {{-- Modal Reporte de Certificaciones --}}
     <div id="modal-reporte-certificados" x-data="modalReporteCertificados" x-show="open" x-cloak
         @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
@@ -178,7 +178,7 @@
                     </div>
                     <div>
                         <h3 class="text-[15px] font-semibold text-default-900 leading-tight"
-                            x-text="view === 'results' ? 'Personal encontrado' : 'Reporte de Certificados'"></h3>
+                            x-text="view === 'results' ? 'Personal encontrado' : 'Reporte de Certificaciones'"></h3>
                         <p class="text-xs text-default-500 mt-0.5"
                             x-text="view === 'results'
                                 ? 'Resultado del reporte generado'
