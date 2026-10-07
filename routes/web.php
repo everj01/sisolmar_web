@@ -1,7 +1,8 @@
  <?php
 
-  use App\Http\Controllers\BiometricoController;
+use App\Http\Controllers\BiometricoController;
 use App\Http\Controllers\CapacitacionController;
+use App\Http\Controllers\ExamenesController;
 use App\Http\Controllers\ConsultaController;
 use App\Http\Controllers\DjController;
 use App\Http\Controllers\FileController;
@@ -13,24 +14,32 @@ use App\Http\Controllers\ReportePersonalController;
 use App\Http\Controllers\RoutingController;
 use App\Http\Controllers\UbicacionController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\ActualizacionesDjController;
+use App\Http\Controllers\Api\NewCapacController;
 use App\Mail\AlertaCaducidadMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Broadcast;
 
 
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 
 Route::middleware(['auth'])->group(function () {
+    
 
     // ─── RUTAS WEB (vistas y acciones directas) ───────────────────────────────
+    Route::get('/dj/periodos/gestionar', [ActualizacionesDjController::class, 'index'])->name('dj.periodos.index');
+    Route::get('/api/dj/periodos/listado', [ActualizacionesDjController::class, 'getPeriodos']);
+    Route::get('/api/reporte-avances-dj', [App\Http\Controllers\DjController::class, 'reporteAvancesDj']);
+    Route::get('/api/reporte-etapa4-dj', [App\Http\Controllers\DjController::class, 'reporteEtapa4Dj']);
     Route::get('/ver-dj/{codPersonal}', [FileController::class, 'verDjPdf'])->name('ver.dj');
     Route::post('/save-dj-folio', [FileController::class, 'saveDjFolio']);
     Route::get('/get-personal-dj', [FileController::class, 'getListaDJXusuario']);
+    Route::get('/get-personal-dj-2026', [FileController::class, 'getListaDJ2026']);
     Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
     Route::get('/get-personal', [FileController::class, 'getPersonal']);
     Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
-  
+    Route::get('/carga-escaneo-dj', [FileController::class, 'ViewEscaneoDJ'])->name('carga.escaneo.dj');
+
     Route::get('/reporte/folios-por-vencer-cliente', [ReporteController::class, 'foliosPorVencerXCliente']);
     Route::post('/capacitacion/save-matricula', [CapacitacionController::class, 'saveMatricula'])->name('capacitacion.save-matricula');
     Route::get('/usuario', [LoginController::class, 'getUsuarioSession']);
@@ -70,15 +79,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/toggle-usuario', [UsuarioController::class, 'toggleHabilitado']);
         Route::get('/get-sucursales-usuario/{codUsuario}', [UsuarioController::class, 'getSucursalesUsuario']);
         Route::post('/save-sucursales-usuario', [UsuarioController::class, 'saveSucursalesUsuario']);
+        Route::get('/get-menus-usuario/{codUsuario}', [UsuarioController::class, 'getMenusUsuario']);
+        Route::post('/save-menus-usuario', [UsuarioController::class, 'saveMenusUsuario']);
 
         // Personal
         Route::get('/get-personal', [FileController::class, 'getPersonal']);
         Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
         Route::get('/get-personal-total-reporte', [FileController::class, 'getPersonalTotalReporte']);
         Route::get('/get-personal-total-prueba', [FileController::class, 'getPersonalTotalPrueba']);
+        Route::get('/get-personal-reporte-personal', [FileController::class, 'getPersonalReportePersonal']);
+        Route::get('/get-personal-reporte-personal/detalle/{codPersonal}', [FileController::class, 'getDetallePersonalHistorial']);
         Route::get('/get-personal-legajos', [FileController::class, 'getPersonalLegajos']);
+        Route::get('/get-personal-legajos-pdf', [FileController::class, 'getPersonalLegajosPdf']);
 
         // File Control
+        Route::get('/get-cargos-erp', [FileController::class, 'getCargosErp']);
         Route::get('/get-coincidencias', [FileController::class, 'getCoincidencias']);
         Route::get('/get-documentos/{personalId}', [FileController::class, 'getDocumentosXPersonal']);
         Route::get('/get-legajos', [FileController::class, 'getLegajos']);
@@ -120,6 +135,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/notificaciones-matriculas/{codigo}/leer', [NotificacionController::class, 'marcarNotificacionLeida']);
         Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
         Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer'])->name('notificaciones.foliosPorVencer');
+        Route::get('/notificaciones/pendientes-etapa2', [NotificacionController::class, 'pendientesEtapa2']);
+        Route::get('/notificaciones/demandas-admin', [NotificacionController::class, 'getDemandasAdmin']);
+        Route::post('/notificaciones/demandas-admin/borrar', [NotificacionController::class, 'deleteDemandaAdmin']);
 
         // Solicitudes y otros
         Route::post('/save-solicitud', [FileController::class, 'saveSolicitud']);
@@ -155,14 +173,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/capacitacion/combos-apertura', [CapacitacionController::class, 'getCombosApertura']);
         Route::post('/capacitacion/procesar-examen-ia', [CapacitacionController::class, 'procesarExamenConIA']);
         Route::post('/capacitacion/guardar-examen-ia', [CapacitacionController::class, 'guardarExamenIA']);
-        Route::post('/capacitacion/validar-excel-matricula', [CapacitacionController::class, 'validarExcelMatricula']);
-        Route::post('/capacitacion/confirmar-matricula-masiva', [CapacitacionController::class, 'confirmarMatriculaMasiva']);
         Route::post('/save-matricula', [CapacitacionController::class, 'saveMatricula']);
+        Route::get('/matriculas-masivas/{jobId}', [CapacitacionController::class, 'estadoMatriculaMasiva']);
         Route::post('/cursos/programacion-manual', [CapacitacionController::class, 'storeProgramacionManual']);
         Route::get('/get-areas-encargadas', [CapacitacionController::class, 'getAreasEncargadas']);
         Route::get('/get-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/get-empresas', [CapacitacionController::class, 'getEmpresasList']);
         Route::get('/get-clientes-pac', [CapacitacionController::class, 'getClientesForPAC']);
+
+        Route::get('/obtener-cursos-av', [ExamenesController::class, 'obtenerCursosAV']);
+        Route::post('/obtener-datos-reporte-av', [ExamenesController::class, 'obtenerDatosReporteAV']);
+
+
 
         // ── Nuevas rutas de Capacitación (Rodrigo) ───────────────────────
         Route::post('/obtener-personal-reporte', [CapacitacionController::class, 'obtenerPersonalParaReporte']);
@@ -180,12 +202,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cursos/obtener-prog-actual/{courseId}', [CapacitacionController::class, 'obtenerProgActual']);
         Route::get('/obtener-programaciones/{courseId}', [CapacitacionController::class, 'obtenerProgramaciones']);
         Route::get('/obtener-matriculados/{courseId}', [CapacitacionController::class, 'obtenerMatriculados']);
+        Route::get('/obtener-datos-matricula/{cursoId}', [CapacitacionController::class, 'obtenerDatosMatricula']);
         Route::get('/reporte-cursos', [CapacitacionController::class, 'obtenerCursosParaReportes']);
         Route::get('/obtener-cursos', [CapacitacionController::class, 'obtenerCursos']);
+        Route::get('/obtener-cursos-cliente/{cod_legacy}', [CapacitacionController::class, 'obtenerCursosPorCliente']);
         Route::get('/get-cursos-por-area-fechas', [CapacitacionController::class, 'getCursosPorAreaFechas']);
         Route::get('/obtener-areas-por-sistema/{sistemaId}', [CapacitacionController::class, 'getAreasPorSistema']);
         Route::get('/obtener-areas', [CapacitacionController::class, 'obtenerAreas']);
         Route::get('/obtener-plan-pce', [CapacitacionController::class, 'obtenerPlanPCE']);
+        Route::get('/obtener-plan-pca/{codCliente}', [CapacitacionController::class, 'obtenerPlanPCA']);
+        Route::get('/obtener-cursos-por-plan/{tipo_curso}', [CapacitacionController::class, 'obtenerCursosPorPlan']);
+        Route::get('/obtener-cursos-new', [NewCapacController::class, 'obtenerCursos']);
+        Route::get('/obtener-curso-new/{codigoCurso}', [NewCapacController::class, 'obtenerCurso']);
+        Route::get('/obtener-tipos-curso', [CapacitacionController::class, 'obtenerTiposDeCurso']);
         Route::post('/capacitacion/procesar-examen-word', [CapacitacionController::class, 'procesarExamenWord']);
         Route::post('/capacitacion/guardar-examen-word', [CapacitacionController::class, 'guardarExamenWord']);
         Route::post('/capacitacion/desmatricular-usuario', [CapacitacionController::class, 'desmatricularUsuario']);
@@ -193,6 +222,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/capacitacion/registrar-reporte', [CapacitacionController::class, 'saveReporteCapacitacion']);
         Route::get('/capacitacion/listar-reportes', [CapacitacionController::class, 'listarReportesCapacitaciones']);
         Route::get('/obtener-sucursales', [CapacitacionController::class, 'listarSucursales']);
+        Route::get('/obtener-tipos-pers', [CapacitacionController::class, 'listarTiposPers']);
+        Route::get('/obtener-certificados', [CapacitacionController::class, 'listarCertificados']);
+        Route::get('/obtener-certificados-portuarios', [CapacitacionController::class, 'listarCertificadosPortuarios']);
+        Route::post('/cursos-externos/reporte-certificados', [CapacitacionController::class, 'reporteCursosPortuarios']);
         Route::get('/obtener-memos-resumen/{nivelMemo}', [CapacitacionController::class, 'obtenerMemosResumen']);
         Route::get('/obtener-memos-enviados', [CapacitacionController::class, 'obtenerMemosEnviados']);
         Route::get('/obtener-detalle-memo/{memoId}', [CapacitacionController::class, 'obtenerDetalleMemo']);
@@ -202,6 +235,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/obtener-personal-todas-empresas', [CapacitacionController::class, 'obtenerPersonalTodasEmpresas']);
         Route::post('/obtener-personal-record', [CapacitacionController::class, 'obtenerPersonalParaRecord']);
         Route::post('/obtener-reporte-general', [CapacitacionController::class, 'obtenerReporteGeneral']);
+        Route::post('/obtener-reporte-formato', [CapacitacionController::class, 'obtenerReporteFormato']);
         Route::get('/capacitacion/descargar-reporte/{id}/{tipo}', [CapacitacionController::class, 'descargarReporte']);
         Route::put('/capacitacion/actualizar-reporte/{id}', [CapacitacionController::class, 'actualizarReporte']);
         Route::patch('/capacitacion/actualizar-estado-reporte/{id}', [CapacitacionController::class, 'actualizarEstadoReporte']);
@@ -222,16 +256,20 @@ Route::middleware(['auth'])->group(function () {
         // Postulantes / DJ
         Route::get('/get-postulantes', [FileController::class, 'getPostulantes']);
         Route::get('/get-personal-dj', [FileController::class, 'getListaDJ']);
+        Route::get('/get-personal-dj-2026', [FileController::class, 'getListaDJ2026']);
         Route::get('/get-personal-dj-migracion', [FileController::class, 'getListaDJMigracion']);
         Route::post('/save-declaracion-jurada', [DjController::class, 'saveDeclaracionJurada']);
         Route::get('/reporte-personal-sin-migracion', [DjController::class, 'reportePersonalSinMigracion']);
+        Route::get('/reporte-personal-etapa2', [DjController::class, 'reportePersonalEtapa2PDF']);
         Route::get('/reporte-personal-sin-migracion-v2', [DjController::class, 'reportePersonalSinMigracionV2']);
         Route::post('/save-dj-folio', [DjController::class, 'saveDeclaracionJurada']);
         Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
 
+        Route::get('/rrhh/reporte-avances', [ReporteAvancesController::class, 'index']);
+
         // Consultas
         Route::get('/sucursales-por-cliente', [ConsultaController::class, 'getSucursalesXCliente']);
-        Route::get('rrhh/reporte-avances', [ReporteAvancesController::class, 'index']);
+        Route::get('/reporte-avances-dj', [App\Http\Controllers\DjController::class, 'reporteAvancesDj']);
 
         // Reportes
         Route::get('/reporte/folios-pendientes-sucursal', [ReporteController::class, 'foliosPendientesPorSucursal']);
@@ -249,6 +287,10 @@ Route::middleware(['auth'])->group(function () {
         // Biométrico
         Route::get('/get-biometrico/{codigo}', [BiometricoController::class, 'show']);
 
+        // Periodos de Actualización DJ
+        Route::get('/dj/periodos/personal-corte', [ActualizacionesDjController::class, 'getPersonalPorCorte']);
+        Route::post('/dj/periodos/guardar', [ActualizacionesDjController::class, 'storePeriodo']);
+
         // DJ módulo (antes con prefix 'dj')
         Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
             Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
@@ -262,7 +304,13 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/get-check-pdf', [DjController::class, 'getCheckPdf']);
             Route::post('/reporte-avance-dj', [DjController::class, 'saveReporteAvanceDj']);
             Route::get('/validar-documento', [DjController::class, 'validarDocumentoDj']);
+            Route::get('/verificar-vacaciones', [DjController::class, 'verificarVacaciones']);
+            Route::get('/get-cargos-dj', [DjController::class, 'getCargosDj']);
+            Route::get('/verificar-contrato', [DjController::class, 'verificarContrato']);
             Route::post('/save-nueva-dj', [DjController::class, 'saveNuevaDj']);
+            Route::post('/validar-excepcion-edad', [DjController::class, 'validarExcepcionEdad']);
+            Route::get('/get-usuarios-excepcion-edad', [DjController::class, 'getUsuariosExcepcionEdad']);
+            Route::post('/save-usuarios-excepcion-edad', [DjController::class, 'saveUsuariosExcepcionEdad']);
             Route::get('/buscar-coincidencias', [DjController::class, 'buscarCoincidencias']);
             Route::get('/reporte-personal-datos-generales', [ReportePersonalController::class, 'datosGenerales']);
             Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);
@@ -270,8 +318,10 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/upload-foto-personal', [DjController::class, 'uploadFotoPersonal']);
             Route::get('get-tipo-doc/', [DjController::class, 'getTipoDoc']);
             Route::get('get-tipo-per/', [DjController::class, 'getTipoPer']);
+            Route::get('reglas-edad/', [DjController::class, 'reglasEdad']);
             Route::get('get-estado-civil/', [DjController::class, 'getEstadoCivil']);
             Route::get('get-sistema-prev/', [DjController::class, 'getSistemaPrev']);
+            Route::get('get-paises/', [DjController::class, 'getPaises']);
         });
 
     }); // fin prefix('api')
@@ -314,5 +364,3 @@ Route::get('/debug-permisos', function () {
 })->middleware('auth');
 
 require __DIR__.'/auth.php';
-
-Broadcast::routes(['middleware' => ['web']]);

@@ -8,7 +8,7 @@ let datos = null;
 export function init() {
     new TomSelect('#filtroCertSucursal', { placeholder: '— Seleccionar —', allowEmptyOption: true });
     new TomSelect('#filtroCertTipoPers', { placeholder: '— Seleccionar —', allowEmptyOption: true });
-    new TomSelect('#filtroCertCertificado', { placeholder: '— Seleccionar —', allowEmptyOption: true });
+    new TomSelect('#filtroCertCertificado', { placeholder: '— Seleccionar —', allowEmptyOption: true, plugins: ['dropdown_input'] });
     new TomSelect('#filtroCertVigencia', { allowEmptyOption: true });
     new TomSelect('#filtroCertEstado', { allowEmptyOption: true });
 

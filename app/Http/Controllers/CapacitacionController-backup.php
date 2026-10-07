@@ -2213,7 +2213,7 @@ class CapacitacionController extends Controller
   public function obtenerAreas(): JsonResponse
   {
       try {
-          $areas = DB::table('sw_curso_areas')
+          $areas = DB::table('sw_cursos_area')
               ->select('codigo', 'nombre', 'codModdle')
               ->where('habilitado', 1)
               ->whereNotNull('codModdle')
@@ -3469,7 +3469,7 @@ class CapacitacionController extends Controller
 
               $areaResponsable = null;
               if ($cursoBdLocal->area) {
-                  $area = DB::table('sw_curso_areas')
+                  $area = DB::table('sw_cursos_area')
                       ->select('nombre')
                       ->where('codigo', $cursoBdLocal->area)
                       ->first();

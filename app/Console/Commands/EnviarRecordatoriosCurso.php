@@ -1,140 +1,144 @@
 <?php
 
-  namespace App\Console\Commands;
+namespace App\Console\Commands;
 
-  use App\Mail\RecordatorioCursosPendientesMail;
-  use Illuminate\Console\Command;
-  use Illuminate\Support\Facades\DB;
-  use Illuminate\Support\Facades\Log;
-  use Illuminate\Support\Facades\Mail;
+use App\Mail\RecordatorioCursosPendientesMail;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
-  class EnviarRecordatoriosCurso extends Command
-  {
-      protected $signature = 'capacitacion:enviar-recordatorios-curso {--dry-run : Muestra cuántos correos se enviarían sin enviarlos}';
+class EnviarRecordatoriosCurso extends Command
+{
+    protected $signature = 'capacitacion:enviar-recordatorios-curso {--dry-run : Muestra cuántos correos se enviarían sin enviarlos}';
 
-      protected $description = 'Envía correos recordatorios a matriculados que no han iniciado sus cursos';
+    protected $description = 'Envía correos recordatorios a matriculados que no han iniciado sus cursos';
 
-      public function handle(): int
-      {
-          $isDryRun = $this->option('dry-run');
+    public function handle(): int
+    {
+        $isDryRun = $this->option('dry-run');
 
-          $totalEnviados       = 0;
-          $totalErrores        = 0;
-          $totalSinCorreo      = 0;
-          $totalCorreoInvalido = 0;
+        $totalEnviados          = 0;
+        $totalErrores           = 0;
+        $totalSinCorreo         = 0;
+        $totalCorreoInvalido    = 0;
+        $totalSinCursosLocales  = 0;
 
-          $usuarios = DB::connection('mysql_grupoihb')
-              ->select(
-                  'CALL SP_OBTENER_RECORDATORIOS_PENDIENTES(?)',
-                  [date('Y')]
-              );
+        $usuarios = DB::connection('mysql_grupoihb')
+            ->select(
+                'CALL SP_OBTENER_RECORDATORIOS_PENDIENTES(?)',
+                [date('Y')]
+            );
 
-          if (empty($usuarios)) {
-              $this->info('Sin pendientes.');
-              return self::SUCCESS;
-          }
+        if (empty($usuarios)) {
+            $this->info('Sin pendientes.');
+            return self::SUCCESS;
+        }
 
-          $totalUsuariosSP = count($usuarios);
+        $cursosLocalesHabilitados = DB::table('sw_cursos')
+            ->where('habilitado', 1)
+            ->whereNotNull('codigo_moodle')
+            ->pluck('codigo_moodle')
+            ->map(fn($c) => (int) $c)
+            ->flip();
 
-          $this->info("{$totalUsuariosSP} usuario(s) obtenidos del SP.");
+        $totalUsuariosSP = count($usuarios);
 
-          $bar = $this->output->createProgressBar($totalUsuariosSP);
-          $bar->start();
+        $this->info("{$totalUsuariosSP} usuario(s) obtenidos del SP.");
 
-          foreach ($usuarios as $usuario) {
+        $bar = $this->output->createProgressBar($totalUsuariosSP);
+        $bar->start();
 
-              try {
+        foreach ($usuarios as $usuario) {
+            try {
+                $email = trim((string) $usuario->email);
 
-                  $email = trim((string) $usuario->email);
+                if (empty($email)) {
+                    $totalSinCorreo++;
 
-                  if (empty($email)) {
+                    Log::warning(
+                        "Usuario {$usuario->user_id} sin correo."
+                    );
 
-                      $totalSinCorreo++;
+                    $bar->advance();
 
-                      Log::warning(
-                          "Usuario {$usuario->user_id} sin correo."
-                      );
+                    continue;
+                }
 
-                      $bar->advance();
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $totalCorreoInvalido++;
 
-                      continue;
-                  }
+                    Log::warning(
+                        "Usuario {$usuario->user_id} con correo inválido: {$email}"
+                    );
 
-                  if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $bar->advance();
 
-                      $totalCorreoInvalido++;
+                    continue;
+                }
 
-                      Log::warning(
-                          "Usuario {$usuario->user_id} con correo inválido: {$email}"
-                      );
+                $cursosPendientes = json_decode(
+                    $usuario->cursos_pendientes
+                );
 
-                      $bar->advance();
+                $cursosPendientes = array_values(array_filter(
+                    $cursosPendientes,
+                    fn($curso) => isset($cursosLocalesHabilitados[(int) $curso->course_id])
+                ));
 
-                      continue;
-                  }
+                if (empty($cursosPendientes)) {
+                    $totalSinCursosLocales++;
 
-                  $cursosPendientes = json_decode(
-                      $usuario->cursos_pendientes
-                  );
+                    Log::info(
+                        "Usuario {$usuario->user_id} sin cursos pendientes que coincidan con catálogo local."
+                    );
 
-                  $usuariosPrueba = [
-                      '76067492',
-                      // '75412099',
-                  ];
+                    $bar->advance();
 
-                  $puedeEnviar = !$isDryRun
-                      || in_array(
-                          $usuario->username,
-                          $usuariosPrueba,
-                          true
-                      );
+                    continue;
+                }
 
-                  if ($puedeEnviar) {
+                Mail::to($email)
+                    ->queue(
+                        new RecordatorioCursosPendientesMail(
+                            $usuario,
+                            $cursosPendientes
+                        )
+                    );
 
-                      Mail::to($email)
-                          ->queue(
-                              new RecordatorioCursosPendientesMail(
-                                  $usuario,
-                                  $cursosPendientes
-                              )
-                          );
+                $totalEnviados++;
+            } catch (\Throwable $e) {
+                $totalErrores++;
 
-                      $totalEnviados++;
-                  }
-              } catch (\Throwable $e) {
+                Log::error(
+                    "Error usuario {$usuario->user_id}: {$e->getMessage()}",
+                    [
+                        'trace' => $e->getTraceAsString(),
+                    ]
+                );
+            }
 
-                  $totalErrores++;
+            $bar->advance();
+        }
 
-                  Log::error(
-                      "Error usuario {$usuario->user_id}: {$e->getMessage()}",
-                      [
-                          'trace' => $e->getTraceAsString(),
-                      ]
-                  );
-              }
+        $bar->finish();
+        $this->newLine(2);
+        $this->table(
+            ['Métrica', 'Total'],
+            [
+                ['Usuarios obtenidos SP', $totalUsuariosSP],
+                ['Usuarios sin correo', $totalSinCorreo],
+                ['Usuarios correo inválido', $totalCorreoInvalido],
+                ['Usuarios sin cursos locales', $totalSinCursosLocales],
+                ['Correos enviados', $totalEnviados],
+                ['Errores', $totalErrores],
+            ]
+        );
 
-              $bar->advance();
-          }
+        if ($isDryRun) {
+            $this->warn('Dry-run activo');
+        }
 
-          $bar->finish();
-
-          $this->newLine(2);
-
-          $this->table(
-              ['Métrica', 'Total'],
-              [
-                  ['Usuarios obtenidos SP', $totalUsuariosSP],
-                  ['Usuarios sin correo', $totalSinCorreo],
-                  ['Usuarios correo inválido', $totalCorreoInvalido],
-                  ['Correos enviados', $totalEnviados],
-                  ['Errores', $totalErrores],
-              ]
-          );
-
-          if ($isDryRun) {
-              $this->warn('Dry-run activo');
-          }
-
-          return self::SUCCESS;
-      }
-  }
+        return self::SUCCESS;
+    }
+}

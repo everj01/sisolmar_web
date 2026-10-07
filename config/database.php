@@ -109,7 +109,7 @@ return [
         
         'sqlsrv_controlclientes' => [
             'driver' => 'sqlsrv',
-            'host' => env('DB_HOST_CONTROL', '192.168.10.21'),
+            'host' => env('DB_HOST_CONTROL', '192.168.10.20'),
             'port' => env('DB_PORT_CONTROL', '1433'),
             'database' => env('DB_DATABASE_CONTROL', 'CONTROLCLIENTES2018'),
             'username' => env('DB_USERNAME_CONTROL', 'usr_solmar_vb'),
@@ -119,7 +119,6 @@ return [
             'encrypt' => env('DB_ENCRYPT', 'yes'),
             'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
             'options' => [
-                 // TOTALMENTE VACÍO
             ],
         ],
 

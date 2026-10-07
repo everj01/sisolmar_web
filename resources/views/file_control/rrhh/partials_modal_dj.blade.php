@@ -1,4 +1,8 @@
 {{-- Partial: _modal_dj.blade.php — Split View Comparación --}}
+{{-- Catálogo de vínculos familiares para JS (filas dinámicas de familiares) --}}
+<script>
+    window.TIPOS_VINCULO = window.TIPOS_VINCULO || @json(array_map('trim', array_column($tiposVinculo ?? [], 'descripcion')));
+</script>
 @if(session('tipo_rol') == 9 || session('tipo_rol') == 8)
 <style>
     #formDatos input:not([type="hidden"]),
@@ -28,7 +32,8 @@
 @include('file_control.rrhh.modal_js_styles')
 
 <div id="modalDjGestion"
-    class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none">
+    class="hs-overlay w-full h-full fixed top-0 left-0 z-[9999] transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none"
+    data-hs-overlay-keyboard="false">
     <div class="-translate-y-5 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 sm:w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded"
         style="width:96%;max-width:1400px;">
         <div class="flex flex-col border border-default-200 shadow-sm rounded-lg pointer-events-auto">
@@ -105,9 +110,17 @@
                                             </div>
                                         </div>
                                         {{-- Foto backup --}}
-                                        <div
-                                            style="width:70px;height:85px;border:2px dashed #fbbf24;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fef9c3;flex-shrink:0;">
-                                            <span style="font-size:9px;color:#92400e;font-weight:600;">FOTO</span>
+                                        <div style="position:relative; width:70px; height:85px; flex-shrink:0;">
+                                            <!-- 1. El recuadro punteado (Placeholder) -->
+                                            <div id="placeholderFotoBackup"
+                                                style="position:absolute; inset:0; border:2px dashed #fbbf24; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fef9c3;">
+                                                <span style="font-size:9px; color:#92400e; font-weight:600;">FOTO</span>
+                                            </div>
+                                            
+                                            <!-- 2. La imagen real (Oculta por defecto) -->
+                                            <img id="previewFotoBackup" class="hidden"
+                                                style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid #fbbf24; box-shadow:0 1px 2px rgba(0,0,0,0.05);"
+                                                alt="Foto Anterior" />
                                         </div>
                                     </div>
                                     <hr class="dj-divider" style="border-color:#fde68a;">
@@ -123,7 +136,7 @@
                                         <div class="bk-field" data-bk="fecha_nacimiento"><label>Fecha de
                                                 Nacimiento</label><span class="bk-val" data-field="FECH_NACI"></span>
                                         </div>
-                                        <div class="bk-field" data-bk="ciudad_nacimiento"><label>Ciudad de
+                                        <div class="bk-field" data-bk="ciudad_nacimiento"><label>País de
                                                 Nacimiento</label><span class="bk-val"
                                                 data-field="dj2026_ciudad_naci"></span></div>
                                         <div class="bk-field" data-bk="sabe_nadar" style="visibility:hidden;">
@@ -330,8 +343,13 @@
                                         <div class="bk-field" data-bk="ocupacion_principal"><label>Profesión / Ocupación
                                                 Principal</label><span class="bk-val"
                                                 data-field="PERS_PROFESION"></span></div>
-                                        <div class="bk-field"><label>Experiencia (años)</label><span class="bk-val"
-                                                data-field="dj2026_experiencia_anios"></span></div>
+                                        <div class="bk-field" data-bk="experiencia_anios">
+                                            <label>Experiencia</label>
+                                            <div style="font-size: 12px; margin-top: 2px;">
+                                                <span class="bk-val" data-field="dj2026_experiencia_anios"></span> Años y 
+                                                <span class="bk-val" data-field="dj2026_experiencia_meses"></span> Meses
+                                            </div>
+                                        </div>
                                         <div class="bk-field"><label>¿Familiar en la empresa?</label><span
                                                 class="bk-val" data-field="dj2026_familiar_empresa"></span></div>
                                     </div>
@@ -373,7 +391,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                                     </svg>
-                                    Servicio Militar Obligatorio
+                                    Servicio Militar (S.M.O.)
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
@@ -448,7 +466,7 @@
                                         </div>
                                         <div class="bk-field" data-bk="cargo_anterior"><label>Cargo</label><span
                                                 class="bk-val" data-field="PERS_CARGOTRABANT"></span></div>
-                                        <div class="bk-field"><label>Duración (años)</label><span class="bk-val"
+                                        <div class="bk-field"><label>Duración</label><span class="bk-val"
                                                 data-field="PERS_DURACIONANT"></span></div>
                                     </div>
                                 </div>
@@ -542,6 +560,24 @@
                         @csrf
                         <input type="hidden" name="cod_postulante" id="cod_postulante">
                         <input type="hidden" id="tipo_personal" name="tipo_personal">
+                        <input type="hidden" id="cargo" name="cargo">
+
+                        <div id="cardTipoCargo" style="display:none;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:14px;">
+                            <div style="flex:1;min-width:240px;">
+                                <label class="dj-label">Tipo de Personal</label>
+                                <select id="tipo_personal_ui" class="dj-select">
+                                    <option value="">— Seleccionar —</option>
+                                </select>
+                            </div>
+                            <div id="wrap_sctr" style="display:none;min-width:130px;">
+                                <label class="dj-label">&nbsp;</label>
+                                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;padding:7px 0;">
+                                    <input type="checkbox" id="autorizar_sctr" name="autorizar_sctr" value="1"
+                                        style="width:14px;height:14px;accent-color:#25d366;cursor:pointer;">
+                                    SCTR
+                                </label>
+                            </div>
+                        </div>
 
                         {{-- ① DATOS PERSONALES --}}
                         <div class="dj-group">
@@ -621,7 +657,12 @@
                                                     name="dni" class="dj-input" placeholder="12345678"
                                                     data-compare="dni"></div>
                                             <div><label class="dj-label">Caduca</label><input type="date" id="caduca"
-                                                    name="caduca" class="dj-input" data-compare="caduca"></div>
+                                                    name="caduca" class="dj-input" data-compare="caduca">
+                                                <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;cursor:pointer;">
+                                                    <input type="checkbox" id="no_caduca_dni" name="no_caduca_dni" style="width:16px;height:16px;cursor:pointer;">
+                                                    No Caduca
+                                                </label>
+                                            </div>
                                             <div>
                                                 <label class="dj-label">Estado Civil</label>
                                                 <select id="estado_civil" name="estado_civil" class="dj-select"
@@ -650,10 +691,20 @@
                                             <div><label class="dj-label">Fecha de Nacimiento</label><input type="date"
                                                     id="fecha_nacimiento" name="fecha_nacimiento" class="dj-input"
                                                     data-compare="fecha_nacimiento"></div>
-                                            <div style="visibility: hidden"><label class="dj-label">Ciudad de Nacimiento</label><input type="text"
-                                                    id="ciudad_nacimiento" name="ciudad_nacimiento" class="dj-input"
-                                                    placeholder="Lima, Arequipa…" style="text-transform:uppercase;">
+                                            <div>
+                                                <label class="dj-label">Fecha Ingreso a Solmar</label>
+                                                <input type="date" id="fecha_ingreso_solmar" name="fecha_ingreso_solmar"
+                                                    class="dj-input"
+                                                    {{ session('tipo_rol') == 17 ? '' : 'readonly' }}
+                                                    style="{{ session('tipo_rol') == 17 ? '' : 'background:#f3f4f6;color:#6b7280;cursor:not-allowed;' }}">
                                             </div>
+                                            <div id="wrap_fecha_cese" style="display:none;">
+                                                <label class="dj-label">Fecha de Cese</label>
+                                                <input type="date" id="fecha_cese" name="fecha_cese"
+                                                    class="dj-input" readonly
+                                                    style="background:#f3f4f6;color:#6b7280;cursor:not-allowed;">
+                                            </div>
+                                            <input type="hidden" id="ciudad_nacimiento" name="ciudad_nacimiento">
                                             <div style="visibility:hidden;">
                                                 <label class="dj-label">¿Sabe nadar?</label>
                                                 <select id="sabe_nadar" name="sabe_nadar" class="dj-select"
@@ -668,27 +719,36 @@
                                 </div>
                                 <div class="dj-section">
                                     <div class="dj-section-header">
-                                        Ciudad de nacimiento
+                                        País de Nacimiento
                                     </div>
-                                     <div class="dj-section-body">
+                                    <div class="dj-section-body">
                                         <div style="display:flex;gap:14px;align-items:flex-start;">
                                             <div style="flex:1;">
-                                                <div class="dj-grid-3" style="margin-bottom:8px;">
-                                                    <div><label class="dj-label">Departamento</label><select
-                                                            id="departamento_nac" name="departamento_nac"
-                                                            class="dj-select">
-                                                            <option value="" disabled>—</option>
-                                                        </select></div>
-                                                    <div><label class="dj-label">Provincia</label><select
-                                                            id="provincia_nac" name="provincia_nac"
-                                                            class="dj-select">
-                                                            <option value="" disabled>—</option>
-                                                        </select></div>
-                                                    <div><label class="dj-label">Distrito</label><select
-                                                            id="distrito_nac" name="distrito_nac"
-                                                            class="dj-select">
-                                                            <option value="" disabled>—</option>
-                                                        </select></div>
+                                                <div class="dj-grid-4" style="margin-bottom:8px;">
+                                                    <div>
+                                                        <label class="dj-label">País</label>
+                                                        <select id="aj_pais" name="nacionalidad" class="dj-select">
+                                                            <option value="">— Seleccionar —</option>
+                                                        </select>
+                                                    </div>
+                                                    <div id="aj_wrap_departamento_nac">
+                                                        <label class="dj-label">Departamento</label>
+                                                        <select id="departamento_nac" name="departamento_nac" class="dj-select">
+                                                            <option value="" disabled selected>—</option>
+                                                        </select>
+                                                    </div>
+                                                    <div id="aj_wrap_provincia_nac">
+                                                        <label class="dj-label">Provincia</label>
+                                                        <select id="provincia_nac" name="provincia_nac" class="dj-select">
+                                                            <option value="" disabled selected>—</option>
+                                                        </select>
+                                                    </div>
+                                                    <div id="aj_wrap_distrito_nac">
+                                                        <label class="dj-label">Distrito</label>
+                                                        <select id="distrito_nac" name="distrito_nac" class="dj-select">
+                                                            <option value="" disabled selected>—</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -856,6 +916,19 @@
                                     <div class="dj-section-body">
                                         <div class="dj-grid-3">
                                             <div>
+                                                <label class="dj-label">Sucursal</label>
+                                                <select id="sucursal" name="sucursal" class="dj-select"
+                                                    data-compare="sucursal" @if($tipoUsuario != 17) disabled style="opacity:0.5;cursor:not-allowed;" @endif>
+                                                    <option value="">—</option>
+                                                    @foreach ($sucursales ?? [] as $sucursal)
+                                                        @if (!in_array(trim((string) $sucursal->codigo), ['', '0', '00'], true))
+                                                            <option value="{{ trim((string) $sucursal->codigo) }}">{{ $sucursal->abreviatura }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div>
                                                 <label class="dj-label">Embargos financieros</label>
                                                 <select id="embargos" name="embargos" class="dj-select"
                                                     data-compare="embargos">
@@ -869,9 +942,9 @@
                                                 <label class="dj-label">Cuenta de Sueldo</label>
                                                 <select id="cuenta_banco" name="cuenta_banco" class="dj-select">
                                                     <option value="" disabled>—</option>
-            
-                                                    <option value="BCP">BCP</option>
-                                                    <option value="INTERBANK">INTERBANK</option>
+                                                    @foreach ($bancos as $banco)
+                                                        <option value="{{ $banco->id }}">{{ $banco->text }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
@@ -933,6 +1006,25 @@
                                                             <option value="" disabled>—</option>
                                                         </select></div>
                                                 </div>
+                                                <div class="dj-grid-2" style="margin-top:8px;">
+                                                    <div>
+                                                        <label class="dj-label">Tipo Zona</label>
+                                                        <select id="tipo_zona_dni" name="tipo_zona_dni" class="dj-select"
+                                                            data-compare="tipo_zona_dni">
+                                                            <option value="">—</option>
+                                                            @foreach ($tiposZona ?? [] as $tz)
+                                                                <option value="{{ trim($tz->TIZO_CODIGO) }}">{{ $tz->TIZO_DESCRIPCION }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="dj-label">Nombre de Zona</label>
+                                                        <input type="text" id="zona_dirdni" name="zona_dirdni"
+                                                            class="dj-input" placeholder="Nombre de la zona"
+                                                            maxlength="100" style="text-transform:uppercase;"
+                                                            data-compare="zona_dirdni">
+                                                    </div>
+                                                </div>
                                                 <label class="dj-label">Descripción</label>
                                                 <textarea id="direccion_dni" name="direccion_dni" class="dj-textarea"
                                                     placeholder="Dirección registrada en el DNI"
@@ -964,15 +1056,9 @@
                                                 <select id="parentesco_emergencia" name="parentesco_emergencia"
                                                         class="dj-select" data-compare="parentesco_emergencia">
                                                     <option value="">—</option>
-                                                    <option value="PADRE">Padre</option>
-                                                    <option value="MADRE">Madre</option>
-                                                    <option value="CONYUGE">Cónyuge</option>
-                                                    <option value="HIJO">Hijo(a)</option>
-                                                    <!-- <option value="HERMANO">Hermano(a)</option>
-                                                    <option value="ABUELO">Abuelo(a)</option>
-                                                    <option value="TIO">Tío(a)</option>
-                                                    <option value="PRIMO">Primo(a)</option>
-                                                    <option value="OTRO">Otro</option> -->
+                                                    @foreach(($tiposVinculo ?? []) as $tv)
+                                                    <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
@@ -1002,9 +1088,16 @@
                                                     class="dj-input" placeholder="Ej. Agente de Seguridad"
                                                     style="text-transform:uppercase;"
                                                     data-compare="ocupacion_principal"></div>
-                                            <div><label class="dj-label">Experiencia (años)</label><input type="number"
-                                                    id="experiencia_anios" name="experiencia_anios" class="dj-input"
-                                                    placeholder="0"></div>
+                                            <div>
+                                                <label class="dj-label">EXPERIENCIA</label>
+                                                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                                    <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Años:</span>
+                                                    <input type="number" id="experiencia_anios" name="experiencia_anios" class="dj-input" placeholder="0" min="0" style="width: 70px;">
+                                                    
+                                                    <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Meses:</span>
+                                                    <input type="number" id="experiencia_meses" name="experiencia_meses" class="dj-input" placeholder="0" min="0" max="11" style="width: 70px;">
+                                                </div>
+                                            </div>
                                             <div>
                                                 <label class="dj-label">¿Familiar en la empresa?</label>
                                                 <select id="familiar_empresa" name="familiar_empresa" class="dj-select">
@@ -1062,16 +1155,6 @@
                                                     <option value="NO">No</option>
                                                     <option value="SI">Sí</option>
                                                 </select>
-                                                <div id="div_sucamec_obs" class="hidden" style="margin-top:6px;">
-                                                    <label class="dj-label">Observación</label>
-                                                    <input type="text" id="sucamec_obs" name="sucamec_obs"
-                                                        class="dj-input" placeholder="Institución o curso...">
-                                                </div>
-                                            </div>
-                                            <div id="institucion_container" class="hidden">
-                                                <label class="dj-label">Institución</label>
-                                                <input type="text" id="institucion_laboral" name="institucion_laboral"
-                                                    class="dj-input" placeholder="Institución donde realizó el curso">
                                             </div>
                                         </div>
                                     </div>
@@ -1084,7 +1167,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H11l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                                         </svg>
-                                        Servicio Militar Obligatorio
+                                        Servicio Militar (S.M.O.)
                                     </div>
                                     <div class="dj-section-body">
                                         <div class="dj-grid-3">
@@ -1099,14 +1182,22 @@
                                                 </select>
                                             </div> --}}
                                             <div>
-                                                <label class="dj-label">S.M.O.</label>
-                                                <select id="consumo_sustancias" name="consumo_sustancias"
-                                                    class="dj-select" data-compare="consumo_sustancias">
+                                                <label class="dj-label">Prestó S.M.O.</label>
+                                                <select id="presto_smo" name="presto_smo"
+                                                    class="dj-select" data-compare="presto_smo">
                                                     <option value="" disabled>Seleccionar...</option>
+                                                    <option value="SI">SI</option>
                                                     <option value="NO">NO</option>
-                                                    <option value="MG">MGP - MARINA DE GUERRA DEL PERU</option>
-                                                    <option value="EP">EP - EJERCITO DEL PERU</option>
-                                                    <option value="FA">FAP - FUERZA AEREA DEL PERU</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="dj-label">Lugar de S.M.O.</label>
+                                                <select id="lugar_smo" name="lugar_smo"
+                                                    class="dj-select" data-compare="lugar_smo" disabled>
+                                                    <option value="" disabled selected>Seleccionar...</option>
+                                                    <option value="MG">MGP</option>
+                                                    <option value="EP">EP</option>
+                                                    <option value="FA">FAP</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1214,9 +1305,9 @@
                                             <div><label class="dj-label">Cargo</label><input type="text"
                                                     id="cargo_anterior" name="cargo_anterior" class="dj-input"
                                                     placeholder="Cargo" data-compare="cargo_anterior"></div>
-                                            <div><label class="dj-label">Duración (años)</label><input type="text"
-                                                    id="duracion_anterior" name="duracion_anterior" step="0.5"
-                                                    class="dj-input" placeholder=""></div>
+                                            <div><label class="dj-label">Duración</label><input type="text"
+        id="duracion_anterior" name="duracion_anterior"
+        class="dj-input" placeholder="Ej. 1 año 7 meses" data-compare="duracion_anterior"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1270,24 +1361,15 @@
                                                     <label class="dj-label">Parentesco</label>
                                                     <select name="parentesco[]" class="dj-select">
                                                         <option value="" disabled>—</option>
-                                                        <option value="PADRE">Padre</option>
-                                                        <option value="MADRE">Madre</option>
-                                                        <option value="CONYUGE">Conyuge</option>
-                                                        <!-- <option value="ESPOSO">Esposo</option>
-                                                        <option value="ESPOSA">Esposa</option> -->
-                                                        <option value="HIJO">Hijo(a)</option>
-                                                        <!-- <option value="HIJA">Hija</option>
-                                                        <option value="HERMANO">Hermano</option>
-                                                        <option value="HERMANA">Hermana</option>
-                                                        <option value="ABUELO">Abuelo</option>
-                                                        <option value="ABUELA">Abuela</option>
-                                                        <option value="OTROS">OTROS</option> -->
+                                                        @foreach(($tiposVinculo ?? []) as $tv)
+                                                        <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                                 <div><label class="dj-label">Apellidos y Nombres</label><input
                                                         type="text" name="apellidosNombres[]" class="dj-input"
                                                         placeholder="Apellidos y nombres completos"></div>
-                                                <div><label class="dj-label">Fecha de Nacimiento</label><input
+                                                <div class="family-date"><label class="dj-label">Fecha de Nacimiento</label><input
                                                         type="date" name="fechaNacimiento[]" class="dj-input"></div>
                                                 <div><button type="button" class="remove-family dj-btn-sm dj-btn-danger"
                                                         style="margin-bottom:1px;">Eliminar</button></div>
@@ -1337,9 +1419,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('familiar_empresa')?.addEventListener('change', function () {
             document.getElementById('div_familiar_interno').classList.toggle('hidden', this.value !== 'SI');
-        });
-        document.getElementById('curso_sucamec')?.addEventListener('change', function () {
-            document.getElementById('div_sucamec_obs').classList.toggle('hidden', this.value !== 'SI');
         });
     });
 </script>

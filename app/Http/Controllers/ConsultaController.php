@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Consulta;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ConsultaController extends Controller
 {
@@ -23,7 +24,7 @@ class ConsultaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error("Error en getSucursalesXCliente: " . $e->getMessage());
+            Log::error("Error en getSucursalesXCliente: " . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage()

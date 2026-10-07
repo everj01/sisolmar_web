@@ -1,8 +1,3 @@
-// ============================================================
-// gestion_dj.js — Lógica principal del módulo Gestión DJ
-// ============================================================
-// PDF separado en: ./dj_pdf.js
-// ============================================================
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { TabulatorFull as Tabulator } from 'tabulator-tables';
@@ -14,6 +9,63 @@ import { generarDeclaracionJuradaPDF, generarReporteFaltantesPDF } from './dj_pd
 
 const API_URL = `${VITE_URL_APP}/api`;
 let registroSeleccionado = null;
+let generadosCache = {};
+let generadosCacheLoaded = false;
+let fotoSeleccionada = null;   // ← archivo de foto seleccionado por el usuario
+let codiPersActual = '';       // ← codi_pers de la DJ abierta actualmente
+
+async function cargarGeneradosCache(codPeriodo = '2026') {
+    try {
+        const res = await axios.get(`${API_URL}/dj/get-check-pdf`, { params: { codPeriodo } });
+        if (res.data.success) {
+            generadosCache = res.data.data || {};
+            generadosCacheLoaded = true;
+        }
+    } catch (e) {
+        console.warn('Error cargando generadosCache:', e);
+        generadosCache = {};
+        generadosCacheLoaded = true;
+    }
+}
+
+function estaGenerado(codPersonal, fechaCambioActual) {
+    if (!generadosCacheLoaded) return false;
+    const reg = generadosCache[codPersonal];
+    if (!reg) return false;
+    return true;
+}
+
+function getGeneradosSet() {
+    return new Set(Object.keys(generadosCache));
+}
+
+async function marcarGeneradosAPI(items, codPeriodo = '2026') {
+    const codigos = items.map(i => String(i.codPersonal || i.CODI_PERS || i.id));
+    if (!codigos.length) return;
+    try {
+        const res = await axios.post(`${API_URL}/dj/update-check-pdf`, { codigos, codPeriodo });
+        if (res.data.success) {
+            codigos.forEach(c => { generadosCache[c] = { generado: true }; });
+        }
+    } catch (e) {
+        console.error('Error marcando generados:', e);
+    }
+}
+
+async function resetearGeneradosAPI(codigos = null, codPeriodo = '2026') {
+    try {
+        const res = await axios.post(`${API_URL}/dj/reset-check-pdf`, { codigos, codPeriodo });
+        if (res.data.success) {
+            if (codigos && codigos.length) {
+                codigos.forEach(c => delete generadosCache[c]);
+            } else {
+                generadosCache = {};
+            }
+        }
+    } catch (e) {
+        console.error('Error reseteando generados:', e);
+    }
+}
 
 const categoriasSe = {
     'A': [
@@ -31,7 +83,7 @@ const categoriasSe = {
     ]
 };
 
-const PAUSA_ENTRE_REGISTROS = 800;
+const PAUSA_ENTRE_REGISTROS = 200;
 
 async function esperarConBackoff(intento, baseMs = 1000) {
     const espera = baseMs * Math.pow(2, intento); // 1s, 2s, 4s, 8s...
@@ -93,22 +145,223 @@ function actualizarCategorias() {
 
 
 function marcarDJGeneradosBatch(items) {
-    const data = getDJGenerados();
-
-    items.forEach(({ codPersonal, fechaCambio }) => {
-        data[codPersonal] = {
-            fechaMarcado: new Date().toISOString(),
-            fechaCambio: fechaCambio || null,
-        };
-    });
-
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
+    marcarGeneradosAPI(items);
 }
 
 // ============================================================
 // DOCUMENT READY
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
+
+    cargarGeneradosCache();
+
+    // === LÓGICA DEL MODAL SUBIR DJ (Migrado) ===
+    const archivoDJ_E4C = document.getElementById('archivoDJ_E4C');
+    const zonaDropDJ_E4C = document.getElementById('zonaDropDJ_E4C');
+    const listaArchivosDJ_E4C = document.getElementById('listaArchivosDJ_E4C');
+
+    let ultimoContextoMenu = null; // Guardará los datos para poder regresar al menú
+
+    zonaDropDJ_E4C?.addEventListener('click', () => archivoDJ_E4C.click());
+
+    // Abstracción del menú SweetAlert
+    window.abrirMenuOpcionesArchivo = function(codiPers, nombre, tieneDJ) {
+        Swal.fire({
+            title: 'Opciones de Archivo',
+            html: `
+                <div class="flex flex-col gap-3 mt-4">
+                    <button id="swal-btn-subir" class="btn border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm">
+                        <i class="bx bx-upload text-xl"></i> Subir DJ
+                    </button>
+                    ${tieneDJ ? `
+                    <button id="swal-btn-ver" class="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm">
+                        <i class="bx bx-show text-xl"></i> Ver DJ Escaneado
+                    </button>
+                    <button id="swal-btn-bio" class="btn border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm">
+                        <i class="bx bx-fingerprint text-xl"></i> Validación Biométrica
+                    </button>
+                    ` : ''}
+                </div>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+            width: '320px',
+            customClass: { popup: 'rounded-2xl', title: 'text-lg font-bold text-gray-700 border-b pb-3' },
+            didOpen: () => {
+                // Evento: Subir DJ
+                document.getElementById('swal-btn-subir').addEventListener('click', () => {
+                    Swal.close();
+                    if (typeof abrirModalSubirDJ_E4C === 'function') {
+                        abrirModalSubirDJ_E4C(codiPers, nombre, tieneDJ);
+                    }
+                });
+                
+                // Evento: Ver DJ Escaneado
+                const btnVer = document.getElementById('swal-btn-ver');
+                if (btnVer) {
+                    btnVer.addEventListener('click', () => {
+                        Swal.close();
+                        window.open(`${VITE_URL_APP}/ver-dj/${codiPers}`, '_blank');
+                    });
+                }
+
+                // Evento: Validación Biométrica (Nuevo)
+                const btnBio = document.getElementById('swal-btn-bio');
+                if (btnBio) {
+                    btnBio.addEventListener('click', () => {
+                        Swal.close();
+                        // Disparamos el CustomEvent que ya existe abajo en el código
+                        const event = new CustomEvent('solicitarBiometrico', {
+                            detail: { codigo: codiPers, persona: nombre }
+                        });
+                        window.dispatchEvent(event);
+                    });
+                }
+            }
+        });
+    };
+
+    window.abrirModalSubirDJ_E4C = function(codigo, nombre, tieneDJ = true) {
+        ultimoContextoMenu = { codigo, nombre, tieneDJ }; // Guardamos el contexto
+        document.getElementById('codPersonalDJ_E4C').value = codigo;
+        document.querySelector('.nombre-personal_E4C').textContent = nombre ?? '';
+        limpiarModal_E4C();
+        document.getElementById('btn-modal-dj_E4C').click();
+    };
+
+    // Eventos para regresar al menú si cancelan o cierran el modal (El timeout es para esperar que cierre la ventana actual)
+    document.getElementById('btn-cancelar-dj_E4C')?.addEventListener('click', () => {
+        if (ultimoContextoMenu) {
+            setTimeout(() => { window.abrirMenuOpcionesArchivo(ultimoContextoMenu.codigo, ultimoContextoMenu.nombre, ultimoContextoMenu.tieneDJ); }, 350);
+        }
+    });
+    
+    // (Opcional) Si también le dan clic a la 'X' superior del modal
+    document.getElementById('btn-modal-dj-close_E4C')?.addEventListener('click', () => {
+        if (ultimoContextoMenu) {
+            setTimeout(() => { window.abrirMenuOpcionesArchivo(ultimoContextoMenu.codigo, ultimoContextoMenu.nombre, ultimoContextoMenu.tieneDJ); }, 350);
+        }
+    });
+
+    function limpiarModal_E4C() {
+        const f = new Date();
+        const hoy = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+        const el = document.getElementById('fecha_emision_dj_E4C');
+        if (el) {
+            el.value = hoy;
+            el.readOnly = true;
+            el.classList.add('bg-gray-100', 'cursor-not-allowed');
+        }
+        if (archivoDJ_E4C) archivoDJ_E4C.value = '';
+        if (listaArchivosDJ_E4C) listaArchivosDJ_E4C.innerHTML = '';
+    }
+
+    archivoDJ_E4C?.addEventListener('change', function () {
+        const archivos = Array.from(this.files);
+        if (!archivos.length) return;
+        const maxSize = 1.2 * 1024 * 1024;
+
+        for (const archivo of archivos) {
+            if (archivo.type !== 'application/pdf') {
+                Swal.fire({ title: 'Solo se permite PDF para el DJ', icon: 'warning' });
+                this.value = ''; listaArchivosDJ_E4C.innerHTML = ''; return;
+            }
+            if (archivo.size > maxSize) {
+                Swal.fire({ title: 'Archivo demasiado grande', text: `"${archivo.name}" pesa ${(archivo.size / 1024 / 1024).toFixed(2)} MB. Límite: 1 MB.`, icon: 'warning' });
+                this.value = ''; listaArchivosDJ_E4C.innerHTML = ''; return;
+            }
+        }
+
+        listaArchivosDJ_E4C.innerHTML = archivos.map(a => `
+            <li class="flex items-center gap-2 text-sm text-gray-700">
+                <i class="bx bxs-file-pdf text-red-500 text-lg"></i>
+                <span>${a.name}</span>
+                <span class="text-gray-400">(${(a.size / 1024).toFixed(1)} KB)</span>
+            </li>
+        `).join('');
+    });
+
+    document.getElementById('formSubirDJ_E4C')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const fechaEmision = document.getElementById('fecha_emision_dj_E4C').value;
+        const codPersonal = document.getElementById('codPersonalDJ_E4C').value;
+        const archivo = archivoDJ_E4C?.files?.[0];
+        const maxSize = 1.2 * 1024 * 1024;
+
+        if (!fechaEmision) { Swal.fire({ title: 'Ingrese la fecha de emisión', icon: 'warning' }); return; }
+        if (!archivo) { Swal.fire({ title: 'Seleccione un archivo PDF', icon: 'warning' }); return; }
+        if (archivo.type !== 'application/pdf') { Swal.fire({ title: 'Solo se permite PDF', icon: 'warning' }); return; }
+        if (archivo.size > maxSize) { Swal.fire({ title: 'El archivo supera 1 MB', icon: 'warning' }); return; }
+
+        const btnGuardar = document.getElementById('btn-guardar-dj_E4C');
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = 'Guardando...';
+
+        const formData = new FormData();
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+        formData.append('fecha_emision', fechaEmision);
+        formData.append('codPersonal', codPersonal);
+        formData.append('pdf', archivo);
+
+        axios.post(`${VITE_URL_APP}/save-dj-folio-2`, formData, { headers: { 'Accept': 'application/json' } })
+            .then(() => {
+                document.getElementById('btn-modal-dj-close_E4C').click();
+                limpiarModal_E4C();
+                getPersonal(); // Recargamos la tabla de Gestión DJ
+                Swal.fire({ title: 'DJ subida correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
+            })
+            .catch(error => {
+                const msg = error.response?.data?.error || error.response?.data?.message || 'Error al guardar el DJ';
+                Swal.fire({ title: msg, icon: 'error' });
+            })
+            .finally(() => {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = '<i class="bx bx-upload text-lg me-1"></i> Subir DJ';
+            });
+    });
+    // === FIN LÓGICA DEL MODAL SUBIR DJ ===
+
+    // Cache stale-while-revalidate para las vistas de personal
+    // Cache stale-while-revalidate para las vistas de personal
+    const _personalCache = { SI: null, NO: null, TODOS: null, _tsSI: 0, _tsNO: 0, _tsTODOS: 0 };
+    const _CACHE_TTL = 90_000; // 90 segundos
+
+    // === INICIO LÓGICA CUSTOM SELECT CARGO ===
+    let cargosDisponibles = [];
+
+    function renderCustomCargoOptions(cargosLista) {
+        const contenedor = document.getElementById('listaCargosPEN');
+        if (!contenedor) return;
+        contenedor.innerHTML = '';
+
+        const optTodos = document.createElement('div');
+        optTodos.className = 'px-3 py-1.5 cursor-pointer text-gray-700 hover-select-nativo text-sm';
+        optTodos.textContent = 'Todos';
+        optTodos.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('filtroCargoPEN').value = '';
+            contenedor.classList.add('hidden');
+            aplicarFiltrosPEN();
+        });
+        contenedor.appendChild(optTodos);
+
+        cargosLista.forEach(cargo => {
+            const div = document.createElement('div');
+            // Cambiamos "truncate" por "whitespace-nowrap" para que el texto no se corte
+            div.className = 'px-3 py-1.5 cursor-pointer text-gray-700 hover-select-nativo text-sm whitespace-nowrap';
+            div.textContent = cargo;
+            div.title = cargo;
+            div.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('filtroCargoPEN').value = cargo;
+                contenedor.classList.add('hidden');
+                aplicarFiltrosPEN();
+            });
+            contenedor.appendChild(div);
+        });
+    }
+    // === FIN LÓGICA CUSTOM SELECT CARGO ===
 
     document.getElementById('clase_brevete').addEventListener('change', actualizarCategorias);
 
@@ -138,11 +391,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const placeholder = document.getElementById("placeholderFoto");
     const btnSubir = document.getElementById("btnSubirFoto");
     const btnEliminar = document.getElementById("btnEliminarFoto");
-
-    // SUCAMEC
-    const cursoSucamec = document.getElementById("curso_sucamec");
-    const institucionContainer = document.getElementById("institucion_container");
-    const institucionInput = document.getElementById("institucion_laboral");
 
     // Ubigeos
     const departamentoSelect = document.getElementById("departamento_actual");
@@ -178,8 +426,28 @@ document.addEventListener('DOMContentLoaded', function () {
         responsiveLayout: "collapse",
         pagination: true,
         paginationSize: 20,
+        selectable: true,
         rowHeader: { formatter: "responsiveCollapse", width: 30, minWidth: 30, hozAlign: "center", resizable: false, headerSort: false },
         locale: "es",
+        rowFormatter: function(row) {
+            const data = row.getData();
+            
+            // Descomenta esta línea un segundo para ver en la consola si "vigencia" sí está llegando:
+            // console.log("Revisando a:", data.nombres, "- Vigencia:", data.vigencia);
+            
+            if (data.vigencia && data.vigencia.toString().trim().toUpperCase() === 'NO') {
+                const colorRojito = "#fef2f2"; // bg-red-50 de Tailwind
+
+                // 1. Pintamos la fila base
+                row.getElement().style.setProperty("background-color", colorRojito, "important");
+                
+                // 2. 🔥 EL HACK: Pintamos cada celda individualmente para ganarle al CSS de Tabulator
+                row.getCells().forEach(cell => {
+                    cell.getElement().style.setProperty("background-color", colorRojito, "important");
+                });
+            }
+        },
+
         langs: {
             "es": {
                 pagination: { first: "Primero", first_title: "Primera Página", last: "Final", last_title: "Última Página", prev: "<", prev_title: "Página Anterior", next: ">", next_title: "Página Siguiente", all: "Todo" },
@@ -189,34 +457,61 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         },
         columns: [
-            { title: "N°", formatter: "rownum", hozAlign: "center", width: 60 },
+            {
+                title: "",
+                formatter: "rowSelection",
+                titleFormatter: "rowSelection",
+                hozAlign: "center",
+                headerSort: false,
+                width: 40,
+            },
+            { 
+                title: "N°", 
+                field: "nro_fila_estatico", 
+                formatter: function() { return ""; }, 
+                hozAlign: "center", 
+                width: 60, 
+                headerSort: false, 
+                responsive: false 
+            },
+            { title: "Codigo", field: "codPersonal", hozAlign: "center", width: 80 },
             {
                 title: "Apellidos", field: "apellidos", hozAlign: "left", widthGrow: 2,
-                formatter: cell => { const d = cell.getData(); return `${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim(); }
+                formatter: cell => { 
+                    const d = cell.getData(); 
+                    const apellidos = `${d.apellido1 ?? ''} ${d.apellido2 ?? ''}`.trim();
+                    return apellidos ? capitalizeWords(apellidos) : ''; 
+                }
             },
             {
-                title: "Nombres", field: "nombres", hozAlign: "left", widthGrow: 2,
-                formatter: cell => { const d = cell.getData(); return `${d.nombres ?? ''} `.trim(); }
+                title: "Nombres", field: "NOMB_1", hozAlign: "left", widthGrow: 2,
+                formatter: cell => { 
+                    const d = cell.getData(); 
+                    const nombres = `${d.NOMB_1 ?? ''} ${d.NOMB_2 ?? ''}`.trim();
+                    return nombres ? capitalizeWords(nombres) : ''; 
+                }
             },
 
             { title: "DNI", field: "dni", hozAlign: "center", widthGrow: 2 },
             { title: "Sucursal", field: "sucursal", hozAlign: "center", widthGrow: 2 },
             { title: "Cargo", field: "cargo", hozAlign: "left", widthGrow: 2 }, // 🔥 NUEVA COLUMNA 🔥
             {
-                title: "Tipo", field: "tipoPer", hozAlign: "center", widthGrow: 2,
+                title: "Tipo", field: "tipoPer", hozAlign: "center", minWidth: 150, widthGrow: 2,
                 formatter: cell => {
                     const val = cell.getValue() ?? '';
-                    let color = '';
-                    if (val.includes('OPERATIVO')) {
-                        color = 'border-blue-300 bg-blue-100 text-blue-800';
-                    } else if (val.includes('ADMINISTRATIVO')) {
-                        color = 'border-purple-300 bg-purple-100 text-purple-800';
-                    } else if (val.includes('ESPECIAL')) {
-                        color = 'border-orange-300 bg-orange-100 text-orange-800';
-                    } else {
-                        color = 'border-gray-300 bg-gray-100 text-gray-800';
+                    let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm';
+                    
+                    if (val.toUpperCase().includes('OPERATIVO')) { 
+                        color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
                     }
-                    return val ? `<span class="inline-flex items-center rounded-full border ${color} px-3 py-1 text-sm font-medium whitespace-nowrap">${capitalizeWords(val)}</span>` : '';
+                    else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                        color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                    }
+                    else if (val.toUpperCase().includes('ESPECIAL')) { 
+                        color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'; 
+                    }
+
+                    return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap uppercase" style="min-width: 125px;">${val}</span>` : '—';
                 }
             },
             {
@@ -224,39 +519,109 @@ document.addEventListener('DOMContentLoaded', function () {
                 formatter: cell => {
                     const d = cell.getData();
                     if (d.cambio != null) {
-                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700">
-                            <span class="flex items-center gap-1"><i class='bx bx-calendar'></i> <span>${formatearFechaHora(d.cambio).fecha}</span></span>
-                            <span class="flex items-center gap-1"><i class='bx bx-time-five'></i> <span>${formatearFechaHora(d.cambio).hora}</span></span>
+                        return `<div class="flex items-center justify-center gap-3 text-sm text-gray-700 whitespace-nowrap">
+                            <span class="flex items-center gap-1"><i class='bx bx-calendar text-blue-500'></i> <span>${formatearFechaHora(d.cambio).fecha}</span></span>
+                            <span class="flex items-center gap-1"><i class='bx bx-time-five text-orange-500'></i> <span>${formatearFechaHora(d.cambio).hora}</span></span>
                         </div>`.trim();
                     }
                     return `${d.cambio ?? 'Sin cambios'}`.trim();
                 }
             },
             {
-                title: "Acciones", field: "acciones", hozAlign: "center", headerSort: false, widthGrow: 2,
+                title: "Acciones", field: "acciones", hozAlign: "left", headerSort: false, width: 120, minWidth: 120, maxWidth: 120, widthGrow: 0, responsive: false,
                 formatter: cell => {
-                    const d = cell.getData();
-                    const btnDJ = `<button type="button" class="btn rounded-full form-btn bg-success/25 text-success hover:bg-success hover:text-white">DJ</button>`;
-                    const btnPDF = `<button type="button" class="btn rounded-full form-btn bg-info/25 text-info hover:bg-info hover:text-white ms-1" title="previsualizar"><i class='bx bxs-file-pdf'></i></button>`;
-                    return d.estado === 'pendiente' ? btnDJ : btnDJ /*+ btnPDF*/;
-                },
-                cellClick: (e, cell) => {
+                const btnDJ = `<button type="button" class="btn rounded-full form-btn border border-emerald-400 bg-success/25 text-success hover:bg-success hover:text-white hover:border-emerald-600 px-3 py-1 text-xs whitespace-nowrap flex items-center justify-center">DJ</button>`;
+
+                let html = `<div class="flex items-center gap-2 flex-nowrap">
+                    ${btnDJ}
+                    <button type="button" class="btn rounded-full bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 text-xs flex items-center justify-center border border-blue-500 hover:border-blue-700 shadow-sm transition-colors folder-menu-btn" title="Opciones de Archivo">
+                        <i class="bx bx-folder-open text-lg pointer-events-none"></i>
+                    </button>
+                </div>`;
+                
+                return html;
+            },
+            cellClick: (e, cell) => {
+                const rowData = cell.getRow().getData();
+                const codiPers = rowData.codPersonal || rowData.CODI_PERS || rowData.id;
+                const nombre = rowData.personal || rowData.NOMB_1 ? `${rowData.NOMB_1 ?? ''} ${rowData.APEL_1 ?? ''}`.trim() : 'Personal';
+                const tieneDJ = true; // Forzado
+
+                // Lógica Menú Flotante: Si hacen clic en la carpetita
+                if (e.target.closest('.folder-menu-btn')) {
+                    window.abrirMenuOpcionesArchivo(codiPers, nombre, tieneDJ);
+                    return;
+                }
+
+                    // Lógica Original: Botón DJ
                     const btn = e.target.closest('.form-btn');
                     if (!btn) return;
-                    registroSeleccionado = cell.getRow().getData();
+                    
+                    if (rowData.vigencia && rowData.vigencia.toString().trim().toUpperCase() === 'NO') {
+                        window.NuevaDJ?.abrirRecontratacion(codiPers, { OBS_CESE: rowData.OBS_CESE, FECH_CESE: rowData.FECH_CESE });
+                        return;
+                    }
+
+                    registroSeleccionado = rowData;
                     registroSeleccionado._sinSplit = true;
-
-                    const codiPers = registroSeleccionado.codPersonal || registroSeleccionado.CODI_PERS || registroSeleccionado.id;
-
-                    // Limpiar caché solo de esta persona
                     personalDataCache.delete(`${codiPers}_pendiente`);
                     personalDataCache.delete(`${codiPers}_migracion`);
-
-                    //btnNuevaDJ?.click();
                     abrirFormularioDJ(codiPers, 'pendiente');
                 }
             },
         ],
+    });
+
+    // 🔥 ELIMINAMOS/COMENTAMOS ESTO PARA QUE NO BORRE LA INYECCIÓN
+    /* function reformatNums(table) {
+        function rf() { table.getRows("active").forEach(r => r.reformat()); }
+        table.on("dataLoaded", rf);
+        table.on("pageLoaded", rf);
+        table.on("dataSorted", () => { table.setPage(1); rf(); });
+        table.on("dataFiltered", () => { table.setPage(1); rf(); });
+    }
+    reformatNums(tblPersonas); */
+
+    tblPersonas.on("renderComplete", function () {
+        if (this._ultimoFiltro) {
+            resaltarTexto(this, this._ultimoFiltro);
+        }
+
+        // =========================================================
+        // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+        // =========================================================
+        const page = this.getPage() || 1;
+        const size = this.getPageSize() || 20;
+        const offset = (page - 1) * size;
+        
+        this.getRows("active").forEach((row, index) => {
+            const cell = row.getCell("nro_fila_estatico");
+            if (cell) {
+                cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+            }
+        });
+    });
+
+    tblPersonas.on("rowClick", function (e, row) {
+        if (e.target.closest('.form-btn') || e.target.tagName === 'INPUT') return;
+        const data = row.getData();
+        if (data.vigencia && data.vigencia.toString().trim().toUpperCase() === 'NO') {
+            const codiPers = data.codPersonal || data.CODI_PERS;
+            window.NuevaDJ?.abrirRecontratacion(codiPers, { OBS_CESE: data.OBS_CESE, FECH_CESE: data.FECH_CESE });
+        }
+    });
+
+    tblPersonas.on("rowSelectionChanged", function () {
+        const sel = this.getSelectedRows().length;
+        const btn = document.getElementById('btnGenerarSeleccionadosPEN');
+        const count = document.getElementById('countSelPEN');
+        if (count) count.textContent = sel;
+        if (btn) {
+            btn.disabled = !sel;
+            btn.className = sel
+                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors'
+                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+        }
     });
 
     // ── Tabla coincidencias ──────────────────────────────────
@@ -293,20 +658,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function limpiarPreviewFoto() {
+        fotoSeleccionada = null;
         if (inputFoto) inputFoto.value = "";
         if (preview) { preview.src = ""; preview.classList.add("hidden"); }
         if (placeholder) placeholder.classList.remove("hidden");
         if (btnEliminar) btnEliminar.classList.add("hidden");
-    }
-
-    function actualizarInstitucionVisibility() {
-        if (!cursoSucamec || !institucionContainer || !institucionInput) return;
-        if (cursoSucamec.value === "SI") {
-            institucionContainer.classList.remove("hidden");
-        } else {
-            institucionContainer.classList.add("hidden");
-            institucionInput.value = "";
-        }
     }
 
     function makeFamilyRow() {
@@ -315,12 +671,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <div>
                 <label class="text-sm font-medium inline-block mb-2">Parentesco</label>
                 <select name="parentesco[]" class="form-select w-full">
-                    <option value="">Seleccionar</option>
-                    <option value="PADRE">Padre</option>    <option value="MADRE">Madre</option>
-                    <option value="CONYUGE">Conyuge</option>  
-                    <option value="HIJO">Hijo(a)</option>     
-                  
-                   
+                    ${opcionesVinculoHTML('', 'Seleccionar')}
                 </select>
             </div>
             <div>
@@ -328,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <input type="text" name="apellidosNombres[]" class="form-input w-full" placeholder="Apellidos y nombres completos">
             </div>
             <div class="flex gap-2 items-end">
-                <div class="flex-1">
+                <div class="family-date flex-1">
                     <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
                     <input type="date" name="fechaNacimiento[]" class="form-input w-full">
                 </div>
@@ -366,6 +717,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (form) form.reset();
         //if (tagifyLicencia) tagifyLicencia.removeAllTags();
 
+        fotoSeleccionada = null;
+        codiPersActual = '';
         limpiarPreviewFoto();
 
         if (container) { container.innerHTML = ''; container.insertAdjacentHTML('beforeend', makeFamilyRow()); }
@@ -390,11 +743,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (badgeLimp) badgeLimp.textContent = '';
     }
 
+    const RESALTAR_SKIP_FIELDS = new Set(['migrado', 'estado', 'tipoPer', 'cambio', 'codPersonal']);
     function resaltarTexto(tabla, valor) {
         tabla.getRows().forEach(row => {
             row.getElement().querySelectorAll(".tabulator-cell").forEach((cell, i, cells) => {
                 const field = cell.getAttribute('tabulator-field');
-                if (i === cells.length - 1 || field === 'migrado' || field === 'estado' || field === 'tipoPer' || field === 'cambio') return;
+                // Saltar: sin field (checkbox, N°), última columna (acciones) y columnas con HTML propio
+                if (!field || i === cells.length - 1 || RESALTAR_SKIP_FIELDS.has(field)) return;
                 const text = cell.textContent || '';
                 if (valor && text.toLowerCase().includes(valor)) {
                     const escaped = valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -461,45 +816,92 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // CARGA DE DATOS (API)
     // ============================================================
-    function getPersonal() {
+    function _aplicarDatosTabla(datosTabla) {
+        tblPersonas.setData(datosTabla);
+        
+        // Guardamos los cargos en la variable global
+        cargosDisponibles = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+        
+        const inputCargo = document.getElementById('filtroCargoPEN');
+        if (inputCargo) {
+            const valorPrevio = inputCargo.value;
+            
+            // Renderizar la lista base
+            renderCustomCargoOptions(cargosDisponibles);
 
-        axios.get(`${VITE_URL_APP}/get-personal-dj`)
-            .then(response => {
-                const datosTabla = response.data;
-                tblPersonas.setData(datosTabla);
-                
-                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
-                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
-                const filtroCargo = document.getElementById('filtroCargoPEN');
-                if (filtroCargo) {
-                    filtroCargo.innerHTML = '<option value="">Todos</option>';
-                    cargosUnicos.forEach(cargo => {
-                        filtroCargo.add(new Option(cargo, cargo));
-                    });
-                }
-                
-                aplicarFiltrosPEN();
-            })
-            .catch(error => console.error("Hubo un error:", error));
+            // Validar si el texto actual sigue siendo válido en la nueva lista
+            if (valorPrevio && !cargosDisponibles.includes(valorPrevio)) {
+                inputCargo.value = '';
+            }
+        }
+        
+        aplicarFiltrosPEN();
+    }
+
+    async function _fetchPersonal(vigencia) {
+        if (!vigencia) return [];
+        const res = await axios.get(`${VITE_URL_APP}/get-personal-dj-2026`, { params: { vigencia } });
+        const datos = res.data;
+        _personalCache[vigencia] = datos;
+        _personalCache[`_ts${vigencia}`] = Date.now();
+        return datos;
+    }
+
+    async function _cargarTodosLosDatos() {
+        const [datosSI, datosNO] = await Promise.all([
+            _personalCache.SI ? Promise.resolve(_personalCache.SI) : _fetchPersonal('SI'),
+            _personalCache.NO ? Promise.resolve(_personalCache.NO) : _fetchPersonal('NO')
+        ]);
+        return [...(datosSI || []), ...(datosNO || [])];
+    }
+
+    function getPersonal(silent = false) {
+        const selectVigencia = document.getElementById('filtroVigenciaPEN');
+        const vigenciaVal = selectVigencia ? selectVigencia.value : ''; // '' = Todos, 'SI' = Activos, 'NO' = Cesados
+        const ahora = Date.now();
+
+        if (vigenciaVal === 'SI' || vigenciaVal === 'NO') {
+            const cacheValido = _personalCache[vigenciaVal] && (ahora - _personalCache[`_ts${vigenciaVal}`]) < _CACHE_TTL;
+            if (cacheValido) {
+                _aplicarDatosTabla(_personalCache[vigenciaVal]);
+                _fetchPersonal(vigenciaVal).then(datos => _aplicarDatosTabla(datos)).catch(console.error);
+            } else {
+                if (!silent) tblPersonas.alert("Buscando datos...", "msg");
+                _fetchPersonal(vigenciaVal)
+                    .then(datos => _aplicarDatosTabla(datos))
+                    .catch(error => console.error("Hubo un error:", error))
+                    .finally(() => tblPersonas.clearAlert());
+            }
+        } else {
+            // Caso 'Todos' ('')
+            const cacheSIValido = _personalCache.SI && (ahora - _personalCache._tsSI) < _CACHE_TTL;
+            const cacheNOValido = _personalCache.NO && (ahora - _personalCache._tsNO) < _CACHE_TTL;
+
+            if (cacheSIValido && cacheNOValido) {
+                const todos = [...(_personalCache.SI || []), ...(_personalCache.NO || [])];
+                _aplicarDatosTabla(todos);
+                _cargarTodosLosDatos().then(todosFrescos => _aplicarDatosTabla(todosFrescos)).catch(console.error);
+            } else {
+                if (!silent) tblPersonas.alert("Buscando datos...", "msg");
+                _cargarTodosLosDatos()
+                    .then(todos => _aplicarDatosTabla(todos))
+                    .catch(error => console.error("Hubo un error:", error))
+                    .finally(() => tblPersonas.clearAlert());
+            }
+        }
     }
 
 
     window.getPersonalSoloDJ = function () {
 
-        axios.get(`${VITE_URL_APP}/get-personal-dj`)
+        axios.get(`${VITE_URL_APP}/get-personal-dj-2026`)
             .then(response => {
                 const datosTabla = response.data;
                 tblPersonas.setData(datosTabla);
 
-                // 🔥 LLENADO DINÁMICO DEL SELECT DE CARGOS 🔥
-                const cargosUnicos = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
-                const filtroCargo = document.getElementById('filtroCargoPEN');
-                if (filtroCargo) {
-                    filtroCargo.innerHTML = '<option value="">Todos</option>';
-                    cargosUnicos.forEach(cargo => {
-                        filtroCargo.add(new Option(cargo, cargo));
-                    });
-                }
+                // 🔥 LLENADO DINÁMICO DEL CUSTOM SELECT DE CARGOS 🔥
+                cargosDisponibles = [...new Set(datosTabla.map(d => d.cargo).filter(Boolean))].sort();
+                renderCustomCargoOptions(cargosDisponibles);
 
                 aplicarFiltrosPEN();
             })
@@ -534,10 +936,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function matchBusqueda(data, texto) {
         const palabras = texto.toLowerCase().split(/\s+/).filter(p => p);
         const campos = [
-            (data.nombres   ?? '').toLowerCase(),
+            (`${data.NOMB_1 ?? ''} ${data.NOMB_2 ?? ''}`).toLowerCase(),
             (data.apellido1 ?? '').toLowerCase(),
             (data.apellido2 ?? '').toLowerCase(),
-            (data.dni       ?? '').toLowerCase(),
+            (data.dni ?? '').toLowerCase(),
         ];
         return palabras.every(palabra => campos.some(campo => campo.includes(palabra)));
     }
@@ -547,26 +949,99 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     function aplicarFiltrosPEN() {
         const sucursal = document.getElementById('filtroSucursalPEN')?.value ?? '';
-        const tipoPer  = document.getElementById('filtroTipoPerPEN')?.value ?? '';
-        const cargo    = document.getElementById('filtroCargoPEN')?.value ?? ''; // 🔥 Capturar cargo
-        const texto    = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
+        const tipoPer = document.getElementById('filtroTipoPerPEN')?.value ?? '';
+        const cargo = document.getElementById('filtroCargoPEN')?.value ?? ''; // 🔥 Capturar cargo
+        const texto = buscarPersonalInput?.value.toLowerCase().trim() ?? '';
 
         tblPersonas.setFilter((data) => {
             if (sucursal && data.codSucursal !== sucursal) return false;
-            if (tipoPer  && data.tipoPer     !== tipoPer)  return false;
-            
-            // 🔥 CAMBIO AQUÍ: Comparamos el nombre exacto del cargo
-            if (cargo    && data.cargo       !== cargo)    return false; 
-            
-            if (texto    && !matchBusqueda(data, texto))   return false;
+            if (tipoPer && data.tipoPer !== tipoPer) return false;
+
+            // 🔥 CAMBIO AQUÍ: Filtrado parcial para que funcione como autocomplete
+            if (cargo && !(data.cargo || '').toLowerCase().includes(cargo.toLowerCase())) return false;
+
+            if (texto && !matchBusqueda(data, texto)) return false;
             return true;
         });
+
+        // =========================================================================
+        // 🔥 LÓGICA DE INDICADORES: Calculamos en base a la data cargada actual
+        // =========================================================================
+        const todaLaData = tblPersonas.getData();
+
+        // Filtramos solo por los selects (ignoramos la búsqueda de texto para que los totales no se alteren al buscar un nombre)
+        const dataParaTarjetas = todaLaData.filter(d => {
+            const cumpleSucursal = (sucursal === '') || (d.codSucursal === sucursal);
+            const cumpleTipo = (tipoPer === '') || (d.tipoPer === tipoPer);
+            const cumpleCargo = (cargo === '') || ((d.cargo || '').toLowerCase().includes(cargo.toLowerCase()));
+            return cumpleSucursal && cumpleTipo && cumpleCargo;
+        });
+
+        const total = dataParaTarjetas.length;
+        const vigentes = dataParaTarjetas.filter(d => (d.vigencia || '').toUpperCase() === 'SI').length;
+        const noVigentes = total - vigentes;
+
+        if (document.getElementById('countTotalPen')) document.getElementById('countTotalPen').textContent = total;
+        if (document.getElementById('countVigentesPen')) document.getElementById('countVigentesPen').textContent = vigentes;
+        if (document.getElementById('countNoVigentesPen')) document.getElementById('countNoVigentesPen').textContent = noVigentes;
     }
 
     document.getElementById('filtroSucursalPEN')?.addEventListener('change', aplicarFiltrosPEN);
     document.getElementById('filtroTipoPerPEN')?.addEventListener('change', aplicarFiltrosPEN);
-    document.getElementById('filtroCargoPEN')?.addEventListener('change', aplicarFiltrosPEN); // 🔥 Nuevo Listener
+    document.getElementById('filtroVigenciaPEN')?.addEventListener('change', getPersonal);
+
+    // Eventos del Custom Select Cargo
+    const inputCargo = document.getElementById('filtroCargoPEN');
+    const contenedorCargos = document.getElementById('listaCargosPEN');
+    const wrapCargo = document.getElementById('custom-select-cargo');
+
+    if (inputCargo && contenedorCargos && wrapCargo) {
+        
+        // Función auxiliar para renderizar filtrando por el valor actual del input
+        const mostrarOpcionesFiltradas = () => {
+            const val = inputCargo.value.toLowerCase();
+            contenedorCargos.classList.remove('hidden');
+            const filtrados = cargosDisponibles.filter(c => c.toLowerCase().includes(val));
+            renderCustomCargoOptions(filtrados);
+        };
+
+        // Mostrar lista al hacer click o enfocar, respetando lo que ya está escrito
+        inputCargo.addEventListener('focus', mostrarOpcionesFiltradas);
+        inputCargo.addEventListener('click', mostrarOpcionesFiltradas);
+
+        // Filtrar lista al escribir y actualizar tabla
+        inputCargo.addEventListener('input', (e) => {
+            mostrarOpcionesFiltradas();
+            aplicarFiltrosPEN(); 
+        });
+
+        // Ocultar al hacer click afuera
+        document.addEventListener('click', (e) => {
+            if (!wrapCargo.contains(e.target)) {
+                contenedorCargos.classList.add('hidden');
+            }
+        });
+    }
+
+    // Carga inicial (como 'Todos' es el por defecto, traerá activos y cesados juntos)
     getPersonal();
+
+    document.getElementById('btnGenerarSeleccionadosPEN')?.addEventListener('click', async function () {
+        const seleccionadas = tblPersonas.getSelectedRows();
+        if (!seleccionadas.length) {
+            Swal.fire({ icon: 'info', title: 'Sin selección', text: 'Selecciona al menos una persona con el checkbox.' });
+            return;
+        }
+        const filas = seleccionadas.map(r => r.getData());
+        const { isConfirmed } = await Swal.fire({
+            icon: 'question', title: 'Generar DJ seleccionados',
+            html: `Se generará <b>1 PDF</b> con <b>${filas.length}</b> declaración(es).<br>¿Desea continuar?`,
+            showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+        });
+        if (!isConfirmed) return;
+        await _generarUnificado(filas, 'DJ_Seleccionados', 'pendiente');
+        tblPersonas.deselectRow();
+    });
 
     // ============================================================
     // PESTAÑAS
@@ -576,20 +1051,25 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================================
     // BÚSQUEDA Y RESALTADO
     // ============================================================
-    buscarPersonalInput?.addEventListener("keyup", function () {
+    let _buscarTimer = null;
+    buscarPersonalInput?.addEventListener("input", function () {
         const valor = this.value.toLowerCase().trim();
+        clearTimeout(_buscarTimer);
         if (tabActiva === 'pendiente') {
-            tblPersonas.setFilter([[{ field: "nombres", type: "like", value: valor }, { field: "dni", type: "like", value: valor }]]);
+            aplicarFiltrosPEN();
+            _buscarTimer = setTimeout(() => resaltarTexto(tblPersonas, valor), 200);
             tblPersonas._ultimoFiltro = valor;
-            setTimeout(() => resaltarTexto(tblPersonas, valor), 10);
         } else {
-            tblPersonasMigrado._ultimoFiltro = valor;
             aplicarFiltrosMigracion();
-            setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 10);
+            _buscarTimer = setTimeout(() => resaltarTexto(tblPersonasMigrado, valor), 200);
+            tblPersonasMigrado._ultimoFiltro = valor;
         }
     });
 
-    tblPersonas.on("renderComplete", () => { if (tblPersonas._ultimoFiltro) resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro); });
+    // renderComplete solo re-resalta si hay filtro activo (sin debounce extra porque ya filtramos arriba)
+    tblPersonas.on("renderComplete", () => {
+        if (tblPersonas._ultimoFiltro) setTimeout(() => resaltarTexto(tblPersonas, tblPersonas._ultimoFiltro), 0);
+    });
 
     // ============================================================
     // BOTONES MODAL
@@ -637,15 +1117,19 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault(); e.stopPropagation();
         btn.closest('.family-row')?.remove();
     });
-
-    // SUCAMEC
-    cursoSucamec?.addEventListener("change", () => actualizarInstitucionVisibility());
+    container?.addEventListener('change', e => {
+        if (e.target.matches('select[name="parentesco[]"]')) {
+            actualizarFechaFamiliar(e.target.closest('.family-row'));
+        }
+    });
+    document.querySelectorAll('#familyContainer .family-row').forEach(actualizarFechaFamiliar);
 
     // Foto
     btnSubir?.addEventListener("click", () => inputFoto?.click());
     inputFoto?.addEventListener("change", () => {
         const file = inputFoto.files?.[0];
         if (file) {
+            fotoSeleccionada = file;  // ← guardar referencia
             const reader = new FileReader();
             reader.onload = e => {
                 if (preview) { preview.src = e.target.result; preview.classList.remove("hidden"); }
@@ -655,16 +1139,14 @@ document.addEventListener('DOMContentLoaded', function () {
             reader.readAsDataURL(file);
         }
     });
-    btnEliminar?.addEventListener("click", () => limpiarPreviewFoto());
+    btnEliminar?.addEventListener("click", () => { fotoSeleccionada = null; limpiarPreviewFoto(); });
 
     // Page size
     pageSizeSelect?.addEventListener("change", function () { tblPersonas.setPageSize(parseInt(this.value)); });
 
-    // ============================================================
-    // PREVISUALIZAR PDF
-    // ============================================================
-    btnPrevisualizar?.addEventListener("click", function (e) {
+    btnPrevisualizar?.addEventListener("click", async function (e) {
         e.preventDefault();
+        e.stopPropagation();
         const camposObligatorios = [{ input: nombreDJtxt, nombre: 'Nombre' }, { input: dniDJtxt, nombre: 'DNI' }];
         const campoFaltante = camposObligatorios.find(c => !c.input || !String(c.input.value ?? '').trim());
         if (campoFaltante) {
@@ -672,8 +1154,23 @@ document.addEventListener('DOMContentLoaded', function () {
             campoFaltante.input?.focus();
             return;
         }
-        generarDeclaracionJuradaPDF();
+        try {
+            Swal.fire({
+                title: 'Generando PDF…',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            const ok = await generarDeclaracionJuradaPDF();
+            // Solo cerrar el loading si fue éxito (si hubo error, su popup ya reemplazó al loading)
+            if (ok) Swal.close();
+        } catch (err) {
+            console.error('[Previsualizar] Error generando PDF:', err);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar el PDF: ' + (err?.message || err) });
+        }
     });
+
+    // País de nacimiento: sincronizar el hidden al escribir en el input
+    // (el select de país ya guarda el código directamente)
 
     // ============================================================
     // GUARDAR FORMULARIO
@@ -693,7 +1190,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btnGuardar) btnGuardar.disabled = true;
 
             try {
+                // Habilitar sucursal temporalmente para que su valor se envíe en el FormData
+                const sucursalEl = document.getElementById('sucursal');
+                if (sucursalEl) sucursalEl.disabled = false;
+
                 const formData = new FormData(form);
+
+                // Restaurar estado disabled si el usuario no es Admins RRHH
+                if (sucursalEl && window.tipoUsuario != 17) sucursalEl.disabled = true;
 
                 // Verificar que formData tiene datos
                 console.log('📋 FormData entries:');
@@ -705,9 +1209,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('📦 data object:', data);
 
                 const tabActiva = document.querySelector('.tab-btn.border-b-white')?.dataset?.tab ?? 'pendiente';
+
+                const hijoSinFecha = [...document.querySelectorAll('#familyContainer .family-row')]
+                    .find(fila => {
+                        const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
+                        const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
+                        return parentesco.startsWith('HIJO') && !fecha;
+                    });
+                if (hijoSinFecha) {
+                    Swal.fire({ icon: 'warning', title: 'Fecha obligatoria', text: 'Ingrese la fecha de nacimiento para el familiar Hijo(a).', confirmButtonText: 'Entendido' });
+                    hijoSinFecha.querySelector('input[name="fechaNacimiento[]"]')?.focus();
+                    if (btnGuardar) btnGuardar.disabled = false;
+                    return;
+                }
+
                 const payload = {
                     ...data,
                     source: tabActiva,
+                    no_caduca_dni: data.no_caduca_dni === 'on' ? '1' : '0',
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),
                     FAM_NOMBRES: formData.getAll('apellidosNombres[]'),
                     FAM_FECHA_NACI: formData.getAll('fechaNacimiento[]'),
@@ -730,7 +1249,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
-                    Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    // Subir foto si fue seleccionada
+                    const fotoFile = fotoSeleccionada;
+                    const codiPersFoto = response.data.codi_pers || data.cod_postulante || codiPersActual || '';
+                    console.log('[GestionDJ] fotoSeleccionada:', fotoSeleccionada, '| fotoFile:', fotoFile);
+                    console.log('[GestionDJ] codiPersFoto:', codiPersFoto, '| codiPersActual:', codiPersActual);
+                    if (fotoFile && codiPersFoto) {
+                        try {
+                            const fdFoto = new FormData();
+                            fdFoto.append('foto', fotoFile);
+                            fdFoto.append('codi_pers', codiPersFoto);
+                            console.log('[GestionDJ] Enviando foto...', fotoFile.name, fotoFile.size, 'bytes', fotoFile.type);
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                            const resFoto = await axios.post(`${VITE_URL_APP}/api/dj/upload-foto-personal`, fdFoto, {
+                                headers: { 'X-CSRF-TOKEN': csrfToken },
+                            });
+                            console.log('[GestionDJ] Respuesta foto:', resFoto.data);
+                            if (resFoto.data.success) {
+                                Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada y la foto se guardaron correctamente.' });
+                            } else {
+                                Swal.fire({ icon: 'warning', title: 'DJ guardada, pero foto falló', text: resFoto.data.message || 'No se pudo actualizar la foto.' });
+                            }
+                        } catch (e) {
+                            console.error('[GestionDJ] Error subiendo foto:', e.response?.status, e.response?.data);
+                            const errMsg = e.response?.data?.message
+                                || (e.response?.data?.errors ? Object.values(e.response.data.errors).flat().join('<br>') : null)
+                                || e.message;
+                            Swal.fire({ icon: 'warning', title: 'DJ guardada, pero foto falló', html: errMsg });
+                        }
+                    } else {
+                        console.warn('[GestionDJ] No se sube foto nueva.');
+                        Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    }
 
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
@@ -742,6 +1292,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.body.style.overflow = '';
                     }
 
+                    // Invalidar cache para que la recarga traiga datos frescos
+                    _personalCache.SI = null; _personalCache.NO = null; _personalCache.TODOS = null;
                     getPersonal();
                 }
             } catch (error) {
@@ -753,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (error.response?.data?.message) msg = error.response.data.message;
                 else if (error.response?.data?.errors) msg = Object.values(error.response.data.errors).flat().join('<br>');
 
-                Swal.fire({ icon: 'error', title: 'Error', html: msg });
+                Swal.fire({ icon: 'error', title: 'Error', html: msg, zIndex: 99999 });
             } finally {
                 if (btnGuardar) btnGuardar.disabled = false;
             }
@@ -1059,7 +1611,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const codiPers = fila.codPersonal || fila.CODI_PERS || fila.id;
 
             Swal.update({
-                html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.nombres || codiPers}</small>`
+                html: `Procesando <b>${i + 1}</b> de <b>${filas.length}</b><br><small>${fila.NOMB_1 ? `${fila.NOMB_1} ${fila.NOMB_2 ?? ''}`.trim() : codiPers}</small>`
             });
 
             try {
@@ -1226,7 +1778,81 @@ document.addEventListener('DOMContentLoaded', function () {
         resizer.addEventListener('dblclick', () => { panelBk.style.width = '38%'; panelBk.style.flexBasis = '38%'; });
     })();
 
-}); // fin DOMContentLoaded
+    // ============================================================
+    // TIPO DE TRABAJADOR
+    // ============================================================
+    const tipoTrabajadorUi = document.getElementById('tipo_personal_ui');
+
+    // Cargar tipos de personal
+    (function cargarTiposPersonal() {
+        axios.get(`${VITE_URL_APP}/api/dj/get-tipo-per/`)
+            .then(r => {
+                const items = Array.isArray(r.data) ? r.data : (r.data?.data ?? []);
+                window.allTiposPersonalDj = items;
+                if (tipoTrabajadorUi) {
+                    items.forEach(t => {
+                        const o = document.createElement('option');
+                        o.value = t.codigo;
+                        o.textContent = t.nombre;
+                        tipoTrabajadorUi.appendChild(o);
+                    });
+                }
+            })
+            .catch(() => { });
+    })();
+
+    // Cambio de tipo de personal → sincroniza hidden y visibilidad
+    tipoTrabajadorUi?.addEventListener('change', function () {
+        const hidden = document.getElementById('tipo_personal');
+        if (hidden) hidden.value = this.value;
+        aplicarVisibilidadPorTipo(this.value);
+        aplicarSctr(this.value);
+    });
+
+    // No Caduca checkbox: bloquear/desbloquear caduca
+    const noCaducaDni = document.getElementById('no_caduca_dni');
+    const caducaInput = document.getElementById('caduca');
+    noCaducaDni?.addEventListener('change', function () {
+        if (!caducaInput) return;
+        if (this.checked) {
+            caducaInput.disabled = true;
+            caducaInput.value = '0000-00-00';
+            caducaInput.style.background = '#f3f4f6';
+            caducaInput.style.color = '#9ca3af';
+        } else {
+            caducaInput.disabled = false;
+            caducaInput.value = '';
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+    });
+
+    // Caduca: limitar año a 4 dígitos
+    caducaInput?.setAttribute('maxlength', '10');
+    caducaInput?.addEventListener('input', function () {
+        const anioExcedido = this.value.match(/^(\d{5,})(-\d{2}-\d{2})$/);
+        if (anioExcedido) {
+            this.value = `${anioExcedido[1].slice(0, 4)}${anioExcedido[2]}`;
+        }
+    });
+
+    // Prestó S.M.O.: habilitar/deshabilitar Lugar de S.M.O.
+    const prestoSmoEl = document.getElementById('presto_smo');
+    const lugarSmoEl = document.getElementById('lugar_smo');
+    if (lugarSmoEl && (!prestoSmoEl || prestoSmoEl.value !== 'SI')) {
+        lugarSmoEl.disabled = true;
+    }
+    prestoSmoEl?.addEventListener('change', function () {
+        if (!lugarSmoEl) return;
+        if (this.value === 'SI') {
+            lugarSmoEl.disabled = false;
+        } else {
+            lugarSmoEl.disabled = true;
+            lugarSmoEl.value = '';
+        }
+    });
+
+    }); // fin DOMContentLoaded
 
 // ============================================================
 // FUNCIONES GLOBALES (fuera del DOMContentLoaded)
@@ -1244,6 +1870,10 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             limpiarSplitView();
             setValue('cod_postulante', '');
             setValue('tipo_personal', '');
+            tipoPersonalEsEspecial = false;
+            poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
+            setValue('#tipo_personal_ui', '');
+            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
 
             await cargarCatalogos();
 
@@ -1263,6 +1893,11 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             setTimeout(() => {
                 const tipo = document.getElementById('tipo_personal')?.value?.trim() ?? '';
                 aplicarVisibilidadPorTipo(tipo);
+                const _presto = document.getElementById('presto_smo');
+                const _lugar = document.getElementById('lugar_smo');
+                if (_lugar && (!_presto || _presto.value !== 'SI')) {
+                    _lugar.disabled = true;
+                }
             }, 80);
 
         } else {
@@ -1279,6 +1914,14 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
                 else modal.classList.remove('hidden');
             }
 
+            setTimeout(() => {
+                const _presto = document.getElementById('presto_smo');
+                const _lugar = document.getElementById('lugar_smo');
+                if (_lugar && (!_presto || _presto.value !== 'SI')) {
+                    _lugar.disabled = true;
+                }
+            }, 80);
+
             if (source === 'migracion') await cargarDatosBackup(codiPers);
             else limpiarSplitView();
         }
@@ -1293,12 +1936,57 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 let catalogosCache = null;
 let catalogosPromise = null;
 
+// ── Países de nacimiento (select desde ADMI_PAIS) ────────────
+let paisesDataGest = [];
+let paisesPromiseGest = null;
+
+async function cargarPaisesGest() {
+    if (paisesDataGest.length) return;
+    if (paisesPromiseGest) return paisesPromiseGest;
+
+    paisesPromiseGest = axios.get(`${API_URL}/dj/get-paises/`)
+        .then(res => {
+            paisesDataGest = res.data?.paises ?? [];
+            const sel = document.getElementById('aj_pais');
+            if (sel) {
+                sel.innerHTML = '<option value="">— Seleccionar —</option>';
+                paisesDataGest.forEach(p => {
+                    const o = document.createElement('option');
+                    o.value = p.id;
+                    o.textContent = p.text;
+                    sel.appendChild(o);
+                });
+            }
+        })
+        .catch(err => console.error('[GestionDJ] Error cargando países:', err))
+        .finally(() => { paisesPromiseGest = null; });
+
+    return paisesPromiseGest;
+}
+
+async function setPaisGest(codigo) {
+    const sel = document.getElementById('aj_pais');
+    if (!sel) return;
+    // Autoguarantía: si el catálogo de países no llegó, cargarlo ahora
+    if (!paisesDataGest.length) await cargarPaisesGest();
+    sel.value = String(codigo ?? '').trim();
+}
+
+// ── Regla: Carnet de Extranjería (0035) → oculta Dep/Prov/Dist de Nacimiento ──
+function aplicarExtranjeriaNacimiento(codTipoDoc) {
+    const esExtranjeria = String(codTipoDoc ?? '').trim() === '0035';
+    ['aj_wrap_departamento_nac', 'aj_wrap_provincia_nac', 'aj_wrap_distrito_nac'].forEach(id => {
+        const w = document.getElementById(id);
+        if (w) w.style.display = esExtranjeria ? 'none' : '';
+    });
+}
+
 async function cargarCatalogos(source = 'migracion') {
     if (catalogosCache) return catalogosCache;
     if (catalogosPromise) return catalogosPromise;
 
     catalogosPromise = axios.get(`${API_URL}/dj/get-catalogs`)
-        .then(response => {
+        .then(async response => {
             const { grados, carreras, instituciones, sangre, estados_civiles, tipos_arma } = response.data;
 
             populateSelect('#selGrado', grados);
@@ -1315,6 +2003,8 @@ async function cargarCatalogos(source = 'migracion') {
 
             window.allCarreras = carreras;
             catalogosCache = response.data;
+            await cargarCargosDj();
+            await cargarPaisesGest();
             return response.data;
         })
         .finally(() => {
@@ -1322,6 +2012,41 @@ async function cargarCatalogos(source = 'migracion') {
         });
 
     return catalogosPromise;
+}
+
+// ── Cargos DJ ───────────────────────────────────────────────
+async function cargarCargosDj() {
+    try {
+        const response = await axios.get(`${VITE_URL_APP}/api/dj/get-cargos-dj`);
+        if (response.data?.success && response.data.data) {
+            window.allCargosDj = response.data.data;
+        }
+    } catch (err) {
+        console.error('[GestionDJ] Error cargando cargos:', err);
+        window.allCargosDj = [];
+    }
+}
+
+async function filtrarCargos(tipoPersonal) {
+    const sel = document.getElementById('cargo_ui');
+    if (!sel) return;
+    // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
+    if (!window.allCargosDj || !window.allCargosDj.length) await cargarCargosDj();
+    const operativos = ['01', '03', '06'];
+    const admin = ['02', '05'];
+    const cargoTipo = operativos.includes(tipoPersonal) ? '01'
+                    : admin.includes(tipoPersonal) ? '02'
+                    : null;
+    sel.innerHTML = '<option value="">— Seleccionar —</option>';
+    if (!cargoTipo || !window.allCargosDj) return;
+    window.allCargosDj
+        .filter(c => String(c.tipo ?? '').trim() === cargoTipo)
+        .forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.codigo;
+            o.textContent = c.nombre;
+            sel.appendChild(o);
+        });
 }
 
 // ── Datos personales ─────────────────────────────────────────
@@ -1364,13 +2089,20 @@ async function cargarDatosPersonales(codiPers, source = 'migracion') {
 
 // ── Llenar formulario ────────────────────────────────────────
 async function llenarFormulario(data) {
+    codiPersActual = data.CODI_PERS || '';
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
-    console.log('TIPO TRAB:', tipotrab); // ← agregar esto
 
     setValue('tipo_personal', tipotrab);
+    aplicarReglaTipoPersonal(tipotrab);
+    setValue('#tipo_personal_ui', tipotrab);
     aplicarVisibilidadPorTipo(tipotrab);
+    aplicarSctr(tipotrab, data.SCRT ?? null);
+
+    // Mostrar la sección Tipo de Personal / Cargo
+    const cardTC = document.getElementById('cardTipoCargo');
+    if (cardTC) cardTC.style.display = 'flex';
 
     setValue('#nombres_apellidos', `${data.NOMB_1 || ''} ${data.NOMB_2 || ''} ${data.APEL_1 || ''} ${data.APEL_2 || ''}`);
     setValue('#nombre1', data.NOMB_1 || '');
@@ -1379,11 +2111,36 @@ async function llenarFormulario(data) {
     setValue('#apellido_materno', data.APEL_2 || '');
     setValue('#dni', data.NRO_DOCU_IDEN ? data.NRO_DOCU_IDEN.trim() : '');
     setValue('#caduca', formatDateForInput(data.PERS_FECHCADUCADNI) ? formatDateForInput(data.PERS_FECHCADUCADNI) : '');
+
+    // No Caduca checkbox
+    const noCaduca = document.getElementById('no_caduca_dni');
+    const caducaInput = document.getElementById('caduca');
+    const noCaducaVal = data.NO_CADUCA_DNI;
+    if (noCaduca) {
+        noCaduca.checked = (noCaducaVal == 1 || noCaducaVal === '1' || noCaducaVal === true);
+        if (noCaduca.checked && caducaInput) {
+            caducaInput.disabled = true;
+            caducaInput.value = '0000-00-00';
+            caducaInput.style.background = '#f3f4f6';
+            caducaInput.style.color = '#9ca3af';
+        } else if (caducaInput) {
+            caducaInput.disabled = false;
+            caducaInput.style.background = '';
+            caducaInput.style.color = '';
+        }
+    }
+
     setValue('#estado_civil', data.ESCI_CODIGO ? data.ESCI_CODIGO.trim() : '');
     setValue('#sexo', data.PERS_SEXO ? data.PERS_SEXO.trim() : data.SEXO ? data.SEXO.trim() : '');
     setValue('#fecha_nacimiento', formatDateForInput(data.FECH_NACI));
+    cargarFechasIngresoCese(data);
     setValue('#sabe_nadar', data.PERS_SNADAR ? data.PERS_SNADAR.trim() : '');
     setValue('#ciudad_nacimiento', data.dj2026_ciudad_naci ? data.dj2026_ciudad_naci.trim() : '');
+
+    // País de nacimiento (columna NACIONALIDAD de PERSONAL → datalist de países)
+    await cargarPaisesGest();
+    setPaisGest(data.NACIONALIDAD ? String(data.NACIONALIDAD).trim() : '');
+    aplicarExtranjeriaNacimiento(data.CODI_TIPO_DOCU ? String(data.CODI_TIPO_DOCU).trim() : '');
 
     // setValue('#departamento_nac',data.DEPA_CODIGO_NACI ? data.DEPA_CODIGO_NACI.trim() : '');
     // setValue('#provincia_nac',data.PROVI_CODIGO_NACI ? data.PROVI_CODIGO_NACI.trim() : '');
@@ -1446,11 +2203,24 @@ async function llenarFormulario(data) {
     setValue('#anio_egreso', data.EGRESO_EDUCATIVO ? data.EGRESO_EDUCATIVO.trim() : '');
 
     setValue('#embargos', data.PERS_EMBARGO ? data.PERS_EMBARGO.trim() : '');
-    setValue('#consumo_sustancias', data.PERS_SMO ? data.PERS_SMO.trim() : '');
+    setValue('#presto_smo', data.PERS_CONSMO ? data.PERS_CONSMO.trim() : '');
+    setValue('#lugar_smo', data.PERS_LUGARSMO ? data.PERS_LUGARSMO.trim() : '');
+    const prestoSmoEl = document.getElementById('presto_smo');
+    const lugarSmoEl = document.getElementById('lugar_smo');
+    if (prestoSmoEl && lugarSmoEl) {
+        lugarSmoEl.disabled = prestoSmoEl.value !== 'SI';
+        if (lugarSmoEl.disabled) lugarSmoEl.value = '';
+    }
     setValue('#cuenta_banco', data.dj2026_banco ? data.dj2026_banco.trim() : '');
+    setValue('#sucursal', data.SUCU_CODIGO ? data.SUCU_CODIGO.trim() : '');
+    filtrarCargos(data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '');
+    setValue('#cargo_ui', data.CODI_CARG ? data.CODI_CARG.trim() : '');
+    setValue('#cargo', data.CODI_CARG ? data.CODI_CARG.trim() : '');
 
     setValue('#direccion_actual', data.DIRECCION ? data.DIRECCION.trim() : '');
     setValue('#direccion_dni', data.PERS_DIREC_DNI ? data.PERS_DIREC_DNI.trim() : '');
+    setValue('#tipo_zona_dni', data.TIZO_CODIGO ? data.TIZO_CODIGO.trim() : '');
+    setValue('#zona_dirdni', data.PERS_ZONA_DIRDNI ? data.PERS_ZONA_DIRDNI.trim() : '');
 
     cargarUbicaciones('actual', data.PERS_DEPT_ACT?.trim() ?? '', data.PERS_PROV_ACT?.trim() ?? '', data.PERS_DIST_ACT?.trim() ?? '');
     cargarUbicaciones('dni', data.PERS_DPTO_DIRDNI?.trim() ?? '', data.PERS_PROV_DIRDNI?.trim() ?? '', data.PERS_DIST_DIRDNI?.trim() ?? '');
@@ -1458,14 +2228,14 @@ async function llenarFormulario(data) {
 
 
     setValue('#ocupacion_principal', data.dj2026_ocupacion_principal);
-    setValue('#experiencia_anios', data.dj2026_experiencia_anios ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
+    setValue('#experiencia_anios', data.dj2026_experiencia_anios !== null && data.dj2026_experiencia_anios !== undefined ? String(data.dj2026_experiencia_anios).replace(/[^0-9]/g, '') : '');
+    setValue('#experiencia_meses', data.dj2026_experiencia_meses !== null && data.dj2026_experiencia_meses !== undefined ? String(data.dj2026_experiencia_meses).replace(/[^0-9]/g, '') : '');
     setValue('#familiar_empresa', data.dj2026_familiar_empresa ? data.dj2026_familiar_empresa.trim() : '');
     setValue('#familiar_nombre', data.dj2026_familiar_nombre ? data.dj2026_familiar_nombre.trim() : '');
     setValue('#familiar_parentesco', data.dj2026_familiar_parentesco ? data.dj2026_familiar_parentesco.trim() : '');
 
     setValue('#curso_sucamec', data.PERS_CONDISCAMEC ? data.PERS_CONDISCAMEC.trim() : '');
-    setValue('#sucamec_obs', data.PERS_NRODISCAMEC ? data.PERS_NRODISCAMEC.trim() : '');
-    setValue('#smo', data.PERS_SMO ? data.PERS_SMO.trim() : '');
+    // setValue('#smo', data.PERS_SMO ? data.PERS_SMO.trim() : '');
     setValue('#licencia_arma', data.PERS_NROLICENCIA ? data.PERS_NROLICENCIA.trim() : '');
     setValue('#tipo_arma', data.PERS_TIPOARMA ? data.PERS_TIPOARMA.trim() : '');
     setValue('#arma_propia', data.PERS_CONARMAS ? data.PERS_CONARMAS.trim() : '');
@@ -1493,9 +2263,23 @@ async function llenarFormulario(data) {
             document.getElementById('btnEliminarFoto')?.classList.remove('hidden');
         }
     }
+
 }
 
 // ── Familiares ───────────────────────────────────────────────
+function actualizarFechaFamiliar(fila) {
+    const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
+    const contenedorFecha = fila.querySelector('.family-date');
+    const inputFecha = fila.querySelector('input[name="fechaNacimiento[]"]');
+    const esHijo = parentesco.startsWith('HIJO');
+
+    if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
+    if (inputFecha) {
+        inputFecha.required = esHijo;
+        if (!esHijo) inputFecha.value = '';
+    }
+}
+
 function renderFamiliares(familiares) {
     const container = document.getElementById('familyContainer');
     if (!container) return;
@@ -1505,11 +2289,28 @@ function renderFamiliares(familiares) {
         ...(familiares.padres || []),
         ...(familiares.madre || []),
         ...(familiares.hijos || []),
-        ...(familiares.conyugue || [])
+        ...(familiares.conyugue || []),
+        ...(familiares.otros || [])
     ];
 
     if (allFam.length === 0) addFamiliarRow({}, container);
     else allFam.forEach(f => addFamiliarRow(f, container));
+}
+
+// ── Opciones del select de Parentesco (catálogo TIPO_VINCULO_FAMILIAR) ──
+// Solo catálogo para filas nuevas; si se carga un dato legado fuera del
+// catálogo se añade como opción seleccionada para que se muestre como debe.
+function opcionesVinculoHTML(selected = '', emptyLabel = '—') {
+    const cats = (window.TIPOS_VINCULO || []).map(v => String(v).trim()).filter(Boolean);
+    const sel  = String(selected || '').trim();
+    let html = `<option value=""${sel ? '' : ' selected'}>${emptyLabel}</option>`;
+    for (const v of cats) {
+        html += `<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`;
+    }
+    if (sel && !cats.includes(sel)) {
+        html += `<option value="${sel}" selected>${sel}</option>`;
+    }
+    return html;
 }
 
 function addFamiliarRow(data = {}, container = null) {
@@ -1531,45 +2332,24 @@ function addFamiliarRow(data = {}, container = null) {
         <div>
             <label class="dj-label">Parentesco</label>
             <select name="parentesco[]" class="dj-select">
-                <option value="">—</option>
-                ${['PADRE', 'MADRE', 'CONYUGE', 'HIJO']
-            .map(p => `<option value="${p}" ${data.TIPO_RELA === p ? 'selected' : ''}>${p.charAt(0) + p.slice(1).toLowerCase()}</option>`).join('')}
+                ${opcionesVinculoHTML(data.TIPO_RELA || '', '—')}
             </select>
         </div>
         <div>
             <label class="dj-label">Apellidos y Nombres</label>
             <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres || ''}" placeholder="Apellidos y nombres completos">
         </div>
-        <div>
+        <div class="family-date">
             <label class="dj-label">Fecha de Nacimiento</label>
             <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
         </div>
         <div>
             <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
         </div>`;
-    // row.innerHTML = `
-    // <div>
-    //     <label class="dj-label">Parentesco</label>
-    //     <select name="parentesco[]" class="dj-select">
-    //         <option value="">—</option>
-    //         ${['PADRE','MADRE','ESPOSO','ESPOSA','CONYUGE','HIJO','HIJA','HERMANO','HERMANA','ABUELO','ABUELA']
-    //             .map(p => `<option value="${p}" ${data.TIPO_RELA===p?'selected':''}>${p.charAt(0)+p.slice(1).toLowerCase()}</option>`).join('')}
-    //     </select>
-    // </div>
-    // <div>
-    //     <label class="dj-label">Apellidos y Nombres</label>
-    //     <input type="text" name="apellidosNombres[]" class="dj-input" value="${data.Nombres||''}" placeholder="Apellidos y nombres completos">
-    // </div>
-    // <div>
-    //     <label class="dj-label">Fecha de Nacimiento</label>
-    //     <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
-    // </div>
-    // <div>
-    //     <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
-    // </div>`;
 
     container.appendChild(row);
     row.querySelector('.remove-family')?.addEventListener('click', () => row.remove());
+    actualizarFechaFamiliar(row);
 }
 
 // ── Ubicaciones cascada ──────────────────────────────────────
@@ -1628,7 +2408,109 @@ function populateSelect(selector, data) {
 function setValue(selector, value) {
     const id = selector.startsWith('#') ? selector : `#${selector}`;
     const el = document.querySelector(id);
-    if (el) el.value = value || '';
+    if (!el) return;
+    const v = value || '';
+    // Si es select y el valor guardado no está en las opciones (dato legado), añadirlo
+    if (el.tagName === 'SELECT' && v && ![...el.options].some(o => o.value === v)) {
+        el.add(new Option(v, v));
+    }
+    el.value = v;
+}
+
+// ── Regla cambio Tipo de Personal (Operativo ↔ Administrativo) ─────────────
+const TIPO_GRUPO_OPERATIVO = ['01', '03'];
+const TIPO_GRUPO_ADMINISTRATIVO = ['02', '05'];
+const TIPO_CODIGO_ESPECIALES = '06';
+let tipoPersonalEsEspecial = false;
+
+function userPuedeCambiarTipoPersonal() {
+    return (window.funcionalidadesSISOL || []).includes('cambiar_tipo_personal');
+}
+
+function poblarSelectTiposPersonal(items) {
+    const ui = document.getElementById('tipo_personal_ui');
+    if (!ui) return;
+    ui.innerHTML = '<option value="">— Seleccionar —</option>';
+    (items || []).forEach(t => {
+        const o = document.createElement('option');
+        o.value = t.codigo;
+        o.textContent = t.nombre;
+        ui.appendChild(o);
+    });
+    if (!userPuedeCambiarTipoPersonal()) {
+        ui.disabled = true;
+        ui.style.background = '#f3f4f6';
+        ui.style.color = '#9ca3af';
+    }
+}
+
+// Regla: Operativo (01/03) solo puede cambiar a Administrativo (02/05) y viceversa.
+// Admins RRHH pueden cambiar a cualquier tipo excepto Especial (06).
+// Especiales (06) queda deshabilitado sin posibilidad de cambio.
+// ── SCTR: visible solo para Administrativo (02/05) ─────────────
+// OP (01/03)  → sin checkbox, SCTR='SI' automático (backend)
+// ADMIN       → checkbox "SCTR": marcado='SI', sin marcar='NO'
+let sctrTipoAnterior = '';
+function aplicarSctr(tipoCod, scrt = null) {
+    const wrap = document.getElementById('wrap_sctr');
+    const chk  = document.getElementById('autorizar_sctr');
+    if (!wrap || !chk) return;
+    const tipo     = String(tipoCod || '').trim();
+    const esAdmin  = ['02', '05'].includes(tipo);
+    const eraAdmin = ['02', '05'].includes(sctrTipoAnterior);
+    wrap.style.display = esAdmin ? '' : 'none';
+    if (!esAdmin) {
+        chk.checked = false;
+    } else if (scrt !== null && scrt !== undefined) {
+        chk.checked = ['SI', '1'].includes(String(scrt).trim().toUpperCase());
+    } else if (!eraAdmin) {
+        chk.checked = false; // op → admin: aparece sin marcar
+    }
+    sctrTipoAnterior = tipo;
+}
+
+function aplicarReglaTipoPersonal(tipotrab) {
+    const catalogo = window.allTiposPersonalDj || [];
+    tipoPersonalEsEspecial = false;
+
+    if (!tipotrab) { poblarSelectTiposPersonal(catalogo); return; }
+
+    if (tipotrab === TIPO_CODIGO_ESPECIALES) {
+        poblarSelectTiposPersonal(catalogo.filter(t => String(t.codigo).trim() === TIPO_CODIGO_ESPECIALES));
+        tipoPersonalEsEspecial = true;
+        const ui = document.getElementById('tipo_personal_ui');
+        if (ui) { ui.disabled = true; ui.style.background = '#f3f4f6'; ui.style.color = '#9ca3af'; }
+        return;
+    }
+
+    // Admins RRHH: mostrar todos excepto Especial
+    if (userPuedeCambiarTipoPersonal()) {
+        poblarSelectTiposPersonal(catalogo.filter(t => String(t.codigo).trim() !== TIPO_CODIGO_ESPECIALES));
+        return;
+    }
+
+    const esOperativo = TIPO_GRUPO_OPERATIVO.includes(tipotrab);
+    const esAdmin = TIPO_GRUPO_ADMINISTRATIVO.includes(tipotrab);
+    if (!esOperativo && !esAdmin) { poblarSelectTiposPersonal(catalogo); return; }
+
+    const grupoOpuesto = esOperativo ? TIPO_GRUPO_ADMINISTRATIVO : TIPO_GRUPO_OPERATIVO;
+    poblarSelectTiposPersonal(catalogo.filter(t => {
+        const cod = String(t.codigo).trim();
+        return cod === tipotrab || grupoOpuesto.includes(cod);
+    }));
+}
+
+// ── Fechas Ingreso Solmar / Cese (DJ existentes) ──────────────
+// Ingreso: editable SOLO para Admins RRHH (rol 17) — el readonly lo pone el blade
+// Cese:    visible solo si es recontratado (tiene FECH_CESE) y siempre bloqueado
+function cargarFechasIngresoCese(data = {}) {
+    const fi   = document.getElementById('fecha_ingreso_solmar');
+    const fc   = document.getElementById('fecha_cese');
+    const wrap = document.getElementById('wrap_fecha_cese');
+    if (fi) fi.value = formatDateForInput(data.FECH_INGRE) || '';
+    const esRecontratado = !!(data.FECH_CESE && String(data.FECH_CESE).trim() !== '');
+    if (wrap) wrap.style.display = esRecontratado ? '' : 'none';
+    if (fc) fc.value = esRecontratado ? (formatDateForInput(data.FECH_CESE) || '') : '';
 }
 
 function formatDateForInput(dateValue) {
@@ -1677,15 +2559,15 @@ const CAMPO_MAP = {
     'talla': 'tall_metr', 'sistema_previsional': 'DESC_SIST_PENS',
     'essalud': 'ESSALUD', 'pensionista': 'PERS_PENSIONISTA',
     'grado_instruccion': 'NIED_ABREVIADO', 'anio_egreso': 'EGRESO_EDUCATIVO',
-    'embargos': 'PERS_EMBARGO', 'consumo_sustancias': 'PERS_SMO',
+    'embargos': 'PERS_EMBARGO', 'presto_smo': 'PERS_CONSMO', 'lugar_smo': 'PERS_LUGARSMO',
     'direccion_actual': 'DIRECCION', 'direccion_dni': 'PERS_DIREC_DNI',
     'contacto_emergencia': 'PERS_NOMCONTACTO', 'celular_emergencia': 'PERS_NROEMERGENCIA',
     'parentesco_emergencia': 'PERS_EMERC_FAMILIAR', 'ocupacion_principal': 'PERS_PROFESION',
+    'experiencia_anios': 'dj2026_experiencia_anios', 'experiencia_meses': 'dj2026_experiencia_meses',
     'curso_sucamec': 'PERS_CONDISCAMEC', 'licencia_arma': 'PERS_NROLICENCIA',
     'tipo_arma': 'PERS_TIPOARMA', 'arma_propia': 'PERS_CONARMAS',
     'brevete': 'PERS_BREVETE', 'clase_brevete': 'CLASE_BREVETE',
     'empresa_anterior': 'PERS_CTRABANT', 'cargo_anterior': 'PERS_CARGOTRABANT',
-    'smo': 'PERS_CONSMO',
 };
 
 const FECHA_FIELDS_BK = ['FECH_NACI', 'PERS_FECHCADUCADNI', 'FECH_INGRE', 'FECH_CESE'];
@@ -1699,13 +2581,16 @@ async function cargarDatosBackup(codiPers) {
     const contDiffs = document.getElementById('contadorDiffs');
     if (!wrapper) return;
 
+    // ✅ Limpiar/resetear panel antes de cargar
+    wrapper.classList.remove('no-backup');
+    if (panelBk) panelBk.style.display = 'block';
+    document.querySelectorAll('#panelBackup .bk-val').forEach(el => el.textContent = '—');
+
     try {
         const response = await axios.get(`${API_URL}/dj/get-backup-data`, { params: { codi_pers: codiPers } });
 
         if (!response.data.success) {
-            wrapper.classList.add('no-backup');
-            if (panelBk) panelBk.style.display = 'none';
-            if (badgeSplit) badgeSplit.style.display = 'none';
+            console.warn('[BackupDJ] Sin backup:', response.data.message);
             _backupData = null;
             return;
         }
@@ -1790,11 +2675,11 @@ async function cargarDatosBackup(codiPers) {
         activarInteractividad();
 
     } catch (err) {
-        console.warn('Sin backup DJ:', err);
-        wrapper.classList.add('no-backup');
-        if (panelBk) panelBk.style.display = 'none';
-        if (badgeSplit) badgeSplit.style.display = 'none';
-        _backupData = null;
+        console.warn('[BackupDJ] Error:', err);
+        // No ocultar — el panel es esencial en DJ
+        _backupData = {};
+        wrapper.classList.remove('no-backup');
+        if (panelBk) panelBk.style.display = 'block';
     }
 }
 
@@ -1978,6 +2863,7 @@ function limpiarSplitView() {
 
     const badge = document.getElementById('bkFechaModBadge');
     if (badge) badge.textContent = '';
+
 }
 
 // ============================================================
@@ -2024,7 +2910,23 @@ document.getElementById('btnReporteFaltantes')?.addEventListener('click', async 
 document.getElementById('btnReporteActualizacion')?.addEventListener('click', async function () {
     const sucursal = document.getElementById('filtroSucursal')?.value ?? '00';
     const tipoPer = document.getElementById('filtroTipoPer')?.value ?? '00';
-    const codTipoPer = tipoPer === 'OPERATIVO' ? '03' : tipoPer === 'ADMINISTRATIVO' ? '05' : '00';
+    let codTipoPer;
+    if(tipoPer === 'OPERATIVO 4°'){
+        codTipoPer = '01';
+    }
+    if(tipoPer === 'OPERATIVO 5°'){
+        codTipoPer = '03';
+    }
+    if(tipoPer === 'ADMINISTRATIVO 5°'){
+        codTipoPer = '05';
+    }
+    if(tipoPer === 'ADMINISTRATIVO 4°'){
+        codTipoPer = '02';
+    }
+     if(tipoPer === 'ESPECIAL'){
+        codTipoPer = '06';
+    }
+   
     const codSucursal = sucursal || '00';
 
     Swal.fire({ title: 'Generando reporte...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -2071,56 +2973,19 @@ document.getElementById('institucion')?.addEventListener('change', function () {
 
 
 // ============================================================
-// DJ GENERADOS — localStorage helpers
+// DJ GENERADOS — API helpers
 // ============================================================
-const DJ_STORAGE_KEY = 'dj_generados';
-
-function getDJGenerados() {
-    try {
-        return JSON.parse(localStorage.getItem(DJ_STORAGE_KEY) || '{}');
-    } catch { return {}; }
-}
-
-function marcarDJGenerado(codPersonal, fechaCambio) {
-    const data = getDJGenerados();
-    data[codPersonal] = {
-        fechaMarcado: new Date().toISOString(),
-        fechaCambio: fechaCambio || null,
-    };
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
-}
-
-function desmarcarDJGenerado(codPersonal) {
-    const data = getDJGenerados();
-    delete data[codPersonal];
-    localStorage.setItem(DJ_STORAGE_KEY, JSON.stringify(data));
-}
-
-function estaGenerado(codPersonal, fechaCambioActual) {
-    const data = getDJGenerados();
-    const reg = data[codPersonal];
-    if (!reg) return false;
-
-    // Si el registro tuvo cambios DESPUÉS de que se marcó → ya no vale
-    if (fechaCambioActual && reg.fechaCambio) {
-        const cambio = new Date(fechaCambioActual);
-        const marcado = new Date(reg.fechaMarcado);
-        if (cambio > marcado) return false;
-    }
-    return true;
-}
 
 function limpiarDJGenerados() {
-    localStorage.removeItem(DJ_STORAGE_KEY);
-    /* tblPersonasMigrado.redraw(true);
-     Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });*/
+    generadosCache = {};
 }
 
+async function desmarcarDJGenerado(codPersonal) {
+    await resetearGeneradosAPI([codPersonal]);
+}
 
 document.getElementById('btnResetearDJs')?.addEventListener('click', async function () {
-
-    const generados = getDJGenerados();
-    const totalMarcados = Object.keys(generados).length;
+    const totalMarcados = Object.keys(generadosCache).length;
 
     if (totalMarcados === 0) {
         Swal.fire({ icon: 'info', title: 'Sin marcas', text: 'No hay registros marcados como generados.' });
@@ -2140,7 +3005,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
 
     if (!isConfirmed) return;
 
-    limpiarDJGenerados();
+    await resetearGeneradosAPI();
     tblPersonasMigrado.redraw(true);
 
     Swal.fire({ icon: 'success', title: 'Listo', text: 'Todas las marcas fueron eliminadas.', timer: 1800, showConfirmButton: false });
@@ -2259,6 +3124,35 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         modal.classList.add('hidden');
         document.body.style.overflow = '';
         resetModal();
+        
+        // Reset Cargo and Tipo de Personal selects
+        const tipoUi = document.getElementById('tipo_personal_ui');
+        if (tipoUi) {
+            tipoUi.value = '';
+            tipoPersonalEsEspecial = false;
+            poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
+        }
+        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+
+        // Reset No Caduca checkbox y restore caduca
+        const noCaducaReset = document.getElementById('no_caduca_dni');
+        const caducaReset = document.getElementById('caduca');
+        if (noCaducaReset) noCaducaReset.checked = false;
+        if (caducaReset) {
+            caducaReset.disabled = false;
+            caducaReset.value = '';
+            caducaReset.style.background = '';
+            caducaReset.style.color = '';
+        }
+
+        // Reset S.M.O. selects
+        const prestoSmoReset = document.getElementById('presto_smo');
+        const lugarSmoReset = document.getElementById('lugar_smo');
+        if (prestoSmoReset) prestoSmoReset.value = '';
+        if (lugarSmoReset) {
+            lugarSmoReset.disabled = true;
+            lugarSmoReset.value = '';
+        }
     }
 
     // ── Cargar y validar PDF ──────────────────────────────────
@@ -2457,4 +3351,412 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
         if (e.target === this) cerrarModal();
     });
 
+})();
+
+// ============================================================
+// BIOMÉTRICO (Migrado de actualizar_dj.js)
+// ============================================================
+// 🔥 Limpieza previa del evento para evitar ventanas dobles al recargar Vite
+if (window._bioHandler) {
+    window.removeEventListener('solicitarBiometrico', window._bioHandler);
+}
+
+window._bioHandler = function (e) {
+    const { codigo, persona } = e.detail;
+
+    Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    axios.get(`${VITE_URL_APP}/api/get-biometrico/${codigo}`)
+        .then(response => {
+            Swal.close();
+            const data = response.data;
+            document.getElementById('modal-bio-title').textContent = persona;
+
+            // Renderizamos DNI, huellas y firmas
+            document.getElementById('bio-huella-antigua').innerHTML = renderImagen(data.huella_antigua);
+            document.getElementById('bio-huella-nueva').innerHTML = renderImagen(data.huella_nueva);
+            document.getElementById('bio-firma-antigua').innerHTML = renderImagen(data.firma_antigua);
+            document.getElementById('bio-firma-nueva').innerHTML = renderImagen(data.firma_nueva);
+            document.getElementById('bio-doc-dni-antiguo').innerHTML = renderImagen(data.dni_anverso_antigua, true, data.dni_reverso_antigua);
+            document.getElementById('bio-doc-firma-nueva').innerHTML = renderImagen(data.firma_nueva);
+            document.getElementById('bio-doc-huella-nueva').innerHTML = renderImagen(data.huella_nueva);
+
+            // Inyectamos la columna de la foto dinámicamente
+            const dniDiv = document.getElementById('bio-doc-dni-antiguo');
+            if (dniDiv) {
+                const gridContainer = dniDiv.parentElement.parentElement;
+                gridContainer.style.gridTemplateColumns = '2fr 1fr 1fr';
+
+                let cajaFoto = document.getElementById('caja-foto-inyectada');
+                if (!cajaFoto) {
+                    cajaFoto = document.createElement('div');
+                    cajaFoto.id = 'caja-foto-inyectada';
+                    gridContainer.insertBefore(cajaFoto, gridContainer.lastElementChild);
+                }
+
+                const fotoUrl = `http://190.116.178.163/Biblioteca_Grafica/Fotos/${codigo}.jpg?v=${new Date().getTime()}`;
+
+                cajaFoto.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <i class="fa fa-user" style="color:#6366f1; font-size:12px;"></i>
+                        <span style="font-size:12px; font-weight:600; color:#374151;">FOTO</span>
+                        <span style="font-size:10px; color:#9ca3af; font-weight:500; margin-left:2px;">ROSTRO</span>
+                    </div>
+                    <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
+                        <div style="position:relative;width:100%;height:420px;background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                            <img id="foto_rostro_${codigo}" src="${fotoUrl}" 
+                                 style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:zoom-in;" 
+                                 onclick="if(window.abrirLightbox) abrirLightbox('foto_rostro_${codigo}')"
+                                 onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\\'m21 15-5-5L5 21\\'/></svg>Sin foto en servidor</div>'" />
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Abrir el modal primero
+            document.getElementById('btn-modal-biometrico').click();
+
+            const forzarVistaLimpia = () => {
+                // 1. Ocultar estrictamente SOLO el contenedor de las pestañas (NAV)
+                const tabFh = document.getElementById('bio-tab-fh');
+                if (tabFh) {
+                    const navContainer = tabFh.closest('nav') || tabFh.parentElement;
+                    if (navContainer) {
+                        navContainer.style.setProperty('display', 'none', 'important');
+                        
+                        // Limpiamos los bordes del div padre sin ocultarlo
+                        if (navContainer.parentElement && navContainer.parentElement.tagName === 'DIV') {
+                            navContainer.parentElement.style.setProperty('border', 'none', 'important');
+                            navContainer.parentElement.style.setProperty('margin', '0', 'important');
+                            navContainer.parentElement.style.setProperty('padding', '0', 'important');
+                        }
+                    }
+                }
+
+                // 2. Ocultar forzosamente el panel de "Firmas y Huellas" (el que tapa todo)
+                const panelFh = document.getElementById('bio-panel-fh');
+                if (panelFh) {
+                    panelFh.style.setProperty('display', 'none', 'important');
+                    panelFh.classList.add('hidden');
+                    panelFh.classList.remove('active');
+                }
+
+                // 3. Mostrar forzosamente el panel "DOC" (donde están el DNI y la Foto)
+                const panelDoc = document.getElementById('bio-panel-doc');
+                if (panelDoc) {
+                    panelDoc.style.setProperty('display', 'block', 'important');
+                    panelDoc.classList.remove('hidden');
+                    panelDoc.classList.add('active');
+                }
+            };
+
+            // Ejecutamos en ráfaga para ganarle al framework sin matar las imágenes
+            forzarVistaLimpia();
+            setTimeout(forzarVistaLimpia, 50);
+            setTimeout(forzarVistaLimpia, 300);
+            setTimeout(forzarVistaLimpia, 600);
+        })
+        .catch(() => Swal.fire({ title: 'Error al obtener biométrico', icon: 'error' }));
+};
+
+// 🔥 Volvemos a registrar el evento blindado
+window.addEventListener('solicitarBiometrico', window._bioHandler);
+
+window.bioSwitchTab = function (tab) {
+    const esFH = tab === 'fh';
+    const panelFh = document.getElementById('bio-panel-fh');
+    const panelDoc = document.getElementById('bio-panel-doc');
+
+    // Gestionamos la clase 'active' para evitar que el framework superponga las vistas
+    if (panelFh) {
+        if (esFH) {
+            panelFh.style.setProperty('display', 'block', 'important');
+            panelFh.classList.remove('hidden');
+            panelFh.classList.add('active'); // Mantiene compatibilidad con el framework
+        } else {
+            panelFh.style.setProperty('display', 'none', 'important');
+            panelFh.classList.add('hidden');
+            panelFh.classList.remove('active'); // Evita que el framework la fuerce a visible
+        }
+    }
+    
+    if (panelDoc) {
+        if (!esFH) {
+            panelDoc.style.setProperty('display', 'block', 'important');
+            panelDoc.classList.remove('hidden');
+            panelDoc.classList.add('active');
+        } else {
+            panelDoc.style.setProperty('display', 'none', 'important');
+            panelDoc.classList.add('hidden');
+            panelDoc.classList.remove('active');
+        }
+    }
+
+    const tabFh = document.getElementById('bio-tab-fh');
+    const tabDoc = document.getElementById('bio-tab-doc');
+
+    if (tabFh) {
+        tabFh.classList.toggle('border-indigo-500', esFH);
+        tabFh.classList.toggle('text-indigo-600', esFH);
+        tabFh.classList.toggle('border-transparent', !esFH);
+        tabFh.classList.toggle('text-gray-500', !esFH);
+    }
+
+    if (tabDoc) {
+        tabDoc.classList.toggle('border-indigo-500', !esFH);
+        tabDoc.classList.toggle('text-indigo-600', !esFH);
+        tabDoc.classList.toggle('border-transparent', esFH);
+        tabDoc.classList.toggle('text-gray-500', esFH);
+    }
+};
+
+// ============================================================
+// RENDER DE IMÁGENES (biométrico)
+// ============================================================
+function renderImagen(img, esDni = false, reverso = null) {
+    if (!img || typeof img !== 'string' || !img.startsWith('data:')) {
+        return `
+            <div style="width:100%;${esDni ? 'height:420px;' : 'height:180px;'}
+                display:flex;flex-direction:column;align-items:center;justify-content:center;
+                background:#f8fafc;border:1.5px dashed #e2e8f0;border-radius:12px;color:#94a3b8;gap:8px;">
+                <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span style="font-size:12px;font-weight:500;">Sin imagen</span>
+            </div>`;
+    }
+
+    const id = 'img_' + Math.random().toString(36).substr(2, 9);
+    let mostrandoReverso = false;
+
+    const toggleBtn = esDni ? `
+        <button onclick="toggleDni_${id}()" id="toggleBtn_${id}" style="
+            width:100%;font-size:12px;padding:7px 0;background:#f1f5f9;border:none;
+            border-top:1px solid #e2e8f0;border-radius:0 0 12px 12px;
+            cursor:pointer;color:#475569;font-weight:500;transition:background .15s;">
+            <svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>Ver reverso
+        </button>` : '';
+
+    setTimeout(() => {
+        if (esDni) {
+            window[`toggleDni_${id}`] = function () {
+                mostrandoReverso = !mostrandoReverso;
+                document.getElementById(id).src = mostrandoReverso ? (reverso || img) : img;
+                const badge = document.getElementById('badge_' + id);
+                if (badge) badge.textContent = mostrandoReverso ? 'REVERSO' : 'ANVERSO';
+                document.getElementById('toggleBtn_' + id).innerHTML = mostrandoReverso
+                    ? `<svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Ver anverso`
+                    : `<svg style="display:inline;vertical-align:-2px;margin-right:4px;" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Ver reverso`;
+            };
+        }
+        const btn = document.getElementById('toggleBtn_' + id);
+        if (btn) {
+            btn.onmouseover = () => btn.style.background = '#e2e8f0';
+            btn.onmouseout = () => btn.style.background = '#f1f5f9';
+        }
+    }, 0);
+
+    const btnAccion = esDni
+        ? `<button onclick="abrirLightbox('${id}')" style="
+                position:absolute;bottom:8px;right:8px;background:rgba(99,102,241,0.9);color:white;
+                border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:500;
+                cursor:pointer;z-index:11;display:flex;align-items:center;gap:5px;
+                box-shadow:0 2px 8px rgba(99,102,241,0.4);transition:background .15s;"
+                onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='rgba(99,102,241,0.9)'">
+                <svg width="12" height="12" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7"/>
+                </svg>Ver
+           </button>`
+        : `<button onclick="toggleLupa('${id}')" id="lupaBtn_${id}" style="
+                position:absolute;bottom:8px;right:8px;background:rgba(99,102,241,0.9);color:white;
+                border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;z-index:11;
+                display:flex;align-items:center;justify-content:center;
+                box-shadow:0 2px 8px rgba(99,102,241,0.4);transition:transform .15s,background .15s;"
+                onmouseover="this.style.transform='scale(1.1)';this.style.background='#4f46e5'"
+                onmouseout="this.style.transform='scale(1)';this.style.background='rgba(99,102,241,0.9)'"
+                title="Activar lupa">
+                <svg width="13" height="13" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+           </button>`;
+
+    const lupaDiv = !esDni ? `
+        <div id="lupa_${id}" style="
+            display:none;position:absolute;width:130px;height:130px;border-radius:50%;
+            border:2.5px solid #6366f1;box-shadow:0 0 0 3px rgba(99,102,241,0.15);
+            pointer-events:none;background-repeat:no-repeat;z-index:10;"></div>` : '';
+
+    return `
+        <div style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);width:100%;">
+            <div id="cont_${id}" class="m-0 p-0" style="position:relative;width:100%;
+                ${esDni ? 'height:420px;' : 'height:180px;'}
+                background:#f8fafc;overflow:hidden;
+                display:flex;align-items:center;justify-content:center;
+                ${!esDni ? 'cursor:crosshair;' : ''}">
+                <img id="${id}" src="${img}"
+                     style="max-width:100%;max-height:100%;width:95%;height:auto;object-fit:contain;display:block;cursor:${esDni ? 'zoom-in' : 'crosshair'};"
+                     ${esDni ? `onclick="abrirLightbox('${id}')"` : ''}
+                     onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;flex-direction:column;gap:6px;\\'><svg width=32 height=32 fill=none stroke=currentColor stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><circle cx=8.5 cy=8.5 r=1.5/><path d=\\'m21 15-5-5L5 21\\'/></svg>Sin imagen</div>'" />
+                ${lupaDiv}
+                ${esDni ? `<span id="badge_${id}" style="position:absolute;top:8px;left:8px;background:rgba(99,102,241,0.9);color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;letter-spacing:0.5px;z-index:5;">ANVERSO</span>` : ''}
+                ${btnAccion}
+            </div>
+            ${toggleBtn}
+        </div>`;
+}
+
+// ============================================================
+// LUPA
+// ============================================================
+window.toggleLupa = function (id) {
+    const lupa = document.getElementById('lupa_' + id);
+    const img = document.getElementById(id);
+    const cont = document.getElementById('cont_' + id);
+    if (!lupa || !img || !cont) return;
+
+    const activa = lupa.style.display === 'block';
+
+    if (!activa) {
+        lupa.style.display = 'block';
+        cont.style.overflow = 'visible';
+
+        cont.onmousemove = function (e) {
+            const contRect = cont.getBoundingClientRect();
+            const imgRect = img.getBoundingClientRect();
+            const cx = e.clientX - contRect.left;
+            const cy = e.clientY - contRect.top;
+            const ix = e.clientX - imgRect.left;
+            const iy = e.clientY - imgRect.top;
+            const lw = lupa.offsetWidth, lh = lupa.offsetHeight, scale = 2.8;
+
+            lupa.style.left = (cx - lw / 2) + 'px';
+            lupa.style.top = (cy - lh / 2) + 'px';
+            lupa.style.backgroundImage = `url('${img.src}')`;
+            lupa.style.backgroundSize = `${imgRect.width * scale}px ${imgRect.height * scale}px`;
+            lupa.style.backgroundPosition = `${-(ix * scale - lw / 2)}px ${-(iy * scale - lh / 2)}px`;
+        };
+
+        cont.onmouseleave = function () {
+            lupa.style.display = 'none';
+            cont.style.overflow = 'hidden';
+            cont.onmousemove = cont.onmouseleave = null;
+        };
+    } else {
+        lupa.style.display = 'none';
+        cont.style.overflow = 'hidden';
+        cont.onmousemove = cont.onmouseleave = null;
+    }
+};
+
+// ============================================================
+// LIGHTBOX
+// ============================================================
+(function () {
+    const lb = document.createElement('div');
+    lb.id = 'lb-overlay';
+    lb.style.cssText = `display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;`;
+
+    lb.innerHTML = `
+        <div style="width:100%;padding:10px 20px;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);">
+            <span id="lb-titulo" style="color:#e5e7eb;font-size:13px;font-weight:500;">Vista de imagen</span>
+            <button id="lb-close-top" style="background:rgba(220,38,38,0.7);border:1px solid rgba(220,38,38,0.5);color:white;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="lb-canvas" style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:grab;user-select:none;position:relative;">
+            <img id="lb-img" style="max-width:90vw;max-height:75vh;transform-origin:center center;pointer-events:none;display:block;"/>
+            <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:8px;">
+                <button id="lb-zout" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg width="15" height="15" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M8 11h6"/></svg>
+                </button>
+                <span id="lb-zoom-label" style="color:#e5e7eb;font-size:12px;font-weight:600;min-width:40px;text-align:center;">100%</span>
+                <button id="lb-zin" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg width="15" height="15" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>
+                </button>
+                <div style="width:1px;height:24px;background:rgba(255,255,255,0.2);"></div>
+                <button id="lb-reset" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+                <div style="width:1px;height:24px;background:rgba(255,255,255,0.2);"></div>
+                <button id="lb-fullscreen" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:7px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;">
+                    <svg id="lb-fs-icon" width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7"/></svg>
+                </button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(lb);
+
+    let scale = 1, posX = 0, posY = 0, dragging = false, startX = 0, startY = 0;
+    const lbImg = document.getElementById('lb-img');
+    const lbCanvas = document.getElementById('lb-canvas');
+    const lbLabel = document.getElementById('lb-zoom-label');
+
+    const applyTransform = () => {
+        lbImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        lbLabel.textContent = Math.round(scale * 100) + '%';
+    };
+    const resetView = () => { scale = 1; posX = 0; posY = 0; applyTransform(); };
+
+    lbCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        scale = Math.min(Math.max(scale + (e.deltaY > 0 ? -0.15 : 0.15), 0.3), 8);
+        applyTransform();
+    }, { passive: false });
+
+    lbCanvas.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        dragging = true; startX = e.clientX - posX; startY = e.clientY - posY;
+        lbCanvas.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        posX = e.clientX - startX; posY = e.clientY - startY; applyTransform();
+    });
+    document.addEventListener('mouseup', () => { dragging = false; lbCanvas.style.cursor = 'grab'; });
+
+    document.getElementById('lb-zin').onclick = () => { scale = Math.min(scale + 0.25, 8); applyTransform(); };
+    document.getElementById('lb-zout').onclick = () => { scale = Math.max(scale - 0.25, 0.3); applyTransform(); };
+    document.getElementById('lb-reset').onclick = resetView;
+    document.getElementById('lb-close-top').onclick = cerrarLightbox;
+    document.getElementById('lb-fullscreen').onclick = () => {
+        if (!document.fullscreenElement) {
+            lb.requestFullscreen?.();
+            document.getElementById('lb-fs-icon').innerHTML = `<path d="M8 3H3m0 0v5m0-5 7 7M16 21h5m0 0v-5m0 5-7-7"/>`;
+        } else {
+            document.exitFullscreen?.();
+            document.getElementById('lb-fs-icon').innerHTML = `<path d="M15 3h6m0 0v6m0-6-7 7M9 21H3m0 0v-6m0 6 7-7"/>`;
+        }
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (lb.style.display === 'none') return;
+        if (e.key === 'Escape') cerrarLightbox();
+        if (e.key === '+' || e.key === '=') { scale = Math.min(scale + 0.25, 8); applyTransform(); }
+        if (e.key === '-') { scale = Math.max(scale - 0.25, 0.3); applyTransform(); }
+        if (e.key === '0') resetView();
+    });
+
+    ['lb-zin', 'lb-zout', 'lb-reset', 'lb-fullscreen'].forEach(id => {
+        const b = document.getElementById(id);
+        b.onmouseover = () => b.style.background = 'rgba(255,255,255,0.25)';
+        b.onmouseout = () => b.style.background = 'rgba(255,255,255,0.12)';
+    });
+
+    window.abrirLightbox = function (imgId) {
+        const imgEl = document.getElementById(imgId);
+        if (!imgEl) return;
+        lbImg.src = imgEl.src;
+        lb.style.display = 'flex';
+        resetView();
+    };
+
+    function cerrarLightbox() {
+        lb.style.display = 'none';
+        lbImg.src = '';
+        if (document.fullscreenElement) document.exitFullscreen?.();
+    }
 })();

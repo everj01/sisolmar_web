@@ -6,15 +6,15 @@ import 'tabulator-tables/dist/css/tabulator_simple.min.css';
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
-let usuarioActual    = null;
+let usuarioActual = null;
 let pageSizePersonas = 10;
 
 // ============================================================
 // REFERENCIAS AL DOM — modal de carga
 // ============================================================
-const archivoInput   = document.getElementById('archivoInput');
+const archivoInput = document.getElementById('archivoInput');
 const btnSeleccionar = document.getElementById('btnSeleccionar');
-const listaArchivos  = document.getElementById('listaArchivos');
+const listaArchivos = document.getElementById('listaArchivos');
 
 // Abrir selector al hacer click en la zona dashed
 btnSeleccionar.addEventListener('click', () => archivoInput.click());
@@ -28,7 +28,10 @@ btnSeleccionar.addEventListener('click', () => archivoInput.click());
 
     const init = () => {
         seleccionarPrimeraSucursalValida();
-        setTimeout(() => reloadTabla(), 100);
+        setTimeout(() => {
+            reloadTabla();
+            cargarIndicadores(); // 🔥 Disparamos las tarjetas en el primer render
+        }, 100);
     };
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -67,10 +70,10 @@ const tblPersonas = new Tabulator("#tblPersonas", {
         let codSucursal = document.getElementById("sucursal").value;
         if (!codSucursal || codSucursal === "-Seleccionar-" || codSucursal === "00") codSucursal = "0";
 
-        params.search      = document.getElementById("buscarPersonal").value.trim();
+        params.search = document.getElementById("buscarPersonal").value.trim();
         params.codSucursal = codSucursal;
-        params.tipo_per    = document.querySelector('input[name="tipo_per"]:checked')?.value || "TODOS";
-        params.vigencia    = document.querySelector('input[name="vigencia"]:checked')?.value || "";
+        params.tipo_per = document.getElementById("tipo_per")?.value || "TODOS";
+        params.vigencia = document.getElementById("filtroVigencia")?.value || "";
 
         const filtroDJ = document.getElementById("filtroDJ")?.value || "TODOS";
         if (filtroDJ === "SI") params.tiene_folio_25 = "1";
@@ -90,37 +93,57 @@ const tblPersonas = new Tabulator("#tblPersonas", {
     },
 
     columns: [
-        { title: "Cód.",     field: "CODI_PERS", hozAlign: "center", width: '10%', responsive: false },
-        // { title: "Personal", field: "personal",  hozAlign: "left",   width: '30%', responsive: false },
-        { title: "Apellidos", field: "apellidos",  hozAlign: "left",   width: '17%', responsive: false },
-        { title: "Nombres", field: "nombres",  hozAlign: "left",   width: '22%', responsive: false, 
+        { 
+            title: "N°", 
+            field: "nro_fila_estatico", // Asignamos un identificador para llamarlo luego
+            formatter: function() { return ""; }, // Lo dejamos vacío porque lo inyectaremos post-render
+            hozAlign: "center", 
+            width: 55, 
+            headerSort: false, 
+            responsive: false 
+        },
+        { title: "Cód.", field: "CODI_PERS", hozAlign: "center", width: '8%', responsive: false },
+        { 
+            title: "Apellidos", field: "apellidos", hozAlign: "left", width: '15%', responsive: false,
             formatter: function (cell) {
-                const data = cell.getRow().getData();
-                const nombre = cell.getValue();
-            const icono = data.tiene_folio_25 == 1
-            ? `<span title="DJ disponible" style="
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    width:24px; height:24px;
-                    border-radius:6px;
-                    background:#f3f4f6;
-                    border:1px solid #f0fdf4 ;
-                    margin-left:5px;
-                    cursor:default;
-                    pointer-events:none;
-                    vertical-align:middle;">
-                    <img src="${VITE_URL_APP}/images/prueba.png" style="width:14px; height:14px; object-fit:contain; display:block;">
-                </span>`
-            : '';
-                return `<span style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>${nombre}</span>
-                            ${icono}
-                        </span>`;
+                let val = cell.getValue() || '';
+                return val.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
             }
         },
-        { title: "Nro Doc.", field: "nroDoc",     hozAlign: "center", width: '15%', responsive: false },
-        { title: "Sucursal", field: "sucursal",   hozAlign: "center", width: '18%', responsive: 0 },
+        {
+            title: "Nombres", field: "nombres", hozAlign: "left", width: '20%', responsive: false,
+            formatter: function (cell) {
+                let val = cell.getValue() || '';
+                const nombre = val.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                
+                // Botón azulito de DJ ocultado por instrucción
+                return `<span>${nombre}</span>`;
+            }
+        },
+        { title: "Nro Doc.", field: "nroDoc", hozAlign: "center", width: '12%', responsive: false },
+        { title: "Sucursal", field: "sucursal",   hozAlign: "center", width: '13%', responsive: 0 },
+        { title: "Tipo",     field: "TIPOTRAB2",  hozAlign: "center", width: '14%', responsive: false,
+            formatter: function(cell) {
+                let val = cell.getValue() || '';
+                // Reemplazamos las abreviaturas por la palabra completa al vuelo (Mantenemos tu lógica original)
+                val = val.replace('OPER', 'OPERATIVO').replace('ADMIN', 'ADMINISTRATIVO');
+                
+                let color = 'bg-gray-100 border-gray-300 text-gray-800 shadow-sm'; // Color por defecto
+                
+                if (val.toUpperCase().includes('OPERATIVO')) { 
+                    color = 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm'; 
+                } 
+                else if (val.toUpperCase().includes('ADMINISTRATIVO')) { 
+                    color = 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm'; 
+                } 
+                else if (val.toUpperCase().includes('ESPECIAL')) { 
+                    color = 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm';
+                }
+
+                // Inyectamos las clases idénticas al de la Etapa 1 (justify-center, min-width y flex)
+                return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 125px;">${val}</span>` : '—';
+            }
+        },
         {
             title: "Acciones", field: "acciones", width: 220,
             hozAlign: "center", headerSort: false, responsive: false,
@@ -128,28 +151,32 @@ const tblPersonas = new Tabulator("#tblPersonas", {
                 let html = `<button type="button" class="btn rounded-full docs-btn bg-success/25 text-success hover:bg-success hover:text-white">Folios</button>`;
                 if (usuarioActual?.tipo_rol != 8) {
                     html += ` <button type="button" class="btn rounded-full legajo-btn bg-warning/25 text-warning hover:bg-warning hover:text-white">Legajos</button>`;
-                    html += ` <button type="button" class="btn rounded-full bio-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-fingerprint bio-btn"></i></button>`;
+                    // Se agregó la clase "hidden" para ocultar el botón de la huellita
+                    html += ` <button type="button" class="hidden btn rounded-full bio-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-fingerprint bio-btn"></i></button>`;
                 }
                 return html;
             },
             cellClick: function (e, cell) {
                 const registro = cell.getRow().getData();
-                const codigo   = registro.CODI_PERS;
-                const persona  = registro.personal;
+                const codigo = registro.CODI_PERS;
+                const persona = registro.personal;
 
                 document.getElementById('codPersonal').value = codigo;
                 updateCardTitle(persona);
 
                 if (e.target.classList.contains('docs-btn')) {
+                    // Reseteamos el filtro de prioridad y la búsqueda para que siempre inicie limpio
+                    document.getElementById('selectTipoFolio').value = 'TODOS';
+                    document.getElementById('buscarFolio').value = '';
+
                     getDocsObligatorios(codigo);
-                    document.getElementById('dataDocs').classList.remove('hidden');
-                    document.getElementById('dataDocsLeg').classList.add('hidden');
-                    document.getElementById('divCoincidencias').classList.add('hidden');
+                    document.getElementById('btn-modal-folios').click();
+                    setTimeout(() => tblDocs.redraw(true), 300);
                 } else if (e.target.classList.contains('bio-btn')) {
                     verBiometrico(codigo, persona);
                 } else if (e.target.classList.contains('legajo-btn')) {
-                    document.getElementById('dataDocsLeg').classList.remove('hidden');
-                    document.getElementById('dataDocs').classList.add('hidden');
+                    document.getElementById('btn-modal-legajos').click();
+                    setTimeout(() => tblLegajos.redraw(true), 300);
                 }
             }
         },
@@ -158,15 +185,30 @@ const tblPersonas = new Tabulator("#tblPersonas", {
 
 tblPersonas.on("dataLoaded", function () {
     const total = this._totalFiltrado || 0;
-    const page  = this.getPage();
-    const size  = this.getPageSize();
+    const page = this.getPage();
+    const size = this.getPageSize();
     const start = (page - 1) * size + 1;
-    const end   = Math.min(page * size, total);
+    const end = Math.min(page * size, total);
     document.getElementById("tablaInfo").innerText = `${start}-${end} de ${total} registros`;
 });
 
 tblPersonas.on("renderComplete", function () {
     if (this._ultimoFiltro) resaltarTexto(this._ultimoFiltro);
+
+    // =========================================================
+    // INYECCIÓN DE NUMERACIÓN ESTÁTICA
+    // =========================================================
+    const page = this.getPage() || 1;
+    const size = this.getPageSize() || 10;
+    const offset = (page - 1) * size;
+    
+    // getRows("active") trae las filas en el orden visual ACTUAL de la pantalla
+    this.getRows("active").forEach((row, index) => {
+        const cell = row.getCell("nro_fila_estatico");
+        if (cell) {
+            cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+        }
+    });
 });
 
 // ============================================================
@@ -186,7 +228,23 @@ const tblDocs = new Tabulator("#tblDocs", {
         }
     },
     columns: [
-        { title: "Folio", field: "documento", hozAlign: "left", width: '40%' },
+        { title: "Folio", field: "documento", hozAlign: "left", width: '30%' },
+        { 
+            title: "Prioridad", field: "tipo_folio", hozAlign: "center", width: '10%',
+            formatter: function (cell) {
+                const val = cell.getValue();
+                if (!val) return '—';
+                
+                // Colores más vivos, diseño tipo píldora y sombra suave
+                const isPrincipal = val.toUpperCase() === 'PRINCIPAL';
+                const color = isPrincipal 
+                    ? 'bg-blue-100 border-blue-400 text-blue-800 shadow-sm' 
+                    // Aquí le subimos la intensidad al borde morado a 500 para que resalte
+                    : 'bg-purple-100 border-purple-500 text-purple-800 shadow-sm';
+                    
+                return `<span class="inline-flex items-center rounded-full border px-3 py-0.5 text-[10px] font-bold tracking-wider uppercase ${color}">${val}</span>`;
+            }
+        },
         {
             title: "Emisión", field: "fecha_emision", hozAlign: "center", width: '20%',
             formatter: function (cell) {
@@ -198,9 +256,9 @@ const tblDocs = new Tabulator("#tblDocs", {
         {
             title: "Caducidad", field: "fecha_caducidad", hozAlign: "center", width: '20%',
             formatter: function (cell) {
-                const data          = cell.getRow().getData();
+                const data = cell.getRow().getData();
                 const fechaCaducidad = cell.getValue();
-                const vigente       = parseInt(data.vigente);
+                const vigente = parseInt(data.vigente);
 
                 if (!fechaCaducidad && data.vencimiento == 1) return '<span class="rounded-full bg-warning/25">&nbsp;&nbsp;PENDIENTE&nbsp;&nbsp;</span>';
                 if (!fechaCaducidad && data.vencimiento != 1) return '<span class="rounded-full bg-black/10">&nbsp;&nbsp;NO TIENE&nbsp;&nbsp;</span>';
@@ -222,12 +280,13 @@ const tblDocs = new Tabulator("#tblDocs", {
                     </button>`;
             },
             cellClick: function (e, cell) {
-                const dataTbl        = cell.getRow().getData();
-                const codFolio       = parseInt(dataTbl.codFolio);
-                const esDJ           = codFolio === 25;
+                const dataTbl = cell.getRow().getData();
+                const codFolio = parseInt(dataTbl.codFolio);
+                const esDJ = codFolio === 25;
 
                 // — Botón subir —
                 if (e.target.classList.contains('charge-btn')) {
+                    window.parentModalToReopen = 'modal-folios-personal';
                     document.querySelector('#modal-file h3.modal-title').textContent = `Documento: ${dataTbl.documento}`;
                     document.getElementById('codFolioActual').value = codFolio;
 
@@ -237,7 +296,7 @@ const tblDocs = new Tabulator("#tblDocs", {
                         archivoInput.multiple = false;
                         mostrarAvisoTipo('Solo se permite PDF. Máx. 1 MB.');
 
-                         if (dataTbl.vencimiento == 0) {
+                        if (dataTbl.vencimiento == 0) {
                             document.getElementById('divCaducidad').classList.add('hidden');
                             document.getElementById('fecha_caducidad').removeAttribute('required');
                         } else {
@@ -250,13 +309,13 @@ const tblDocs = new Tabulator("#tblDocs", {
                         const cantHojas = parseInt(dataTbl.cantidad_hojas || 1);
 
                         console.log('CANTIDAD DE HOJAS ', dataTbl.cantidad_hojas);
-                         console.log('CANTIDAD DE HOJAS mensaje ->  ', cantHojas);
+                        console.log('CANTIDAD DE HOJAS mensaje ->  ', cantHojas);
 
                         archivoInput.setAttribute('accept', 'image/jpeg');
                         archivoInput.multiple = cantHojas > 1; // múltiple solo si requiere más de 1
 
                         console.log('CANTIDAD DE HOJAS mensaje ->  ', cantHojas > 1);
-                         console.log('NPUT SUBIR ->  ', archivoInput);
+                        console.log('NPUT SUBIR ->  ', archivoInput);
 
                         if (cantHojas > 1) {
                             mostrarAvisoTipo(`Se requieren ${cantHojas} imágenes JPG. Máx. 1 MB cada una.`);
@@ -264,11 +323,11 @@ const tblDocs = new Tabulator("#tblDocs", {
                             mostrarAvisoTipo('Solo imágenes JPG. Máx. 1 MB.');
                         }
 
-                        document.querySelector('#txtPeriodo').textContent    = dataTbl.periodo ?? '';
-                        document.querySelector('#txtCantHojas').textContent  = cantHojas;
-                        document.getElementById('cantArchivos').value        = cantHojas;
-                        document.getElementById('codFolio').value            = codFolio;
-                        document.getElementById('meses').value               = dataTbl.meses ?? '';
+                        document.querySelector('#txtPeriodo').textContent = dataTbl.periodo ?? '';
+                        document.querySelector('#txtCantHojas').textContent = cantHojas;
+                        document.getElementById('cantArchivos').value = cantHojas;
+                        document.getElementById('codFolio').value = codFolio;
+                        document.getElementById('meses').value = dataTbl.meses ?? '';
 
                         if (dataTbl.vencimiento == 0) {
                             document.getElementById('divCaducidad').classList.add('hidden');
@@ -283,45 +342,46 @@ const tblDocs = new Tabulator("#tblDocs", {
 
 
                     const elFechaEmision = document.getElementById('fecha_emision');
-                    const elFechaCad     = document.getElementById('fecha_caducidad');
+                    const elFechaCad = document.getElementById('fecha_caducidad');
 
 
-                    if (elFechaEmision && dataTbl.fecha_emision) 
+                    if (elFechaEmision && dataTbl.fecha_emision)
                         elFechaEmision.value = formatearFechaInput(dataTbl.fecha_emision);
-                    if (elFechaCad && dataTbl.fecha_caducidad)   
+                    if (elFechaCad && dataTbl.fecha_caducidad)
                         elFechaCad.value = formatearFechaInput(dataTbl.fecha_caducidad);
-                                    
+
 
                     document.getElementById('btn-modal-docs').click();
                 }
 
                 // — Botón ver —
                 if (e.target.classList.contains('viewdoc-btn')) {
+                    window.parentModalToReopen = 'modal-folios-personal';
                     if (esDJ) {
                         window.open(`${VITE_URL_APP}/ver-dj/${dataTbl.codPersonal}`, '_blank');
                     } else {
                         // Folios normales: visor de imágenes
                         axios.get(`${VITE_URL_APP}/api/get-view-documents/${dataTbl.codPersonal}/${codFolio}`)
-                        .then(response => {
-                            if (response.data.success !== true) {
-                                Swal.fire({ title: 'No se encontraron documentos válidos', icon: 'info' });
-                                return;
-                            }
+                            .then(response => {
+                                if (response.data.success !== true) {
+                                    Swal.fire({ title: 'No se encontraron documentos válidos', icon: 'info' });
+                                    return;
+                                }
 
-                            document.querySelector('#modal-view-docs .modal-title').textContent = dataTbl.personal ?? '';
-                            document.querySelector('#modal-view-docs #txtDocSelec').textContent  = dataTbl.documento ?? '';
+                                document.querySelector('#modal-view-docs .modal-title').textContent = dataTbl.personal ?? '';
+                                document.querySelector('#modal-view-docs #txtDocSelec').textContent = dataTbl.documento ?? '';
 
-                            const visor = document.getElementById('visorDocs');
-                            visor.innerHTML = '';
-                            response.data.rutas.forEach(ruta => {
-                                visor.insertAdjacentHTML('beforeend', `
+                                const visor = document.getElementById('visorDocs');
+                                visor.innerHTML = '';
+                                response.data.rutas.forEach(ruta => {
+                                    visor.insertAdjacentHTML('beforeend', `
                                     <img src="http://${ruta}" class="w-full max-w-[700px] mb-3 rounded-md" />
                                 `);
-                            });
+                                });
 
-                            document.getElementById('btn-modal-view-docs').click();
-                        })
-                        .catch(() => Swal.fire({ title: 'Problema al encontrar documentos', icon: 'error' }));
+                                document.getElementById('btn-modal-view-docs').click();
+                            })
+                            .catch(() => Swal.fire({ title: 'Problema al encontrar documentos', icon: 'error' }));
                     }
                 }
             }
@@ -360,7 +420,7 @@ const tblLegajos = new Tabulator("#tblDocsLegajo", {
         {
             title: "Caducidad", field: "fecha_caducidad", hozAlign: "center", width: '20%',
             formatter: function (cell) {
-                const vigente        = cell.getRow().getData().vigente;
+                const vigente = cell.getRow().getData().vigente;
                 const fechaCaducidad = cell.getValue();
                 if (vigente == 1) return `<span class="text-vigente-800 font-bold">${fechaCaducidad ?? '--'}</span>`;
                 if (vigente == 0) return `<span class="text-vencido-800 font-bold">${fechaCaducidad ?? '--'}</span>`;
@@ -371,22 +431,23 @@ const tblLegajos = new Tabulator("#tblDocsLegajo", {
             title: "Acciones", field: "accionesy", hozAlign: "center", width: '20%', headerSort: false,
             formatter: function (cell) {
                 const filePath = cell.getRow().getData().ruta_archivo;
-                const url      = '/storage/' + filePath;
-                const viewBtn  = filePath
+                const url = '/storage/' + filePath;
+                const viewBtn = filePath
                     ? `<a href="${url}" target="_blank" class="btn rounded-full view-btn bg-info/25 text-info hover:bg-info hover:text-white"><i class="fa fa-eye"></i></a>`
                     : `<a class="pointer-events-none btn rounded-full bg-gray-200 text-gray-400"><i class="fa fa-eye"></i></a>`;
                 return `<button type="button" class="btn rounded-full charge-btn-leg bg-success/25 text-success hover:bg-success hover:text-white"><i class="fa fa-cloud-upload charge-btn-leg"></i></button> ${viewBtn}`;
             },
             cellClick: function (e, cell) {
                 if (e.target.classList.contains('charge-btn-leg')) {
-                    const dataTbl  = cell.getRow().getData();
+                    window.parentModalToReopen = 'modal-legajos-personal';
+                    const dataTbl = cell.getRow().getData();
                     const codFolio = parseInt(dataTbl.codFolio);
 
                     document.querySelector('#modal-file h3.modal-title').textContent = `Documento: ${dataTbl.documento}`;
                     document.querySelector('#txtPeriodo').textContent = dataTbl.periodo ?? '';
-                    document.getElementById('codFolioActual').value  = codFolio;
-                    document.getElementById('codFolio').value        = codFolio;
-                    document.getElementById('meses').value           = dataTbl.meses ?? '';
+                    document.getElementById('codFolioActual').value = codFolio;
+                    document.getElementById('codFolio').value = codFolio;
+                    document.getElementById('meses').value = dataTbl.meses ?? '';
 
                     const cantHojas = parseInt(dataTbl.cantidad_hojas || 1);
                     archivoInput.setAttribute('accept', 'image/jpeg');
@@ -409,10 +470,10 @@ const tblLegajos = new Tabulator("#tblDocsLegajo", {
 
                     limpiarModal();
                     const elFechaEmision = document.getElementById('fecha_emision');
-                    const elFechaCad     = document.getElementById('fecha_caducidad');
-                    if (elFechaEmision && dataTbl.fecha_emision) 
+                    const elFechaCad = document.getElementById('fecha_caducidad');
+                    if (elFechaEmision && dataTbl.fecha_emision)
                         elFechaEmision.value = formatearFechaInput(dataTbl.fecha_emision);
-                    if (elFechaCad && dataTbl.fecha_caducidad)   
+                    if (elFechaCad && dataTbl.fecha_caducidad)
                         elFechaCad.value = formatearFechaInput(dataTbl.fecha_caducidad);
 
                     document.getElementById('btn-modal-docs').click();
@@ -430,10 +491,10 @@ const tblPersonasCN = new Tabulator("#tblPersonasCN", {
     layout: "fitDataFill",
     responsiveLayout: "collapse",
     columns: [
-        { title: "Código",        field: "CODI_PERS", hozAlign: "center", width: '10%' },
-        { title: "Personal",      field: "personal",  hozAlign: "left",   width: '30%' },
-        { title: "Nro Documento", field: "nroDoc",    hozAlign: "center", width: '15%' },
-        { title: "Sucursal",      field: "sucursal",  hozAlign: "center", width: '18%' },
+        { title: "Código", field: "CODI_PERS", hozAlign: "center", width: '10%' },
+        { title: "Personal", field: "personal", hozAlign: "left", width: '30%' },
+        { title: "Nro Documento", field: "nroDoc", hozAlign: "center", width: '15%' },
+        { title: "Sucursal", field: "sucursal", hozAlign: "center", width: '18%' },
     ],
 });
 
@@ -441,20 +502,20 @@ const tblPersonasCN = new Tabulator("#tblPersonasCN", {
 // MODAL — Carga de archivo
 // ============================================================
 function limpiarModal() {
-    document.getElementById('fecha_emision').value   = '';
+    document.getElementById('fecha_emision').value = '';
     document.getElementById('fecha_caducidad').value = '';
     window.archivosSeleccionados = [];
-    listaArchivos.innerHTML      = '';
-    archivoInput.value           = '';
+    listaArchivos.innerHTML = '';
+    archivoInput.value = '';
     //archivoInput.multiple        = false; // ← resetear
     //const aviso = document.getElementById('aviso-tipo-archivo');
     //if (aviso) aviso.textContent = '';
 }
 
 function limpiarModalDj() {
-    document.getElementById('fecha_emision').value   = '';
+    document.getElementById('fecha_emision').value = '';
     document.getElementById('fecha_caducidad').value = '';
-    archivoInput.value    = '';
+    archivoInput.value = '';
     //archivoInput.multiple = false; // ← resetear
     listaArchivos.innerHTML = '';
     //const aviso = document.getElementById('aviso-tipo-archivo');
@@ -467,8 +528,8 @@ function calcularFechaCaducidad(fechaEmision) {
         const fecha = new Date(fechaEmision);
         fecha.setMonth(fecha.getMonth() + meses);
         const anio = fecha.getFullYear();
-        const mes  = ('0' + (fecha.getMonth() + 1)).slice(-2);
-        const dia  = ('0' + fecha.getDate()).slice(-2);
+        const mes = ('0' + (fecha.getMonth() + 1)).slice(-2);
+        const dia = ('0' + fecha.getDate()).slice(-2);
         return `${anio}-${mes}-${dia}`;
     }
     return '';
@@ -481,12 +542,12 @@ function mostrarAvisoTipo(mensaje) {
 
 // Validación en tiempo real al seleccionar archivo
 archivoInput.addEventListener('change', function () {
-    const archivos    = Array.from(this.files);
+    const archivos = Array.from(this.files);
     if (!archivos.length) return;
 
-    const codFolio    = parseInt(document.getElementById('codFolioActual').value || '0');
-    const esDJ        = codFolio === 25;
-    const maxSize     = 1.2 * 1024 * 1024;
+    const codFolio = parseInt(document.getElementById('codFolioActual').value || '0');
+    const esDJ = codFolio === 25;
+    const maxSize = 1.2 * 1024 * 1024;
     const cantEsperada = parseInt(document.getElementById('cantArchivos')?.value || '1');
 
     const limpiar = () => {
@@ -548,12 +609,12 @@ archivoInput.addEventListener('change', function () {
 document.getElementById('formFolioPersonal').addEventListener('submit', function (event) {
     event.preventDefault();
 
-    const fechaEmision  = document.getElementById('fecha_emision').value;
-    const codigoPer     = document.getElementById('codPersonal').value;
-    const codFolio      = parseInt(document.getElementById('codFolioActual').value || '0');
-    const esDJ          = codFolio === 25;
-    const maxSize       = 1.2 * 1024 * 1024;
-    const cantEsperada  = parseInt(document.getElementById('cantArchivos')?.value || '1');
+    const fechaEmision = document.getElementById('fecha_emision').value;
+    const codigoPer = document.getElementById('codPersonal').value;
+    const codFolio = parseInt(document.getElementById('codFolioActual').value || '0');
+    const esDJ = codFolio === 25;
+    const maxSize = 1.2 * 1024 * 1024;
+    const cantEsperada = parseInt(document.getElementById('cantArchivos')?.value || '1');
 
     // Determinar archivos a enviar
     const archivos = esDJ
@@ -572,7 +633,7 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
             Swal.fire({ title: 'Solo se permiten imágenes JPG', icon: 'warning' }); return;
         }
         if (a.size > maxSize) {
-            Swal.fire({ title: 'Archivo demasiado grande', text: `"${a.name}" pesa ${(a.size/1024/1024).toFixed(2)} MB. Límite: 1 MB.`, icon: 'warning' }); return;
+            Swal.fire({ title: 'Archivo demasiado grande', text: `"${a.name}" pesa ${(a.size / 1024 / 1024).toFixed(2)} MB. Límite: 1 MB.`, icon: 'warning' }); return;
         }
     }
 
@@ -608,26 +669,26 @@ document.getElementById('formFolioPersonal').addEventListener('submit', function
         const codFolioHidden = document.getElementById('codFolio').value;
 
         const formData = new FormData();
-        formData.append('fecha_emision',   fechaEmision);
+        formData.append('fecha_emision', fechaEmision);
         formData.append('fecha_caducidad', fechaCaducidad);
-        formData.append('codFolio',        codFolioHidden);
-        formData.append('codPersonal',     codigoPer);
+        formData.append('codFolio', codFolioHidden);
+        formData.append('codPersonal', codigoPer);
         archivos.forEach(a => formData.append('imagenes[]', a));
 
         axios.post(`${VITE_URL_APP}/api/save_folio_persona`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         })
-        .then(() => {
-            document.getElementById('btn-modal-docs-close').click();
-            getDocsObligatorios(codigoPer);
-            getLegajos();
-            limpiarModal();
-            Swal.fire({ title: 'Documento guardado correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
-        })
-        .catch(error => {
-            const msg = error.response?.data?.error || error.response?.data?.message || 'Error al guardar el documento';
-            Swal.fire({ title: msg, icon: 'error' });
-        });
+            .then(() => {
+                document.getElementById('btn-modal-docs-close').click();
+                getDocsObligatorios(codigoPer);
+                getLegajos();
+                limpiarModal();
+                Swal.fire({ title: 'Documento guardado correctamente', icon: 'success', timer: 2000, showConfirmButton: false });
+            })
+            .catch(error => {
+                const msg = error.response?.data?.error || error.response?.data?.message || 'Error al guardar el documento';
+                Swal.fire({ title: msg, icon: 'error' });
+            });
     }
 });
 
@@ -640,27 +701,31 @@ document.getElementById("page-size-personas").addEventListener("change", functio
     reloadTabla();
 });
 
-document.getElementById("buscarPersonal").addEventListener("keyup", () => reloadTabla());
-document.getElementById("sucursal").addEventListener("change", () => reloadTabla());
-document.querySelectorAll('input[name="tipo_per"]').forEach(r => r.addEventListener("change", () => reloadTabla()));
-document.querySelectorAll('input[name="vigencia"]').forEach(r => r.addEventListener("change", () => reloadTabla()));
-document.getElementById("filtroDJ").addEventListener("change", () => reloadTabla());
-// Filtro de tipo de folio (Principal / Adicional)
-document.querySelectorAll('input[name="tipo_folio"]').forEach(radio => {
-    radio.addEventListener('change', filterTableByTipoFolio);
+// Estos SÍ recalcularán las tarjetas:
+document.getElementById("sucursal").addEventListener("change", () => {
+    reloadTabla();
+    cargarIndicadores();
+});
+document.getElementById("tipo_per")?.addEventListener("change", () => {
+    reloadTabla();
+    cargarIndicadores();
 });
 
-document.getElementById("buscarFolio").addEventListener("keyup", function () {
-    tblDocs.setFilter([[{ field: "documento", type: 'like', value: this.value.toLowerCase().trim() }]]);
-});
+// Estos NO recalcularán las tarjetas (solo filtran la tabla visualmente):
+document.getElementById("buscarPersonal").addEventListener("keyup", () => reloadTabla());
+document.getElementById("filtroVigencia")?.addEventListener("change", () => reloadTabla());
+document.getElementById("filtroDJ")?.addEventListener("change", () => reloadTabla());
+// Filtros combinados para el Modal de Folios (Select + Búsqueda)
+document.getElementById('selectTipoFolio')?.addEventListener('change', filterTableByTipoFolio);
+document.getElementById('buscarFolio')?.addEventListener('keyup', filterTableByTipoFolio);
 
 // ============================================================
 // LISTENERS — Legajos
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
-    const params      = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
     const codPersonal = params.get('codPersonal');
-    const nombre      = params.get('nombre');
+    const nombre = params.get('nombre');
     if (codPersonal) abrirFoliosDesdeNotificacion(codPersonal, nombre);
 
     document.getElementById('cargos').addEventListener('change', () => getLegajos());
@@ -680,8 +745,36 @@ document.addEventListener('DOMContentLoaded', function () {
 window.addEventListener("sidebar-toggled", () => tblPersonas?.redraw(true));
 
 // ============================================================
-// FUNCIONES — Tabla
+// FUNCIONES — Tabla e Indicadores
 // ============================================================
+function cargarIndicadores() {
+    let codSucursal = document.getElementById("sucursal").value;
+    if (!codSucursal || codSucursal === "-Seleccionar-" || codSucursal === "00") codSucursal = "0";
+
+    // 🔥 SOLO filtramos por Sucursal y Tipo (ignoramos búsqueda, DJ y Vigencia)
+    const params = {
+        codSucursal: codSucursal,
+        tipo_per: document.getElementById("tipo_per")?.value || "TODOS",
+        size: 99999, // Traemos todos para la matemática
+        page: 1
+    };
+
+    axios.get(`${VITE_URL_APP}/get-personal-total`, { params })
+        .then(response => {
+            const data = response.data.data || [];
+            
+            const total = data.length;
+            // 🔥 Ahora contamos en base a si están Vigentes en la empresa
+            const vigentes = data.filter(d => d.PERS_VIGENCIA === 'SI').length; 
+            const cesados = total - vigentes;
+
+            document.getElementById('countTotal').textContent = total;
+            document.getElementById('countVigentes').textContent = vigentes;
+            document.getElementById('countCesados').textContent = cesados;
+        })
+        .catch(error => console.error("Error al cargar indicadores:", error));
+}
+
 function reloadTabla() {
     const search = document.getElementById("buscarPersonal").value.trim();
     tblPersonas.setData(`${VITE_URL_APP}/get-personal-total`, { page: 1, size: pageSizePersonas });
@@ -704,12 +797,25 @@ function resaltarTexto(valor) {
 }
 
 function filterTableByTipoFolio() {
-    const tipo = document.querySelector('input[name="tipo_folio"]:checked').value;
-    tblDocs.setFilter("tipo_folio", "=", tipo);
+    const tipo = document.getElementById('selectTipoFolio').value;
+    const busqueda = document.getElementById("buscarFolio").value.toLowerCase().trim();
+
+    // 1. Limpiamos filtros anteriores para evitar conflictos
+    tblDocs.clearFilter();
+
+    // 2. Aplicamos el filtro de Prioridad (solo si no es "TODOS")
+    if (tipo !== "TODOS") {
+        tblDocs.addFilter("tipo_folio", "=", tipo);
+    }
+
+    // 3. Aplicamos el filtro de texto (si el usuario escribió algo)
+    if (busqueda !== "") {
+        tblDocs.addFilter("documento", "like", busqueda);
+    }
 }
 
 function seleccionarPrimeraSucursalValida() {
-    const select   = document.getElementById("sucursal");
+    const select = document.getElementById("sucursal");
     if (!select) return;
     const opciones = [...select.options].filter(opt =>
         opt.value && opt.value !== "-Seleccionar-" && opt.value !== "— Seleccionar —" && !opt.disabled
@@ -719,17 +825,15 @@ function seleccionarPrimeraSucursalValida() {
 
 function updateCardTitle(nombrePersona) {
     document.querySelector('.nombrePersDocs').textContent = `Folios de ${nombrePersona}`;
-    document.querySelector('.nombrePersLeg').textContent  = `Legajos para ${nombrePersona}`;
+    document.querySelector('.nombrePersLeg').textContent = `Legajos para ${nombrePersona}`;
 }
 
 function abrirFoliosDesdeNotificacion(codPersonal, nombre) {
     document.getElementById('codPersonal').value = codPersonal;
     getDocsObligatorios(codPersonal);
-    document.getElementById('dataDocs').classList.remove('hidden');
-    document.getElementById('dataDocsLeg').classList.add('hidden');
-    document.getElementById('divCoincidencias').classList.add('hidden');
     updateCardTitle(nombre);
-    setTimeout(() => document.getElementById('dataDocs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    document.getElementById('btn-modal-folios').click();
+    setTimeout(() => tblDocs.redraw(true), 300);
 }
 
 // ============================================================
@@ -754,13 +858,17 @@ function getLegajos() {
     document.getElementById('tblDocsLegajo').classList.remove('hidden');
     axios.get(`${VITE_URL_APP}/api/get-legajos`, {
         params: {
-            cliente:  document.getElementById('clientes').value,
-            cargo:    document.getElementById('cargos').value,
-            codigo:   document.getElementById('codPersonal').value,
+            cliente: document.getElementById('clientes').value,
+            cargo: document.getElementById('cargos').value,
+            codigo: document.getElementById('codPersonal').value,
         }
     })
-    .then(response => tblLegajos.setData(response.data))
-    .catch(error => console.error("Error al obtener legajos:", error));
+        .then(response => {
+            tblLegajos.setData(response.data);
+            // Pequeño ajuste para evitar desajustes visuales al renderizar dinámicamente
+            setTimeout(() => tblLegajos.redraw(true), 150);
+        })
+        .catch(error => console.error("Error al obtener legajos:", error));
 }
 
 function getCargos(clienteLeg) {
@@ -770,7 +878,7 @@ function getCargos(clienteLeg) {
             select.innerHTML = '<option disabled selected>-Seleccionar-</option>';
             response.data.forEach(cargo => {
                 const option = document.createElement("option");
-                option.value       = cargo.codigo;
+                option.value = cargo.codigo;
                 option.textContent = cargo.nombre;
                 select.appendChild(option);
             });
@@ -808,11 +916,11 @@ function verBiometrico(codigo, persona) {
             document.getElementById('modal-bio-title').textContent = persona;
 
             document.getElementById('bio-huella-antigua').innerHTML = renderImagen(data.huella_antigua);
-            document.getElementById('bio-huella-nueva').innerHTML   = renderImagen(data.huella_nueva);
-            document.getElementById('bio-firma-antigua').innerHTML  = renderImagen(data.firma_antigua);
-            document.getElementById('bio-firma-nueva').innerHTML    = renderImagen(data.firma_nueva);
-            document.getElementById('bio-doc-dni-antiguo').innerHTML  = renderImagen(data.dni_anverso_antigua, true, data.dni_reverso_antigua);
-            document.getElementById('bio-doc-firma-nueva').innerHTML  = renderImagen(data.firma_nueva);
+            document.getElementById('bio-huella-nueva').innerHTML = renderImagen(data.huella_nueva);
+            document.getElementById('bio-firma-antigua').innerHTML = renderImagen(data.firma_antigua);
+            document.getElementById('bio-firma-nueva').innerHTML = renderImagen(data.firma_nueva);
+            document.getElementById('bio-doc-dni-antiguo').innerHTML = renderImagen(data.dni_anverso_antigua, true, data.dni_reverso_antigua);
+            document.getElementById('bio-doc-firma-nueva').innerHTML = renderImagen(data.firma_nueva);
             document.getElementById('bio-doc-huella-nueva').innerHTML = renderImagen(data.huella_nueva);
 
             bioSwitchTab('fh');
@@ -823,18 +931,18 @@ function verBiometrico(codigo, persona) {
 
 window.bioSwitchTab = function (tab) {
     const esFH = tab === 'fh';
-    document.getElementById('bio-panel-fh').style.display  = esFH ? 'flex' : 'none';
+    document.getElementById('bio-panel-fh').style.display = esFH ? 'flex' : 'none';
     document.getElementById('bio-panel-doc').style.display = esFH ? 'none' : 'block';
 
     document.getElementById('bio-tab-fh').classList.toggle('border-indigo-500', esFH);
-    document.getElementById('bio-tab-fh').classList.toggle('text-indigo-600',   esFH);
+    document.getElementById('bio-tab-fh').classList.toggle('text-indigo-600', esFH);
     document.getElementById('bio-tab-fh').classList.toggle('border-transparent', !esFH);
-    document.getElementById('bio-tab-fh').classList.toggle('text-gray-500',     !esFH);
+    document.getElementById('bio-tab-fh').classList.toggle('text-gray-500', !esFH);
 
     document.getElementById('bio-tab-doc').classList.toggle('border-indigo-500', !esFH);
-    document.getElementById('bio-tab-doc').classList.toggle('text-indigo-600',   !esFH);
+    document.getElementById('bio-tab-doc').classList.toggle('text-indigo-600', !esFH);
     document.getElementById('bio-tab-doc').classList.toggle('border-transparent', esFH);
-    document.getElementById('bio-tab-doc').classList.toggle('text-gray-500',     esFH);
+    document.getElementById('bio-tab-doc').classList.toggle('text-gray-500', esFH);
 };
 
 // ============================================================
@@ -883,7 +991,7 @@ function renderImagen(img, esDni = false, reverso = null) {
         const btn = document.getElementById('toggleBtn_' + id);
         if (btn) {
             btn.onmouseover = () => btn.style.background = '#e2e8f0';
-            btn.onmouseout  = () => btn.style.background = '#f1f5f9';
+            btn.onmouseout = () => btn.style.background = '#f1f5f9';
         }
     }, 0);
 
@@ -941,19 +1049,19 @@ function renderImagen(img, esDni = false, reverso = null) {
 // ============================================================
 window.toggleLupa = function (id) {
     const lupa = document.getElementById('lupa_' + id);
-    const img  = document.getElementById(id);
+    const img = document.getElementById(id);
     const cont = document.getElementById('cont_' + id);
     if (!lupa || !img || !cont) return;
 
     const activa = lupa.style.display === 'block';
 
     if (!activa) {
-        lupa.style.display  = 'block';
+        lupa.style.display = 'block';
         cont.style.overflow = 'visible';
 
         cont.onmousemove = function (e) {
             const contRect = cont.getBoundingClientRect();
-            const imgRect  = img.getBoundingClientRect();
+            const imgRect = img.getBoundingClientRect();
             const cx = e.clientX - contRect.left;
             const cy = e.clientY - contRect.top;
             const ix = e.clientX - imgRect.left;
@@ -961,19 +1069,19 @@ window.toggleLupa = function (id) {
             const lw = lupa.offsetWidth, lh = lupa.offsetHeight, scale = 2.8;
 
             lupa.style.left = (cx - lw / 2) + 'px';
-            lupa.style.top  = (cy - lh / 2) + 'px';
-            lupa.style.backgroundImage    = `url('${img.src}')`;
-            lupa.style.backgroundSize     = `${imgRect.width * scale}px ${imgRect.height * scale}px`;
+            lupa.style.top = (cy - lh / 2) + 'px';
+            lupa.style.backgroundImage = `url('${img.src}')`;
+            lupa.style.backgroundSize = `${imgRect.width * scale}px ${imgRect.height * scale}px`;
             lupa.style.backgroundPosition = `${-(ix * scale - lw / 2)}px ${-(iy * scale - lh / 2)}px`;
         };
 
         cont.onmouseleave = function () {
-            lupa.style.display  = 'none';
+            lupa.style.display = 'none';
             cont.style.overflow = 'hidden';
             cont.onmousemove = cont.onmouseleave = null;
         };
     } else {
-        lupa.style.display  = 'none';
+        lupa.style.display = 'none';
         cont.style.overflow = 'hidden';
         cont.onmousemove = cont.onmouseleave = null;
     }
@@ -1018,13 +1126,13 @@ window.toggleLupa = function (id) {
     document.body.appendChild(lb);
 
     let scale = 1, posX = 0, posY = 0, dragging = false, startX = 0, startY = 0;
-    const lbImg    = document.getElementById('lb-img');
+    const lbImg = document.getElementById('lb-img');
     const lbCanvas = document.getElementById('lb-canvas');
-    const lbLabel  = document.getElementById('lb-zoom-label');
+    const lbLabel = document.getElementById('lb-zoom-label');
 
     const applyTransform = () => {
         lbImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-        lbLabel.textContent   = Math.round(scale * 100) + '%';
+        lbLabel.textContent = Math.round(scale * 100) + '%';
     };
     const resetView = () => { scale = 1; posX = 0; posY = 0; applyTransform(); };
 
@@ -1045,9 +1153,9 @@ window.toggleLupa = function (id) {
     });
     document.addEventListener('mouseup', () => { dragging = false; lbCanvas.style.cursor = 'grab'; });
 
-    document.getElementById('lb-zin').onclick    = () => { scale = Math.min(scale + 0.25, 8); applyTransform(); };
-    document.getElementById('lb-zout').onclick   = () => { scale = Math.max(scale - 0.25, 0.3); applyTransform(); };
-    document.getElementById('lb-reset').onclick  = resetView;
+    document.getElementById('lb-zin').onclick = () => { scale = Math.min(scale + 0.25, 8); applyTransform(); };
+    document.getElementById('lb-zout').onclick = () => { scale = Math.max(scale - 0.25, 0.3); applyTransform(); };
+    document.getElementById('lb-reset').onclick = resetView;
     document.getElementById('lb-close-top').onclick = cerrarLightbox;
     document.getElementById('lb-fullscreen').onclick = () => {
         if (!document.fullscreenElement) {
@@ -1070,7 +1178,7 @@ window.toggleLupa = function (id) {
     ['lb-zin', 'lb-zout', 'lb-reset', 'lb-fullscreen'].forEach(id => {
         const b = document.getElementById(id);
         b.onmouseover = () => b.style.background = 'rgba(255,255,255,0.25)';
-        b.onmouseout  = () => b.style.background = 'rgba(255,255,255,0.12)';
+        b.onmouseout = () => b.style.background = 'rgba(255,255,255,0.12)';
     });
 
     window.abrirLightbox = function (imgId) {

@@ -1,35 +1,17 @@
-/**
- * Theme: Taildash - Tailwind CSS 3 Admin Layout & UI Kit Template
- * Author: MyraStudio
- * Module/App: App js
- */
-
-// import _ from 'lodash/lodash';
-
 import "dropzone/dist/dropzone-min";
 
-import "preline";
+import "preline/dist/index.js";
 import "jquery";
 import "simplebar";
 import "boxicons/css/boxicons.min.css";
 import "./functions/capacitacion/reportes_capacitaciones.js";
 import "./functions/capacitacion/planes_capacitaciones.js";
+import "./functions/capacitacion/exportar_examenes.js";
+import "./functions/capacitacion/cursos_externos.js";
 import Waves from "node-waves";
 import Alpine from "alpinejs";
-import DataTable from "vanilla-datatables";
 import "vanilla-datatables/dist/vanilla-dataTables.min.css"; // Import Styles
 import Swal from "sweetalert2";
-import Echo from "laravel-echo";
-import Pusher from "pusher-js";
-
-window.Pusher = Pusher;
-
-window.Echo = new Echo({
-    broadcaster: "pusher",
-    key: import.meta.env.VITE_PUSHER_APP_KEY,
-    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
-    forceTLS: true,
-});
 
 window.Swal = Swal;
 window.Alpine = Alpine;
@@ -222,7 +204,6 @@ class App {
     }
 }
 
-// Esperar a que el DOM esté listo antes de inicializar
 document.addEventListener("DOMContentLoaded", function () {
     new App().init();
 });

@@ -7,122 +7,116 @@
 {{-- =====================================================================
      PANEL PRINCIPAL: Listado de personal + Folios / Legajos
      ===================================================================== --}}
-<div class="grid lg:grid-cols-[3.1fr_2.05fr] gap-6 mt-8">
+<div class="grid grid-cols-1 gap-6 mt-8">
 
     {{-- ── CARD: Listado de Personal ────────────────────────────────────── --}}
     <div class="card overflow-hidden">
-        <div class="card-header">
-            <div class="flex flex-row items-center justify-between w-full">
-                <h4 class="card-title">Listado de Personal</h4>
-                @if ($tipoUsuario == 5 || $tipoUsuario == 2)
-                    <button type="button"
-                            class="btn bg-info text-white"
-                            data-accion="abrir-reporte-avances">
-                        Reporte de avances
-                    </button>
-                @endif
+        <div class="card-header border-b border-gray-100 pb-4">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <h4 class="text-lg font-bold text-primary uppercase">Listado de Personal</h4>
+                    @if ($tipoUsuario == 5 || $tipoUsuario == 2)
+                        <button type="button"
+                                class="btn bg-info text-white btn-sm px-3 py-1.5 rounded-lg text-xs"
+                                data-accion="abrir-reporte-avances">
+                            Reporte de avances
+                        </button>
+                    @endif
+                </div>
+
+                {{-- Tarjetas de Indicadores --}}
+                <div class="flex gap-2">
+                    <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-blue-600 font-bold uppercase">Total</span>
+                        <span id="countTotal" class="text-lg font-bold text-blue-700">0</span>
+                    </div>
+                    <div class="bg-green-50 px-3 py-2 rounded-lg border border-green-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-green-600 font-bold uppercase">Vigentes</span>
+                        <span id="countVigentes" class="text-lg font-bold text-green-700">0</span>
+                    </div>
+                    <div class="bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-center min-w-[90px]">
+                        <span class="block text-[9px] text-red-600 font-bold uppercase">Cesados</span>
+                        <span id="countCesados" class="text-lg font-bold text-red-700">0</span>
+                    </div>
+                </div>
             </div>
-            
         </div>
 
         <div class="px-5 pt-4 pb-2 space-y-3">
 
-            {{-- Búsqueda + Sucursal --}}
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <input
-                    type="text"
-                    id="buscarPersonal"
-                    placeholder="Buscar..."
-                    autocomplete="off"
-                    class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
-                           focus:outline-none focus:border-blue-500 transition-colors"
-                />
-                <div class="flex items-center gap-2">
-                    <label for="sucursal" class="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        Sucursal
-                    </label>
-                    <select id="sucursal" class="form-select text-sm">
-                        <option disabled selected>— Seleccionar —</option>
-                        @foreach ($sucursales as $sucursal)
-                            <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            {{-- Caja unificada de Filtros (Estilo Actualizar DJ) --}}
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <div class="flex flex-wrap items-center gap-5">
+                    
+                    {{-- Búsqueda --}}
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="buscarPersonal"
+                            placeholder="Buscar por nombre o DNI..."
+                            autocomplete="off"
+                            class="w-48 px-4 py-1.5 border border-gray-300 rounded-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm uppercase" 
+                            style="min-width: 250px;"
+                        />
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <label for="filtroDJ" class="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        DJ actualizada
-                    </label>
-                    <select id="filtroDJ" class="form-select text-sm" name="filtroDJ">
-                        <option value="TODOS" selected>Todos</option>
-                        <option value="SI">Sí</option>
-                        <option value="NO">No</option>
-                    </select>
-                </div>
-            </div>
+                    {{-- Sucursal --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="sucursal" class="text-sm font-medium text-gray-700 whitespace-nowrap">Sucursal:</label>
+                        <select id="sucursal" class="form-select text-sm w-36 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option disabled selected>— Seleccionar —</option>
+                            @foreach ($sucursales as $sucursal)
+                                <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-            {{-- Filtros: Tipo de personal + Vigencia en una sola fila --}}
-            <div class="flex flex-wrap items-center gap-x-6 gap-y-2 py-1">
+                    {{-- Tipo --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="tipo_per" class="text-sm font-medium text-gray-700 whitespace-nowrap">Tipo:</label>
+                        <select id="tipo_per" name="tipo_per" class="form-select text-sm w-48 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            @if ($tipoPerLimitar != 1 && $tipoPerLimitar != 2 && $tipoPerLimitar != 3 && $tipoPerLimitar == 0)
+                                <option value="TODOS" selected>Todos</option>
+                            @endif
 
-                {{-- Tipo de personal --}}
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</span>
+                            @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
+                                <option value="ADMIN_4">Administrativo 4°</option>
+                                <option value="ADMIN_5">Administrativo 5°</option>
+                            @endif
 
-                    @if ($tipoPerLimitar != 1 && $tipoPerLimitar != 2 && $tipoPerLimitar != 3 && $tipoPerLimitar == 0)
-                          <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioTodos" name="tipo_per" value="TODOS" checked>
-                        <span class="text-sm">Todos</span>
-                    </label>
-                    @endif
-                  
+                            @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
+                                <option value="OPER_4">Operativo 4°</option>
+                                <option value="OPER_5">Operativo 5°</option>
+                            @endif
 
-                    @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 1)
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" class="form-radio text-primary" id="radioAdmin" name="tipo_per" value="ADMIN">
-                            <span class="text-sm">Administrativo</span>
-                        </label>
-                    @endif
+                            @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 3)
+                                <option value="ESPECIAL">Especiales</option>
+                            @endif
+                        </select>
+                    </div>
 
-                    @if ($tipoPerLimitar == 0 || $tipoPerLimitar == 2)
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" class="form-radio text-primary" id="radioOper" name="tipo_per" value="OPER" checked>
-                            <span class="text-sm">Operativo</span>
-                        </label>
-                    @endif
+                    {{-- DJ Actualizada (Estado) - OCULTO --}}
+                    <div class="hidden items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="filtroDJ" class="text-sm font-medium text-gray-700 whitespace-nowrap">DJ Actualizada:</label>
+                        <select id="filtroDJ" name="filtroDJ" class="form-select text-sm w-32 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option value="TODOS" selected>Todos</option>
+                            <option value="SI">Sí</option>
+                            <option value="NO">No</option>
+                        </select>
+                    </div>
 
-                    @if (/*$tipoPerLimitar == 0 ||*/ $tipoPerLimitar == 3 )
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" class="form-radio text-primary" id="radioEsp" name="tipo_per" value="ESPECIAL">
-                            <span class="text-sm">Especial</span>
-                        </label>
-                    @endif
-                </div>
-                 <br>
-                {{-- Separador vertical --}}
-                <div class="hidden sm:block w-px h-5 bg-gray-200"></div>
-                <br>
-                {{-- Vigencia --}}
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Vigencia</span>
-
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioTodosV" name="vigencia" value="" checked>
-                        <span class="text-sm">Todos</span>
-                    </label>
-
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radiooSi" name="vigencia" value="SI">
-                        <span class="text-sm">Sí</span>
-                    </label>
-
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" class="form-radio text-primary" id="radioNo" name="vigencia" value="NO">
-                        <span class="text-sm">No</span>
-                    </label>
+                    {{-- Vigencia --}}
+                    <div class="flex items-center gap-2 border-l-2 border-gray-200 pl-4">
+                        <label for="filtroVigencia" class="text-sm font-medium text-gray-700 whitespace-nowrap">Vigencia:</label>
+                        <select id="filtroVigencia" name="vigencia" class="form-select text-sm w-28 pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg focus:ring-primary">
+                            <option value="" selected>Todos</option>
+                            <option value="SI">Sí</option>
+                            <option value="NO">No</option>
+                        </select>
+                    </div>
+                    
                 </div>
             </div>
-        </div>
-
         {{-- Tabla de personas --}}
         <div class="px-5 pb-5">
             <div id="tblPersonas" class="w-full"></div>
@@ -147,66 +141,100 @@
         </div>
     </div>
 
-    {{-- ── CARD: Folios del personal ────────────────────────────────────── --}}
-    <div id="dataDocs" class="card hidden">
-        <div class="card-header flex items-center justify-between">
-            <h4 class="card-title nombrePersDocs">Folios de</h4>
-            <div class="flex items-center gap-4">
-                <label class="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" class="form-radio text-primary" id="radioPrin" name="tipo_folio" value="PRINCIPAL" checked>
-                    <span class="text-sm">Principal</span>
-                </label>
-                <label class="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" class="form-radio text-primary" id="radioAux" name="tipo_folio" value="ADICIONAL">
-                    <span class="text-sm">Adicional</span>
-                </label>
-            </div>
-        </div>
+    {{-- ── Trigger oculto: Modal Folios ────────────────────────────── --}}
+    <button type="button" class="hidden" id="btn-modal-folios" data-hs-overlay="#modal-folios-personal"></button>
 
-        <div class="px-5 py-4 space-y-3">
-            <input
-                type="text"
-                id="buscarFolio"
-                placeholder="Buscar..."
-                autocomplete="off"
-                class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
-                       focus:outline-none focus:border-blue-500 transition-colors"
-            />
-            <div id="tblDocs" class="w-full"></div>
-        </div>
-    </div>
+    {{-- ── MODAL: Folios del personal ────────────────────────────────────── --}}
+    <div id="modal-folios-personal"
+         class="hs-overlay hidden fixed inset-0 z-60 overflow-y-auto transition-all duration-500 pointer-events-none">
+        <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100
+                    translate-y-10 opacity-0 ease-in-out transition-all duration-500
+                    max-w-6xl w-full my-8 mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto
+                    border border-gray-200">
 
-    {{-- ── CARD: Legajos del personal ───────────────────────────────────── --}}
-    <div id="dataDocsLeg" class="card hidden">
-        <div class="card-header">
-            <h4 class="card-title nombrePersLeg">Legajos para</h4>
-        </div>
-
-        <div class="px-5 py-4 space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                    <select id="clientes" class="form-select w-full">
-                        <option disabled selected>— Seleccionar —</option>
-                        @foreach ($clientes as $cliente)
-                            <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                    <select id="cargos" class="form-select w-full">
-                        <option disabled selected>— Seleccionar —</option>
-                    </select>
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900 nombrePersDocs">Folios de</h3>
+                
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-4 border-r pr-4 border-gray-200">
+                        <label for="selectTipoFolio" class="text-sm font-medium text-gray-700 whitespace-nowrap">Prioridad:</label>
+                        <select id="selectTipoFolio" class="form-select text-sm py-1.5 w-36 border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500 cursor-pointer">
+                            <option value="TODOS">Todos</option>
+                            <option value="PRINCIPAL" selected>Principal</option>
+                            <option value="ADICIONAL">Adicional</option>
+                        </select>
+                    </div>
+                    <button type="button" id="btn-modal-folios-close"
+                            class="text-gray-500 hover:text-gray-700 transition-colors"
+                            data-hs-overlay="#modal-folios-personal">
+                        <i class="i-tabler-x text-xl"></i>
+                    </button>
                 </div>
             </div>
 
-            <input type="hidden" name="codPersonal" id="codPersonal">
-            <div id="tblDocsLegajo" class="w-full hidden"></div>
+            {{-- Body --}}
+            <div class="px-5 py-4 space-y-3">
+                <input
+                    type="text"
+                    id="buscarFolio"
+                    placeholder="Buscar..."
+                    autocomplete="off"
+                    class="w-40 px-3 py-1.5 text-sm uppercase border border-gray-300 rounded-full
+                           focus:outline-none focus:border-blue-500 transition-colors"
+                />
+                {{-- Contenedor de la tabla --}}
+                <div id="tblDocs" class="w-full"></div>
+            </div>
         </div>
     </div>
 
-</div>
+    {{-- ── Trigger oculto: Modal Legajos ────────────────────────────── --}}
+    <button type="button" class="hidden" id="btn-modal-legajos" data-hs-overlay="#modal-legajos-personal"></button>
+
+    {{-- ── MODAL: Legajos del personal ───────────────────────────────────── --}}
+    <div id="modal-legajos-personal"
+         class="hs-overlay hidden fixed inset-0 z-60 overflow-y-auto transition-all duration-500 pointer-events-none">
+        <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100
+                    translate-y-10 opacity-0 ease-in-out transition-all duration-500
+                    max-w-6xl w-full my-8 mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto
+                    border border-gray-200">
+
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900 nombrePersLeg">Legajos para</h3>
+                <button type="button" id="btn-modal-legajos-close"
+                        class="text-gray-500 hover:text-gray-700 transition-colors"
+                        data-hs-overlay="#modal-legajos-personal">
+                    <i class="i-tabler-x text-xl"></i>
+                </button>
+            </div>
+
+            {{-- Body --}}
+            <div class="px-5 py-4 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                        <select id="clientes" class="form-select w-full">
+                            <option disabled selected>— Seleccionar —</option>
+                            @foreach ($clientes as $cliente)
+                                <option value="{{ $cliente->codigo }}">{{ $cliente->abreviatura }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                        <select id="cargos" class="form-select w-full">
+                            <option disabled selected>— Seleccionar —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <input type="hidden" name="codPersonal" id="codPersonal">
+                <div id="tblDocsLegajo" class="w-full hidden"></div>
+            </div>
+        </div>
+    </div>
 
 
 {{-- =====================================================================
@@ -229,7 +257,7 @@
             <h3 class="text-base font-medium text-gray-900 modal-title">Visor de documento</h3>
             <button type="button" id="btn-modal-view-docs-close"
                     class="text-gray-500 hover:text-gray-700 transition-colors"
-                    data-hs-overlay="#modal-view-docs">
+                    onclick="window.HSOverlay.close(document.getElementById('modal-view-docs')); setTimeout(() => { if(window.parentModalToReopen) window.HSOverlay.open(document.getElementById(window.parentModalToReopen)); }, 400);">
                 <i class="i-tabler-x text-lg"></i>
             </button>
         </div>
@@ -259,7 +287,7 @@
             <h3 class="text-base font-medium text-gray-900 modal-title">Cargar documento</h3>
             <button type="button" id="btn-modal-docs-close"
                     class="text-gray-500 hover:text-gray-700 transition-colors"
-                    data-hs-overlay="#modal-file">
+                    onclick="window.HSOverlay.close(document.getElementById('modal-file')); setTimeout(() => { if(window.parentModalToReopen) window.HSOverlay.open(document.getElementById(window.parentModalToReopen)); }, 400);">
                 <i class="i-tabler-x text-lg"></i>
             </button>
         </div>
@@ -331,7 +359,7 @@
                     <i class="i-tabler-check me-1"></i> Guardar
                 </button>
                 <button type="button" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        data-hs-overlay="#modal-file">
+                        onclick="window.HSOverlay.close(document.getElementById('modal-file')); setTimeout(() => { if(window.parentModalToReopen) window.HSOverlay.open(document.getElementById(window.parentModalToReopen)); }, 400);">
                     <i class="i-tabler-x me-1"></i> Cerrar
                 </button>
             </div>

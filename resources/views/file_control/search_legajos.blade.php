@@ -17,14 +17,15 @@
 
   <div class="w-full">
       <div class="flex flex-row items-center justify-center gap-2">
-          <button type="button" class="btn bg-primary text-white" id="btnTodos">Mostrar Todos</button>
+          <button type="button" class="hidden btn bg-primary text-white" id="btnTodos">Mostrar Todos</button>
       </div>
   </div>
 
-  <div class="grid lg:grid-cols-5 gap-6 mt-8">
+  <!-- Cambiamos a 12 columnas totales -->
+  <div class="grid lg:grid-cols-3 gap-6 mt-8">
 
       {{-- ── COLUMNA IZQUIERDA ── --}}
-      <div class="lg:col-span-2 flex flex-col gap-6">
+      <div class="lg:col-span-1 flex flex-col gap-6">
 
           {{-- CLIENTE --}}
           <div class="card">
@@ -55,7 +56,7 @@
       </div>
 
       {{-- ── COLUMNA DERECHA ── --}}
-      <div class="lg:col-span-3 flex flex-col gap-6">
+      <div class="lg:col-span-2 flex flex-col gap-6">
 
           <div class="card overflow-hidden">
               <div class="card-header flex gap-6">
@@ -63,9 +64,29 @@
                   <span class="text-primary font-semibold text-lg" id="txtTextoilus"></span>
               </div>
               <div class="px-5 py-2 mt-3">
-                  <input type="text" id="buscar" placeholder="Buscar..."
-                      class="w-40 px-3 py-1 border border-gray-300 rounded-full text-sm
-                             focus:outline-none focus:border-blue-500 transition-all" />
+                  <!-- Contenedor flex para alinear input y selects horizontalmente -->
+                  <div class="flex flex-wrap items-center gap-3">
+                      <input type="text" id="buscar" placeholder="Buscar..."
+                          class="w-40 px-3 py-1 border border-gray-300 rounded-full text-sm
+                                 focus:outline-none focus:border-blue-500 transition-all" />
+                      
+                      <select id="filtroSucursal" class="pl-4 pr-10 py-1 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
+                          <option value="">Todas las Sucursales</option>
+                      </select>
+
+                      <select id="filtroCliente" class="pl-4 pr-10 py-1 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
+                          <option value="">Todos los Clientes</option>
+                      </select>
+
+                      <select id="filtroTipoPersonal" class="pl-4 pr-10 py-1 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
+                          <option value="">Todos los Tipos</option>
+                      </select>
+
+                      <select id="filtroCargo" class="pl-4 pr-10 py-1 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-500 transition-all cursor-pointer">
+                          <option value="">Todos los Cargos</option>
+                      </select>
+                  </div>
+
                   <div id="tblPersonas" class="w-full mt-5"></div>
               </div>
           </div>

@@ -2,8 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Events\MatriculaMasivaProgreso;
-use App\Events\MatriculaMasivaFinalizada;
+use App\Mail\MatriculaMasivaResumenMail;
 use App\Models\Matricula;
 use App\Models\Personal;
 use App\Models\Cursos;
@@ -15,6 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class MatriculaMasivaJob implements ShouldQueue
@@ -30,6 +30,7 @@ class MatriculaMasivaJob implements ShouldQueue
     protected string|int|null $sucursalId;
     protected int    $cursoCodigo;
     protected int    $usuarioId;
+    protected bool   $notificarEmail;
 
     private function __construct(
         string           $modo,
@@ -37,7 +38,8 @@ class MatriculaMasivaJob implements ShouldQueue
         string           $programacionCodigo,
         int              $usuarioId,
         string|int|null  $sucursalId = null,
-        array            $personalIds = []
+        array            $personalIds = [],
+        bool             $notificarEmail = false
     ) {
         $this->modo               = $modo;
         $this->cursoCodigo        = $cursoCodigo;
@@ -45,6 +47,7 @@ class MatriculaMasivaJob implements ShouldQueue
         $this->usuarioId          = $usuarioId;
         $this->sucursalId         = $sucursalId;
         $this->personalIds        = $personalIds;
+        $this->notificarEmail     = $notificarEmail;
     }
 
     public static function estandar(
@@ -52,7 +55,8 @@ class MatriculaMasivaJob implements ShouldQueue
         string           $programacionCodigo,
         array            $personalIds,
         int              $usuarioId,
-        string|int|null  $sucursalId = null
+        string|int|null  $sucursalId = null,
+        bool             $notificarEmail = false
     ): static {
         return new static(
             self::MODO_ESTANDAR,
@@ -60,7 +64,8 @@ class MatriculaMasivaJob implements ShouldQueue
             $programacionCodigo,
             $usuarioId,
             $sucursalId,
-            $personalIds
+            $personalIds,
+            $notificarEmail
         );
     }
 
@@ -68,14 +73,17 @@ class MatriculaMasivaJob implements ShouldQueue
         int              $cursoCodigo,
         string           $programacionCodigo,
         int              $usuarioId,
-        string|int|null  $sucursalId = null
+        string|int|null  $sucursalId = null,
+        bool             $notificarEmail = false
     ): static {
         return new static(
             self::MODO_POR_TIPO_CURSO,
             $cursoCodigo,
             $programacionCodigo,
             $usuarioId,
-            $sucursalId
+            $sucursalId,
+            [],
+            $notificarEmail
         );
     }
 
@@ -97,22 +105,83 @@ class MatriculaMasivaJob implements ShouldQueue
 
         $jobId = $this->cursoCodigo . '_' . $this->programacionCodigo;
 
-        $resumen = match ($this->modo) {
-            self::MODO_ESTANDAR =>
-            $this->ejecutarEstandar($curso, $prog),
+        try {
+            DB::table('matricula_masiva_jobs')->updateOrInsert(
+                ['job_id' => $jobId],
+                [
+                    'curso_codigo'   => (string) $this->cursoCodigo,
+                    'programacion'   => (string) $this->programacionCodigo,
+                    'usuario_id'     => $this->usuarioId,
+                    'curso_nombre'   => $curso->nombre,
+                    'estado'         => 'procesando',
+                    'notificar_email' => $this->notificarEmail,
+                    'updated_at'     => now(),
+                    'created_at'     => now(),
+                ]
+            );
+        } catch (\Exception $e) {
+            Log::warning("MatriculaMasivaJob: no se pudo registrar el seguimiento.", ['error' => $e->getMessage()]);
+        }
 
-            self::MODO_POR_TIPO_CURSO =>
-            $this->ejecutarPorTipoCurso($curso, $prog),
-        };
+        try {
+            $resumen = match ($this->modo) {
+                self::MODO_ESTANDAR =>
+                $this->ejecutarEstandar($curso, $prog),
 
-        event(new MatriculaMasivaFinalizada(
-            usuarioId: $this->usuarioId,
-            jobId: $jobId,
-            curso: $curso->nombre,
-            total: $resumen['total'],
-            enviados: $resumen['enviados'],
-            fallidos: $resumen['fallidos'],
-        ));
+                self::MODO_POR_TIPO_CURSO =>
+                $this->ejecutarPorTipoCurso($curso, $prog),
+            };
+        } catch (\Exception $e) {
+            $this->marcarSeguimiento($jobId, ['estado' => 'fallido', 'error' => substr($e->getMessage(), 0, 1000)]);
+            throw $e;
+        }
+
+        $this->marcarSeguimiento($jobId, [
+            'estado'     => 'finalizado',
+            'total'      => $resumen['total'],
+            'procesados' => $resumen['total'],
+            'enviados'   => $resumen['enviados'],
+            'fallidos'   => $resumen['fallidos'],
+        ]);
+
+        if ($this->notificarEmail && $resumen['total'] > 10) {
+            $this->notificarCoordinador($curso->nombre, $resumen);
+        }
+    }
+
+    private function marcarSeguimiento(string $jobId, array $datos): void
+    {
+        try {
+            $datos['updated_at'] = now();
+            DB::table('matricula_masiva_jobs')->where('job_id', $jobId)->update($datos);
+        } catch (\Exception $e) {
+            Log::warning("MatriculaMasivaJob: no se pudo actualizar el seguimiento.", ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function notificarCoordinador(string $nombreCurso, array $resumen): void
+    {
+        $destino = config('capacitacion.coord_email');
+
+        if (empty($destino) || !filter_var($destino, FILTER_VALIDATE_EMAIL)) {
+            Log::warning("MatriculaMasivaJob: CAPA_COORD_EMAIL no configurado o inválido, no se envía aviso.", [
+                'curso' => $nombreCurso,
+            ]);
+            return;
+        }
+
+        try {
+            Mail::to($destino)->queue(new MatriculaMasivaResumenMail(
+                nombreCurso: $nombreCurso,
+                programacion: (string) $this->programacionCodigo,
+                total: (int) $resumen['total'],
+                enviados: (int) $resumen['enviados'],
+                fallidos: (int) $resumen['fallidos'],
+                origen: $this->modo === self::MODO_POR_TIPO_CURSO ? 'apertura automática' : 'gestión de matrícula',
+            ));
+        } catch (\Exception $e) {
+            Log::error("MatriculaMasivaJob: no se pudo encolar el aviso al coordinador.", ['error' => $e->getMessage()]);
+        }
     }
 
     private function ejecutarEstandar(Cursos $curso, CursoProgramacion $prog): array
@@ -215,8 +284,13 @@ class MatriculaMasivaJob implements ShouldQueue
 
         $dirigidoToTipos = [
             '1' => [null],          // todos -> llama al SP sin filtrar
-            '2' => ['02', '05'],    // administrativo
-            '3' => ['01', '03'],    // operativo
+            '7' => ['02', '05'],    // Personal Administrativo (Todos)
+            '8' => ['02'],          // Personal Administrativo (4°)
+            '9' => ['05'],          // Personal Administrativo (5°)
+            '10' => ['01', '03'],   // Personal Operativo (Todos)
+            '11' => ['01'],         // Personal Operativo (4°)
+            '12' => ['03'],         // Personal Operativo (5°)
+            '0' => [],              // Otros -> matrícula manual (sin auto-matricular)
         ];
 
         $tipos = $dirigidoToTipos[$dirigido] ?? null;
@@ -278,8 +352,6 @@ class MatriculaMasivaJob implements ShouldQueue
         $matriculados     = [];
 
         $jobId            = $this->cursoCodigo . '_' . $this->programacionCodigo;
-        $intervalo        = max(1, (int) round($totalPersonas * 0.01));
-        $ultimoPorcentaje = -1;
 
         try {
             foreach (array_chunk($personalIds, 100) as $chunk) {
@@ -294,28 +366,12 @@ class MatriculaMasivaJob implements ShouldQueue
                     if ($enviados > $antes) {
                         $matriculados[] = $codPersonal;
                     }
-
-                    $debeEmitir = $procesados <= 5
-                        || $procesados % $intervalo === 0
-                        || $procesados === $totalPersonas;
-
-                    if ($debeEmitir) {
-                        $porcentaje = round(($procesados / $totalPersonas) * 100);
-
-                        if ($porcentaje !== $ultimoPorcentaje) {
-                            $ultimoPorcentaje = $porcentaje;
-
-                            event(new MatriculaMasivaProgreso(
-                                usuarioId: $this->usuarioId,
-                                jobId: $jobId,
-                                curso: $curso->nombre,
-                                procesados: $procesados,
-                                total: $totalPersonas,
-                                porcentaje: $porcentaje,
-                            ));
-                        }
-                    }
                 }
+
+                $this->marcarSeguimiento($jobId, [
+                    'total'      => $totalPersonas,
+                    'procesados' => $procesados,
+                ]);
             }
 
             // foreach (array_chunk($matriculados, 50) as $chunkCorreos) {

@@ -1,4 +1,4 @@
-@include('layouts.shared/main')
+﻿@include('layouts.shared/main')
 
 <head>
     @include('layouts.shared/title-meta', ['title' => $title])
@@ -27,6 +27,9 @@
 
     </div>
 
+<!-- Contenedor Popups Superior Derecho (SIP Demandas) SIN BLOQUEO TEMPORAL -->
+    <div id="demandas-toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;">
+    </div>
 
     <!-- Popup notificación folios por vencer -->
     <div id="folio-toast"
@@ -47,139 +50,23 @@
         ">
     </div>
 
-    @auth
-    <div x-data="matriculaNotificacion({{ auth()->id() }})">
-        <template x-for="(n, index) in notificaciones" :key="n._id">
-            <div class="fixed right-4 w-80 bg-white dark:bg-slate-800 border border-default-200 dark:border-slate-700 shadow-2xl rounded-2xl overflow-hidden animate-slide-up"
-                :style="'z-index: ' + (50 + index) + '; bottom: ' + (16 + index * 210) + 'px'">
 
-                {{-- Franja superior de color --}}
-                <div class="h-1.5 w-full"
-                    :class="!n.finalizado
-                    ? 'bg-gradient-to-r from-blue-400 to-blue-500'
-                    : n.fallidos > 0
-                        ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-                        : 'bg-gradient-to-r from-emerald-400 to-green-500'">
-                </div>
+    @include('layouts.shared.footer-scripts')
 
-                <div class="p-5">
-                    {{-- Cabecera --}}
-                    <div class="flex items-start gap-3 mb-4">
-                        <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-sm"
-                            :class="!n.finalizado
-                            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-700/50'
-                            : n.fallidos > 0
-                                ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 ring-1 ring-amber-200 dark:ring-amber-700/50'
-                                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-700/50'">
-                            <template x-if="!n.finalizado">
-                                <i class="i-ph-spinner-gap text-xl animate-spin"></i>
-                            </template>
-                            <template x-if="n.finalizado && n.fallidos > 0">
-                                <i class="i-ph-warning-circle text-xl"></i>
-                            </template>
-                            <template x-if="n.finalizado && !n.fallidos">
-                                <i class="i-ph-check-circle text-xl"></i>
-                            </template>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate" x-text="n.curso"></p>
-                            <p class="text-xs mt-0.5 font-medium"
-                                :class="!n.finalizado
-                                ? 'text-blue-600 dark:text-blue-400'
-                                : n.fallidos > 0
-                                    ? 'text-amber-600 dark:text-amber-400'
-                                    : 'text-emerald-600 dark:text-emerald-400'">
-                                <template x-if="!n.finalizado">
-                                    <span>Matriculando personas...</span>
-                                </template>
-                                <template x-if="n.finalizado && n.fallidos > 0">
-                                    <span>Procesado con errores</span>
-                                </template>
-                                <template x-if="n.finalizado && !n.fallidos">
-                                    <span>Completado exitosamente</span>
-                                </template>
-                            </p>
-                        </div>
-                        <template x-if="n.finalizado">
-                            <button @click="cerrar(n._id)" class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
-                                <i class="i-ph-x text-sm"></i>
-                            </button>
-                        </template>
-                    </div>
-
-                    {{-- Barra de progreso --}}
-                    <div class="mb-4">
-                        <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                            <span class="font-medium" x-text="n.finalizado ? 'Efectividad' : 'Progreso'"></span>
-                            <span class="font-semibold" x-text="n.finalizado
-                            ? Math.round((n.enviados / n.total) * 100) + '%'
-                            : n.porcentaje + '%'">
-                            </span>
-                        </div>
-                        <div class="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-500 ease-out"
-                                :style="'width: ' + (n.finalizado ? (n.enviados / n.total) * 100 : n.porcentaje) + '%'"
-                                :class="!n.finalizado
-                                ? 'bg-gradient-to-r from-blue-400 to-blue-500'
-                                : n.fallidos > 0
-                                    ? 'bg-gradient-to-r from-amber-400 to-amber-500'
-                                    : 'bg-gradient-to-r from-emerald-400 to-emerald-500'">
-                            </div>
-                        </div>
-                        {{-- Contador de personas --}}
-                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1 text-right">
-                            <span x-text="n.procesados"></span> / <span x-text="n.total"></span> personas
-                        </p>
-                    </div>
-
-                    {{-- Stats (solo al finalizar) --}}
-                    <template x-if="n.finalizado">
-                        <div>
-                            <div class="grid grid-cols-3 gap-2 mb-4">
-                                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 text-center">
-                                    <p class="text-lg font-bold text-gray-900 dark:text-gray-100" x-text="n.enviados"></p>
-                                    <p class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">Enviados</p>
-                                </div>
-                                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 text-center">
-                                    <p class="text-lg font-bold text-gray-900 dark:text-gray-100" x-text="n.total"></p>
-                                    <p class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">Total</p>
-                                </div>
-                                <div class="rounded-xl p-3 text-center"
-                                    :class="n.fallidos > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-slate-700/50'">
-                                    <p class="text-lg font-bold"
-                                        :class="n.fallidos > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'"
-                                        x-text="n.fallidos || '0'">
-                                    </p>
-                                    <p class="text-[10px] font-semibold uppercase tracking-wider mt-0.5"
-                                        :class="n.fallidos > 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'">
-                                        Fallidos
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button @click="cerrar(n._id)"
-                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 shadow-sm"
-                                :class="n.fallidos > 0
-                                ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700'
-                                : 'bg-gradient-to-r from-primary to-primary-600 hover:from-primary-600 hover:to-primary-700'">
-                                <i class="i-ph-check text-sm"></i>
-                                ENTENDIDO
-                            </button>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </template>
-    </div>
-    @endauth
-
-    @include('layouts.shared/footer-scripts')
+    @php
+        // Pop-ups de notificaciones: solo se muestran UNA VEZ por login.
+        // La primera renderización consume el flag; al navegar entre vistas ya no aparecen.
+        $notifPopupsAutoshow = !session('notif_popups_ya_mostrados');
+        if ($notifPopupsAutoshow) {
+            session(['notif_popups_ya_mostrados' => true]);
+        }
+    @endphp
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
 
-            // 🔹 Evita que se muestre más de una vez por sesión
-            if (sessionStorage.getItem("folioToastShown")) {
+            // 🔹 Solo una vez por login (y sin repetir en el mismo navegador)
+            if (!@json($notifPopupsAutoshow) || sessionStorage.getItem("folioToastShown")) {
                 return;
             }
 
@@ -221,107 +108,138 @@
         });
     </script>
 
-    <script>
-        function matriculaNotificacion(usuarioId) {
-            return {
-                notificaciones: [],
-                idCounter: 0,
-                storageKey: 'matricula_notificacion_' + usuarioId,
+<script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let notificacionesMostradas = new Set();
+            // Pop-ups solo una vez por login: el primer check los muestra;
+            // los checks siguientes (cada 5s) solo actualizan la campanita.
+            let popupsActivos = @json($notifPopupsAutoshow);
 
-                init() {
-                    const stored = localStorage.getItem(this.storageKey);
-                    if (stored) {
-                        try {
-                            const parsed = JSON.parse(stored);
-                            let items = Array.isArray(parsed) ? parsed : [parsed];
-                            items = items.map((item, i) => {
-                                item._id = i + 1;
-                                return item;
+            function checkDemandasAdmin() {
+                fetch("{{ url('/api/notificaciones/demandas-admin') }}")
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.data.length > 0) {
+                            const container = document.getElementById("demandas-toast-container");
+                            const notifList = document.getElementById("notif-list");
+                            const badge = document.getElementById("notif-count");
+                            
+                            if (notifList && notifList.innerHTML.includes('Â¡Todo al día!')) {
+                                notifList.innerHTML = '';
+                            }
+
+                            result.data.forEach(demanda => {
+                                // --- 1. POP-UP SUPERIOR DERECHA ---
+                                if (popupsActivos && !notificacionesMostradas.has(demanda.id)) {
+                                    notificacionesMostradas.add(demanda.id);
+
+                                    const toast = document.createElement("div");
+                                    toast.id = `demanda-toast-${demanda.id}`;
+                                    toast.style.cssText = "background: white; border-left: 5px solid #3b82f6; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 320px; position: relative; opacity: 0; transform: translateX(100%); transition: all 0.4s ease;";
+                                    
+                                    toast.innerHTML = `
+                                        <button onclick="cerrarToastSip('${demanda.id}')" style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #9ca3af; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
+                                            <i class="bx bx-x"></i>
+                                        </button>
+                                        <div style="font-weight:600; margin-bottom:5px; color: #1e3a8a; padding-right: 15px;">
+                                            <i class="bx bx-info-circle"></i> DJ Registrada por SIP
+                                        </div>
+                                        <div style="font-size:13px; color: #4b5563; line-height: 1.4;">
+                                            El personal <b>${demanda.personal}</b> ha registrado su DJ por demanda.
+                                        </div>
+                                    `;
+
+                                    if(container) {
+                                        container.appendChild(toast);
+                                        setTimeout(() => {
+                                            toast.style.opacity = "1";
+                                            toast.style.transform = "translateX(0)";
+                                        }, 100);
+                                    }
+                                }
+
+                                // --- 2. CAMPANITA INTERNA ---
+                                if (notifList && !document.getElementById(`campana-demanda-${demanda.id}`)) {
+                                    const itemCampana = document.createElement("div");
+                                    itemCampana.id = `campana-demanda-${demanda.id}`;
+                                    itemCampana.className = "flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors border-b border-gray-100";
+                                    itemCampana.innerHTML = `
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                                                <i class="bx bx-info-circle text-lg"></i>
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm font-bold text-gray-700">DJ por SIP</span>
+                                                <span class="text-[11px] text-gray-500"><b>${demanda.personal}</b> Actualizó DJ (Demanda)</span>
+                                            </div>
+                                        </div>
+                                        <button onclick="event.stopPropagation(); borrarDemandaSip('${demanda.id}')" class="text-gray-400 hover:text-red-500 px-2" title="Descartar">
+                                            <i class="bx bx-x text-lg"></i>
+                                        </button>
+                                    `;
+                                    notifList.prepend(itemCampana); 
+                                    
+                                    if(badge) {
+                                        let currentCount = parseInt(badge.textContent) || 0;
+                                        badge.textContent = currentCount + 1;
+                                        badge.classList.remove('hidden');
+                                    }
+                                }
                             });
-                            this.notificaciones = items;
-                            this.idCounter = this.notificaciones.length;
-                        } catch (e) {
-                            localStorage.removeItem(this.storageKey);
                         }
-                    }
 
-                    window.Echo.private(`usuario.${usuarioId}`)
-                        .listen('.matricula.progreso', (data) => {
-                            this.actualizarProgreso(data);
-                        })
-                        .listen('.matricula.finalizada', (data) => {
-                            this.finalizar(data);
-                        });
-                },
-
-                actualizarProgreso(data) {
-                    const existe = this.notificaciones.find(n => n.jobId === data.jobId);
-
-                    if (existe) {
-                        existe.porcentaje = data.porcentaje;
-                        existe.procesados = data.procesados;
-                    } else {
-                        this.notificaciones.push({
-                            _id: ++this.idCounter,
-                            jobId: data.jobId,
-                            curso: data.curso,
-                            procesados: data.procesados,
-                            total: data.total,
-                            porcentaje: data.porcentaje,
-                            finalizado: false,
-                            enviados: 0,
-                            fallidos: 0,
-                        });
-                    }
-
-                    this.guardar();
-                },
-
-                finalizar(data) {
-                    const existe = this.notificaciones.find(n => n.jobId === data.jobId);
-
-                    if (existe) {
-                        existe.porcentaje = 100;
-                        existe.procesados = data.total;
-                        existe.enviados = data.enviados;
-                        existe.fallidos = data.fallidos;
-                        existe.finalizado = true;
-                    } else {
-                        this.notificaciones.push({
-                            _id: ++this.idCounter,
-                            jobId: data.jobId,
-                            curso: data.curso,
-                            procesados: data.total,
-                            total: data.total,
-                            porcentaje: 100,
-                            finalizado: true,
-                            enviados: data.enviados,
-                            fallidos: data.fallidos,
-                        });
-                    }
-
-                    this.guardar();
-                },
-
-                cerrar(id) {
-                    this.notificaciones = this.notificaciones.filter(n => n._id !== id);
-                    if (this.notificaciones.length === 0) {
-                        localStorage.removeItem(this.storageKey);
-                    } else {
-                        this.guardar();
-                    }
-                },
-
-                guardar() {
-                    const paraGuardar = this.notificaciones.map(({
-                        _id,
-                        ...resto
-                    }) => resto);
-                    localStorage.setItem(this.storageKey, JSON.stringify(paraGuardar));
-                }
+                        // Después del primer check ya no se muestran más pop-ups
+                        popupsActivos = false;
+                    })
+                    .catch(error => console.error('Error revisando demandas del SIP:', error));
             }
-        }
+
+            // Función para ELIMINAR definitivamente de la base de datos (Desde la Campanita)
+            window.borrarDemandaSip = function(id) {
+                fetch("{{ url('/api/notificaciones/demandas-admin/borrar') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ id: id })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        const toast = document.getElementById(`demanda-toast-${id}`);
+                        if (toast) {
+                            toast.style.opacity = "0";
+                            toast.style.transform = "translateX(100%)";
+                            setTimeout(() => toast.remove(), 400);
+                        }
+                        
+                        const itemCampana = document.getElementById(`campana-demanda-${id}`);
+                        if (itemCampana) {
+                            itemCampana.remove();
+                            const badge = document.getElementById("notif-count");
+                            if(badge) {
+                                let currentCount = parseInt(badge.textContent) || 0;
+                                if (currentCount > 0) badge.textContent = currentCount - 1;
+                            }
+                        }
+                        notificacionesMostradas.delete(id);
+                    }
+                })
+                .catch(err => console.error('Error al borrar la notificación', err));
+            };
+
+            // Función para CERRAR el pop-up: descarta la notificación definitivamente
+            // (se elimina de la BD y ya no vuelve a aparecer en ningún login)
+            window.cerrarToastSip = function(id) {
+                window.borrarDemandaSip(id);
+            };
+
+            setInterval(checkDemandasAdmin, 5000); 
+            checkDemandasAdmin();
+        });
     </script>
+
 
     @yield('script')
 

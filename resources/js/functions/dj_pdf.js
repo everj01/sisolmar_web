@@ -8,6 +8,17 @@ import Swal from 'sweetalert2';
 const API_URL_PDF = `${VITE_URL_APP}/api`;
 const FONT_FAMILY = "helvetica";
 
+async function fetchBiometrico(codiPers) {
+    if (!codiPers) return {};
+    try {
+        const resp = await axios.get(`${API_URL_PDF}/get-biometrico/${codiPers}`, { timeout: 8000 });
+        return resp.data || {};
+    } catch (e) {
+        console.warn('No se pudo obtener datos biométricos:', e.message);
+        return {};
+    }
+}
+
 async function fetchFotoConRetry(codiPers, maxReintentos = 3) {
     for (let intento = 0; intento <= maxReintentos; intento++) {
         try {
@@ -563,13 +574,10 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         y += educRowH;
 
         // Fila 9 — Embargos / Cuentas
-        const embW       = boxWidth * 0.30;
-        const bcpW       = boxWidth * 0.35;
-        const interbankW = boxWidth * 0.35;
-        const cuentaBanco = getValue("cuenta_banco").toUpperCase().trim();
+        const embW    = boxWidth * 0.30;
+        const cuentaW = boxWidth * 0.70;
         drawField("Embargos en instituciones financieras", getValue("embargos"), boxX, embW, y, rowH, 0.75);
-        drawField("Cuenta sueldo BCP",       cuentaBanco === "BCP"       ? "X" : "", boxX + embW,        bcpW,       y, rowH, 0.55, "center");
-        drawField("Cuenta sueldo INTERBANK", cuentaBanco === "INTERBANK" ? "X" : "", boxX + embW + bcpW, interbankW, y, rowH, 0.55, "center");
+        drawField("Cuenta sueldo", getCleanSelectText("cuenta_banco"), boxX + embW, cuentaW, y, rowH, 0.35);
         y += rowH;
 
         drawField("Dirección Actual", getValue("direccion_actual"), boxX, boxWidth, y, rowH, 0.15, "left", false, false, false, true); y += rowH;
@@ -588,9 +596,9 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
 
         const wLab3 = boxWidth / 6;
         if (esOper || (!esOper && !esAdmin)) {
-            drawField("Carne SUCAMEC", getValue('sucamec_obs') || (getValue('curso_sucamec') === 'SI' ? 'SÍ' : 'NO'), boxX, boxWidth * 0.285, y, rowH, 0.42);
-            drawField("S.M.O.",      getValue('smo'),               boxX + boxWidth * 0.285, boxWidth * 0.381, y, rowH, 0.3);
-            drawField("Institución", getValue('institucion_laboral'),boxX + boxWidth * 0.666, boxWidth * 0.334, y, rowH, 0.35);
+            drawField("Carne SUCAMEC", getValue('curso_sucamec') === 'SI' ? 'SÍ' : 'NO', boxX, boxWidth * 0.285, y, rowH, 0.42);
+            drawField("S.M.O.",      getValue('presto_smo'),               boxX + boxWidth * 0.285, boxWidth * 0.381, y, rowH, 0.3);
+            drawField("Lugar S.M.O.",  getValue('lugar_smo'),                boxX + boxWidth * 0.666, boxWidth * 0.334, y, rowH, 0.35);
             y += rowH;
             drawField("N° Licencia L4", getValue('licencia_arma'), boxX,                     boxWidth * 0.5264, y, rowH, 0.35);
             drawField("Arma Propia",    getValue('arma_propia'),    boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.35);
@@ -622,15 +630,15 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             const wClas  = boxWidth * 0.12;
             const wTipo  = boxWidth * 0.12;
             const wVeh   = boxWidth * 0.30;
-            drawField("SMO",             getValue('consumo_sustancias') != 'NO' ? 'SI' : 'NO',               boxX,                              wSMO,  y, rowH, 0.4);
+            drawField("SMO",             getValue('presto_smo') === 'SI' ? 'SI' : 'NO',               boxX,                              wSMO,  y, rowH, 0.4);
             let instEjer = '';
-            if( getValue('consumo_sustancias') == 'EP'){
+            if( getValue('lugar_smo') == 'EP'){
                 instEjer = 'EJERCITO DEL PERU'
             }
-            if( getValue('consumo_sustancias') == 'MG'){
+            if( getValue('lugar_smo') == 'MG'){
                 instEjer = 'MARINA DE GUERRA DEL PERU'
             }
-            if( getValue('consumo_sustancias') == 'FA'){
+            if( getValue('lugar_smo') == 'FA'){
                 instEjer = 'FUERZA AEREA DEL PERU'
             }
             drawField("Institución",     instEjer ,boxX + wSMO,                      wInst, y, rowH, 0.35);
@@ -761,13 +769,47 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         pdf.setLineWidth(0.20);
         pdf.line(boxX + firmaW, y, boxX + firmaW, y + firmaH);
         pdf.line(boxX, y + firmaH, boxX + boxWidth, y + firmaH);
- 
+
+        // ── Obtener firma y huella desde Biométrico ──
+        const codiPersDJ = (document.getElementById('cod_postulante')?.value || '').trim();
+        const bioData = await fetchBiometrico(codiPersDJ);
+
+        function drawImageInBox(b64, x, boxY, w, h) {
+            if (!b64 || b64.error) return false;
+            try {
+                const padding = 2;
+                const maxW = w - padding * 2;
+                const maxH = h - 12;
+                const props = pdf.getImageProperties(b64);
+                const ratio = Math.min(maxW / props.width, maxH / props.height);
+                const finalW = props.width * ratio;
+                const finalH = props.height * ratio;
+                const offsetX = x + padding + (maxW - finalW) / 2;
+                const offsetY = boxY + padding + (maxH - finalH) / 2;
+                let format = "JPEG";
+                if (b64.startsWith("data:image/png")) format = "PNG";
+                if (b64.startsWith("data:image/webp")) format = "WEBP";
+                pdf.addImage(b64, format, offsetX, offsetY, finalW, finalH);
+                return true;
+            } catch (err) {
+                console.warn('Error dibujando imagen biométrica:', err);
+                return false;
+            }
+        }
+
+        const tieneFirma  = drawImageInBox(bioData.firma_nueva || bioData.firma_antigua, boxX, y, firmaW, firmaH);
+        const tieneHuella = drawImageInBox(bioData.huella_nueva || bioData.huella_antigua, boxX + firmaW, y, huellaW, firmaH);
+
         const firmaLabelY = y + firmaH - 6;
         pdf.setFont(FONT_FAMILY, "bold"); pdf.setFontSize(7.5); pdf.setTextColor(0);
-        pdf.text("Firma Registrada",              boxX + firmaW / 2,          firmaLabelY,     { align: "center" });
-        pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,          firmaLabelY + 3, { align: "center" });
-        pdf.text("Huella Registrada",              boxX + firmaW + huellaW / 2, firmaLabelY,   { align: "center" });
-        pdf.text("INDICE DERECHO",                 boxX + firmaW + huellaW / 2, firmaLabelY + 3, { align: "center" });
+        if (!tieneFirma) {
+            pdf.text("Firma Registrada",              boxX + firmaW / 2,          firmaLabelY,     { align: "center" });
+            pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,          firmaLabelY + 3, { align: "center" });
+        }
+        if (!tieneHuella) {
+            pdf.text("Huella Registrada",              boxX + firmaW + huellaW / 2, firmaLabelY,   { align: "center" });
+            pdf.text("INDICE DERECHO",                 boxX + firmaW + huellaW / 2, firmaLabelY + 3, { align: "center" });
+        }
  
         const footerY          = y + firmaH;
         const fechaW           = boxWidth * 0.25;
@@ -799,12 +841,27 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             + '_' + String(f.getHours()).padStart(2,'0') + String(f.getMinutes()).padStart(2,'0');
         const nombreArchivo = `DJ_${dni}_${nombres.replace(/ /g, "-")}_${fechaHora}.pdf`;
         if (returnBlob) return { blob: pdf.output('blob'), filename: nombreArchivo };
-        pdf.save(nombreArchivo);
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nombreArchivo;
+        link.style.cssText = 'position:fixed;left:-9999px;pointer-events:none;';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
+        return nombreArchivo;
 
     } catch (error) {
         console.error("Error al generar PDF:", error);
         if (returnBlob) return null;
-        Swal.fire({ icon: 'error', title: 'Error de PDF', text: 'Hubo un error al generar el documento: ' + error.message });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de PDF',
+            text: 'Hubo un error al generar el documento: ' + error.message,
+            didOpen: (popup) => { popup.addEventListener('click', e => e.stopPropagation()); }
+        });
+        return null;
     }
 }
 
@@ -911,5 +968,15 @@ export async function generarReporteFaltantesPDF(data, todosLosDatos = null) {
     }
 
     const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-    pdf.save(`Reporte_Faltantes_DJ_${ts}.pdf`);
+    const nombreArchivo = `Reporte_Faltantes_DJ_${ts}.pdf`;
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nombreArchivo;
+    link.style.display = 'none';
+    link.addEventListener('click', e => e.stopPropagation(), true);
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
 }

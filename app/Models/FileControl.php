@@ -16,6 +16,17 @@ class FileControl extends Model
         return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL ?', [$sucursal]);
     }
 
+    public static function getPersonalLegajosPdf($codSucursal = '0', $vigencia = 'SI', $cliente = 'T', $cargo = 'T')
+    {
+        return DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_LEGAJO_PDF ?, ?, ?, ?, ?', [
+            $codSucursal,
+            '01',         // @empresa
+            $vigencia,    // @vigencia
+            $cliente,     // @cliente
+            $cargo        // @cargo
+        ]);
+    }
+
     public static function getListaDJ()
     {
         return DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ]');
@@ -51,7 +62,7 @@ class FileControl extends Model
 
     public static function getCargos()
     {
-        return DB::select('EXEC SW_LISTAR_CARGOS');
+        return DB::select('EXEC SW_LISTAR_CARGO_GESTION_DE_CARGOS');
     }
 
     public static function getLegajos($cliente, $cargo, $codPersonal)
@@ -142,7 +153,7 @@ class FileControl extends Model
             'fecha_creacion'  => DB::raw('GETDATE()'),
         ]);
     }
-     public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null)
+     public static function saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null, $solo_lectura = 0)
     {
         $inserted = DB::table('sw_folios')->insert([
             'nombre'          => $nombre,
@@ -154,12 +165,13 @@ class FileControl extends Model
             'codResponsable'  => $responsable,
             'cod_categoria'   => $cod_categoria,
             'fecha_creacion' => DB::raw('GETDATE()'),
+            'solo_lectura' => $solo_lectura,
             'creado_por' => $usuario
         ]);
 
         return $inserted;
     }
-     public static function updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null)
+     public static function updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable = null, $usuario = null, $cod_categoria = null, $solo_lectura = 0)
       {
           $updated = DB::table('sw_folios')
               ->where('codigo', $codigo)
@@ -172,6 +184,7 @@ class FileControl extends Model
                   'plataforma'         => $plataforma,
                   'codResponsable'     => $responsable,
                   'cod_categoria'      => $cod_categoria,
+                  'solo_lectura' => $solo_lectura,
                   'fecha_modificacion' => DB::raw('GETDATE()'),
                   'modificado_por' => $usuario
               ]);
@@ -560,6 +573,16 @@ class FileControl extends Model
                 ORDER BY IEDU_DESCRIPCION"
             );
     }
+
+    public static function getBancosDJ()
+    {
+        return DB::select(
+            "SELECT CODI_BANC AS id, DESC_BANC AS text
+            FROM si_solm.dbo.BANCOS
+            WHERE CODI_BANC NOT IN ('07', '08')
+            ORDER BY CODI_BANC"
+        );
+    }
     public static function getRoles($test = 0)
     {
         return $test !== 1 ? DB::table('sw_roles')
@@ -568,6 +591,54 @@ class FileControl extends Model
             ->get() : DB::table('sw_roles')
             ->where('habilitado', 1)
             ->get();
+    }
+    public static function getCargosOperativos()
+    {
+        return DB::select("
+            SELECT 
+                CODI_CARG AS codigo, 
+                DESC_CARGO AS nombre 
+            FROM si_solm.dbo.CARGOS WITH (NOLOCK) 
+            WHERE DESC_CARGO IS NOT NULL
+            ORDER BY DESC_CARGO
+        ");
+    }
+
+    public static function getCargosDj()
+    {
+        return DB::select("
+            SELECT 
+                CODI_CARG AS codigo, 
+                DESC_CARGO AS nombre,
+                CARGO_TIPO AS tipo
+            FROM si_solm.dbo.CARGOS WITH (NOLOCK)
+            WHERE CARG_VIGENCIA = 'SI' AND DESC_CARGO IS NOT NULL
+            ORDER BY DESC_CARGO
+        ");
+    }
+    // NUEVA FUNCIÓN: Traer clientes directamente del ERP
+    public static function getClientesOperativos()
+    {
+        return DB::select("
+            SELECT 
+                CODI_CLIE_PROV AS codigo, 
+                ABREVIATURA AS abreviatura 
+            FROM si_solm.dbo.CLIENTE_PROVEEDOR WITH (NOLOCK)
+            WHERE ESTA_CLIE_PROV = '1' -- Solo activos (opcional)
+            ORDER BY ABREVIATURA
+        ");
+    }
+    
+    // NUEVA FUNCIÓN: Traer clientes directamente del ERP (A prueba de balas)
+    public static function getClientesERP()
+    {
+        return DB::select("
+            SELECT DISTINCT 
+                CODI_CLIE_PROV AS codigo, 
+                ABREVIATURA AS abreviatura 
+            FROM si_solm.dbo.CLIENTE_PROVEEDOR WITH (NOLOCK)
+            ORDER BY ABREVIATURA
+        ");
     }
 
     

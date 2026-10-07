@@ -229,36 +229,18 @@
         </div>
 
         <!-- Carnet -->
-        <div class="card custom-card h-full">
-            <div class="p-4 md:p-5 flex flex-col justify-between h-full">
-                <h3 class="text-lg font-bold text-default-800 flex items-center gap-2">
-                    <i class='bx bx-id-card text-primary text-2xl'></i>
-                    Carnet
-                </h3>
-                <p class="mt-2 text-default-500">Genera el reporte de carnets del personal.</p>
-                <button type="button" id="btnReporteCarnet" class="mt-3 inline-flex items-center gap-x-1
-                       text-sm font-semibold rounded-lg border border-transparent text-primary hover:text-primary-800">
-                    Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Certificados -->
-        <div class="card custom-card h-full">
-            <div class="p-4 md:p-5 flex flex-col justify-between h-full">
-                <h3 class="text-lg font-bold text-default-800 flex items-center gap-2">
-                    <i class='bx bxs-award text-warning text-2xl'></i>
-                    Certificados
-                </h3>
-                <p class="mt-2 text-default-500">Genera el reporte de certificados registrados en el
-                    sistema.</p>
-                <button type="button" id="btnReporteCertificados" class="mt-3 inline-flex items-center
-                      gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-primary
-                      hover:text-primary-800">
-                    Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
-                </button>
-            </div>
-        </div>
+        <div type="button" id="btnReporteCarnet" class="card custom-card h-full cursor-pointer">
+    <div class="p-4 md:p-5 flex flex-col justify-between h-full">
+        <h3 class="text-lg font-bold text-default-800 flex items-center gap-2">
+            <i class='bx bx-id-card text-primary text-2xl'></i>
+            Carnet y Certificados
+        </h3>
+        <p class="mt-2 text-default-500">Genera el reporte de carnet y certificados en el sistema.</p>
+        <span class="mt-3 inline-flex items-center gap-x-1 text-sm font-semibold text-primary">
+            Generar <i class="material-symbols-rounded text-lg flex-shrink-0">chevron_right</i>
+        </span>
+    </div>
+</div>
 
         <!-- Constancias de Entrega -->
         <div class="card custom-card h-full">
@@ -865,199 +847,200 @@
         </div>
     </div>
 
-    <!-- ====== MODAL: Carnet ====== -->
     <div id="modalCarnet" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl mx-4 flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-auto flex flex-col max-h-[85vh]">
+            
             <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
                 <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
-                    <i class='bx bx-id-card text-primary text-xl'></i>
-                    Carnet
+                    <i class='bx bx-file text-primary text-xl'></i>
+                    Reporte de Carnet y Certificados
                 </h5>
                 <button class="btnCerrarModal text-default-400 hover:text-default-600">
                     <i class='bx bx-x text-2xl'></i>
                 </button>
             </div>
-            <div class="p-5 flex-shrink-0 border-b border-default-100">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div>
-                        <label class="text-default-800 text-sm font-medium mb-2 block">
-                            Categoría <span class="text-danger">*</span>
-                        </label>
-                        <select id="filtroCarnetCategoria" class="form-select">
-                            <option value="">— Seleccionar —</option>
-                            @foreach($categoriasCarnet as $cat)
-                                <option value="{{ $cat->CATE_CODIGO }}">{{ $cat->CATE_DESCRIPCION }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-default-800 text-sm font-medium mb-2 block">Sucursal</label>
-                        <select id="filtroCarnetSucursal" class="form-select">
-                            <option value="T">Todas</option>
-                            @foreach($sucursales as $sucursal)
-                                @if(!$loop->first)
-                                    <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                                @endif
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-default-800 text-sm font-medium mb-2 block">Tipo de Personal</label>
-                        <select id="filtroCarnetTipoPers" class="form-select">
-                            <option value="T">Todos</option>
-                            @foreach($tiposPersonal as $tipo)
-                                <option value="{{ $tipo->TIPE_CODIGO }}">{{ $tipo->TIPE_DESCRIPCION }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-default-800 text-sm font-medium mb-2 block">Vigencia del personal</label>
-                        <select id="filtroCarnetVigencia" class="form-select">
-                            <option value="T">Todos</option>
-                            <option value="SI">Vigente</option>
-                            <option value="NO">No vigente</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-default-800 text-sm font-medium mb-2 block">Estado del carnet</label>
-                        <select id="filtroCarnetEstado" class="form-select">
-                            <option value="T">Todos</option>
-                            <option value="1">Activo</option>
-                            <option value="2">Inactivo</option>
-                        </select>
-                    </div>
-                    <div class="flex justify-end gap-2 items-end">
-                        <button
-                            class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
-                        <button id="btnGenerarCarnet"
-                            class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
-                            <i class="bx bx-search-alt-2"></i> Generar
-                        </button>
-                    </div>
-                </div>
+
+            <div class="flex border-b border-default-200 bg-default-50 flex-shrink-0">
+                <button type="button" id="tabCarnet" class="flex-1 py-3 px-4 text-sm font-bold border-b-2 border-primary text-primary transition-all text-center flex items-center justify-center gap-2 bg-white">
+                    <i class='bx bx-id-card text-lg'></i> Carnet
+                </button>
+                <button type="button" id="tabCertificados" class="flex-1 py-3 px-4 text-sm font-semibold border-b-2 border-transparent text-default-500 hover:text-primary hover:border-default-300 transition-all text-center flex items-center justify-center gap-2">
+                    <i class='bx bxs-award text-lg'></i> Certificados
+                </button>
             </div>
-            <!-- Resultados -->
-            <div id="resultadosCarnet" class="hidden flex-1 flex flex-col overflow-hidden p-5">
-                <div class="flex items-center justify-between mb-3 flex-shrink-0">
-                    <span id="totalCarnet" class="text-sm text-default-600 font-medium"></span>
-                    <div class="flex gap-2">
-                        <button id="btnExportExcelCarnet"
-                            class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
-                            <i class="bx bx-spreadsheet"></i> Excel
-                        </button>
-                        <button id="btnExportPdfCarnet"
-                            class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
-                            <i class="bx bxs-file-pdf"></i> PDF
-                        </button>
+
+            <div class="flex-1 flex flex-col min-h-0 overflow-visible rounded-b-xl">
+            
+                <!-- ================= PESTAÑA CARNET ================= -->
+                <div id="contenidoCarnet" class="flex flex-col flex-1 min-h-0 rounded-b-xl">
+                    <div class="p-5 flex-shrink-0 border-b border-default-100 rounded-b-xl relative z-10">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">
+                                    Categoría <span class="text-danger">*</span>
+                                </label>
+                                <select id="filtroCarnetCategoria" class="form-select">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($categoriasCarnet as $cat)
+                                        <option value="{{ $cat->CATE_CODIGO }}">{{ $cat->CATE_DESCRIPCION }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Sucursal</label>
+                                <select id="filtroCarnetSucursal" class="form-select">
+                                    <option value="T">Todas</option>
+                                    @foreach($sucursales as $sucursal)
+                                        @if(!$loop->first)
+                                            <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Tipo de Personal</label>
+                                <select id="filtroCarnetTipoPers" class="form-select">
+                                    <option value="T">Todos</option>
+                                    @foreach($tiposPersonal as $tipo)
+                                        <option value="{{ $tipo->TIPE_CODIGO }}">{{ $tipo->TIPE_DESCRIPCION }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Vigencia del personal</label>
+                                <select id="filtroCarnetVigencia" class="form-select">
+                                    <option value="T">Todos</option>
+                                    <option value="SI">Vigente</option>
+                                    <option value="NO">No vigente</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Estado del carnet</label>
+                                <select id="filtroCarnetEstado" class="form-select">
+                                    <option value="T">Todos</option>
+                                    <option value="1">Activo</option>
+                                    <option value="2">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="flex justify-end gap-2 items-end">
+                                <button class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                                <button id="btnGenerarCarnet" class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                                    <i class="bx bx-search-alt-2"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="resultadosCarnet" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+                        <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                            <span id="totalCarnet" class="text-sm text-default-600 font-medium"></span>
+                            <div class="flex gap-2">
+                                <button id="btnExportExcelCarnet" class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                                    <i class="bx bx-spreadsheet"></i> Excel
+                                </button>
+                                <button id="btnExportPdfCarnet" class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                                    <i class="bx bxs-file-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-auto flex-1">
+                            <div id="tablaCarnet"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="overflow-auto flex-1">
-                    <div id="tablaCarnet"></div>
+
+                <!-- ================= PESTAÑA CERTIFICADOS ================= -->
+                <div id="contenidoCertificados" class="hidden flex-col flex-1 min-h-0 rounded-b-xl">
+                    <div class="p-5 flex-shrink-0 border-b border-default-100 rounded-b-xl relative z-10">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">
+                                    Sucursal <span class="text-danger">*</span>
+                                </label>
+                                <select id="filtroCertSucursal" class="tom-select">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($sucursales as $sucursal)
+                                        @if($loop->first) @continue @endif
+                                        <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">
+                                    Tipo de Personal <span class="text-danger">*</span>
+                                </label>
+                                <select id="filtroCertTipoPers" class="tom-select">
+                                    <option value="T">Todos</option>
+                                    @foreach($tiposPersonal as $tipo)
+                                        <option value="{{ $tipo->TIPE_CODIGO }}">{{ $tipo->TIPE_DESCRIPCION }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">
+                                    Certificado <span class="text-danger">*</span>
+                                </label>
+                                <select id="filtroCertCertificado" class="tom-select">
+    <option value="">— Seleccionar —</option>
+    @foreach($certificados as $cert)
+        <option value="{{ $cert->REQU_CODIGO }}">{{ $cert->REQU_DESCRIPCION }}</option>
+    @endforeach
+</select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Vigencia</label>
+                                <select id="filtroCertVigencia" class="tom-select">
+                                    <option value="T">Todos</option>
+                                    <option value="SI">Sí</option>
+                                    <option value="NO">No</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Estado</label>
+                                <select id="filtroCertEstado" class="tom-select">
+                                    <option value="T">Todos</option>
+                                    <option value="SI">Activo</option>
+                                    <option value="NO">Inactivo</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-default-800 text-sm font-medium mb-2 block">Vencimiento al</label>
+                                <input type="date" id="filtroCertFechaVenc" class="form-input" value="{{ date('Y-m-d') }}">
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
+                            <button id="btnGenerarCertificados" class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
+                                <i class="bx bx-search-alt-2"></i> Generar
+                            </button>
+                        </div>
+                    </div> <div id="resultadosCertificados" class="hidden flex-1 flex flex-col overflow-hidden p-5">
+                        <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                            <span id="totalCertificados" class="text-sm text-default-600 font-medium"></span>
+                            <div class="flex gap-2">
+                                <button id="btnExportExcelCertificados" class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
+                                    <i class="bx bx-spreadsheet"></i> Excel
+                                </button>
+                                <button id="btnExportPdfCertificados" class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
+                                    <i class="bx bxs-file-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-auto flex-1">
+                            <div id="tablaCertificados"></div>
+                        </div>
+                    </div>
+                    </div>
+                        <div class="overflow-auto flex-1">
+                            <div id="tablaCertificados"></div>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
-
-    <!-- ====== MODAL: Certificados ====== -->
-  <div id="modalCertificados" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl mx-4 flex flex-col max-h-[90vh]">
-          <div class="flex items-center justify-between p-5 border-b border-default-200 flex-shrink-0">
-              <h5 class="text-base font-semibold text-default-800 flex items-center gap-2">
-                  <i class='bx bx-certification text-primary text-xl'></i>
-                  Certificados
-              </h5>
-              <button class="btnCerrarModal text-default-400 hover:text-default-600">
-                  <i class='bx bx-x text-2xl'></i>
-              </button>
-          </div>
-          <div class="p-5 flex-shrink-0 border-b border-default-100">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">
-                          Sucursal <span class="text-danger">*</span>
-                      </label>
-                      <select id="filtroCertSucursal" class="tom-select">
-                          <option value="">— Seleccionar —</option>
-                          @foreach($sucursales as $sucursal)
-                              @if($loop->first) @continue @endif
-                              <option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">
-                          Tipo de Personal <span class="text-danger">*</span>
-                      </label>
-                      <select id="filtroCertTipoPers" class="tom-select">
-                          <option value="T">Todos</option>
-                          @foreach($tiposPersonal as $tipo)
-                              <option value="{{ $tipo->TIPE_CODIGO }}">{{ $tipo->TIPE_DESCRIPCION }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">
-                          Certificado <span class="text-danger">*</span>
-                      </label>
-                      <select id="filtroCertCertificado" class="tom-select">
-                          <option value="">— Seleccionar —</option>
-                          @foreach($certificados as $cert)
-                              <option value="{{ $cert->REQU_CODIGO }}">{{ $cert->REQU_DESCRIPCION }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">Vigencia</label>
-                      <select id="filtroCertVigencia" class="tom-select">
-                          <option value="T">Todos</option>
-                          <option value="SI">Sí</option>
-                          <option value="NO">No</option>
-                      </select>
-                  </div>
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">Estado</label>
-                       <select id="filtroCertEstado" class="tom-select">
-                            <option value="T">Todos</option>
-                            <option value="SI">Activo</option>
-                            <option value="NO">Inactivo</option>
-                        </select>
-                  </div>
-                  <div>
-                      <label class="text-default-800 text-sm font-medium mb-2 block">Vencimiento al</label>
-                      <input type="date" id="filtroCertFechaVenc" class="form-input" value="{{ date('Y-m-d') }}">
-                  </div>
-              </div>
-              <div class="flex justify-end gap-2">
-                  <button class="btnCerrarModal px-4 py-2 rounded-lg border border-default-300 text-default-600 hover:bg-default-100 text-sm">Cancelar</button>
-                  <button id="btnGenerarCertificados"
-                      class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 text-sm">
-                      <i class="bx bx-search-alt-2"></i> Generar
-                  </button>
-              </div>
-          </div>
-          <!-- Resultados -->
-          <div id="resultadosCertificados" class="hidden flex-1 flex flex-col overflow-hidden p-5">
-              <div class="flex items-center justify-between mb-3 flex-shrink-0">
-                  <span id="totalCertificados" class="text-sm text-default-600 font-medium"></span>
-                  <div class="flex gap-2">
-                      <button id="btnExportExcelCertificados"
-                          class="bg-success text-white px-4 py-2 rounded-lg shadow hover:bg-success/90 text-sm flex items-center gap-1">
-                          <i class="bx bx-spreadsheet"></i> Excel
-                      </button>
-                      <button id="btnExportPdfCertificados"
-                          class="bg-danger text-white px-4 py-2 rounded-lg shadow hover:bg-danger/90 text-sm flex items-center gap-1">
-                          <i class="bx bxs-file-pdf"></i> PDF
-                      </button>
-                  </div>
-              </div>
-              <div class="overflow-auto flex-1">
-                  <div id="tablaCertificados"></div>
-              </div>
-          </div>
-      </div>
-  </div>
 
     <!-- ====== MODAL: Constancias de Entrega ====== -->
     <div id="modalConstanciasEntrega" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">

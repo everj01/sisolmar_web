@@ -47,42 +47,67 @@ const tblFolios = new Tabulator("#tblFolios", {
         }
     },
     columns: [
+        { 
+            title: "N°", 
+            field: "nro_fila_estatico", 
+            formatter: function() { return ""; }, 
+            hozAlign: "center", 
+            width: 55, 
+            headerSort: false, 
+            responsive: false 
+        },
         { title: "Folios", field: "nombre", hozAlign: "left", widthGrow: 3 },
         { title: "Categoría", field: "nombre_categoria", hozAlign: "center", widthGrow: 3 },
         {
             title: "Tipo", field: "tipoFolio", hozAlign: "center", widthGrow: 2,
-            formatter: function (cell, formatterParams) {
-                var tipo = cell.getValue();
+            formatter: function (cell) {
+                let tipo = cell.getValue() || '';
+                let color = 'border-gray-400 bg-gray-100 text-gray-800 shadow-sm';
+
                 if (tipo === "FORMATO") {
-                    return '<span class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-yellow-500 text-white">FORMATO</span>';
+                    color = 'border-amber-500 bg-yellow-100 text-yellow-800 shadow-sm';
                 } else if (tipo === "DOCUMENTO") {
-                    return '<span class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-purple-500 text-white">DOCUMENTO</span>';
+                    // 🔥 Morado a 500 para que marque la diferencia
+                    color = 'border-purple-500 bg-purple-100 text-purple-800 shadow-sm';
                 } else if (tipo === "CERTIFICADO") {
-                    return '<span class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary text-white">CERTIFICADO</span>';
+                    // 🔥 Azul a 500 para emparejar la intensidad
+                    color = 'border-blue-500 bg-blue-100 text-blue-800 shadow-sm';
                 }
-                return tipo;
+
+                return tipo ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 105px;">${tipo}</span>` : '—';
             }
         },
         {
             title: "Prioridad", field: "prioridad", hozAlign: "center", widthGrow: 2,
             formatter: function (cell) {
-                var val = cell.getValue();
+                let val = cell.getValue() || '';
+                
+                let color = 'border-teal-500 bg-teal-100 text-teal-800 shadow-sm'; 
+
                 if (val === "PRINCIPAL") {
-                    return '<span class="inline-flex items-center py-1 px-2.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">PRINCIPAL</span>';
-                } else if (val === "ADICIONAL") {
-                    return '<span class="inline-flex items-center py-1 px-2.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">ADICIONAL</span>';
+                    // 🔥 Índigo a 500 para que resalte bien contra el rosa
+                    color = 'border-indigo-500 bg-indigo-100 text-indigo-800 shadow-sm';
                 }
-                return val || '';
+
+                return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 95px;">${val}</span>` : '—';
             }
         },
         {
-            title: "Vencimiento", field: "periodo", hozAlign: "center", widthGrow: 2,
+            title: "Caduca", field: "periodo", hozAlign: "center", widthGrow: 2,
             formatter: function (cell) {
-                var val = cell.getValue();
-                if (!val || val === "NO VENCE") {
-                    return val || '';
+                let val = cell.getValue() || '';
+                
+                let color = 'bg-gray-200 shadow-sm'; 
+                // 🔥 TRUCO: Forzamos el color negro directo al HTML para que Tailwind no lo purgue
+                let extraStyle = 'border-color: black; color: black;';
+
+                if (val && val !== "NO VENCE") {
+                    color = 'border-orange-500 bg-orange-100 text-orange-800 shadow-sm'; 
+                    extraStyle = ''; // El naranja sí lo lee normal, lo dejamos vacío
                 }
-                return '<span class="inline-flex items-center py-1 px-2.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">' + val + '</span>';
+
+                // Inyectamos el extraStyle directamente en la etiqueta
+                return val ? `<span class="inline-flex items-center justify-center rounded-full border ${color} px-3 py-1 text-[11px] font-bold tracking-wider whitespace-nowrap" style="min-width: 130px; ${extraStyle}">${val}</span>` : '—';
             }
         },
         {
@@ -144,6 +169,13 @@ const tblFolios = new Tabulator("#tblFolios", {
                         document.getElementById('periodoDiv').classList.add('hidden');
                     }
 
+                    if (rowData.solo_lectura == 1) {
+                        document.querySelector('#switchLectura').checked = true;
+            
+                    } else {
+                        document.querySelector('#switchLectura').checked = false;
+                    }
+
                     var plataforma = rowData.plataforma;
                     var radioButtons = institucionDiv.querySelectorAll('input[type="radio"]');
 
@@ -165,8 +197,9 @@ const tblFolios = new Tabulator("#tblFolios", {
 
                     document.getElementById("txtMensajeNuevo").innerText = "Editando registro";
                     document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-red-100 text-red-800";
-                    document.getElementById('soloEdicion').classList.remove("hidden");
-                    document.getElementById('soloEdicion').classList.add("flex");
+                    
+                    // Abrir el modal
+                    document.getElementById('btn-modal-gestion').click();
 
                 } else if (e.target.classList.contains('activar-btn')) {
                     const rowData = cell.getRow().getData();
@@ -232,6 +265,23 @@ const tblFolios = new Tabulator("#tblFolios", {
             row.getElement().style.backgroundColor = "#ffe9e9";
         }
     }
+});
+
+// =========================================================
+// INYECCIÓN DE NUMERACIÓN ESTÁTICA
+// =========================================================
+tblFolios.on("renderComplete", function () {
+    // Usamos 20 por defecto porque así lo definiste en paginationSize
+    const page = this.getPage() || 1;
+    const size = this.getPageSize() || 20; 
+    const offset = (page - 1) * size;
+    
+    this.getRows("active").forEach((row, index) => {
+        const cell = row.getCell("nro_fila_estatico");
+        if (cell) {
+            cell.getElement().innerHTML = `<span class="text-gray-700 font-medium">${offset + index + 1}</span>`;
+        }
+    });
 });
 
 //-------- Desactivar/Activar la institucion
@@ -329,7 +379,10 @@ document.getElementById('tipo').addEventListener('change', function () {
     }
 });
 
- document.querySelector('.clean-btn').addEventListener('click', limpiarForm);
+document.getElementById('btnNuevoFolio')?.addEventListener('click', () => {
+     limpiarForm();
+     document.getElementById('btn-modal-gestion').click();
+ });
 
   // Verificar nombre duplicado mientras escribe
   let checkNombreTimeout = null;
@@ -377,19 +430,21 @@ document.getElementById("buscar").addEventListener("keyup", function () {
 
 // Función para actualizar la tabla con TODOS los filtros
 function aplicarTodosFiltros() {
-      const filtroTipos          = document.querySelector('input[name="filtroTipos"]:checked')?.value;
-      const filtroClasificacion  = document.querySelector('input[name="filtroClasificacion"]:checked')?.value;
-      const vencimientoFiltro    = document.querySelector('input[name="vencimientoFiltro"]:checked')?.value;
-      const soloActivosChecked   = document.getElementById('chkEliminados')?.checked || false;
+      const filtroTipos          = document.getElementById('filtroTipos')?.value;
+      const filtroClasificacion  = document.getElementById('filtroClasificacion')?.value;
+      const vencimientoFiltro    = document.getElementById('vencimientoFiltro')?.value;
+      const filtroEstado         = document.getElementById('filtroEstado')?.value; // <-- NUEVO
       const buscarValor          = document.getElementById('buscar')?.value.toLowerCase().trim() || '';
 
       const filtros = [];
 
-      if (soloActivosChecked) {
+      // Validamos el nuevo select de Estado
+      if (filtroEstado === "1") {
           filtros.push({ field: "habilitado", type: "=", value: "1" });
-      } else {
+      } else if (filtroEstado === "0") {
           filtros.push({ field: "habilitado", type: "=", value: "0" });
       }
+      // Si es "TODOS", no empujamos nada, así Tabulator muestra ambos.
 
       if (filtroTipos && filtroTipos !== "TODOS") {
           filtros.push({ field: "prioridad", type: "=", value: filtroTipos });
@@ -399,9 +454,9 @@ function aplicarTodosFiltros() {
           filtros.push({ field: "tipoFolio", type: "=", value: filtroClasificacion });
       }
 
-      if (vencimientoFiltro === "CON_VENCIMIENTO") {
+      if (vencimientoFiltro === "SI") {
           filtros.push({ field: "periodo", type: "!=", value: "NO VENCE" });
-      } else if (vencimientoFiltro === "SIN_VENCIMIENTO") {
+      } else if (vencimientoFiltro === "NO") {
           filtros.push({ field: "periodo", type: "=", value: "NO VENCE" });
       }
 
@@ -421,21 +476,11 @@ function aplicarTodosFiltros() {
       }
   }
 
-  window.aplicarFiltroSoloActivos = function (op) {
-      aplicarTodosFiltros();
-  }
-
-  document.querySelectorAll('input[name="filtroTipos"]').forEach(radio => {
-      radio.addEventListener('change', aplicarTodosFiltros);
-  });
-
-  document.querySelectorAll('input[name="filtroClasificacion"]').forEach(radio => {
-      radio.addEventListener('change', aplicarTodosFiltros);
-  });
-
-  document.querySelectorAll('input[name="vencimientoFiltro"]').forEach(radio => {
-      radio.addEventListener('change', aplicarTodosFiltros);
-  });
+  // Listeners para los Selects
+  document.getElementById('filtroTipos')?.addEventListener('change', aplicarTodosFiltros);
+  document.getElementById('filtroClasificacion')?.addEventListener('change', aplicarTodosFiltros);
+  document.getElementById('vencimientoFiltro')?.addEventListener('change', aplicarTodosFiltros);
+  document.getElementById('filtroEstado')?.addEventListener('change', aplicarTodosFiltros); // <-- NUEVO LISTENER
 
 
 //Activar los periodos si hay VENCIMIENTO
@@ -450,9 +495,7 @@ document.getElementById('switchVencimiento').addEventListener('change', function
 //Función para limpia los campos del modal
  function limpiarForm() {
       document.getElementById("txtMensajeNuevo").innerText = "Nuevo registro";
-      document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-primary/25 text-primary-800";
-      document.getElementById('soloEdicion').classList.remove("flex");
-      document.getElementById('soloEdicion').classList.add("hidden");
+      document.getElementById("txtMensajeNuevo").className = "inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-blue-100 text-blue-800";
 
       document.getElementById('nombre').value = "";
       document.getElementById('nombre').disabled = false;
@@ -482,8 +525,18 @@ document.getElementById('switchVencimiento').addEventListener('change', function
 function cargarFolios() {
     axios.get(`${VITE_URL_APP}/api/get-folios`)
         .then(response => {
-            tblFolios.setData(response.data);
+            const data = response.data || [];
+            tblFolios.setData(data);
             aplicarTodosFiltros();
+
+            // 🔥 Lógica de Indicadores
+            const total = data.length;
+            const activos = data.filter(f => f.habilitado == 1).length;
+            const inactivos = total - activos;
+
+            document.getElementById('countTotal').textContent = total;
+            document.getElementById('countActivos').textContent = activos;
+            document.getElementById('countInactivos').textContent = inactivos;
         })
         .catch(error => {
             console.error("Error al obtener los datos:", error);
@@ -505,6 +558,8 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
     var responsable = document.getElementById('responsable').value;
     var categoria = document.getElementById('categoria').value; // <-- CAPTURAS EL DATO
     var institucion = document.querySelector('input[name="institucion"]:checked')?.value;
+    var switchLectura = document.getElementById('switchLectura');
+    var soloLectura = switchLectura.checked ? 1 : 0 ;
 
     if (vencimiento == 0) {
         periodo = null;
@@ -520,8 +575,9 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
             vencimiento: vencimiento,
             periodo: periodo,
             responsable: responsable,
-            cod_categoria: categoria, // <-- LO MANDAS AL CONTROLADOR
+            cod_categoria: categoria,
             plataforma: institucion,
+            solo_lectura: soloLectura,
         })
             .then(function (response) {
                 cargarFolios();
@@ -533,6 +589,8 @@ document.getElementById('formSaveFolio').addEventListener('submit', function (ev
                     timer: 2000,
                     showConfirmButton: false
                 });
+                // Cerrar el modal tras guardar
+                document.getElementById('btn-modal-gestion-close').click();
             })
             .catch(function (error) {
                 console.error('Error al guardar las fechas:', error);

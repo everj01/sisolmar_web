@@ -9,6 +9,7 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\ActualizacionesDjController;
 
 class RoutingController extends Controller
 {
@@ -55,6 +56,8 @@ class RoutingController extends Controller
             'dj' => [
                 'gestion_dj' => [FileController::class, 'indexGestionDj'],
                 'actualizar_dj' => [FileController::class, 'indexActualizarDj'],
+                'reporte_personal' => [FileController::class, 'indexReportePersonal'],
+                'gestionar_actualizaciones_dj' => [ActualizacionesDjController::class, 'index'],
             ],
             'file_control' => [
                 'chargefile' => [FileController::class, 'index'],
@@ -66,11 +69,13 @@ class RoutingController extends Controller
                 'legajos_pdf' => [FileController::class, 'ViewLegajoPdf'],
                 'dashboard' => [FileController::class, 'ViewDashboard'],
                 'reportes' => [ReporteController::class, 'index'],
+                'carga_escaneo_dj' => [FileController::class, 'ViewEscaneoDJ'],
             ],
             'capacitacion' => [
                 'consulta_matriculas'      => [CapacitacionController::class, 'vistaConsultaMatriculas'],
                 'historial_capacitaciones' => [CapacitacionController::class, 'vistaHistorialCapacitaciones'],
                 'gestion_cursos'           => [CapacitacionController::class, 'vistaGestionCursos'],
+                'cursos_sucamec'           => [CapacitacionController::class, 'vistaCursosSucamec'],
                 'seguimiento_matriculas'   => [CapacitacionController::class, 'vistaSeguimientoMatriculas'],
                 'reportes_capacitaciones'  => [CapacitacionController::class, 'vistaReportesCapacitaciones'],
                 'planes_capacitacion'      => [CapacitacionController::class, 'vistaPlanesCapacitacion'],

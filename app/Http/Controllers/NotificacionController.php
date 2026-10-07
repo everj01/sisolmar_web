@@ -2,19 +2,10 @@
 
 namespace App\Http\Controllers;
 
-
-use App\Helpers\PdfHelper;
-use App\Helpers\ImagenHelper;
 use App\Mail\AlertaCaducidadMail;
-use Barryvdh\Snappy\Facades\SnappyPdf;
 use Illuminate\Http\Request;
 use App\Models\NotificacionModel;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
-use Mail;
-use ZipArchive;
+use Illuminate\Support\Facades\Mail;
 
 
 class NotificacionController extends Controller{
@@ -120,6 +111,40 @@ class NotificacionController extends Controller{
             'total'   => count($personas)
         ]);
     }
+
+    public function pendientesEtapa2()
+    {
+        // Trae ['CALLAO' => 5, 'LIMA' => 12, ...]
+        $conteosPorSucursal = NotificacionModel::pendientesEtapa2();
+        
+        // Suma todos los valores del array para el globo rojo de la campana
+        $totalGeneral = array_sum($conteosPorSucursal);
+
+        return response()->json([
+            'success' => true,
+            'total'   => $totalGeneral,
+            'data'    => $conteosPorSucursal
+        ]);
+    }
+
+public function getDemandasAdmin()
+    {
+        $demandas = NotificacionModel::obtenerDemandasNuevas();
+        
+        return response()->json([
+            'success' => true,
+            'data'    => $demandas
+        ]);
+    }
+
+    public function deleteDemandaAdmin(Request $request)
+    {
+        $id = $request->input('id');
+        $deleted = NotificacionModel::borrarDemanda($id);
+
+        return response()->json(['success' => $deleted > 0]);
+    }
+
 }
 
 

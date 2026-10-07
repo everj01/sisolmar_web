@@ -18,4 +18,6 @@ yarn-error.log
 /.idea
 /.vscode
 /temp
+temp/
 public/build - copia/
+.php-preview-router.php

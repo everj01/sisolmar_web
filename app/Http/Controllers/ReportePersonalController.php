@@ -74,7 +74,6 @@ class ReportePersonalController extends Controller
             return response()->json(['error' => 'Error interno: ' . $e->getMessage()], 500);
         }
     }
-
     public function datosGenerales(Request $request)
     {
         $codSucursal  = trim($request->get('codSucursal',  ''));

@@ -72,8 +72,10 @@ var options = {
     }]
 }
 
-var chart = new ApexCharts(document.querySelector("#radial-chart"), options);
-chart.render();
+if (document.querySelector("#radial-chart")) {
+    var chart = new ApexCharts(document.querySelector("#radial-chart"), options);
+    chart.render();
+}
 
 
 // chart6 (Line chart)
@@ -172,5 +174,7 @@ var options = {
     },
 };
 
-var chart = new ApexCharts(document.querySelector("#line-chart"), options);
-chart.render();
+if (document.querySelector("#line-chart")) {
+    var chart = new ApexCharts(document.querySelector("#line-chart"), options);
+    chart.render();
+}

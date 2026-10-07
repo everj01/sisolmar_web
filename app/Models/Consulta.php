@@ -73,8 +73,14 @@ class Consulta extends Model
         return DB::select("EXEC SW_LISTAR_AREAS_POR_SISTEMA ?", [$sistemaId]);
     }
 
-    public static function obtenerAreas(){
-        return DB::select('SELECT [nombre],[codModdle] FROM [sisolm_web].[dbo].[sw_curso_areas]');
+    public static function obtenerAreas()
+    {
+        return DB::select('
+        SELECT
+            [nombre],
+            [codigo_moodle] AS [codModdle]
+        FROM [sisolm_web].[dbo].[sw_cursos_area]
+    ');
     }
 
     public static function obtenerAreasEncargadas()
@@ -148,7 +154,7 @@ class Consulta extends Model
     public static function obtenerDirigidos()
     {
         return DB::table("sw_cursos_dirigido as d")
-            ->select("codigo", "opcion as texto")
+            ->select("codigo", "nombre as texto")
             ->where("habilitado", 1)
             ->orderBy("codigo")
             ->get();
@@ -172,8 +178,11 @@ class Consulta extends Model
             P.NRO_DOCU_IDEN AS NRO_DOC,
 
             CASE
-                WHEN P.PERS_TIPOTRAB = '03' THEN 'OPERATIVO'
-                WHEN P.PERS_TIPOTRAB = '05' THEN 'ADMINISTRATIVO'
+                WHEN P.PERS_TIPOTRAB = '01' THEN 'OPERATIVO 4°'
+                WHEN P.PERS_TIPOTRAB = '02' THEN 'ADMINISTRATIVO 4°'
+                WHEN P.PERS_TIPOTRAB = '03' THEN 'OPERATIVO 5°'
+                WHEN P.PERS_TIPOTRAB = '05' THEN 'ADMINISTRATIVO 5°'
+                WHEN P.PERS_TIPOTRAB = '06' THEN 'ESPECIAL'
                 ELSE 'OTRO'
             END AS TIPO_TRABAJADOR,
 

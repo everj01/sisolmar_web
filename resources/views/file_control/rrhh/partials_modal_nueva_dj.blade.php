@@ -6,6 +6,11 @@
      ============================================================ --}}
 @include('file_control.rrhh.modal_js_styles_nuevo')
 
+{{-- Catálogo de vínculos familiares para JS (filas dinámicas de familiares) --}}
+<script>
+    window.TIPOS_VINCULO = window.TIPOS_VINCULO || @json(array_map('trim', array_column($tiposVinculo ?? [], 'descripcion')));
+</script>
+
 <div id="modalNuevaDJ"
     class="hs-overlay w-full h-full fixed top-0 left-0 z-70 transition-all duration-500 overflow-x-hidden overflow-y-auto hidden pointer-events-none">
     <div class="-translate-y-5 hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 opacity-0 ease-in-out transition-all duration-500 sm:w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded"
@@ -38,7 +43,7 @@
 
                     <div id="ndj_alert_tipo_personal"
                         style="display:block;background:#fef3c7;color:#92400e;padding:10px 16px;border-radius:6px;margin-bottom:12px;font-size:14px;font-weight:500;">
-                        ⚠️ Debe seleccionar el tipo de personal antes de completar el formulario.
+                        ⚠️ Debe seleccionar la sucursal antes de completar el formulario.
                     </div>
 
                     {{-- ══════════════════════════════════════
@@ -46,12 +51,42 @@
                          ══════════════════════════════════════ --}}
                     <div class="dj-group">
                         <div class="dj-group-body">
-                            <div class="dj-grid-4">
+                            <div class="dj-grid-3">
+                                <div>
+                                    <label class="dj-label">Sucursal <span style="color:#ef4444">*</span></label>
+                                    <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
+                                        @foreach ($todasLasSucursales as $sucursal)
+                                            <option value="{{ $sucursal->codigo }}">
+                                                {{ $sucursal->abreviatura }}
+                                            </option>
+                                        @endforeach 
+                                    </select>
+                                </div>
                                 <div>
                                     <label class="dj-label">Tipo de Personal <span style="color:#ef4444">*</span></label>
                                     <select id="ndj_sel_tipo_personal" name="ndj_sel_tipo_personal" class="dj-select">
                                         <option value="">— Seleccionar —</option>
                                     </select>
+                                    <div id="ndj_wrap_sctr" style="display:none;margin-top:6px;">
+                                        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer;">
+                                            <input type="checkbox" id="ndj_autorizar_sctr" name="ndj_autorizar_sctr" value="1"
+                                                style="width:14px;height:14px;accent-color:#25d366;cursor:pointer;">
+                                            SCTR
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="dj-label">Cargo</label>
+                                    <select id="ndj_sel_cargo" name="ndj_cargo" class="dj-select">
+                                        <option value="">— Seleccionar —</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="dj-grid-3" style="margin-top:10px;">
+                                <div>
+                                    <label class="dj-label">Fecha Ingreso a Solmar <span style="color:#ef4444">*</span></label>
+                                    <input type="date" id="ndj_fecha_ingreso_solmar" name="ndj_fecha_ingreso_solmar"
+                                        class="dj-input" max="{{ date('Y-m-d') }}">
                                 </div>
                                 <div>
                                     <label class="dj-label">Tipo de Documento <span style="color:#ef4444">*</span></label>
@@ -62,21 +97,8 @@
                                 <div>
                                     <label class="dj-label">Número de Documento <span style="color:#ef4444">*</span></label>
                                     <input type="text" id="ndj_nro_documento" name="ndj_nro_documento"
-                                        class="dj-input" placeholder="Ingrese el número"
-                                        maxlength="20" style="text-transform:uppercase;">
-                                </div>
-                                <div>
-                                    <label class="dj-label">Sucursal <span style="color:#ef4444">*</span></label>
-
-                                    <select id="ndj_filtroSucursal" class="dj-select" name="ndj_filtroSucursal">
-
-                                        @foreach ($sucursalesFiltradas as $sucursal)
-                                            <option value="{{ $sucursal->codigo }}">
-                                                {{ $sucursal->abreviatura }}
-                                            </option>
-                                        @endforeach
-
-                                    </select>
+                                        class="dj-input" placeholder="Seleccione tipo de documento primero"
+                                        maxlength="20" style="text-transform:uppercase;" disabled>
                                 </div>
                             </div>
                             <div style="margin-top:6px;">
@@ -155,6 +177,10 @@
                                         <div>
                                             <label class="dj-label">Caduca Documento</label>
                                             <input type="date" id="ndj_caduca" name="ndj_caduca" class="dj-input">
+                                            <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;cursor:pointer;">
+                                                <input type="checkbox" id="ndj_no_caduca" name="ndj_no_caduca" style="width:16px;height:16px;cursor:pointer;">
+                                                No Caduca
+                                            </label>
                                         </div>
                                         <div>
                                             <label class="dj-label">Estado Civil</label>
@@ -178,38 +204,37 @@
                                 </div>
                             </div>
 
-                            {{-- Ciudad de nacimiento --}}
+                            {{-- País de nacimiento --}}
                             <div class="dj-section">
                                 <div class="dj-section-header">
                                     <i class='bx bx-map'></i>
-                                    Ciudad de Nacimiento
+                                    País de Nacimiento
                                 </div>
                                 <div class="dj-section-body">
-                                    {{-- ✅ CORREGIDO: Agregado campo ciudad_naci --}}
                                     <div class="dj-grid-4" style="margin-bottom:8px;">
                                         <div>
+                                            <label class="dj-label">País</label>
+                                            <select id="ndj_pais" name="ndj_pais" class="dj-select">
+                                                <option value="">— Seleccionar —</option>
+                                            </select>
+                                        </div>
+                                        <div id="ndj_wrap_departamento_nac">
                                             <label class="dj-label">Departamento</label>
                                             <select id="ndj_departamento_nac" name="ndj_departamento_nac" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
                                         </div>
-                                        <div>
+                                        <div id="ndj_wrap_provincia_nac">
                                             <label class="dj-label">Provincia</label>
                                             <select id="ndj_provincia_nac" name="ndj_provincia_nac" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
                                         </div>
-                                        <div>
+                                        <div id="ndj_wrap_distrito_nac">
                                             <label class="dj-label">Distrito</label>
                                             <select id="ndj_distrito_nac" name="ndj_distrito_nac" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
-                                        </div>
-                                        <div>
-                                            <label class="dj-label">Ciudad / Localidad</label>
-                                            <input type="text" id="ndj_ciudad_naci" name="ndj_ciudad_naci"
-                                                class="dj-input" placeholder="Ej. Trujillo"
-                                                style="text-transform:uppercase;">
                                         </div>
                                     </div>
                                 </div>
@@ -226,7 +251,8 @@
                                         <div>
                                             <label class="dj-label">Celular</label>
                                             <input type="text" id="ndj_celular" name="ndj_celular"
-                                                class="dj-input" placeholder="999 999 999">
+                                                class="dj-input" placeholder="999 999 999" inputmode="numeric"
+                                                maxlength="9" pattern="[0-9]{9}">
                                         </div>
                                         <div>
                                             <label class="dj-label">Correo electrónico</label>
@@ -236,7 +262,8 @@
                                         <div>
                                             <label class="dj-label">WhatsApp</label>
                                             <input type="text" id="ndj_whatsapp" name="ndj_whatsapp"
-                                                class="dj-input" placeholder="999 999 999">
+                                                class="dj-input" placeholder="999 999 999" inputmode="numeric"
+                                                maxlength="9" pattern="[0-9]{9}">
                                         </div>
                                     </div>
                                 </div>
@@ -263,13 +290,15 @@
                                         </div>
                                         <div>
                                             <label class="dj-label">Peso (kg)</label>
-                                            <input type="number" id="ndj_peso" name="ndj_peso"
-                                                step="0.01" class="dj-input" placeholder="70">
+                                            <input type="text" id="ndj_peso" name="ndj_peso"
+                                                class="dj-input" placeholder="70" inputmode="numeric"
+                                                maxlength="3" pattern="[0-9]{1,3}">
                                         </div>
                                         <div>
                                             <label class="dj-label">Talla (m)</label>
-                                            <input type="number" id="ndj_talla" name="ndj_talla"
-                                                step="0.01" class="dj-input" placeholder="1.75">
+                                            <input type="text" id="ndj_talla" name="ndj_talla"
+                                                class="dj-input" placeholder="1.75" inputmode="decimal"
+                                                maxlength="4" pattern="[0-9]\.[0-9]{2}">
                                         </div>
                                     </div>
                                 </div>
@@ -288,6 +317,13 @@
                                             <select id="ndj_sistema_previsional" name="ndj_sistema_previsional" class="dj-select">
                                                 <option value="" disabled selected>—</option>
                                             </select>
+                                            <a href="https://servicios.sbs.gob.pe/ReporteSituacionPrevisional/Afil_Consulta.aspx"
+                                                target="_blank" rel="noopener noreferrer"
+                                                class="dj-btn-sm dj-btn-primary"
+                                                style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;text-decoration:none;">
+                                                <i class='bx bx-search-alt-2'></i>
+                                                Revisión SBS
+                                            </a>
                                         </div>
                                         <div>
                                             <label class="dj-label">ESSALUD Vida</label>
@@ -346,8 +382,9 @@
                                         </div>
                                         <div>
                                             <label class="dj-label">Año de egreso</label>
-                                            <input type="number" id="ndj_anio_egreso" name="ndj_anio_egreso"
-                                                class="dj-input" placeholder="2020">
+                                            <input type="text" id="ndj_anio_egreso" name="ndj_anio_egreso"
+                                                class="dj-input" placeholder="2020" inputmode="numeric"
+                                                maxlength="4" pattern="[0-9]{4}">
                                         </div>
                                     </div>
                                 </div>
@@ -373,8 +410,8 @@
                                             <label class="dj-label">Cuenta de Sueldo</label>
                                             <select id="ndj_cuenta_banco" name="ndj_cuenta_banco" class="dj-select">
                                                 <option value="" disabled selected>—</option>
-                                                <option value="BCP">BCP</option>
-                                                <option value="INTERBANK">INTERBANK</option>
+                                                <option value="01">BANCO DE CRÉDITO DEL PERÚ</option>
+                                                <option value="03">BANCO INTERNACIONAL DEL PERÚ - INTERBANK</option>
                                             </select>
                                         </div>
                                     </div>
@@ -437,6 +474,23 @@
                                                     </select>
                                                 </div>
                                             </div>
+                                            <div class="dj-grid-2" style="margin-top:8px;">
+                                                <div>
+                                                    <label class="dj-label">Tipo Zona</label>
+                                                    <select id="ndj_tipo_zona" name="ndj_tipo_zona" class="dj-select">
+                                                        <option value="">—</option>
+                                                        @foreach ($tiposZona ?? [] as $tz)
+                                                            <option value="{{ trim($tz->TIZO_CODIGO) }}">{{ $tz->TIZO_DESCRIPCION }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="dj-label">Nombre de Zona</label>
+                                                    <input type="text" id="ndj_zona_dirdni" name="ndj_zona_dirdni"
+                                                        class="dj-input" placeholder="Nombre de la zona"
+                                                        maxlength="100" style="text-transform:uppercase;">
+                                                </div>
+                                            </div>
                                             <label class="dj-label">Descripción</label>
                                             <textarea id="ndj_direccion_dni" name="ndj_direccion_dni"
                                                 class="dj-textarea" placeholder="Dirección registrada en el DNI"></textarea>
@@ -456,21 +510,22 @@
                                         <div>
                                             <label class="dj-label">Llamar a</label>
                                             <input type="text" id="ndj_contacto_emergencia" name="ndj_contacto_emergencia"
-                                                class="dj-input" placeholder="Juan Pérez García">
+                                                class="dj-input" placeholder="Juan Pérez García" autocomplete="name"
+                                                pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+">
                                         </div>
                                         <div>
                                             <label class="dj-label">Celular</label>
                                             <input type="text" id="ndj_celular_emergencia" name="ndj_celular_emergencia"
-                                                class="dj-input" placeholder="999 999 999">
+                                                class="dj-input" placeholder="999 999 999" inputmode="numeric"
+                                                maxlength="9" pattern="[0-9]{9}">
                                         </div>
                                         <div>
                                             <label class="dj-label">Parentesco</label>
                                             <select id="ndj_parentesco_emergencia" name="ndj_parentesco_emergencia" class="dj-select">
                                                 <option value="">—</option>
-                                                <option value="PADRE">Padre</option>
-                                                <option value="MADRE">Madre</option>
-                                                <option value="CONYUGE">Cónyuge</option>
-                                                <option value="HIJO">Hijo(a)</option>
+                                                @foreach(($tiposVinculo ?? []) as $tv)
+                                                <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                @endforeach
                                             </select>
                                         </div>
                                     </div>
@@ -499,12 +554,17 @@
                                             <label class="dj-label">Profesión / Ocupación Principal</label>
                                             <input type="text" id="ndj_ocupacion_principal" name="ndj_ocupacion_principal"
                                                 class="dj-input" placeholder="Ej. Administrador"
-                                                style="text-transform:uppercase;">
+                                                style="text-transform:uppercase;" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+">
                                         </div>
                                         <div>
-                                            <label class="dj-label">Experiencia (años)</label>
-                                            <input type="number" id="ndj_experiencia_anios" name="ndj_experiencia_anios"
-                                                class="dj-input" placeholder="0">
+                                            <label class="dj-label">EXPERIENCIA</label>
+                                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                                <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Años:</span>
+                                                <input type="text" id="ndj_experiencia_anios" name="ndj_experiencia_anios" class="dj-input" placeholder="0" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" style="width: 70px;">
+                                                
+                                                <span style="font-size: 11px; font-weight: 600; color: #4b5563;">Meses:</span>
+                                                <input type="text" id="ndj_experiencia_meses" name="ndj_experiencia_meses" class="dj-input" placeholder="0" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" style="width: 70px;">
+                                            </div>
                                         </div>
                                         <div>
                                             <label class="dj-label">¿Familiar en la empresa?</label>
@@ -551,11 +611,6 @@
                                                 <option value="NO">No</option>
                                                 <option value="SI">Sí</option>
                                             </select>
-                                            <div id="ndj_div_sucamec_obs" class="hidden" style="margin-top:6px;">
-                                                <label class="dj-label">Observación / N° Certificado</label>
-                                                <input type="text" id="ndj_sucamec_obs" name="ndj_sucamec_obs"
-                                                    class="dj-input" placeholder="Institución o certificado...">
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -565,19 +620,25 @@
                             <div class="dj-section">
                                 <div class="dj-section-header">
                                     <i class='bx bx-flag'></i>
-                                    Servicio Militar Obligatorio
+                                    Servicio Militar (S.M.O.)
                                 </div>
                                 <div class="dj-section-body">
                                     <div class="dj-grid-3">
                                         <div>
-                                            <label class="dj-label">S.M.O.</label>
-                                            {{-- name=ndj_consumo_sustancias para compatibilidad con backend --}}
-                                            <select id="ndj_smo" name="ndj_consumo_sustancias" class="dj-select">
+                                            <label class="dj-label">Prestó S.M.O.</label>
+                                            <select id="ndj_presto_smo" name="ndj_presto_smo" class="dj-select">
                                                 <option value="" disabled selected>Seleccionar...</option>
+                                                <option value="SI">SI</option>
                                                 <option value="NO">NO</option>
-                                                <option value="MG">MGP - MARINA DE GUERRA DEL PERU</option>
-                                                <option value="EP">EP - EJERCITO DEL PERU</option>
-                                                <option value="FA">FAP - FUERZA AEREA DEL PERU</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="dj-label">Lugar de S.M.O.</label>
+                                            <select id="ndj_lugar_smo" name="ndj_lugar_smo" class="dj-select" disabled>
+                                                <option value="" disabled selected>Seleccionar...</option>
+                                                <option value="MG">MGP</option>
+                                                <option value="EP">EP</option>
+                                                <option value="FA">FAP</option>
                                             </select>
                                         </div>
                                     </div>
@@ -722,18 +783,18 @@
                                                 <label class="dj-label">Parentesco</label>
                                                 <select name="ndj_parentesco[]" class="dj-select">
                                                     <option value="" disabled selected>—</option>
-                                                    <option value="PADRE">Padre</option>
-                                                    <option value="MADRE">Madre</option>
-                                                    <option value="CONYUGE">Cónyuge</option>
-                                                    <option value="HIJO">Hijo(a)</option>
+                                                    @foreach(($tiposVinculo ?? []) as $tv)
+                                                    <option value="{{ trim($tv->descripcion) }}">{{ trim($tv->descripcion) }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                             <div>
                                                 <label class="dj-label">Apellidos y Nombres</label>
                                                 <input type="text" name="ndj_apellidosNombres[]" class="dj-input"
-                                                    placeholder="Apellidos y nombres completos">
+                                                    placeholder="Apellidos y nombres completos"
+                                                    pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+">
                                             </div>
-                                            <div>
+                                            <div class="ndj-family-date">
                                                 <label class="dj-label">Fecha de Nacimiento</label>
                                                 <input type="date" name="ndj_fechaNacimiento[]" class="dj-input">
                                             </div>
@@ -771,6 +832,57 @@
                 @endif
             </div>
 
+        </div>
+    </div>
+</div>
+
+{{-- Modal de autorización para excepción de edad. La validación de permisos se conecta desde nueva_dj.js. --}}
+<div id="modalExcepcionEdad"
+    class="hs-overlay hidden fixed inset-0 z-[80] overflow-y-auto transition-all duration-500 pointer-events-none"
+    data-hs-overlay-options='{"isClosePrev": false}'
+    role="dialog" tabindex="-1" aria-labelledby="tituloModalExcepcionEdad">
+    <div class="hs-overlay-open:translate-y-0 hs-overlay-open:opacity-100 translate-y-10 opacity-0 ease-in-out transition-all duration-500 sm:max-w-lg w-full my-8 sm:mx-auto flex flex-col bg-white shadow-sm rounded-lg pointer-events-auto border border-gray-200">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+            <div>
+                <h3 id="tituloModalExcepcionEdad" class="text-lg font-bold text-gray-900">
+                    Registrar excepción de edad
+                </h3>
+                <p class="text-sm text-gray-500 font-medium mt-0.5">Autorización de usuario especial</p>
+            </div>
+            <button type="button" id="ndj_btnCerrarExcepcionEdad"
+                class="text-gray-500 hover:text-gray-700 transition-colors" aria-label="Cerrar">
+                <i class='bx bx-x text-2xl'></i>
+            </button>
+        </div>
+
+        <div class="px-5 py-5 space-y-5">
+            <p class="text-sm text-center text-gray-500 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                Esta operación requiere las credenciales de un usuario autorizado para registrar excepciones de edad.
+            </p>
+
+            <div>
+                <label for="ndj_usuario_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Usuario</label>
+                <input type="text" id="ndj_usuario_excepcion" autocomplete="username"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                    placeholder="Usuario autorizado">
+            </div>
+            <div>
+                <label for="ndj_clave_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
+                <input type="password" id="ndj_clave_excepcion" autocomplete="current-password"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                    placeholder="Contraseña">
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-slate-50 rounded-b-lg">
+            <button type="button" id="ndj_btnValidarExcepcionEdad"
+                class="btn bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                <i class='bx bx-check-shield text-lg'></i> Validar credenciales
+            </button>
+            <button type="button" id="ndj_btnCancelarExcepcionEdad"
+                class="btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium">
+                Cancelar
+            </button>
         </div>
     </div>
 </div>

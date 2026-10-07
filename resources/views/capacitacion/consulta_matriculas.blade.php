@@ -393,7 +393,7 @@
 
     .cnt-filter-btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
     }
 
     .cnt-filter-btn.active {
@@ -413,6 +413,9 @@
     }
 </style>
 @endsection
+
+@include('layouts.shared/page-title', ['subtitle' => 'Capacitación', 'title' => 'Gestión de matrículas'])
+
 @section('content')
 <div class="px-6 py-6">
     {{-- Header --}}
@@ -440,9 +443,7 @@
                     </h1>
 
                     <p class="mt-3 text-sm leading-7 text-default-600 max-w-3xl">
-                        Consulte y gestione las matrículas de los colaboradores en los cursos de capacitación.
-                        Seleccione un curso del panel izquierdo para ver sus participantes, o busque por personal
-                        para consultar su kardex de capacitaciones.
+                        Matrícula de participantes en los cursos de los planes de capacitación, gestionando matrículas grupales o individuales.
                     </p>
 
                     <div class="flex items-center gap-6 mt-5">
@@ -490,37 +491,34 @@
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Tipo de curso</label>
                     <select id="filtroTipoCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todos los tipos</option>
+                        <option value="">Cargando tipos...</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Área</label>
                     <select id="filtroAreaCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todas las áreas</option>
+                        <option value="">Cargando áreas...</option>
                     </select>
                 </div>
-                <div class="flex flex-col gap-1.5">
+                <div id="filtroSistemaCursoContainer" class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Sistema de gestión</label>
                     <select id="filtroSistemaCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todos los sistemas</option>
+                        <option value="">Cargando sistemas...</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium text-default-700">Jefatura</label>
                     <select id="filtroJefaturaCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <option value="">Todas las jefaturas</option>
+                        <option value="">Cargando jefaturas...</option>
                     </select>
                 </div>
-                <div class="flex flex-col gap-1.5 lg:col-span-2">
-                    <label class="text-xs font-medium text-default-700">Fecha de creación</label>
-                    <div class="flex items-center gap-2">
-                        <input id="filtroFechaDesde" type="date" placeholder="Desde"
-                            class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                        <span class="text-xs text-default-400 shrink-0">—</span>
-                        <input id="filtroFechaHasta" type="date" placeholder="Hasta"
-                            class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                    </div>
+                <div id="filtroClienteCursoContainer" class="flex flex-col gap-1.5" style="display: none;">
+                    <label class="text-xs font-medium text-default-700">Cliente</label>
+                    <select id="filtroClienteCurso" class="w-full h-9 px-3 text-sm border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+                        <option value="">Cargando clientes...</option>
+                    </select>
                 </div>
+
             </div>
 
             <div class="flex gap-2">
@@ -541,13 +539,27 @@
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="background: rgba(36,39,70,0.45);">
 
-    <div class="flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-7xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
+    <div class="relative flex flex-col shadow-2xl shadow-primary/10 rounded-2xl overflow-hidden w-full max-w-7xl border border-default-200 bg-white transition-all duration-300 max-h-[90vh]"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 scale-95 translate-y-4"
         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
         x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+        <!-- Loader full-modal -->
+        <div x-show="isLoading"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="absolute inset-0 z-30 bg-white flex flex-col items-center justify-center text-center px-8">
+            <div class="w-12 h-12 rounded-full border-4 border-slate-200 border-t-slate-700 animate-spin"></div>
+            <p class="mt-5 text-base font-bold text-default-900" x-text="loadingTitle">Cargando información...</p>
+            <p class="mt-2 text-xs leading-5 text-default-400 max-w-md">Estamos trayendo la programación vigente y el personal del curso. En un momento continuamos.</p>
+        </div>
 
 
         <!-- Header -->
@@ -594,13 +606,13 @@
                 </div>
             </div>
 
-            <!-- Programación -->
-            <div class="flex flex-col gap-1 bg-default-50 border border-default-200/60 rounded-xl px-4 py-2">
-                <p class="text-[11px] font-semibold text-default-400 uppercase tracking-widest mb-2">Programaciones vigentes, pendientes y finalizadas del curso</p>
-                <select id="slcProgramacion"
-                    class="w-full px-2.5 text-xs border border-default-200 rounded-lg bg-white text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
-                    <option value="">Seleccione una programación</option>
-                </select>
+            <!-- Programación vigente -->
+            <div class="flex flex-col gap-1 bg-default-50 border border-default-200/60 rounded-xl px-4 py-3">
+                <p class="text-[11px] font-semibold text-default-400 uppercase tracking-widest">Programación vigente del curso</p>
+                <div id="infoProgramacionVigente" class="flex items-center gap-2 text-sm font-semibold text-default-900">
+                    <i class="ti ti-calendar-event text-primary"></i>
+                    <span id="txtProgramacionVigente">—</span>
+                </div>
             </div>
 
             <!-- Filtros -->
@@ -648,40 +660,26 @@
                 </div>
             </div>
 
-            <!-- Contadores -->
-            <div class="flex flex-wrap items-center gap-3 mb-4" id="contadoresMatricula">
-                <button type="button" class="cnt-filter-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200" data-filter="matriculados">
-                    <i class="ti ti-users text-blue-600 text-sm"></i>
-                    <span class="text-xs font-semibold text-blue-700">Matriculados: <span id="cntMatriculados">0</span></span>
-                </button>
-                <button type="button" class="cnt-filter-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200" data-filter="sin-matricular">
-                    <i class="ti ti-user-off text-amber-600 text-sm"></i>
-                    <span class="text-xs font-semibold text-amber-700">Sin matricular: <span id="cntSinMatricular">0</span></span>
+            <!-- Acciones de selección -->
+            <div class="flex flex-wrap items-center gap-2 mb-4" id="infoModoMatricula">
+                <button type="button" id="btnSeleccionarFiltrados" class="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 text-primary text-xs font-semibold shadow-sm hover:bg-primary/10 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="ti ti-checks text-sm"></i>
+                    <span>Seleccionar filtrados (0)</span>
                 </button>
             </div>
 
             <!-- Tabla -->
-            <div class="border border-default-200/60 rounded-xl overflow-hidden shadow-sm bg-white relative">
-
-                <!-- Loader Overlay -->
-                <div x-show="isLoading"
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0"
-                    x-transition:enter-end="opacity-100"
-                    x-transition:leave="transition ease-in duration-200"
-                    x-transition:leave-start="opacity-100"
-                    x-transition:leave-end="opacity-0"
-                    class="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                    <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <span class="mt-3 text-sm font-semibold text-primary tracking-wide">Cargando personal...</span>
-                </div>
-
+            <div class="border border-default-200/60 rounded-xl overflow-hidden shadow-sm bg-white">
                 <div id="tblPersonalMatriculado" class="w-full min-h-[400px]"></div>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="flex justify-end items-center gap-3 px-6 py-4 border-t border-default-100 shrink-0 bg-default-50/50">
+            <label id="lblNotificarMatricula" class="mr-auto flex items-center gap-2 text-xs font-medium text-default-500 cursor-pointer select-none" title="Se avisará al coordinador por correo al finalizar (solo si son más de 10 personas)">
+                <input type="checkbox" id="chkNotificarMatricula" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
+                Avisar por correo al finalizar
+            </label>
             <button type="button" @click="cerrar()"
                 class="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-white border border-default-200 text-default-700 text-sm font-medium rounded-lg shadow-sm hover:bg-default-50 transition cursor-pointer">
                 Cerrar
@@ -699,6 +697,7 @@
         return {
             open: false,
             isLoading: false,
+            loadingTitle: 'Cargando información...',
             cursoId: null,
             nombre: '',
             area: '',
@@ -718,14 +717,13 @@
                 this.descripcion = data.Descripcion || '';
                 this.codResponsable = data.Cod_Responsable || '';
 
-                if (window.cargarDatosModalMatriculados) {
-                    window.cargarDatosModalMatriculados(this.cursoId, this);
-                }
+                if (window._iniciarTextoLoader) window._iniciarTextoLoader(this);
             },
 
             cerrar() {
                 this.open = false;
                 this.isLoading = false;
+                if (window._detenerTextoLoader) window._detenerTextoLoader();
                 if (window.limpiarModalMatriculados) window.limpiarModalMatriculados();
             },
         }

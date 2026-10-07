@@ -12,10 +12,10 @@ use App\Models\Reporte;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-
 
 class FileController extends Controller
 {
@@ -37,16 +37,171 @@ class FileController extends Controller
         $grados = FileControl::getGradosInstruccionDJ();
         $carreras = FileControl::getCarrerasDJ();
         $instituciones = FileControl::getInstitucionesDJ();
+        $bancos = FileControl::getBancosDJ();
         $sucursales = FileControl::getSucursales();
 
-        // 🔥 1. Obtener cargos
-        $cargos = FileControl::getCargos();
+        // Lista completa de sucursales vigentes para el modal Nueva DJ
+        // (llamada al SP sin filtro de usuario: @usuario = '0')
+        $todasLasSucursales = DB::select('EXEC SW_LISTAR_SUCURSALES ?', ['0']);
+
+        // Catálogo de tipos de zona para los formularios DJ
+        $tiposZona = DB::select(
+            'SELECT TIZO_CODIGO, TIZO_DESCRIPCION FROM si_solm.dbo.TIPO_ZONA WHERE TIZO_VIGENCIA = ? ORDER BY TIZO_CODIGO',
+            ['1']
+        );
+
+        // Catálogo de vínculos familiares (parentescos) para Contacto de Emergencia
+        $tiposVinculo = DB::select(
+            'SELECT cod, descripcion FROM sisolm_web.dbo.TIPO_VINCULO_FAMILIAR ORDER BY cod'
+        );
+
+        $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
+        $restringirSucursalesGestionDj = $this->usuarioTieneSucursalLimitada();
+
+        // Cuando el usuario tiene asignaciones activas, el filtro solo debe
+        // exponer esas sucursales. Los usuarios sin asignaciones mantienen
+        // el comportamiento actual (todas las sucursales).
+        if ($restringirSucursalesGestionDj) {
+            $normalizarCodigoSucursal = static function ($codigo): string {
+                $codigo = trim((string) $codigo);
+
+                return ctype_digit($codigo) ? (string) ((int) $codigo) : strtoupper($codigo);
+            };
+            $sucursalesAsignadasNormalizadas = array_map($normalizarCodigoSucursal, $sucursalesAsignadas);
+
+            $sucursales = array_values(array_filter($sucursales, function ($sucursal) use ($normalizarCodigoSucursal, $sucursalesAsignadasNormalizadas) {
+                $codigo = trim((string) ($sucursal->codigo ?? ''));
+
+                return in_array($normalizarCodigoSucursal($codigo), $sucursalesAsignadasNormalizadas, true);
+            }));
+        }
+
+        $sucursalesGestionDj = array_values(array_filter($sucursales, function ($sucursal) {
+            return ! in_array(trim((string) ($sucursal->codigo ?? '')), ['', '0', '00'], true);
+        }));
+
+        // Los usuarios con acceso global inician en Chimbote. Para los
+        // usuarios limitados, el predeterminado solo aplica si Chimbote está
+        // entre sus sucursales permitidas.
+        $filtrosInicialesGestionDj = [
+            'sucursal' => '',
+            'tipo' => '',
+            'vigencia' => '',
+        ];
+
+        foreach ($sucursalesGestionDj as $sucursal) {
+            $datosSucursal = implode(' ', array_filter([
+                $sucursal->codigo ?? null,
+                $sucursal->abreviatura ?? null,
+                $sucursal->nombre ?? null,
+                $sucursal->descripcion ?? null,
+            ]));
+
+            if (str_contains(strtoupper(trim($datosSucursal)), 'CHIMBOTE')) {
+                $filtrosInicialesGestionDj = [
+                    'sucursal' => trim((string) $sucursal->codigo),
+                    'tipo' => 'OPERATIVO 5°',
+                    'vigencia' => 'SI',
+                ];
+                break;
+            }
+        }
+
+        $mostrarTodosTiposGestionDj = $filtrosInicialesGestionDj['sucursal'] !== '';
+
+        // 1. Obtener cargos
+        $cargos = FileControl::getCargosDj();
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
 
-        // 🔥 2. Añadir 'cargos' al compact
-        return view('file_control.gestion_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'cargos', 'tipoPerLimitar', 'tipoUsuario'));
+        // 2. Añadir 'cargos' al compact
+        return view('file_control.gestion_dj', compact(
+            'grados',
+            'carreras',
+            'instituciones',
+            'bancos',
+            'sucursales',
+            'todasLasSucursales',
+            'sucursalesGestionDj',
+            'restringirSucursalesGestionDj',
+            'filtrosInicialesGestionDj',
+            'mostrarTodosTiposGestionDj',
+            'cargos',
+            'tipoPerLimitar',
+            'tipoUsuario',
+            'tiposZona',
+            'tiposVinculo'
+        ));
+    }
+
+    /**
+     * Obtiene las sucursales activas asignadas al usuario autenticado.
+     * Una lista vacía mantiene el acceso global actual.
+     */
+    private function obtenerSucursalesAsignadasUsuario(): array
+    {
+        $codUsuario = Auth::id();
+
+        if (! $codUsuario) {
+            return [];
+        }
+
+        return DB::table('sw_permisos_usuario_sucursal')
+            ->where('codUsuario', $codUsuario)
+            ->where('habilitado', 1)
+            ->pluck('codSucursal')
+            ->map(fn ($codigo) => trim((string) $codigo))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * La asignación de sucursales solo se aplica cuando el usuario tiene
+     * la bandera limitarSucursal activada. Con valor 0 conserva acceso global.
+     */
+    private function usuarioTieneSucursalLimitada(): bool
+    {
+        return (int) (Auth::user()?->limitarSucursal ?? 0) === 1;
+    }
+
+    /**
+     * Limita los datos de Gestión DJ a las sucursales activas del usuario.
+     */
+    private function filtrarDjPorSucursalesAsignadas(array $personal): array
+    {
+        if (! $this->usuarioTieneSucursalLimitada()) {
+            return $personal;
+        }
+
+        $sucursalesAsignadas = $this->obtenerSucursalesAsignadasUsuario();
+
+        if (empty($sucursalesAsignadas)) {
+            return $personal;
+        }
+
+        // Los permisos se guardan como CHAR(2), por ejemplo "04", mientras
+        // algunos procedimientos devuelven el código sin cero inicial ("4").
+        // Se normalizan para mantener el filtro estricto sin perder registros.
+        $normalizarCodigoSucursal = static function ($codigo): string {
+            $codigo = trim((string) $codigo);
+
+            return ctype_digit($codigo) ? (string) ((int) $codigo) : strtoupper($codigo);
+        };
+
+        $sucursalesPermitidas = array_map($normalizarCodigoSucursal, $sucursalesAsignadas);
+
+        return array_values(array_filter($personal, function ($persona) use ($sucursalesPermitidas, $normalizarCodigoSucursal) {
+            $codSucursal = $persona->codSucursal
+                ?? $persona->COD_SUCURSAL
+                ?? $persona->SUCU_CODIGO
+                ?? $persona->sucursalCodigo
+                ?? '';
+
+            return in_array($normalizarCodigoSucursal($codSucursal), $sucursalesPermitidas, true);
+        }));
     }
 
     public function indexActualizarDj()
@@ -54,13 +209,40 @@ class FileController extends Controller
         $grados = FileControl::getGradosInstruccionDJ();
         $carreras = FileControl::getCarrerasDJ();
         $instituciones = FileControl::getInstitucionesDJ();
+        $bancos = FileControl::getBancosDJ();
         $sucursales = FileControl::getSucursales();
 
         $tipoPerLimitar = session('limitarTipoPer');
         $tipoUsuario = session('tipo_rol');
 
-        // Retorna a una nueva vista que crearemos en el siguiente paso
-        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'sucursales', 'tipoPerLimitar', 'tipoUsuario'));
+        // Catálogo de tipos de zona
+        $tiposZona = DB::select(
+            'SELECT TIZO_CODIGO, TIZO_DESCRIPCION FROM si_solm.dbo.TIPO_ZONA WHERE TIZO_VIGENCIA = ? ORDER BY TIZO_CODIGO',
+            ['1']
+        );
+
+        // Catálogo de vínculos familiares (parentescos) para Contacto de Emergencia
+        $tiposVinculo = DB::select(
+            'SELECT cod, descripcion FROM sisolm_web.dbo.TIPO_VINCULO_FAMILIAR ORDER BY cod'
+        );
+
+        $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
+        $esAdmin = in_array($tipoUsuario, [5, 11]);
+
+        return view('file_control.actualizar_dj', compact('grados', 'carreras', 'instituciones', 'bancos', 'sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin', 'tiposZona', 'tiposVinculo'));
+    }
+
+
+     public function indexReportePersonal()
+    {
+        $sucursales = FileControl::getSucursales();
+
+        $tipoPerLimitar = session('limitarTipoPer');
+        $tipoUsuario = session('tipo_rol');
+        $esRrhhMigracion = in_array($tipoUsuario, [8, 12]);
+        $esAdmin = in_array($tipoUsuario, [5, 11]);
+
+        return view('file_control.reporte_personal', compact('sucursales', 'tipoPerLimitar', 'tipoUsuario', 'esRrhhMigracion', 'esAdmin'));
     }
 
 
@@ -191,6 +373,92 @@ class FileController extends Controller
         }
     }
 
+    public function getPersonalLegajosPdf(Request $request)
+    {
+        try {
+            $codSucursal = $request->input('codSucursal', '0');
+            $vigencia    = $request->input('vigencia', 'SI');
+            $clienteWeb  = $request->input('cliente', 'T');
+            $cargoErp    = $request->input('cargo', 'T'); 
+
+            $clienteErp = 'T';
+            if ($clienteWeb !== 'T') {
+                $clientesWeb = FileControl::getClientes();
+                $abreviatura = '';
+                foreach ($clientesWeb as $c) {
+                    if ($c->codigo == $clienteWeb) {
+                        $abreviatura = $c->abreviatura;
+                        break;
+                    }
+                }
+                if ($abreviatura !== '') {
+                    $erpData = DB::table('si_solm.dbo.CLIENTE_PROVEEDOR')
+                        ->where('ABREVIATURA', $abreviatura)
+                        ->first();
+                    if ($erpData) {
+                        $clienteErp = $erpData->CODI_CLIE_PROV;
+                    }
+                }
+            }
+
+            $allPersonal = FileControl::getPersonalLegajosPdf($codSucursal, $vigencia, $clienteErp, $cargoErp);
+            return response()->json(array_values($allPersonal));
+        } catch (\Exception $e) {
+            Log::error('Error en getPersonalLegajosPdf: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+
+    public function getCargosErp(Request $request)
+    {
+        $clienteWeb = $request->input('cliente', 'T');
+        $clienteErp = 'T';
+
+        if ($clienteWeb !== 'T') {
+            $clientesWeb = FileControl::getClientes();
+            $abreviatura = '';
+            foreach ($clientesWeb as $c) {
+                if ($c->codigo == $clienteWeb) {
+                    $abreviatura = $c->abreviatura;
+                    break;
+                }
+            }
+            if ($abreviatura !== '') {
+                $erpData = DB::table('si_solm.dbo.CLIENTE_PROVEEDOR')->where('ABREVIATURA', $abreviatura)->first();
+                if ($erpData) { $clienteErp = $erpData->CODI_CLIE_PROV; }
+            }
+        }
+
+        if ($clienteErp !== 'T') {
+            $cargos = DB::select("
+                SELECT DISTINCT C.CODI_CARG AS codigo, C.DESC_CARGO AS nombre
+                FROM si_solm.dbo.PERSONAL P WITH (NOLOCK)
+                INNER JOIN si_solm.dbo.CARGOS C WITH (NOLOCK) ON C.CODI_CARG = P.CODI_CARG
+                INNER JOIN (
+                    SELECT DET.CODI_PERS, CAB.CODI_CLIE_PROV,
+                           ROW_NUMBER() OVER (PARTITION BY DET.CODI_PERS ORDER BY CAB.ASCA_FECHA DESC) rn
+                    FROM si_solm.dbo.OPER_ASITENCIA_DET DET WITH (NOLOCK)
+                    INNER JOIN si_solm.dbo.OPER_ASISTENCIA_CAB CAB WITH (NOLOCK) ON CAB.ASCA_CODIGO = DET.ASCA_CODIGO
+                ) U ON U.CODI_PERS COLLATE DATABASE_DEFAULT = P.CODI_PERS COLLATE DATABASE_DEFAULT AND U.rn = 1
+                WHERE U.CODI_CLIE_PROV COLLATE DATABASE_DEFAULT = ?
+                  AND C.DESC_CARGO IS NOT NULL
+                ORDER BY C.DESC_CARGO
+            ", [$clienteErp]);
+        } else {
+            $cargos = DB::select("SELECT CODI_CARG AS codigo, DESC_CARGO AS nombre FROM si_solm.dbo.CARGOS WITH (NOLOCK) WHERE DESC_CARGO IS NOT NULL ORDER BY DESC_CARGO");
+        }
+
+        return response()->json($cargos);
+    }
+
+
+    public function ViewEscaneoDJ()
+    {
+        $sucursales = FileControl::getSucursales();
+        $tipoPerLimitar = session('limitarTipoPer');
+        return view('file_control.carga_escaneo_dj', compact('sucursales', 'tipoPerLimitar'));
+    }
+
     public function getPersonalTotal(Request $request)
     {
         $page = $request->get('page', 1);
@@ -212,7 +480,7 @@ class FileController extends Controller
         // ─── Traer TODOS sin paginar para poder filtrar ───
         // Solo si hay filtro activo de DJ, traemos todo y filtramos
         if ($tieneFolio !== null) {
-            $todosDatos = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
+            $todosDatos = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_CARGA_DE_ARCHIVOS ?, ?, ?, ?, ?, ?, ?', [
                 $codSucursal, 1, 99999, $search, $tipo_per, $vigencia, $usuario,
             ]);
 
@@ -235,14 +503,13 @@ class FileController extends Controller
             }
 
         } else {
-            // Sin filtro DJ — flujo normal con SP de conteo
-            $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
+            // Sin filtro DJ — SP nuevo que ya trae el TotalRows integrado y limpieza de guiones
+            $data = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_CARGA_DE_ARCHIVOS ?, ?, ?, ?, ?, ?, ?', [
                 $codSucursal, $page, $size, $search, $tipo_per, $vigencia, $usuario,
             ]);
 
-            $total = DB::select('EXEC SW_CONTAR_PERSONAL ?, ?, ?, ?, ?', [
-                $codSucursal, $search, $tipo_per, $vigencia, $usuario,
-            ])[0]->total;
+            // Leemos el total de la primera fila. Si no hay registros, el total es 0.
+            $total = count($data) > 0 ? $data[0]->TotalRows : 0;
 
             foreach ($data as $persona) {
                 $persona->tiene_folio_25 = in_array($persona->CODI_PERS, $conFolio25) ? 1 : 0;
@@ -278,7 +545,7 @@ class FileController extends Controller
         // ─── Traer TODOS sin paginar para poder filtrar ───
         // Solo si hay filtro activo de DJ, traemos todo y filtramos
         if ($tieneFolio !== null) {
-            $todosDatos = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL ?, ?, ?, ?, ?, ?, ?', [
+            $todosDatos = DB::select('EXEC SW_LISTAR_PERSONAL_X_SUCURSAL_TOTAL_CARGA_DE_ARCHIVOS ?, ?, ?, ?, ?, ?, ?', [
                 $codSucursal, 1, 99999, $search, $tipo_per, $vigencia, $usuario,
             ]);
 
@@ -348,6 +615,159 @@ class FileController extends Controller
         ]);
     }
 
+    public function getPersonalReportePersonal(Request $request)
+    {
+        session()->save(); // libera el lock de sesión para no bloquear otras requests
+
+        $page        = (int) $request->get('page', 1);
+        $size        = (int) $request->get('size', 20);
+        $search      = trim((string) $request->get('search', ''));
+        $tipo_per    = $request->get('tipo_per', null);
+        $vigencia    = $request->get('vigencia', null);   // 'SI', 'NO', o null = TODOS
+        $codSucursal = $request->get('codSucursal', '0');
+        $usuario     = session('usuario') ?? '0';
+
+        $isTodos        = !$vigencia;
+        $needsPhpFilter = $search !== '' || $tipo_per;
+
+        // Helper: llama el SP con todos sus parámetros
+        $exec = fn($vig, $pag, $fils) => DB::select(
+            'EXEC [dbo].[SW_LISTAR_REPORTE_PERSONAL_DJ_2026]
+                @usuario=?, @codEmpresa=?, @vigencia=?, @codSucursal=?, @pagina=?, @filasPorPag=?',
+            [$usuario, '01', $vig, $codSucursal, $pag, $fils]
+        );
+
+        // ── Cards: solo responden a sucursal + tipo_per (sin vigencia ni búsqueda) ──
+        if (!$tipo_per) {
+            // Sin tipo_per: SP da el total con una sola fila (ligero)
+            $cVI = $exec('SI', 1, 1);
+            $cNO = $exec('NO', 1, 1);
+            $totalVigentes = !empty($cVI) ? (int) $cVI[0]->totalRegistros : 0;
+            $totalCesados  = !empty($cNO) ? (int) $cNO[0]->totalRegistros : 0;
+            $allVI = null; $allNO = null;
+        } else {
+            // Con tipo_per: traer todo y contar en PHP (los datos se reusan abajo)
+            $allVI = $exec('SI', 1, 99999);
+            $allNO = $exec('NO', 1, 99999);
+            $totalVigentes = count(array_filter($allVI, fn($d) => trim($d->tipoPer ?? '') === trim($tipo_per)));
+            $totalCesados  = count(array_filter($allNO, fn($d) => trim($d->tipoPer ?? '') === trim($tipo_per)));
+        }
+
+        // ── Caso ideal: sin filtros PHP ni TODOS → SP pagina todo ──
+        if (!$isTodos && !$tipo_per && $search === '') {
+            $rows     = $exec($vigencia, $page, $size);
+            $total    = !empty($rows) ? (int) $rows[0]->totalRegistros : 0;
+            $lastPage = max(1, (int) ceil($total / $size));
+            return response()->json([
+                'data'          => $rows,
+                'last_page'     => $lastPage,
+                'total'         => $total,
+                'totalVigentes' => $totalVigentes,
+                'totalCesados'  => $totalCesados,
+            ]);
+        }
+
+        // ── Necesita filtro PHP: usar datos ya cargados o traerlos ──
+        if ($allVI === null) {
+            $allVI = $exec('SI', 1, 99999);
+            $allNO = $exec('NO', 1, 99999);
+        }
+
+        // Combinar según vigencia seleccionada
+        $data = match(true) {
+            $isTodos           => array_merge($allVI, $allNO),
+            $vigencia === 'SI' => $allVI,
+            default            => $allNO,
+        };
+
+        // Filtro tipo_per (PHP)
+        if ($tipo_per) {
+            $data = array_values(array_filter($data, fn($d) =>
+                trim($d->tipoPer ?? '') === trim($tipo_per)
+            ));
+        }
+
+        // Filtro búsqueda (PHP — no afecta los cards)
+        if ($search !== '') {
+            $s = strtolower($search);
+            $data = array_values(array_filter($data, fn($d) =>
+                str_contains(strtolower($d->apellido1   ?? ''), $s) ||
+                str_contains(strtolower($d->apellido2   ?? ''), $s) ||
+                str_contains(strtolower($d->NOMB_1      ?? ''), $s) ||
+                str_contains(strtolower($d->NOMB_2      ?? ''), $s) ||
+                str_contains(strtolower($d->dni         ?? ''), $s) ||
+                str_contains(strtolower($d->codPersonal ?? ''), $s)
+            ));
+        }
+
+        $total    = count($data);
+        $paged    = array_slice($data, ($page - 1) * $size, $size);
+        $lastPage = max(1, (int) ceil($total / $size));
+
+        return response()->json([
+            'data'          => array_values($paged),
+            'last_page'     => $lastPage,
+            'total'         => $total,
+            'totalVigentes' => $totalVigentes,
+            'totalCesados'  => $totalCesados,
+        ]);
+    }
+
+    public function getDetallePersonalHistorial($codPersonal)
+    {
+        session()->save();
+
+        // Solo ceses normales (MOCE_TIPO = '01')
+        $ceses = DB::select("
+            SELECT TOP 200
+                CS.FEC_INGRESO,
+                CS.FEC_CESE,
+                CS.OBSE_CESE
+            FROM [si_solm].[dbo].[ADMI_CESE_PERSONAL] AS CS WITH (NOLOCK)
+            INNER JOIN [si_solm].[dbo].[MOTIVO_CESE]   AS M  WITH (NOLOCK)
+                ON M.MOCE_CODIGO = CS.MOCE_CODIGO
+            WHERE CS.CODI_PERS = ?
+              AND M.MOCE_TIPO  = '01'
+            ORDER BY CS.FEC_INGRESO DESC
+        ", [$codPersonal]);
+
+        $tareajes = DB::select("
+            SELECT DISTINCT TOP 200
+                CAB.ASCA_FECHA      AS fecha,
+                CL.PUCL_DESCRIPCION AS puesto,
+                CC.ABREVIATURA      AS cliente
+            FROM [si_solm].[dbo].[OPER_ASITENCIA_DET]        AS DET WITH (NOLOCK)
+            INNER JOIN [si_solm].[dbo].[OPER_ASISTENCIA_CAB]  AS CAB WITH (NOLOCK) ON CAB.ASCA_CODIGO  = DET.ASCA_CODIGO
+            INNER JOIN [si_solm].[dbo].[OPER_PUESTOV_CLIENTE] AS CL  WITH (NOLOCK) ON CL.PUCL_CODIGO   = DET.PUCL_CODIGO
+            INNER JOIN [si_solm].[dbo].[CLIENTE_PROVEEDOR]    AS CC  WITH (NOLOCK) ON CC.CODI_CLIE_PROV = CAB.CODI_CLIE_PROV
+            WHERE DET.CODI_PERS = ?
+              AND CAB.ASCA_FECHA >= DATEADD(YEAR, -2, GETDATE())
+            ORDER BY CAB.ASCA_FECHA DESC
+        ", [$codPersonal]);
+
+        // Lista negra (MOCE_TIPO <> '01')
+        $listaNegra = DB::select("
+            SELECT TOP 100
+                CS.FEC_CESE,
+                M.MOCE_DESCRIPCION AS motivo,
+                CS.OBSE_CESE
+            FROM [si_solm].[dbo].[ADMI_CESE_PERSONAL] AS CS WITH (NOLOCK)
+            INNER JOIN [si_solm].[dbo].[MOTIVO_CESE]   AS M  WITH (NOLOCK)
+                ON M.MOCE_CODIGO = CS.MOCE_CODIGO
+            WHERE CS.CODI_PERS  = ?
+              AND M.MOCE_TIPO  <> '01'
+              AND CS.ESTA_CESE  = '1'
+            ORDER BY CS.FEC_CESE DESC
+        ", [$codPersonal]);
+
+        return response()->json([
+            'success'     => true,
+            'ceses'       => $ceses,
+            'tareajes'    => $tareajes,
+            'lista_negra' => $listaNegra,
+        ]);
+    }
+
     public function verDjPdf($codPersonal)
     {
         $ruta = '\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dj\\2026\\'.$codPersonal.'.pdf';
@@ -388,35 +808,56 @@ class FileController extends Controller
     public function getFoliosXPersonas(Request $request)
     {
         $personas = $request->personas;
-        $folios = $request->folios;
+        $folios   = $request->folios;
         $resultados = [];
-        //Averiguando la sucursal de la persona
 
         foreach ($personas as $persona) {
-            $sucursal = FileControl::getSucursalXPersona($persona['CODI_PERS']);
-            foreach ($folios as $folio) {
-                $datosFolioPersona = FileControl::getFoliosInfoPersona($persona['CODI_PERS'], $folio['codigo']);
-                foreach ($datosFolioPersona as $dato) {
+            try {
+                $sucursal = FileControl::getSucursalXPersona($persona['CODI_PERS']);
+                $tieneDocumentos = false;
+
+                foreach ($folios as $folio) {
+                    try {
+                        $datosFolioPersona = FileControl::getFoliosInfoPersona($persona['CODI_PERS'], $folio['codigo']);
+                        foreach ($datosFolioPersona as $dato) {
+                            $tieneDocumentos = true;
+                            $resultados[] = [
+                                'persona'     => $dato->personal       ?? ($persona['personal'] ?? null),
+                                'nroDoc'      => $dato->nroDoc         ?? ($persona['nroDoc']   ?? null),
+                                'codPersonal' => $persona['CODI_PERS'],
+                                'folio'       => $folio['nombre'],
+                                'sucursal'    => $sucursal             ?? ($persona['sucursal'] ?? null),
+                                'ruta'        => $dato->ruta_archivo   ?? null,
+                                'ancho'       => $dato->ancho          ?? null,
+                                'hojas'       => $dato->cantidad_hojas ?? null,
+                                'documento'   => $dato->documento      ?? null,
+                                'cargo'       => $dato->cargo          ?? null,
+                                'es_formato'  => $dato->es_formato     ?? null,
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Folio {$folio['codigo']} - persona {$persona['CODI_PERS']}: " . $e->getMessage());
+                    }
+                }
+
+                // Sin documentos → entrada mínima para que siempre aparezca la carátula
+                if (!$tieneDocumentos) {
                     $resultados[] = [
-                        //'persona' => $persona['personal'],
-                        'persona' => $dato->personal ?? null,
-                        'nroDoc' => $dato->nroDoc ?? null,
+                        'persona'     => $persona['personal'] ?? null,
+                        'nroDoc'      => $persona['nroDoc']   ?? null,
                         'codPersonal' => $persona['CODI_PERS'],
-                        'folio' => $folio['nombre'],
-                        'sucursal' => $sucursal,
-                        'ruta' => $dato->ruta_archivo ?? null,
-                        'ancho' => $dato->ancho ?? null,
-                        'hojas' => $dato->cantidad_hojas ?? null,
-                        'documento' => $dato->documento ?? null,
-                        'cargo' => $dato->cargo ?? null,
-                        'es_formato' => $dato->es_formato ?? null,
+                        'folio'       => null,
+                        'sucursal'    => $sucursal ?? ($persona['sucursal'] ?? null),
+                        'ruta'        => null,
+                        'ancho'       => null,
+                        'hojas'       => null,
+                        'documento'   => null,
+                        'cargo'       => null,
+                        'es_formato'  => null,
                     ];
                 }
-                /*$resultados[] = [
-                    'persona' => $persona['personal'],
-                    'folio' => $folio['nombre'],
-                    'ruta' => $datosFolioPersona[0]->ruta_archivo ?? null,
-                ];*/
+            } catch (\Exception $e) {
+                Log::error("Error persona {$persona['CODI_PERS']}: " . $e->getMessage());
             }
         }
 
@@ -425,29 +866,53 @@ class FileController extends Controller
 
     public function getFoliosXPersona_uno(Request $request)
     {
-        $persona = $request->input('codPersona');
-        $folios = $request->folios;
-        $resultados = [];
+        $codPersona  = $request->input('codPersona');
+        $personaData = $request->input('persona', []);
+        $folios      = $request->folios;
+        $resultados  = [];
 
-        $sucursal = FileControl::getSucursalXPersona($persona);
+        $sucursal = FileControl::getSucursalXPersona($codPersona);
+        $tieneDocumentos = false;
 
         foreach ($folios as $folio) {
-            $datosFolioPersona = FileControl::getFoliosInfoPersona($persona, $folio['codigo']);
-            foreach ($datosFolioPersona as $dato) {
-                $resultados[] = [
-                    'persona' => $dato->personal ?? null,
-                    'nroDoc' => $dato->nroDoc ?? null,
-                    'codPersonal' => $persona,
-                    'folio' => $folio['nombre'],
-                    'sucursal' => $sucursal,
-                    'ruta' => $dato->ruta_archivo ?? null,
-                    'ancho' => $dato->ancho ?? null,
-                    'hojas' => $dato->cantidad_hojas ?? null,
-                    'documento' => $dato->documento ?? null,
-                    'cargo' => $dato->cargo ?? null,
-                    'es_formato' => $dato->es_formato ?? null,
-                ];
+            try {
+                $datosFolioPersona = FileControl::getFoliosInfoPersona($codPersona, $folio['codigo']);
+                foreach ($datosFolioPersona as $dato) {
+                    $tieneDocumentos = true;
+                    $resultados[] = [
+                        'persona'     => $dato->personal       ?? ($personaData['personal'] ?? null),
+                        'nroDoc'      => $dato->nroDoc         ?? ($personaData['nroDoc']   ?? null),
+                        'codPersonal' => $codPersona,
+                        'folio'       => $folio['nombre'],
+                        'sucursal'    => $sucursal             ?? ($personaData['sucursal'] ?? null),
+                        'ruta'        => $dato->ruta_archivo   ?? null,
+                        'ancho'       => $dato->ancho          ?? null,
+                        'hojas'       => $dato->cantidad_hojas ?? null,
+                        'documento'   => $dato->documento      ?? null,
+                        'cargo'       => $dato->cargo          ?? null,
+                        'es_formato'  => $dato->es_formato     ?? null,
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::warning("Folio {$folio['codigo']} - persona {$codPersona}: " . $e->getMessage());
             }
+        }
+
+        // Sin documentos → entrada mínima para que siempre aparezca la carátula
+        if (!$tieneDocumentos) {
+            $resultados[] = [
+                'persona'     => $personaData['personal'] ?? null,
+                'nroDoc'      => $personaData['nroDoc']   ?? null,
+                'codPersonal' => $codPersona,
+                'folio'       => null,
+                'sucursal'    => $sucursal ?? ($personaData['sucursal'] ?? null),
+                'ruta'        => null,
+                'ancho'       => null,
+                'hojas'       => null,
+                'documento'   => null,
+                'cargo'       => null,
+                'es_formato'  => null,
+            ];
         }
 
         return response()->json($resultados);
@@ -572,27 +1037,29 @@ class FileController extends Controller
 
     public function generarPDF(Request $request)
     {
-        $resultados = $request->input('resultados');
-        //dd($resultados);
-        //exit;
+        set_time_limit(0);
+        $resultados  = $request->input('resultados');
+        $sinCaratula = (bool) $request->input('sinCaratula', false);
         //Agrupar los datos para mostrar en la carátula
         $unicos = [];
-
         $nombreNuevo = 'Reporte';
 
         foreach ($resultados as $item) {
-            $clave = $item['persona'].'|'.$item['sucursal'].'|'.$item['codPersonal'].'|'.$item['cargo'];
-            if (! isset($unicos[$clave])) {
+            $clave = $item['codPersonal'];
+            $nombreNuevo = $item['codPersonal'] . '_' . ($item['persona'] ?? '') . '_' . date('Ymd_Hi');
+
+            if (!isset($unicos[$clave])) {
                 $unicos[$clave] = [
-                    'persona' => $item['persona'],
+                    'persona'     => $item['persona'],
                     'codPersonal' => $item['codPersonal'],
-                    'sucursal' => $item['sucursal'],
-                    'cargo' => $item['cargo'],
+                    'sucursal'    => $item['sucursal'],
+                    'cargo'       => $item['cargo'],
                 ];
-
+            } else {
+                if (!empty($item['persona']))  $unicos[$clave]['persona']  = $item['persona'];
+                if (!empty($item['sucursal'])) $unicos[$clave]['sucursal'] = $item['sucursal'];
+                if (!empty($item['cargo']))    $unicos[$clave]['cargo']    = $item['cargo'];
             }
-
-            $nombreNuevo = $item['codPersonal'].'_'.$item['persona'].'_'.date('Ymd_Hi');
         }
 
         $personasUnicas = array_values($unicos);
@@ -618,44 +1085,52 @@ class FileController extends Controller
             }
         }
 
-        $rutasLocales = PdfHelper::descargarImagenesLegajo($urls);
+        try {
+            $rutasLocales = PdfHelper::descargarImagenesLegajo($urls);
+        } catch (\Exception $e) {
+            Log::error('Error descargando imágenes legajo: ' . $e->getMessage());
+            $rutasLocales = [];
+        }
 
         $itemsFinales = [];
-        //Los que tienen imagen en ruta
+
         foreach ($rutasLocales as $item) {
             $itemsFinales[] = [
-                'es_formato' => $item['es_formato'],
+                'es_formato'  => $item['es_formato'],
                 'codPersonal' => $item['codPersonal'],
-                'ruta' => $item['ruta'],
-                'documento' => $item['documento'],
-                'hojas' => $item['hojas'],
-                'ancho' => $item['ancho'],
+                'ruta'        => $item['ruta'],
+                'documento'   => $item['documento'],
+                'hojas'       => $item['hojas'],
+                'ancho'       => $item['ancho'],
             ];
         }
 
-        // Los que deben renderizar una vista Blade porque son formatos (es_formato == 1)
         foreach ($resultados as $resultado) {
             if ($resultado['es_formato'] == 1) {
-                $itemsFinales[] = [
-                    'es_formato' => $resultado['es_formato'],
-                    'codPersonal' => $resultado['codPersonal'],
-                    'documento' => $resultado['documento'],
-                    'nombre_vista' => $this->obtenerNombreVista($resultado), // Función que defines
-                    'datos' => $resultado,
-                    'firma' => public_path('temp_legajos').'/FIRMAS/PERSONAL/'.$resultado['codPersonal'].'.jpg',
-                    'huella' => public_path('temp_legajos').'/HUELLAS_DIGITALES/PERSONAL/'.$resultado['codPersonal'].'.jpg',
-                ];
-                //Hacer la copia local de la FIRMA y HUELLA DIGITAL
-                $rutasLocalesFormato = ImagenHelper::descargarImagenesFormato($resultado['codPersonal']);
+                try {
+                    $itemsFinales[] = [
+                        'es_formato'   => $resultado['es_formato'],
+                        'codPersonal'  => $resultado['codPersonal'],
+                        'documento'    => $resultado['documento'],
+                        'nombre_vista' => $this->obtenerNombreVista($resultado),
+                        'datos'        => $resultado,
+                        'firma'        => public_path('temp_legajos') . '/FIRMAS/PERSONAL/'  . $resultado['codPersonal'] . '.jpg',
+                        'huella'       => public_path('temp_legajos') . '/HUELLAS_DIGITALES/PERSONAL/' . $resultado['codPersonal'] . '.jpg',
+                    ];
+                    ImagenHelper::descargarImagenesFormato($resultado['codPersonal']);
+                } catch (\Exception $e) {
+                    Log::warning('Error formato ' . ($resultado['documento'] ?? '') . ' - persona ' . $resultado['codPersonal'] . ': ' . $e->getMessage());
+                }
             }
         }
 
         //print_r($itemsFinales);
         $pdf = SnappyPdf::loadView('file_control.pdf.reporte', [
-            'personas' => $personasUnicas,
-            'resultados' => $resultados,
-            'imagenes' => $rutasLocales,
-            'items' => $itemsFinales,
+            'personas'    => $personasUnicas,
+            'resultados'  => $resultados,
+            'imagenes'    => $rutasLocales,
+            'items'       => $itemsFinales,
+            'sinCaratula' => $sinCaratula,
         ])->setOption('enable-local-file-access', true);
 
         return response()->streamDownload(function () use ($pdf) {
@@ -807,19 +1282,45 @@ class FileController extends Controller
         return response()->json($folios);
     }
 
-    public function getListaDJ()
+    public function getListaDJ(Request $request)
     {
-        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_V2]');
+        // Atrapamos la vigencia que viene del switch ('SI' o 'TD'). Si no viene, por defecto es 'SI'
+        $vigencia = $request->input('vigencia', 'SI');
+        $usuario = session('usuario') ?? '0';
+
+        // Pasamos los parámetros nombrados explícitamente al Stored Procedure
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_V2] @usuario = ?, @vigencia = ?', [
+            $usuario,
+            $vigencia
+        ]);
 
         return response()->json($DJ);
     }
 
-    public function getListaDJXusuario()
+    public function getListaDJXusuario(Request $request)
     {
-        $usuario = session('usuario');
-        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_V2] ?', [$usuario]);
+        $vigencia = $request->input('vigencia', 'SI');
+        $usuario = session('usuario') ?? '0';
+
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_V2] @usuario = ?, @vigencia = ?', [
+            $usuario,
+            $vigencia
+        ]);
 
         return response()->json($DJ);
+    }
+
+    public function getListaDJ2026(Request $request)
+    {
+        $vigencia = $request->input('vigencia', 'SI');
+        $usuario = session('usuario') ?? '0';
+
+        $DJ = DB::select('EXEC [dbo].[SW_LISTAR_PERSONAL_DJ_2026_GESTION] @usuario = ?, @vigencia = ?', [
+            $usuario,
+            $vigencia
+        ]);
+
+        return response()->json($this->filtrarDjPorSucursalesAsignadas($DJ));
     }
 
     public function getListaDJMigracion()
@@ -881,6 +1382,7 @@ class FileController extends Controller
         $cargos = FileControl::getCargos();
         //$clientes = FileControl::getClientes();
         $clientes = FileControl::getClientesLegajos();
+        $clientes = FileControl::getClientes();
 
         return view('file_control.search_legajos', compact('personal', 'cargos', 'clientes'));
     }
@@ -888,8 +1390,9 @@ class FileController extends Controller
     public function ViewLegajoPdf()
     {
         $sucursales = FileControl::getSucursales();
-        $cargos = FileControl::getCargos();
-        $clientes = FileControl::getClientes();
+        $clientes = FileControl::getClientes(); 
+        
+        $cargos = DB::select("SELECT CODI_CARG AS codigo, DESC_CARGO AS nombre FROM si_solm.dbo.CARGOS WITH (NOLOCK) WHERE DESC_CARGO IS NOT NULL ORDER BY DESC_CARGO");
 
         return view('file_control.legajos_pdf', compact('sucursales', 'cargos', 'clientes'));
     }
@@ -914,7 +1417,6 @@ class FileController extends Controller
     //GUARDAR DATOS
     public function saveFolioPersona(Request $request)
     {
-
         // Validar los datos del formulario
         $validated = $request->validate([
             'fecha_emision' => 'required|date',
@@ -1039,7 +1541,7 @@ class FileController extends Controller
                 $rutaBase = str_replace('//', 'http://', $item->ruta_aux);
 
                 foreach ($extensiones as $ext) {
-                    $rutaConExt = $rutaBase.'.'.$ext;
+                    $rutaConExt = $rutaBase . '.' . $ext;
 
                     if (self::urlExiste($rutaConExt)) {
                         $rutasValidas[] = $rutaConExt;
@@ -1050,11 +1552,11 @@ class FileController extends Controller
             }
 
             // Si no se encontró nada en ruta_aux, probar con ruta
-            if (! $rutaEncontrada && isset($item->ruta)) {
+            if (!$rutaEncontrada && isset($item->ruta)) {
                 $rutaBase = str_replace('//', 'http://', $item->ruta);
 
                 foreach ($extensiones as $ext) {
-                    $rutaConExt = $rutaBase.'.'.$ext;
+                    $rutaConExt = $rutaBase . '.' . $ext;
 
                     if (self::urlExiste($rutaConExt)) {
                         $rutasValidas[] = $rutaConExt;
@@ -1067,13 +1569,13 @@ class FileController extends Controller
         if (empty($rutasValidas)) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se encontraron archivos accesibles desde la red',
+                'message' => 'No se encontraron archivos accesibles desde el servidor'
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'rutas' => $rutasValidas,
+            'rutas' => $rutasValidas
         ]);
     }
 
@@ -1520,6 +2022,7 @@ class FileController extends Controller
         return $statusCode === 200;
     }
 
+
     // public function saveFolioPersona(Request $request)
     // {
     //     $validated = $request->validate([
@@ -1743,6 +2246,8 @@ class FileController extends Controller
         $tipo_fecha = $request->input('periodo');
         $plataforma = $request->input('plataforma');
         $responsable = $request->input('responsable');
+
+        $solo_lectura = $request->input('solo_lectura');
         
         // 2. ATRAPA EL DATO QUE VIENE DEL FRONT
         $cod_categoria = $request->input('cod_categoria'); 
@@ -1750,9 +2255,9 @@ class FileController extends Controller
 
         // 3. PÁSALE LA VARIABLE AL MODELO (Lo agregué al final de los parámetros)
         if (empty($codigo)) {
-            $result = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria);
+            $result = FileControl::saveFolio($nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria, $solo_lectura);
         } else {
-            $result = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria);
+            $result = FileControl::updateFolio($codigo, $nombre, $tipo, $obligatorio, $vencimiento, $tipo_fecha, $plataforma, $responsable, $usuario, $cod_categoria, $solo_lectura);
         }
 
         if ($result) {
