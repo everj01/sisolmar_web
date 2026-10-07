@@ -15,6 +15,12 @@ use App\Mail\ExcepcionEdadMail;
 
 class DjController extends Controller
 {
+    /**
+     * Rol "ADMINS RRHH" (sw_roles.codigo). Unico rol que puede autorizar
+     * excepciones de edad al registrar o editar una DJ.
+     */
+    private const ROL_ADMIN_RRHH = 17;
+
     public function generarPDF(Request $request)
     {
         $data = $request->all();
@@ -91,8 +97,52 @@ class DjController extends Controller
             $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
             $dni     = trim($request->input('dni', ''));
             $tipoPer = trim($request->input('tipo_personal', ''));
- 
+
+            // Siempre se leen: aunque el exento no esté obligado a adjuntarlos,
+            // si los envía se suben igual.
+            $fotoReq       = $request->file('foto');
+            $dniAnversoReq = $request->file('dni_anverso');
+            $dniReversoReq = $request->file('dni_reverso');
+
             if (!$exentoValidaciones) {
+                // ── Documentos obligatorios: foto del personal + DNI (anverso y reverso) ──
+                // Sin ellos no se crea el personal (solo exentos se lo saltan).
+                $faltanPartes = [];
+                if (!$fotoReq)                          $faltanPartes[] = 'foto del personal';
+                if (!$dniAnversoReq || !$dniReversoReq) $faltanPartes[] = 'foto del DNI';
+
+                if (!empty($faltanPartes)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success'        => false,
+                        'code'           => !$fotoReq ? 'falta_foto' : 'falta_dni',
+                        'message'        => 'Falta ingresar ' . implode(' y ', $faltanPartes) . '.',
+                        'falta_foto'     => !$fotoReq,
+                        'falta_anverso'  => !$dniAnversoReq,
+                        'falta_reverso'  => !$dniReversoReq,
+                    ], 422);
+                }
+
+                foreach ([$fotoReq, $dniAnversoReq, $dniReversoReq] as $archivo) {
+                    $extension = strtolower((string) $archivo->getClientOriginalExtension());
+                    if (!in_array($extension, ['jpg', 'jpeg'], true)) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'code'    => 'documento_invalido',
+                            'message' => 'La foto del personal y la del DNI deben ser imágenes JPG.',
+                        ], 422);
+                    }
+                    if ($archivo->getSize() > 10 * 1024 * 1024) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'code'    => 'documento_invalido',
+                            'message' => 'Cada imagen no debe superar los 10 MB.',
+                        ], 422);
+                    }
+                }
+
                 if (empty($dni)) {
                     return response()->json(['success' => false, 'message' => 'El DNI es requerido.'], 400);
                 }
@@ -128,11 +178,9 @@ class DjController extends Controller
                 $edad = $fechaNacimientoCarbon->age;
                 $reglasEdad = $this->obtenerReglasEdad();
                 if ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima']) {
-                    $excepcionEdad = session('dj_excepcion_edad');
-                    $excepcionValida = is_array($excepcionEdad)
-                        && ($excepcionEdad['fecha_nacimiento'] ?? null) === $fechaNacimiento
-                        && (int) ($excepcionEdad['edad'] ?? -1) === $edad
-                        && ($excepcionEdad['usuario_autorizador'] ?? '') !== '';
+                    // Debe existir una excepción autorizada por un ADMIN RRHH
+                    // para esta misma fecha de nacimiento (se pide en cada registro).
+                    $excepcionValida = $this->excepcionEdadAutorizada($fechaNacimiento, $edad);
 
                     if (!$excepcionValida) {
                         DB::rollBack();
@@ -441,69 +489,19 @@ class DjController extends Controller
             );
 
             if (isset($excepcionValida) && $excepcionValida) {
-                $tipoExcepcion = $edad < $reglasEdad['minima'] ? 'MINIMA' : 'MAXIMA';
-                $codigoRegla = $edad < $reglasEdad['minima'] ? 377 : 176;
-                $excepcionEdad = session('dj_excepcion_edad');
-
-                $now = now()->format('Y-m-d H:i:s');
-                $fechaNac = \Carbon\Carbon::parse($fechaNacimiento)->format('Y-m-d');
-                $fechaAuto = \Carbon\Carbon::parse($excepcionEdad['fecha_autorizacion'])->format('Y-m-d H:i:s');
-
-                $codPersonal = addslashes((string) $nuevoCod);
-                $dniVal      = addslashes((string) $dni);
-                $tipoExc     = addslashes((string) $tipoExcepcion);
-                $usuReg      = addslashes((string) (session('usuario') ?? '0'));
-                $usuAutor    = addslashes((string) $excepcionEdad['usuario_autorizador']);
-
-                DB::connection('sqlsrv')->unprepared(
-                    "INSERT INTO sisolm_web.dbo.sw_dj_excepciones_edad 
-                        (cod_personal, dni, fecha_nacimiento, edad_calculada, tipo_excepcion, 
-                         codigo_valo_unitario, edad_minima, edad_maxima, usuario_registro, 
-                         usuario_autorizador, fecha_autorizacion, fecha_registro) 
-                     VALUES ('$codPersonal', '$dniVal', CONVERT(date,'$fechaNac',23), $edad, '$tipoExc', $codigoRegla, {$reglasEdad['minima']}, {$reglasEdad['maxima']}, '$usuReg', '$usuAutor', CONVERT(datetime,'$fechaAuto',121), CONVERT(datetime,'$now',121))"
+                // Auditoria + notificacion a RRHH (tabla sw_dj_excepciones_edad)
+                $this->registrarExcepcionEdad(
+                    (string) $nuevoCod,
+                    (string) $dni,
+                    $fechaNacimiento,
+                    (int) $edad,
+                    $reglasEdad,
+                    $data,
+                    $tipotrab,
+                    $sucursal
                 );
-
-                session()->forget('dj_excepcion_edad');
-
-                $nombreCompleto = trim(($data['nombre1'] ?? '') . ' ' . ($data['nombre2'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
-
-                // Resolver tipo trabajador
-                $tipoTrabNombre = $tipotrab;
-                if (!empty($tipotrab)) {
-                    $tipoRow = DB::connection('sqlsrv')->selectOne(
-                        "SELECT TIPE_DESCRIPCION FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?",
-                        [$tipotrab]
-                    );
-                    $tipoTrabNombre = $tipoRow->TIPE_DESCRIPCION ?? $tipotrab;
-                }
-
-                // Resolver sucursal
-                $sucursalNombre = $sucursal;
-                if (!empty($sucursal)) {
-                    $sucRow = DB::connection('sqlsrv')->selectOne(
-                        "SELECT SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WHERE SUCU_CODIGO = ?",
-                        [$sucursal]
-                    );
-                    $sucursalNombre = $sucRow->SUCU_ABREVIATURA ?? $sucursal;
-                }
-
-                $datosCorreo = [
-                    'nombre'               => $nombreCompleto,
-                    'dni'                  => $dni,
-                    'fecha_nacimiento'     => $fechaNacimiento,
-                    'edad'                 => $edad,
-                    'tipo_excepcion'       => $tipoExcepcion,
-                    'edad_minima'          => $reglasEdad['minima'],
-                    'edad_maxima'          => $reglasEdad['maxima'],
-                    'tipo_trabajador'      => $tipoTrabNombre,
-                    'sucursal'             => $sucursalNombre,
-                    'usuario_registro'     => session('usuario') ?? 'N/A',
-                    'usuario_autorizador'  => $excepcionEdad['usuario_autorizador'],
-                    'fecha_autorizacion'   => $excepcionEdad['fecha_autorizacion'],
-                ];
-
-                Mail::to('rrhh@solsecurity.pe')->send(new ExcepcionEdadMail($datosCorreo));
             }
+
  
             // Familiares y Teléfonos
             $this->saveFamiliaresTemp($nuevoCod, $data);
@@ -513,9 +511,18 @@ class DjController extends Controller
 
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($nuevoCod, $data);
+            $this->aplicarAsigFami($nuevoCod, $data);
 
             // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
             $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
+
+            // ── Subir foto y DNI al servidor de archivos ──────────────────
+            // Si el servidor de archivos falla NO se bloquea el guardado: la DJ
+            // se guarda igual y se avisa qué quedó pendiente de subir.
+            $subidaFoto    = $this->subirFotoAlServidor($nuevoCod, $fotoReq);
+            $subidaDni     = $this->subirDniAlServidor($nuevoCod, $dniAnversoReq, $dniReversoReq);
+            $fotoPendiente = !$subidaFoto['ok'];
+            $dniPendiente  = !$subidaDni['ok'];
  
             DB::commit();
  
@@ -526,10 +533,19 @@ class DjController extends Controller
                 $this->enviarCorreoBienvenidaSip($data, $dni, $nuevoCod);
             }
 
+            $pendientesMsg = [];
+            if ($fotoPendiente) $pendientesMsg[] = 'la foto del personal';
+            if ($dniPendiente)  $pendientesMsg[] = 'el DNI';
+
             return response()->json([
-                'success'   => true,
-                'message'   => 'Declaración Jurada guardada correctamente.',
-                'codi_pers' => $nuevoCod,
+                'success'        => true,
+                'message'        => !empty($pendientesMsg)
+                    ? 'Declaración Jurada guardada correctamente, pero ' . implode(' y ', $pendientesMsg) . ' quedó pendiente de subir.'
+                    : 'Declaración Jurada guardada correctamente.',
+                'codi_pers'      => $nuevoCod,
+                'foto_pendiente' => $fotoPendiente,
+                'dni_pendiente'  => $dniPendiente,
+                'dni_faltan'     => $subidaDni['faltan'],
             ]);
  
         } catch (\Exception $e) {
@@ -546,8 +562,12 @@ class DjController extends Controller
     public function uploadFotoPersonal(Request $request)
     {
         $request->validate([
-            'foto'       => 'required|file|mimes:jpg,jpeg|max:1024', // 1 MB
+            'foto'       => 'required|file|mimes:jpg,jpeg|max:10240', // JPG, máx 10 MB
             'codi_pers'  => 'required|string',
+        ], [
+            'foto.required' => 'Debe seleccionar una foto.',
+            'foto.mimes'    => 'La foto debe ser una imagen JPG.',
+            'foto.max'      => 'La foto no debe superar los 10 MB.',
         ]);
     
         try {
@@ -600,6 +620,93 @@ class DjController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error interno al subir la foto: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Subir DNI (anverso y/o reverso) — mismo flujo que la foto del personal:
+     * Laravel → charge_file.php (IP pública) → acceso directo "Biblioteca Grafica" → 10.2
+     * DNI1_1 = ANVERSO, DNI2_1 = REVERSO (carpetas donde el visor ya busca {CODI}.jpg)
+     */
+    public function uploadDniPersonal(Request $request)
+    {
+        $request->validate([
+            'dni_anverso' => 'nullable|file|mimes:jpg,jpeg|max:10240',
+            'dni_reverso' => 'nullable|file|mimes:jpg,jpeg|max:10240',
+            'codi_pers'   => 'required|string',
+        ], [
+            'dni_anverso.mimes' => 'El DNI anverso debe ser una imagen JPG.',
+            'dni_anverso.max'   => 'El DNI anverso no debe superar los 10 MB.',
+            'dni_reverso.mimes' => 'El DNI reverso debe ser una imagen JPG.',
+            'dni_reverso.max'   => 'El DNI reverso no debe superar los 10 MB.',
+        ]);
+
+        try {
+            $codiPers = trim($request->input('codi_pers'));
+
+            if (!$request->hasFile('dni_anverso') && !$request->hasFile('dni_reverso')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se recibió ninguna imagen del DNI.',
+                ], 400);
+            }
+
+            // Nombre fijo: CODI_PERS.jpg (así lo muestra el visor existente)
+            $nameFile = $codiPers . '.jpg';
+
+            $pendientes = [];
+            if ($request->hasFile('dni_anverso')) {
+                $pendientes['anverso'] = ['file' => $request->file('dni_anverso'), 'ruta' => 'DNI1_1'];
+            }
+            if ($request->hasFile('dni_reverso')) {
+                $pendientes['reverso'] = ['file' => $request->file('dni_reverso'), 'ruta' => 'DNI2_1'];
+            }
+
+            $fallos = [];
+            foreach ($pendientes as $lado => $info) {
+                $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                    ->attach('archivo', file_get_contents($info['file']->getRealPath()), $nameFile)
+                    ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                        'nameFile' => $nameFile,
+                        'ruta'     => $info['ruta'],
+                    ]);
+
+                $proxyData = $response->json();
+                if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                    $fallos[] = $lado;
+                    Log::error('uploadDniPersonal: fallo en proxy', [
+                        'codi_pers' => $codiPers,
+                        'lado'      => $lado,
+                        'status'    => $response->status(),
+                        'body'      => $response->body(),
+                    ]);
+                }
+            }
+
+            if ($fallos) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El servidor de archivos rechazó la imagen del DNI (' . implode(', ', $fallos) . ').',
+                ], 500);
+            }
+
+            Log::info('uploadDniPersonal: DNI guardado', [
+                'codi_pers' => $codiPers,
+                'lados'     => array_keys($pendientes),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DNI guardado correctamente.',
+                'lados'   => array_keys($pendientes),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('uploadDniPersonal error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al subir el DNI: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -1109,6 +1216,67 @@ class DjController extends Controller
 
             $data = $request->all();
 
+            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
+
+            // ── Documentos obligatorios: solo se exige lo que falte en el servidor ──
+            // Si el servidor de archivos no responde NO se bloquea el guardado.
+            // Los usuarios con "exento_validaciones" no están obligados a adjuntarlos.
+            $fotoReq       = $request->file('foto');
+            $dniAnversoReq = $request->file('dni_anverso');
+            $dniReversoReq = $request->file('dni_reverso');
+
+            if (!$exentoValidaciones) {
+                $estadoDni     = $this->dniPersonalEnServidor((string) $codiPers);
+                $estadoFoto    = $this->fotoPersonalEnServidor((string) $codiPers);
+
+                $faltaFoto = ($estadoFoto === false && !$fotoReq);
+
+                $faltanLados = [];
+                if ($estadoDni['consultado']) {
+                    if (!$estadoDni['anverso'] && !$dniAnversoReq) $faltanLados[] = 'anverso';
+                    if (!$estadoDni['reverso'] && !$dniReversoReq) $faltanLados[] = 'reverso';
+                }
+
+                $faltanPartes = [];
+                if ($faltaFoto)                  $faltanPartes[] = 'foto del personal';
+                if (!empty($faltanLados))        $faltanPartes[] = 'foto del DNI';
+
+                if (!empty($faltanPartes)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success'        => false,
+                        'code'           => $faltaFoto ? 'falta_foto' : 'falta_dni',
+                        'message'        => 'Falta ingresar ' . implode(' y ', $faltanPartes) . '.',
+                        'falta_foto'     => $faltaFoto,
+                        'falta_anverso'  => in_array('anverso', $faltanLados, true),
+                        'falta_reverso'  => in_array('reverso', $faltanLados, true),
+                    ], 422);
+                }
+            }
+
+            foreach ([$fotoReq, $dniAnversoReq, $dniReversoReq] as $archivo) {
+                if (!$archivo) {
+                    continue;
+                }
+                $extension = strtolower((string) $archivo->getClientOriginalExtension());
+                if (!in_array($extension, ['jpg', 'jpeg'], true)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'dni_invalido',
+                        'message' => 'La foto del DNI debe ser una imagen JPG.',
+                    ], 422);
+                }
+                if ($archivo->getSize() > 10 * 1024 * 1024) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'dni_invalido',
+                        'message' => 'Cada foto del DNI no debe superar los 10 MB.',
+                    ], 422);
+                }
+            }
+
             // Relacionar la sucursal seleccionada (SUCU_CODIGO) con la unidad operativa
             // UNID_OPER.UBICACION = SISO_SUCURSAL.SUCU_CODIGO → CODI_UNID_OPER
             $sucursalSel = strtoupper(trim($data['sucursal'] ?? ''));
@@ -1155,6 +1323,44 @@ class DjController extends Controller
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
+            // ── Validación de edad (igual que en Nueva DJ) ──────────────────
+            // Si la edad queda fuera del rango se exige una excepción autorizada por
+            // un ADMIN RRHH (rol tipo_rol 17). Se pide en cada edición.
+            $fechaNacimiento = trim((string) ($data['fecha_nacimiento'] ?? ''));
+            $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
+
+            if (!$fechaNacimientoCarbon) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'La fecha de nacimiento es obligatoria y debe tener formato válido.'], 422);
+            }
+
+            $fechaNacimiento = $fechaNacimientoCarbon->format('Y-m-d');
+
+            if ($fechaNacimientoCarbon->isToday() || $fechaNacimientoCarbon->isFuture()) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'La fecha de nacimiento debe ser anterior a hoy.'], 422);
+            }
+
+            $edad = $fechaNacimientoCarbon->age;
+            $reglasEdad = $this->obtenerReglasEdad();
+            $excepcionValidaEdad = false;
+
+            if (!$exentoValidaciones && ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima'])) {
+                $excepcionValidaEdad = $this->excepcionEdadAutorizada($fechaNacimiento, $edad);
+
+                if (!$excepcionValidaEdad) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "La edad calculada ({$edad} años) está fuera del rango permitido de {$reglasEdad['minima']} a {$reglasEdad['maxima']} años.",
+                        'edad_fuera_rango' => true,
+                        'edad' => $edad,
+                        'edad_minima' => $reglasEdad['minima'],
+                        'edad_maxima' => $reglasEdad['maxima'],
+                    ], 422);
+                }
+            }
+
             $source = $request->input('source', 'migracion');
 
             // ✅ 1. SOLO MARCAR COMO MIGRADO en sw_MIGRA_PERSONAL (NO actualizar otros campos)
@@ -1174,8 +1380,14 @@ class DjController extends Controller
                 unset($data['FECH_INGRE'], $data['fecha_ingreso_solmar']);
             }
             unset($data['FECH_CESE'], $data['fecha_cese']);
+            // Cargo: solo el rol ADMINS RRHH (tipo_rol 17) puede modificarlo;
+            // los demás roles conservan el CODI_CARG actual (el select viene bloqueado en UI)
+            if (session('tipo_rol') != 17) {
+                unset($data['cargo']);
+            }
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
+            $this->aplicarAsigFami($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, $source);
 
             // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
@@ -1198,6 +1410,28 @@ class DjController extends Controller
 
             // ✅ 7. MIGRAR TELÉFONOS → si_solm.dbo.TELEFONO
             $this->migrarTelefonos($codiPers);
+
+            // Auditoria de excepción de edad (si la hubo en esta edición)
+            if (!empty($excepcionValidaEdad)) {
+                $this->registrarExcepcionEdad(
+                    (string) $codiPers,
+                    (string) $dni,
+                    $fechaNacimiento,
+                    (int) $edad,
+                    $reglasEdad,
+                    $data,
+                    $tipoPer,
+                    $sucursalSel
+                );
+            }
+
+            // ── Subir foto y DNI al servidor de archivos ──────────────────
+            // Solo se sube lo adjuntado. Si el servidor de archivos falla NO se
+            // bloquea el guardado: se avisa qué quedó pendiente.
+            $subidaFoto    = $this->subirFotoAlServidor((string) $codiPers, $fotoReq);
+            $subidaDni     = $this->subirDniAlServidor((string) $codiPers, $dniAnversoReq, $dniReversoReq);
+            $fotoPendiente = !$subidaFoto['ok'];
+            $dniPendiente  = !$subidaDni['ok'];
 
             DB::commit();
 
@@ -1236,9 +1470,18 @@ class DjController extends Controller
             \Illuminate\Support\Facades\Log::info("=== 5. FIN PROCESO DE CORREO ===");
             // === FIN: ENVÍO DE CORREO AUTOMÁTICO ===
 
+            $pendientesMsg = [];
+            if ($fotoPendiente) $pendientesMsg[] = 'la foto del personal';
+            if ($dniPendiente)  $pendientesMsg[] = 'el DNI';
+
             return response()->json([
-                'success' => true,
-                'message' => 'Declaración Jurada guardada y migrada correctamente',
+                'success'        => true,
+                'message'        => !empty($pendientesMsg)
+                    ? 'Declaración Jurada guardada y migrada correctamente, pero ' . implode(' y ', $pendientesMsg) . ' quedó pendiente de subir.'
+                    : 'Declaración Jurada guardada y migrada correctamente',
+                'foto_pendiente' => $fotoPendiente,
+                'dni_pendiente'  => $dniPendiente,
+                'dni_faltan'     => $subidaDni['faltan'],
             ]);
 
         } catch (\Exception $e) {
@@ -1343,7 +1586,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = str_starts_with($parentesco, 'HIJO')
+            $fechaNaci = preg_match('/^HIJ/i', $parentesco)
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -2696,7 +2939,7 @@ class DjController extends Controller
 
             $parentesco = strtoupper(trim($data['FAM_PARENTESCO'][$index] ?? ''));
             // En Datos Familiares solo se registra fecha de nacimiento para hijos.
-            $fechaNaci = str_starts_with($parentesco, 'HIJO')
+            $fechaNaci = preg_match('/^HIJ/i', $parentesco)
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
@@ -2945,14 +3188,14 @@ class DjController extends Controller
                 CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
                 CODI_TIPO_DOCU, NRO_DOCU_IDEN,
                 {$toDate('FECH_NACI')},
-                FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
+                0, DEHA_OCUPACION, DEHA_EDAD,
                 USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
                 DEHA_SEXO, DEHA_MES_CONCEPCION,
                 {$toDate('DEHA_FECHA_ALTA')},
                 DEHA_TIPO_BAJA,
                 {$toDate('DEHA_FECHA_BAJA')},
                 DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
-                {$toDate('DEHA_VIGENCIA')},
+                'SI', -- DEHA_VIGENCIA: 'SI' predeterminado
                 DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
             FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
             WHERE CODI_PERS = ?
@@ -2980,14 +3223,14 @@ class DjController extends Controller
                 CODI_PERS, TIPO_RELA, NOMB_1, NOMB_2, APEL_1, APEL_2,
                 CODI_TIPO_DOCU, NRO_DOCU_IDEN,
                 {$toDate('FECH_NACI')},
-                FALLECIDO, DEHA_OCUPACION, DEHA_EDAD,
+                0, DEHA_OCUPACION, DEHA_EDAD,
                 USUA_CODIGO_REG, GETDATE(), USUA_CODIGO_MOD, GETDATE(),
                 DEHA_SEXO, DEHA_MES_CONCEPCION,
                 {$toDate('DEHA_FECHA_ALTA')},
                 DEHA_TIPO_BAJA,
                 {$toDate('DEHA_FECHA_BAJA')},
                 DEHA_INCAPACIDAD, DEHA_RESOL_INCAPACIDAD,
-                {$toDate('DEHA_VIGENCIA')},
+                'SI', -- DEHA_VIGENCIA: 'SI' predeterminado
                 DEHA_telefono, domicilio, DEHA_DEREHABI, TIDV_CODIGO
             FROM sisolm_web.dbo.sw_MIGRA_DERECHO_HABIENTE
             WHERE CODI_PERS = ?
@@ -3048,7 +3291,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             CODI_TIPO_DOCU,
             NRO_DOCU_IDEN,
             TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM(FECH_NACI)), ''), 103),
-            FALLECIDO,
+            0,
             DEHA_OCUPACION,
             DEHA_EDAD,
             USUA_CODIGO_REG,
@@ -3062,7 +3305,7 @@ private function migrarFamiliares_solo_nuevo($codiPers)
             TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM(DEHA_FECHA_BAJA)), ''), 103),
             DEHA_INCAPACIDAD,
             DEHA_RESOL_INCAPACIDAD,
-            TRY_CONVERT(datetime, NULLIF(LTRIM(RTRIM(DEHA_VIGENCIA)), ''), 103),
+            'SI', -- DEHA_VIGENCIA: 'SI' predeterminado
             DEHA_telefono,
             domicilio,
             DEHA_DEREHABI,
@@ -3602,6 +3845,175 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
 
     /**
+     * Subir DNI de HIJOS (anverso y/o reverso) → carpetas DNI1_HIJOS / DNI2_HIJOS
+     * Nombres: {CODI_PERS}_H{N}.jpg — H1/H2 = hijo 1 (anverso/reverso), H3/H4 = hijo 2, ...
+     * Recibe pares archivos[] + metas[] con formato "DNI1_HIJOS|00085_H1.jpg"
+     */
+    public function uploadDniHijos(Request $request)
+    {
+        $request->validate([
+            'codi_pers'  => 'required|string',
+            'archivos'   => 'required|array|min:1',
+            'archivos.*' => 'file|mimes:jpg,jpeg|max:10240',
+            'metas'      => 'required|array|min:1',
+            'metas.*'    => 'string',
+        ], [
+            'archivos.*.mimes' => 'Las imágenes del DNI deben ser JPG.',
+            'archivos.*.max'   => 'Cada imagen del DNI no debe superar los 10 MB.',
+        ]);
+
+        try {
+            $codiPers = trim($request->input('codi_pers'));
+            $archivos = $request->file('archivos', []);
+            $metas    = $request->input('metas', []);
+
+            if (count($archivos) !== count($metas)) {
+                return response()->json(['success' => false, 'message' => 'La cantidad de archivos y destinos no coincide.'], 422);
+            }
+
+            $fallos = [];
+            foreach ($archivos as $i => $archivo) {
+                $meta = trim((string) ($metas[$i] ?? ''));
+                // Formato permitido: DNI1_HIJOS|CODI_H#.jpg (DNI1_HIJOS = anverso, DNI2_HIJOS = reverso)
+                if (!preg_match('/^(DNI1_HIJOS|DNI2_HIJOS)\|([A-Za-z0-9_\-]+\.jpg)$/i', $meta, $m)) {
+                    $fallos[] = $meta !== '' ? $meta : ('archivo #' . ($i + 1));
+                    continue;
+                }
+                $ruta     = strtoupper($m[1]);
+                $nameFile = $m[2];
+
+                $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                    ->attach('archivo', file_get_contents($archivo->getRealPath()), $nameFile)
+                    ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                        'nameFile' => $nameFile,
+                        'ruta'     => $ruta,
+                    ]);
+
+                $proxyData = $response->json();
+                if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                    $fallos[] = $nameFile;
+                    Log::error('uploadDniHijos: fallo en proxy', [
+                        'codi_pers' => $codiPers,
+                        'destino'   => $meta,
+                        'status'    => $response->status(),
+                        'body'      => $response->body(),
+                    ]);
+                }
+            }
+
+            if ($fallos) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudieron guardar algunos DNI: ' . implode(', ', $fallos),
+                ], 500);
+            }
+
+            Log::info('uploadDniHijos: DNI de hijos guardado', [
+                'codi_pers' => $codiPers,
+                'total'     => count($archivos),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DNI de los hijos guardado correctamente.',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('uploadDniHijos error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al subir el DNI de hijos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Consulta qué DNI de hijos YA existen en el servidor (para no volverlos a pedir).
+     * Recibe nombres[] tipo "00085_H1.jpg"; el lado se deduce: H impar = DNI1_HIJOS (anverso),
+     * H par = DNI2_HIJOS (reverso). Responde { nombre: true/false }.
+     */
+    public function getDniHijos(Request $request)
+    {
+        try {
+            $nombres = $request->get('nombres', []);
+            if (!is_array($nombres)) $nombres = [];
+
+            $resultado = [];
+            foreach ($nombres as $nombre) {
+                $nombre = trim((string) $nombre);
+                if ($nombre === '' || !preg_match('/_H(\d+)\.jpg$/i', $nombre, $m)) continue;
+                $numero = (int) $m[1];
+                $ruta   = ($numero % 2 === 1) ? 'DNI1_HIJOS' : 'DNI2_HIJOS';
+                $url    = "http://190.116.178.163/Biblioteca_Grafica/{$ruta}/{$nombre}";
+
+                $existe = false;
+                try {
+                    $existe = Http::timeout(5)->head($url)->successful();
+                } catch (\Exception $e) {
+                    $existe = false;
+                }
+                $resultado[$nombre] = $existe;
+            }
+
+            return response()->json(['success' => true, 'data' => $resultado]);
+        } catch (\Exception $e) {
+            Log::error('getDniHijos error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * ASIG_FAMI (si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
+     * 'SI' si registra al menos un HIJO menor de 18 años; en caso contrario 'NO'
+     * (sin hijos, o solo hijos mayores de edad).
+     */
+    private function aplicarAsigFami($codiPers, &$data)
+    {
+        $asig = 'NO';
+
+        $evaluar = function ($parentesco, $fechaNaci) use (&$asig) {
+            if (!preg_match('/^HIJ/i', trim((string) $parentesco))) return;
+            $f = trim((string) $fechaNaci);
+            if ($f === '') return;
+            try {
+                $nac = \Carbon\Carbon::createFromFormat('Y-m-d', substr($f, 0, 10));
+                if ($nac && $nac->age < 18) $asig = 'SI';
+            } catch (\Exception $e) {
+                // fecha inválida: no cuenta como menor de edad
+            }
+        };
+
+        $parentescos = $data['FAM_PARENTESCO'] ?? null;
+        $fechas      = $data['FAM_FECHA_NACI'] ?? null;
+
+        if (is_array($parentescos) && is_array($fechas)) {
+            foreach ($parentescos as $i => $p) {
+                $evaluar($p, $fechas[$i] ?? '');
+            }
+        } elseif (!empty($codiPers)) {
+            // Fallback: familias ya registradas en BD
+            $rows = DB::select(
+                "SELECT TIPO_RELA, CONVERT(varchar(10), FECH_NACI, 23) AS FECH_NACI
+                 FROM si_solm.dbo.DERECHO_HABIENTE WHERE CODI_PERS = ?",
+                [$codiPers]
+            );
+            foreach ($rows as $r) {
+                $evaluar($r->TIPO_RELA ?? '', $r->FECH_NACI ?? '');
+            }
+        }
+
+        $data['ASIG_FAMI'] = $asig;
+
+        // Reflejar en la tabla maestra PERSONAL (DJ2026 se llena vía insertOrUpdate)
+        DB::update(
+            'UPDATE si_solm.dbo.PERSONAL SET ASIG_FAMI = ? WHERE CODI_PERS = ?',
+            [$asig, $codiPers]
+        );
+
+        Log::info('aplicarAsigFami', ['CODI_PERS' => $codiPers, 'ASIG_FAMI' => $asig]);
+    }
+
+    /**
      * Regla SCTR (columna SCRT en si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
      * - Operativo 4°/5° (01/03)  → 'SI' automático
      * - Administrativo 4°/5° (02/05) → 'SI' si el checkbox autorizar_sctr viene marcado, 'NO' si no
@@ -3864,6 +4276,7 @@ $tipotrab    = $tipoPer;
             // Actualizar DJ2026_PERSONAL con los datos de la recontratación (sucursal, fecha modificación, etc.)
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
+            $this->aplicarAsigFami($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
  
             DB::commit();
@@ -4169,24 +4582,20 @@ $tipotrab    = $tipoPer;
 
     public function validarExcepcionEdad(Request $request)
     {
-        $usuario = trim($request->input('usuario', ''));
+        $usuario = strtoupper(trim($request->input('usuario', '')));
         $clave = (string) $request->input('clave', '');
         $fechaNacimiento = trim($request->input('fecha_nacimiento', ''));
 
         if ($usuario === '' || $clave === '' || $fechaNacimiento === '') {
             return response()->json([
                 'success' => false,
+                'code' => 'datos_incompletos',
                 'message' => 'Usuario, contraseña y fecha de nacimiento son obligatorios.',
             ], 422);
         }
 
-        if ($usuario !== (string) (session('usuario') ?? '')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debe validar la contraseña del usuario actualmente logueado.',
-            ], 422);
-        }
-
+        // La cuenta ingresada puede ser DISTINTA a la del usuario que registra la DJ:
+        // quien autoriza debe ser un ADMIN RRHH (rol tipo_rol = 17).
         $user = DB::table('sw_usuarios')
             ->where('usuario', $usuario)
             ->where('habilitado', 1)
@@ -4196,18 +4605,17 @@ $tipotrab    = $tipoPer;
         if (!$user || !Hash::check($clave, $hashAlmacenado)) {
             return response()->json([
                 'success' => false,
+                'code' => 'clave_invalida',
                 'message' => 'La contraseña no es válida.',
             ], 422);
         }
 
-        $tienePermiso = DB::connection('sqlsrv')->selectOne(
-            "SELECT 1 FROM sisolm_web.dbo.sw_permisos_excepcion_edad WHERE usuario = ? AND habilitado = 1",
-            [$usuario]
-        );
-        if (!$tienePermiso) {
+        // Solo el rol ADMINS RRHH (tipo_rol 17) puede autorizar excepciones de edad.
+        if ((int) $user->tipo_rol !== self::ROL_ADMIN_RRHH) {
             return response()->json([
                 'success' => false,
-                'message' => 'No tiene permiso para registrar excepciones de edad.',
+                'code' => 'sin_rol_admin_rrhh',
+                'message' => 'La cuenta ingresada no tiene el rol ADMINS RRHH. Un administrador de RRHH debe autorizar la excepción.',
             ], 403);
         }
 
@@ -4261,6 +4669,11 @@ $tipotrab    = $tipoPer;
 
     public function getUsuariosExcepcionEdad()
     {
+        $denegado = $this->denegadoSiNoEsAdminRrhh();
+        if ($denegado !== null) {
+            return $denegado;
+        }
+
         try {
             $usuarios = DB::connection('sqlsrv')->select(
                 "SELECT u.usuario, u.nombre_1, u.apellido_1,
@@ -4280,6 +4693,11 @@ $tipotrab    = $tipoPer;
 
     public function saveUsuariosExcepcionEdad(Request $request)
     {
+        $denegado = $this->denegadoSiNoEsAdminRrhh();
+        if ($denegado !== null) {
+            return $denegado;
+        }
+
         try {
             $usuarios = $request->input('usuarios', []);
 
@@ -4305,6 +4723,329 @@ $tipotrab    = $tipoPer;
             Log::error('Error al guardar usuarios excepción edad: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * ¿La cuenta tiene el rol ADMINS RRHH?
+     */
+    private function esAdminRrhh(string $usuario): bool
+    {
+        $usuario = strtoupper(trim($usuario));
+        if ($usuario === '') {
+            return false;
+        }
+
+        $fila = DB::table('sw_usuarios')
+            ->where('usuario', $usuario)
+            ->where('habilitado', 1)
+            ->first();
+
+        return $fila !== null && (int) $fila->tipo_rol === self::ROL_ADMIN_RRHH;
+    }
+
+    /**
+     * Determina si hay una excepción de edad válida para la fecha/edad indicadas.
+     *
+     * Solo se acepta la autorización validada en el modal (sesión 'dj_excepcion_edad')
+     * y, además, se exige que quien autorizó siga teniendo el rol ADMINS RRHH.
+     * La autorización se pide en cada registro Y en cada edición de la DJ.
+     */
+    private function excepcionEdadAutorizada(string $fechaNacimiento, int $edad): bool
+    {
+        $excepcionEdad = session('dj_excepcion_edad');
+        $sesionValida = is_array($excepcionEdad)
+            && ($excepcionEdad['fecha_nacimiento'] ?? null) === $fechaNacimiento
+            && (int) ($excepcionEdad['edad'] ?? -1) === $edad
+            && ($excepcionEdad['usuario_autorizador'] ?? '') !== '';
+
+        return $sesionValida && $this->esAdminRrhh((string) $excepcionEdad['usuario_autorizador']);
+    }
+
+    /**
+     * Devuelve una respuesta 403 si quien hace la petición no es ADMIN RRHH.
+     * Se usa para proteger los endpoints de administración de excepciones de edad.
+     */
+    private function denegadoSiNoEsAdminRrhh(): ?\Illuminate\Http\JsonResponse
+    {
+        if ($this->esAdminRrhh((string) (session('usuario') ?? ''))) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'code' => 'sin_rol_admin_rrhh',
+            'message' => 'Solo un usuario con rol ADMINS RRHH puede administrar los permisos de excepción de edad.',
+        ], 403);
+    }
+
+    /**
+     * Registra la auditoría de la excepción de edad y notifica a RRHH.
+     * Se ejecuta dentro de la transacción, después de guardar el personal.
+     */
+    private function registrarExcepcionEdad(
+        string $codPersonal,
+        string $dni,
+        string $fechaNacimiento,
+        int $edad,
+        array $reglasEdad,
+        array $data,
+        ?string $tipoTrab,
+        ?string $sucursal
+    ): void {
+        $excepcionEdad = session('dj_excepcion_edad');
+        $tipoExcepcion = $edad < $reglasEdad['minima'] ? 'MINIMA' : 'MAXIMA';
+        $codigoRegla   = $edad < $reglasEdad['minima'] ? 377 : 176;
+
+        $now       = now()->format('Y-m-d H:i:s');
+        $fechaNac  = \Carbon\Carbon::parse($fechaNacimiento)->format('Y-m-d');
+        $fechaAuto = \Carbon\Carbon::parse($excepcionEdad['fecha_autorizacion'])->format('Y-m-d H:i:s');
+
+        $codPersonalQ = addslashes((string) $codPersonal);
+        $dniVal       = addslashes((string) $dni);
+        $tipoExc      = addslashes((string) $tipoExcepcion);
+        $usuReg       = addslashes((string) (session('usuario') ?? '0'));
+        $usuAutor     = addslashes((string) ($excepcionEdad['usuario_autorizador'] ?? ''));
+
+        DB::connection('sqlsrv')->unprepared(
+            "INSERT INTO sisolm_web.dbo.sw_dj_excepciones_edad 
+                (cod_personal, dni, fecha_nacimiento, edad_calculada, tipo_excepcion, 
+                 codigo_valo_unitario, edad_minima, edad_maxima, usuario_registro, 
+                 usuario_autorizador, fecha_autorizacion, fecha_registro) 
+             VALUES ('$codPersonalQ', '$dniVal', CONVERT(date,'$fechaNac',23), $edad, '$tipoExc', $codigoRegla, {$reglasEdad['minima']}, {$reglasEdad['maxima']}, '$usuReg', '$usuAutor', CONVERT(datetime,'$fechaAuto',121), CONVERT(datetime,'$now',121))"
+        );
+
+        session()->forget('dj_excepcion_edad');
+
+        $nombreCompleto = trim(($data['nombre1'] ?? '') . ' ' . ($data['nombre2'] ?? '') . ' ' . ($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? ''));
+
+        // Resolver tipo trabajador
+        $tipoTrabNombre = $tipoTrab;
+        if (!empty($tipoTrab)) {
+            $tipoRow = DB::connection('sqlsrv')->selectOne(
+                'SELECT TIPE_DESCRIPCION FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?',
+                [$tipoTrab]
+            );
+            $tipoTrabNombre = $tipoRow->TIPE_DESCRIPCION ?? $tipoTrab;
+        }
+
+        // Resolver sucursal
+        $sucursalNombre = $sucursal;
+        if (!empty($sucursal)) {
+            $sucRow = DB::connection('sqlsrv')->selectOne(
+                'SELECT SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WHERE SUCU_CODIGO = ?',
+                [$sucursal]
+            );
+            $sucursalNombre = $sucRow->SUCU_ABREVIATURA ?? $sucursal;
+        }
+
+        $datosCorreo = [
+            'nombre'              => $nombreCompleto,
+            'dni'                 => $dni,
+            'fecha_nacimiento'    => $fechaNacimiento,
+            'edad'                => $edad,
+            'tipo_excepcion'      => $tipoExcepcion,
+            'edad_minima'         => $reglasEdad['minima'],
+            'edad_maxima'         => $reglasEdad['maxima'],
+            'tipo_trabajador'     => $tipoTrabNombre,
+            'sucursal'            => $sucursalNombre,
+            'usuario_registro'    => session('usuario') ?? 'N/A',
+            'usuario_autorizador' => $excepcionEdad['usuario_autorizador'] ?? '',
+            'fecha_autorizacion'  => $excepcionEdad['fecha_autorizacion'] ?? null,
+        ];
+
+        Mail::to('rrhh@solsecurity.pe')->send(new ExcepcionEdadMail($datosCorreo));
+    }
+
+    /**
+     * Sube el DNI (anverso y/o reverso) al servidor de archivos.
+     * No lanza excepción: devuelve ['ok' => bool, 'faltan' => [lados fallidos]] y
+     * el llamador decide si el fallo bloquea el guardado o solo avisa.
+     */
+    private function subirDniAlServidor(?string $codiPers, $anverso = null, $reverso = null): array
+    {
+        $codiPers = trim((string) $codiPers);
+        $pendientes = [];
+        if ($anverso) $pendientes['anverso'] = ['file' => $anverso, 'ruta' => 'DNI1_1'];
+        if ($reverso) $pendientes['reverso'] = ['file' => $reverso, 'ruta' => 'DNI2_1'];
+
+        if ($codiPers === '' || empty($pendientes)) {
+            return ['ok' => empty($pendientes), 'faltan' => array_keys($pendientes)];
+        }
+
+        // Nombre fijo: CODI_PERS.jpg (así lo muestra el visor existente)
+        $nameFile = $codiPers . '.jpg';
+        $fallos   = [];
+
+        foreach ($pendientes as $lado => $info) {
+            try {
+                $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                    ->attach('archivo', file_get_contents($info['file']->getRealPath()), $nameFile)
+                    ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                        'nameFile' => $nameFile,
+                        'ruta'     => $info['ruta'],
+                    ]);
+
+                $proxyData = $response->json();
+                if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                    $fallos[] = $lado;
+                    Log::error('subirDniAlServidor: fallo en proxy', [
+                        'codi_pers' => $codiPers,
+                        'lado'      => $lado,
+                        'status'    => $response->status(),
+                        'body'      => $response->body(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                $fallos[] = $lado;
+                Log::error('subirDniAlServidor: excepcion', [
+                    'codi_pers' => $codiPers,
+                    'lado'      => $lado,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return ['ok' => empty($fallos), 'faltan' => $fallos];
+    }
+
+    /**
+     * Consulta al servidor de archivos qué caras del DNI del personal ya existen.
+     * Devuelve ['anverso' => bool, 'reverso' => bool, 'consultado' => bool].
+     * 'consultado' = false cuando el servidor de archivos no respondió; en ese caso
+     * NO se debe bloquear el guardado.
+     */
+    private function dniPersonalEnServidor(string $codiPers): array
+    {
+        $codiPers  = trim($codiPers);
+        $nombre    = $codiPers . '.jpg';
+        $resultado = ['anverso' => false, 'reverso' => false, 'consultado' => false];
+
+        if ($codiPers === '') {
+            return $resultado;
+        }
+
+        $consultado = true;
+        foreach (['anverso' => 'DNI1_1', 'reverso' => 'DNI2_1'] as $lado => $ruta) {
+            try {
+                $resultado[$lado] = Http::timeout(5)
+                    ->head("http://190.116.178.163/Biblioteca_Grafica/{$ruta}/{$nombre}")
+                    ->successful();
+            } catch (\Throwable $e) {
+                $resultado[$lado] = false;
+                $consultado       = false;
+            }
+        }
+
+        $resultado['consultado'] = $consultado;
+
+        return $resultado;
+    }
+
+    /**
+     * Indica qué caras del DNI del personal ya están en el servidor de archivos.
+     * GET /api/dj/get-dni-personal?codi_pers=XXXXX
+     */
+    public function getDniPersonal(Request $request)
+    {
+        $codiPers = trim((string) $request->get('codi_pers', ''));
+        if ($codiPers === '') {
+            return response()->json(['success' => false, 'message' => 'codi_pers es obligatorio.'], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $this->dniPersonalEnServidor($codiPers),
+        ]);
+    }
+
+    /**
+     * Indica si la foto del personal ya existe en el servidor de archivos.
+     * Devuelve true (existe), false (no existe) o null (no se pudo consultar:
+     * en ese caso NO se debe bloquear el guardado).
+     */
+    private function fotoPersonalEnServidor(string $codiPers): ?bool
+    {
+        $codiPers = trim($codiPers);
+        if ($codiPers === '') {
+            return null;
+        }
+
+        try {
+            return Http::timeout(5)
+                ->head("http://190.116.178.163/Biblioteca_Grafica/Fotos/{$codiPers}.jpg")
+                ->successful();
+        } catch (\Throwable $e) {
+            Log::warning('fotoPersonalEnServidor: sin respuesta del servidor de archivos', [
+                'codi_pers' => $codiPers,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Sube la foto del personal al servidor de archivos.
+     * No lanza excepción: devuelve ['ok' => bool, 'faltan' => [lados fallidos]].
+     */
+    private function subirFotoAlServidor(?string $codiPers, $foto): array
+    {
+        $codiPers = trim((string) $codiPers);
+        if (!$foto) {
+            return ['ok' => true, 'faltan' => []];
+        }
+        if ($codiPers === '') {
+            return ['ok' => false, 'faltan' => ['foto']];
+        }
+
+        // Nombre fijo: CODI_PERS.jpg
+        $nameFile = $codiPers . '.jpg';
+
+        try {
+            $response = Http::withToken('457862h45hj7u5126h58d2s51s2s')
+                ->attach('archivo', file_get_contents($foto->getRealPath()), $nameFile)
+                ->post('http://190.116.178.163/apps/api/file-control/charge_file.php', [
+                    'nameFile' => $nameFile,
+                    'ruta'     => 'Fotos',
+                ]);
+
+            $proxyData = $response->json();
+            if ($response->failed() || (isset($proxyData['success']) && $proxyData['success'] === false)) {
+                Log::error('subirFotoAlServidor: fallo en proxy', [
+                    'codi_pers' => $codiPers,
+                    'status'    => $response->status(),
+                    'body'      => $response->body(),
+                ]);
+
+                return ['ok' => false, 'faltan' => ['foto']];
+            }
+        } catch (\Throwable $e) {
+            Log::error('subirFotoAlServidor: excepcion', [
+                'codi_pers' => $codiPers,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return ['ok' => false, 'faltan' => ['foto']];
+        }
+
+        return ['ok' => true, 'faltan' => []];
+    }
+
+    /**
+     * Indica si el personal ya tiene foto en el servidor de archivos.
+     * GET /api/dj/get-foto-personal?codi_pers=XXXXX
+     */
+    public function getFotoPersonal(Request $request)
+    {
+        $codiPers = trim((string) $request->get('codi_pers', ''));
+        if ($codiPers === '') {
+            return response()->json(['success' => false, 'message' => 'codi_pers es obligatorio.'], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => ['existe' => $this->fotoPersonalEnServidor($codiPers)],
+        ]);
     }
 
     private function parsearFechaNacimiento(string $fecha): ?\Carbon\Carbon

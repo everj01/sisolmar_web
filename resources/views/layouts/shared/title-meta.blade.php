@@ -10,7 +10,7 @@
 
 <script src="https://kit.fontawesome.com/76256ea07c.js" crossorigin="anonymous"></script>
 <script>
-    const VITE_URL_APP = '{{ env('VITE_URL') }}';
+    const VITE_URL_APP = '{{ config('app.url') }}';
     window.abrirModalPasswordChange = () => {
         document.getElementById("btn-modal-password-change-user").click();
     }

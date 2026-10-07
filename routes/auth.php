@@ -16,4 +16,3 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/home', fn()=>view('index'))->name('home');
 });
 
-?>

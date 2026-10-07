@@ -35,8 +35,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        putenv('TMPDIR=' . base_path('temp'));
-        putenv('TEMP=' . base_path('temp'));
-        putenv('TMP=' . base_path('temp'));
+        // <proyecto>/temp es el directorio temporal global de la app (ignorado por
+        // git). Si no existe, sys_get_temp_dir() apunta a una carpeta inexistente y
+        // todo lo que escriba ahí (PhpSpreadsheet, reportes, subidas) revienta con
+        // "fopen(): Failed to open stream: No such file or directory" (500).
+        $dir = base_path('temp');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        putenv('TMPDIR=' . $dir);
+        putenv('TEMP=' . $dir);
+        putenv('TMP=' . $dir);
     }
 }
