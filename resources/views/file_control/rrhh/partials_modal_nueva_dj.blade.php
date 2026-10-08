@@ -162,13 +162,81 @@
                                                 <span style="font-size:10px;color:#9ca3af;margin-top:3px;">FOTO</span>
                                                 <img id="ndj_previewFoto" class="hidden"
                                                     style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
-                                                <input type="file" id="ndj_inputFoto" accept="image/*" class="hidden" />
+                                                <input type="file" id="ndj_inputFoto" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
                                             </div>
-                                            <div style="display:flex;gap:5px;">
-                                                <button type="button" id="ndj_btnSubirFoto" class="dj-btn-sm"
-                                                    style="background:#f3f4f6;color:#374151;border-radius:5px;">Subir foto</button>
-                                                <button type="button" id="ndj_btnEliminarFoto"
-                                                    class="dj-btn-sm dj-btn-danger hidden">Quitar</button>
+                                            <div style="display:flex;flex-direction:column;gap:5px;align-items:center;">
+                                                <div style="display:flex;gap:5px;">
+                                                    <button type="button" id="ndj_btnSubirFoto" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">Subir foto</button>
+                                                    <button type="button" id="ndj_btnEliminarFoto"
+                                                        class="dj-btn-sm dj-btn-danger hidden">Quitar</button>
+                                                </div>
+                                                <button type="button" id="ndj_btnSubirDni" class="dj-btn-sm"
+                                                    style="background:#f3f4f6;color:#374151;border-radius:5px;">Subir DNI</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{-- Modal Subir DNI: anverso/reverso con vista previa; se sube al presionar GUARDAR --}}
+                                    <div id="ndj_modalDni" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+                                        <div style="background:#fff;border-radius:10px;padding:18px 20px;width:92%;max-width:460px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+                                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                                <strong style="font-size:14px;">Subir DNI</strong>
+                                                <button type="button" id="ndj_cerrarModalDni" title="Cerrar"
+                                                    style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
+                                            </div>
+                                            <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;">
+                                                <div style="text-align:center;">
+                                                    <button type="button" id="ndj_btnDniAnverso" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI ANVERSO</button>
+                                                    <input type="file" id="ndj_dni_anverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
+                                                    <div id="ndj_prev_dni_anverso" style="display:none;margin-top:8px;position:relative;width:150px;">
+                                                        <img id="ndj_img_dni_anverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
+                                                        <button type="button" id="ndj_clear_dni_anverso" title="Quitar"
+                                                            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;">✕</button>
+                                                    </div>
+                                                </div>
+                                                <div style="text-align:center;">
+                                                    <button type="button" id="ndj_btnDniReverso" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI REVERSO</button>
+                                                    <input type="file" id="ndj_dni_reverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
+                                                    <div id="ndj_prev_dni_reverso" style="display:none;margin-top:8px;position:relative;width:150px;">
+                                                        <img id="ndj_img_dni_reverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
+                                                        <button type="button" id="ndj_clear_dni_reverso" title="Quitar"
+                                                            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;">✕</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{-- Modal DNI del hijo: anverso/reverso con vista previa; se sube al presionar GUARDAR --}}
+                                    <div id="ndj_modalDniHijos" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+                                        <div style="background:#fff;border-radius:10px;padding:18px 20px;width:92%;max-width:460px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+                                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                                <strong style="font-size:14px;">DNI del hijo — <span id="ndj_dni_hijo_label"></span></strong>
+                                                <button type="button" id="ndj_cerrarModalDniHijos" title="Cerrar"
+                                                    style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
+                                            </div>
+                                            <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;">
+                                                <div style="text-align:center;">
+                                                    <button type="button" id="ndj_btnDniHijoAnverso" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI ANVERSO</button>
+                                                    <input type="file" id="ndj_inputDniHijoAnverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
+                                                    <div id="ndj_prev_dni_hijo_anverso" style="display:none;margin-top:8px;position:relative;width:150px;">
+                                                        <img id="ndj_img_dni_hijo_anverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
+                                                        <button type="button" id="ndj_clear_dni_hijo_anverso" title="Quitar"
+                                                            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;">✕</button>
+                                                    </div>
+                                                </div>
+                                                <div style="text-align:center;">
+                                                    <button type="button" id="ndj_btnDniHijoReverso" class="dj-btn-sm"
+                                                        style="background:#f3f4f6;color:#374151;border-radius:5px;">DNI REVERSO</button>
+                                                    <input type="file" id="ndj_inputDniHijoReverso" accept="image/jpeg,.jpg,.jpeg" class="hidden" />
+                                                    <div id="ndj_prev_dni_hijo_reverso" style="display:none;margin-top:8px;position:relative;width:150px;">
+                                                        <img id="ndj_img_dni_hijo_reverso" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;display:block;" />
+                                                        <button type="button" id="ndj_clear_dni_hijo_reverso" title="Quitar"
+                                                            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1;">✕</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -778,7 +846,7 @@
                                     <div id="ndj_familyContainer" style="display:flex;flex-direction:column;gap:8px;">
                                         {{-- fila inicial --}}
                                         <div class="ndj-family-row"
-                                            style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:end;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;">
+                                            style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:start;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;">
                                             <div>
                                                 <label class="dj-label">Parentesco</label>
                                                 <select name="ndj_parentesco[]" class="dj-select">
@@ -797,8 +865,15 @@
                                             <div class="ndj-family-date">
                                                 <label class="dj-label">Fecha de Nacimiento</label>
                                                 <input type="date" name="ndj_fechaNacimiento[]" class="dj-input">
+                                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                                                    <span class="ndj-family-age" style="display:none;font-size:11px;color:#2563eb;"></span>
+                                                    <button type="button" class="ndj-btn-dni-hijo dj-btn-sm"
+                                                        style="display:none;background:#eef2ff;color:#3730a3;border-radius:5px;">SUBIR DNI</button>
+                                                    <span class="ndj-dni-hijo-estado" style="display:none;font-size:10px;"></span>
+                                                </div>
                                             </div>
                                             <div>
+                                                <label class="dj-label" style="visibility:hidden;">.</label>
                                                 <button type="button" class="ndj-remove-family dj-btn-sm dj-btn-danger"
                                                     style="margin-bottom:1px;">Eliminar</button>
                                             </div>
@@ -847,7 +922,7 @@
                 <h3 id="tituloModalExcepcionEdad" class="text-lg font-bold text-gray-900">
                     Registrar excepción de edad
                 </h3>
-                <p class="text-sm text-gray-500 font-medium mt-0.5">Autorización de usuario especial</p>
+                <p class="text-sm text-gray-500 font-medium mt-0.5">Autorización de ADMIN RRHH</p>
             </div>
             <button type="button" id="ndj_btnCerrarExcepcionEdad"
                 class="text-gray-500 hover:text-gray-700 transition-colors" aria-label="Cerrar">
@@ -856,15 +931,16 @@
         </div>
 
         <div class="px-5 py-5 space-y-5">
-            <p class="text-sm text-center text-gray-500 bg-amber-50 p-2 rounded-lg border border-amber-100">
-                Esta operación requiere las credenciales de un usuario autorizado para registrar excepciones de edad.
+            <p class="text-sm text-center text-gray-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                <strong class="font-bold">Importante:</strong> para continuar se requiere la cuenta y contraseña de un usuario con rol
+                <strong class="font-bold">ADMINS RRHH</strong>. Sin esta autorización <strong class="font-bold">no se puede registrar la DJ</strong>.
             </p>
 
             <div>
-                <label for="ndj_usuario_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Usuario</label>
-                <input type="text" id="ndj_usuario_excepcion" autocomplete="username"
+                <label for="ndj_usuario_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Cuenta ADMINS RRHH</label>
+                <input type="text" id="ndj_usuario_excepcion" autocomplete="off"
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                    placeholder="Usuario autorizado">
+                    placeholder="Ej: CPASTOR">
             </div>
             <div>
                 <label for="ndj_clave_excepcion" class="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>

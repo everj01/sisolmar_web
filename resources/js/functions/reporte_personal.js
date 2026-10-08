@@ -33,7 +33,7 @@ const tbl = new Tabulator('#tblReportePersonal', {
     pagination:       true,
     paginationMode:   'local',
     paginationSize:   20,
-    placeholder:      'Cargando datos...',
+    placeholder:      'No hay datos que mostrar',
     height:           '520px',
     layout:           'fitColumns',
     responsiveLayout: 'collapse',
@@ -52,12 +52,14 @@ const tbl = new Tabulator('#tblReportePersonal', {
         },
     },
     rowFormatter: row => {
-        const d = row.getData();
-        if (d.vigencia && d.vigencia.toString().trim().toUpperCase() === 'NO') {
-            row.getElement().style.backgroundColor = '#fff5f5';
-        } else {
-            row.getElement().style.backgroundColor = '';
-        }
+        const d   = row.getData();
+        const ln  = (d.en_lista_negra ?? 'NO').toString().trim().toUpperCase() === 'SI';
+        const ces = (d.vigencia ?? 'SI').toString().trim().toUpperCase() === 'NO';
+        const el  = row.getElement();
+        // Blanco por defecto · rojo si es cesado · gris si está en lista negra (prioridad)
+        el.classList.toggle('rep-ln',     ln);
+        el.classList.toggle('rep-cesado', !ln && ces);
+        el.style.backgroundColor = '';
     },
     columns: [
         {
@@ -172,6 +174,32 @@ tbl.on('dataLoaded',     reformat);
 tbl.on('pageLoaded',     reformat);
 tbl.on('renderComplete', reformat);
 
+// ── Indicador "Mostrando X–Y de Z" bajo la tabla ─────────────────────────────
+const tblInfo = document.getElementById('tblInfo');
+let tblInfoTimer = null;
+function actualizarInfoFilas() {
+    if (!tblInfo) return;
+    clearTimeout(tblInfoTimer);
+    tblInfoTimer = setTimeout(() => {
+        if (!tblInfo) return;
+        const activas = tbl.getRows('active').length;
+        if (!activas) { tblInfo.innerHTML = '<b>0</b> filas'; return; }
+        const pagina = tbl.getPage();
+        if (pagina === 'all') { tblInfo.innerHTML = `Mostrando <b>${activas}</b> filas`; return; }
+        const size   = tbl.getPageSize() || 20;
+        const totalPag = Math.ceil(activas / size);
+        const desde    = ((pagina || 1) - 1) * size + 1;
+        const hasta    = Math.min((pagina || 1) * size, activas);
+        tblInfo.innerHTML = `Mostrando <b>${desde}–${hasta}</b> de <b>${activas}</b> filas` +
+            (totalPag > 1 ? ` · Página <b>${pagina}</b>/${totalPag}` : '');
+    }, 0);
+}
+tbl.on('dataLoaded',       actualizarInfoFilas);
+tbl.on('pageLoaded',       actualizarInfoFilas);
+tbl.on('dataFiltered',     actualizarInfoFilas);
+tbl.on('pageSizeChanged',  actualizarInfoFilas);
+tbl.on('renderComplete',   actualizarInfoFilas);
+
 // ── Carga desde el servidor (sucursal + tipo + vigencia) ─────────────────────
 const repLoader = document.getElementById('repLoadingIndicator');
 
@@ -193,6 +221,7 @@ async function cargarDatos() {
         document.getElementById('buscarRep'),
         document.getElementById('btnExportExcelRep'),
         document.getElementById('btnExportPdfRep'),
+        document.getElementById('btnLimpiarFiltros'),
     ];
 
     const bloquear = () => controlesBloquear.forEach(el => {
@@ -219,10 +248,19 @@ async function cargarDatos() {
         const no   = json.totalCesados  ?? 0;
         const ln   = data.filter(d => (d.en_lista_negra ?? 'NO').toString().trim().toUpperCase() === 'SI').length;
 
-        document.getElementById('cntTotal').textContent      = vi + no;
+        const total = vi + no;
+        document.getElementById('cntTotal').textContent      = total;
         document.getElementById('cntVigentes').textContent   = vi;
         document.getElementById('cntCesados').textContent    = no;
         document.getElementById('cntListaNegra').textContent = ln;
+
+        // Barras de proporción
+        const pct = n => (total > 0 ? Math.max(n > 0 ? 4 : 0, Math.round((n / total) * 100)) : 0);
+        document.getElementById('barTotal').style.width    = total > 0 ? '100%' : '0%';
+        document.getElementById('barVigentes').style.width = pct(vi) + '%';
+        document.getElementById('barCesados').style.width  = pct(no) + '%';
+        document.getElementById('barLN').style.width       =
+            (data.length > 0 ? Math.max(ln > 0 ? 4 : 0, Math.round((ln / data.length) * 100)) : 0) + '%';
 
         // Diferir setData para no bloquear el hilo principal
         await new Promise(r => setTimeout(r, 0));
@@ -238,7 +276,11 @@ async function cargarDatos() {
 
 // ── Búsqueda local (sin request al servidor) ─────────────────────────────────
 let buscarTimer;
-document.getElementById('buscarRep').addEventListener('input', function () {
+const inpBuscar   = document.getElementById('buscarRep');
+const btnLimpiarB = document.getElementById('btnLimpiarBusqueda');
+
+inpBuscar.addEventListener('input', function () {
+    if (btnLimpiarB) btnLimpiarB.classList.toggle('hidden', !this.value);
     clearTimeout(buscarTimer);
     buscarTimer = setTimeout(() => {
         const s = this.value.trim().toLowerCase();
@@ -252,6 +294,25 @@ document.getElementById('buscarRep').addEventListener('input', function () {
             (d.codPersonal ?? '').toLowerCase().includes(s)
         );
     }, 200);
+});
+
+if (btnLimpiarB) btnLimpiarB.addEventListener('click', () => {
+    inpBuscar.value = '';
+    btnLimpiarB.classList.add('hidden');
+    tbl.clearFilter();
+    inpBuscar.focus();
+});
+
+// ── Botón "Limpiar": restablece filtros + búsqueda ───────────────────────────
+const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
+if (btnLimpiarFiltros) btnLimpiarFiltros.addEventListener('click', () => {
+    document.getElementById('filtroSucursal').value = '';
+    document.getElementById('filtroTipo').value     = 'OPER 5°';   // valor por defecto
+    document.getElementById('filtroVigencia').value = 'SI';        // valor por defecto
+    inpBuscar.value = '';
+    if (btnLimpiarB) btnLimpiarB.classList.add('hidden');
+    tbl.clearFilter();
+    cargarDatos();
 });
 
 // ── Filtros del servidor: recargan todos los datos ───────────────────────────
@@ -273,9 +334,11 @@ const modalCodigo    = document.getElementById('modalDetalleCodigo');
 const btnCerrarModal = document.getElementById('btnCerrarModalDetalle');
 
 function campo(label, valor, extra = '') {
-    return `<div class="bg-gray-50 rounded-lg px-3 py-2 ${extra}">
-        <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">${label}</p>
-        <p class="text-sm text-gray-700 font-medium mt-0.5">${valor || '—'}</p>
+    return `<div class="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm hover:border-gray-300 transition-colors ${extra}">
+        <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+            <span class="w-1 h-1 rounded-full bg-gray-300"></span>${label}
+        </p>
+        <p class="text-sm text-gray-800 font-semibold mt-0.5">${valor || '—'}</p>
     </div>`;
 }
 
@@ -297,8 +360,10 @@ function campoColor(label, valor, esquema) {
         dark:  { bg: 'bg-neutral-100 border border-neutral-300', lbl: 'text-neutral-500', val: 'text-neutral-900 font-semibold' },
     };
     const e = esqs[esquema] ?? esqs.green;
-    return `<div class="${e.bg} rounded-lg px-3 py-2">
-        <p class="text-[10px] ${e.lbl} font-medium uppercase tracking-wide">${label}</p>
+    return `<div class="${e.bg} rounded-lg px-3 py-2 shadow-sm">
+        <p class="text-[10px] ${e.lbl} font-semibold uppercase tracking-wider flex items-center gap-1">
+            <span class="w-1 h-1 rounded-full bg-current opacity-50"></span>${label}
+        </p>
         <p class="text-sm ${e.val} mt-0.5">${valor || '—'}</p>
     </div>`;
 }
@@ -468,13 +533,17 @@ async function abrirModal(cod, rowData) {
 
     // Info personal desde la fila (sin request)
     const lnCampo = esLN
-        ? `<div class="bg-black rounded-lg px-3 py-2">
-            <p class="text-[10px] text-neutral-400 font-medium uppercase tracking-wide">Lista Negra</p>
+        ? `<div class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 shadow-sm">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                <span class="w-1 h-1 rounded-full bg-slate-500"></span>Lista Negra
+            </p>
             <p class="text-sm text-white font-bold mt-0.5 flex items-center gap-1"><i class='bx bx-block'></i> SÍ</p>
            </div>`
-        : `<div class="bg-gray-50 rounded-lg px-3 py-2">
-            <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Lista Negra</p>
-            <p class="text-sm text-gray-400 font-medium mt-0.5">NO</p>
+        : `<div class="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm hover:border-gray-300 transition-colors">
+            <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                <span class="w-1 h-1 rounded-full bg-gray-300"></span>Lista Negra
+            </p>
+            <p class="text-sm text-gray-800 font-semibold mt-0.5">NO</p>
            </div>`;
 
     document.getElementById('modalInfoPersonal').innerHTML = [
@@ -537,6 +606,9 @@ function cerrarModal() {
 
 btnCerrarModal.addEventListener('click', cerrarModal);
 modalDetalle.addEventListener('click', e => { if (e.target === modalDetalle) cerrarModal(); });
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modalDetalle.classList.contains('flex')) cerrarModal();
+});
 
 document.getElementById('tblReportePersonal').addEventListener('click', e => {
     const btn = e.target.closest('.btn-ver-rep');
@@ -544,6 +616,15 @@ document.getElementById('tblReportePersonal').addEventListener('click', e => {
     const rows = tbl.searchRows('codPersonal', '=', btn.dataset.cod);
     const rowData = rows.length ? rows[0].getData() : {};
     abrirModal(btn.dataset.cod, rowData);
+});
+
+// Clic en cualquier parte de la fila también abre el detalle
+// (el botón "Más detalles" queda oculto cuando la tabla colapsa columnas)
+tbl.on('rowClick', (e, row) => {
+    if (e.target.closest('.btn-ver-rep, .tabulator-responsive-collapse')) return;
+    const d = row.getData();
+    if (!d || !d.codPersonal) return;
+    abrirModal(d.codPersonal, d);
 });
 
 // ── Carga inicial (esperar que la tabla esté lista) ──────────────────────────

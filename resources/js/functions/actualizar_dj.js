@@ -316,9 +316,9 @@ document.addEventListener('DOMContentLoaded', function () {
         paginationSize: 20,
         rowFormatter: function (row) {
             const d = row.getData();
-            if (d.SIP_CAMBIO !== 'Ok') {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            const el = row.getElement();
+            el.classList.toggle('rep-cesado', d.SIP_CAMBIO !== 'Ok');
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         // --- AQUÍ TRADUCIMOS EL PAGINADOR ---
@@ -847,9 +847,9 @@ document.addEventListener('DOMContentLoaded', function () {
         paginationSize: 20,
         rowFormatter: function (row) {
             const d = row.getData();
-            if ((d.migrado || '').toUpperCase().trim() !== 'SI') {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            const el = row.getElement();
+            el.classList.toggle('rep-cesado', (d.migrado || '').toUpperCase().trim() !== 'SI');
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
@@ -1341,10 +1341,10 @@ document.addEventListener('DOMContentLoaded', function () {
         selectable: true,
         rowFormatter: function (row) {
             const d = row.getData();
+            const el = row.getElement();
             const gen = d.generado === 1 || d.generado === true || d.generado === 'SI' || d.generado === '1';
-            if (!gen) {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            el.classList.toggle('rep-cesado', !gen);
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
@@ -1514,8 +1514,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnGen) {
             btnGen.disabled = !sel;
             btnGen.className = sel
-                ? 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors'
-                : 'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-indigo-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors';
+                ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-indigo-600 text-white border border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700'
+                : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-indigo-100 text-indigo-400 border border-indigo-200 cursor-not-allowed';
         }
         if (btnQuitar) {
             btnQuitar.disabled = !sel;
@@ -2262,13 +2262,14 @@ document.addEventListener('DOMContentLoaded', function () {
         langs: { es: { pagination: { first: 'Primero', prev: 'Anterior', next: 'Siguiente', last: 'Último' } } },
 
         rowFormatter: function (row) {
-            const d = row.getData();
-            if (d.tiene_folio_25 != 1) {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            } else if (d.PERS_VIGENCIA !== 'SI') {
-                row.getElement().style.backgroundColor = '#ffe5e5';
-                row.getElement().style.color = '#7a1f1f';
-            }
+            const d   = row.getData();
+            const el  = row.getElement();
+            const mal = d.tiene_folio_25 != 1;
+            const noV = d.PERS_VIGENCIA !== 'SI';
+            el.classList.toggle('rep-cesado', mal);
+            el.classList.toggle('rep-alerta', !mal && noV);
+            el.style.removeProperty('background-color');
+            el.style.removeProperty('color');
         },
 
         columns: [
@@ -2649,9 +2650,9 @@ document.addEventListener('DOMContentLoaded', function () {
         rowFormatter: function (row) {
             const d = row.getData();
             const dj = d.djSubido || d.djsubido || d.DJSUBIDO;
-            if (dj !== 'SI') {
-                row.getElement().style.backgroundColor = '#fff5f5';
-            }
+            const el = row.getElement();
+            el.classList.toggle('rep-cesado', dj !== 'SI');
+            el.style.removeProperty('background-color');
         },
         locale: "es",
         langs: { "es": { "pagination": { "first": "Primero", "prev": "Anterior", "next": "Siguiente", "last": "Último" } } },
@@ -3329,12 +3330,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 <label class="text-sm font-medium inline-block mb-2">Apellidos y Nombres</label>
                 <input type="text" name="apellidosNombres[]" class="form-input w-full" placeholder="Apellidos y nombres completos">
             </div>
-            <div class="flex gap-2 items-end">
-                <div class="family-date flex-1">
-                    <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
-                    <input type="date" name="fechaNacimiento[]" class="form-input w-full">
+            <div>
+                <label class="text-sm font-medium inline-block mb-2">Fecha Nacimiento</label>
+                <div class="flex gap-2 items-center">
+                    <div class="family-date flex-1">
+                        <input type="date" name="fechaNacimiento[]" class="form-input w-full">
+                    </div>
+                    <button type="button" class="remove-family px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 whitespace-nowrap">Eliminar</button>
                 </div>
-                <button type="button" class="remove-family self-end px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">Eliminar</button>
+                <div class="flex gap-2 items-center flex-wrap mt-2">
+                    <span class="family-age" style="display:none;font-size:11px;color:#2563eb;"></span>
+                    <button type="button" class="btn-dni-hijo px-3 py-1 rounded" style="display:none;background:#eef2ff;color:#3730a3;">SUBIR DNI</button>
+                    <span class="dni-hijo-estado" style="display:none;font-size:10px;"></span>
+                </div>
             </div>
         </div>`;
         // return `
@@ -3705,6 +3713,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hidden) hidden.value = this.value;
         aplicarVisibilidadPorTipo(this.value);
         aplicarSctr(this.value);
+        // Refrescar CARGO según el nuevo tipo y limpiar la selección previa
+        filtrarCargos(this.value);
+        const cargoSel = document.getElementById('cargo_ui');
+        if (cargoSel) cargoSel.value = '';
+        const cargoHidden = document.getElementById('cargo');
+        if (cargoHidden) cargoHidden.value = '';
+    });
+
+    // CARGO: se guarda por código (hidden "cargo"); solo Admins RRHH puede editarlo
+    document.getElementById('cargo_ui')?.addEventListener('change', function () {
+        const hidden = document.getElementById('cargo');
+        if (hidden) hidden.value = this.value;
     });
 
     // ============================================================
@@ -3949,13 +3969,37 @@ document.addEventListener('DOMContentLoaded', function () {
                     .find(fila => {
                         const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
                         const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
-                        return parentesco.startsWith('HIJO') && !fecha;
+                        return /^HIJ/i.test(parentesco) && !fecha;
                     });
                 if (hijoSinFecha) {
                     Swal.fire({ icon: 'warning', title: 'Fecha obligatoria', text: 'Ingrese la fecha de nacimiento para el familiar Hijo(a).', confirmButtonText: 'Entendido' });
                     hijoSinFecha.querySelector('input[name="fechaNacimiento[]"]')?.focus();
                     if (btnGuardar) btnGuardar.disabled = false;
                     return;
+                }
+
+                // DNI obligatorio: solo para hijos MENORES de edad
+                // (la regla NO aplica para el rol ADMINS RRHH)
+                if (!esAdminRrhhDj()) {
+                    const filasHijosDni = filasHijosDj();
+                    for (let i = 0; i < filasHijosDni.length; i++) {
+                        const fechaH = filasHijosDni[i].querySelector('input[name="fechaNacimiento[]"]')?.value;
+                        if (!esMenorDeEdadDj(fechaH)) continue;   // solo menores de edad
+                        const stH = estadoDniHijo(filasHijosDni[i]);
+                        const okA = !!(stH.anverso || stH.tieneAnverso);
+                        const okR = !!(stH.reverso || stH.tieneReverso);
+                        if (!okA || !okR) {
+                            const falta = (!okA && !okR) ? 'anverso y reverso' : (!okA ? 'anverso' : 'reverso');
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Falta el DNI del hijo ' + (i + 1),
+                                text: 'Debe subir el ' + falta + ' del DNI para continuar.',
+                                confirmButtonText: 'Entendido',
+                            });
+                            if (btnGuardar) btnGuardar.disabled = false;
+                            return;
+                        }
+                    }
                 }
 
                 const payload = {
@@ -3981,14 +4025,39 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log(esNuevaDJ ? '🆕 Nueva DJ' : '✏️ DJ Existente', payload);
 
 
-                const response = await axios.post(url, payload);
+                // El DNI (anverso + reverso) viaja ADJUNTO en esta misma petición,
+                // para que el servidor lo exija antes de crear/actualizar el personal.
+                const dniAdjuntoAdj = { anverso: djDniFiles.anverso || null, reverso: djDniFiles.reverso || null };
+                const fotoAdjuntaAdj = inputFoto?.files?.[0] || null;
+                const formDataSave = new FormData();
+                Object.keys(payload).forEach(k => {
+                    const v = payload[k];
+                    if (v === undefined || v === null) return;
+                    if (Array.isArray(v)) v.forEach(item => formDataSave.append(`${k}[]`, item ?? ''));
+                    else formDataSave.append(k, v);
+                });
+                if (fotoAdjuntaAdj)         formDataSave.append('foto', fotoAdjuntaAdj);
+                if (dniAdjuntoAdj.anverso)  formDataSave.append('dni_anverso', dniAdjuntoAdj.anverso);
+                if (dniAdjuntoAdj.reverso) formDataSave.append('dni_reverso', dniAdjuntoAdj.reverso);
+
+                const csrfTokenSave = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const response = await axios.post(url, formDataSave, {
+                    headers: { 'X-CSRF-TOKEN': csrfTokenSave, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                });
+
+                // El DNI ya viajó con el guardado: se limpia la selección para no volver a subirlo
+                if (dniAdjuntoAdj.anverso || dniAdjuntoAdj.reverso) limpiarDniDj();
                 console.log('✅ Response:', response);
 
                 if (response.status === 200 || response.status === 201) {
-                    // Subir foto si fue seleccionada
+                    // Subir foto y DNI si fueron seleccionados
                     const fotoFile = inputFoto?.files?.[0];
                     const codiPersFoto = response.data.codi_pers || data.cod_postulante || '';
-                    if (fotoFile && codiPersFoto) {
+                    const resDniDj0 = await subirDniDj(codiPersFoto);
+                    const resDniHijos = await subirDniHijosDj(codiPersFoto);
+                    const resDniDj = (!resDniDj0.sinDni && !resDniDj0.ok) ? resDniDj0
+                        : ((!resDniHijos.sinDni && !resDniHijos.ok) ? resDniHijos : { ok: true, sinDni: true, pendiente: !!(response.data.dni_pendiente || response.data.foto_pendiente) });
+                    if (fotoFile && codiPersFoto && !fotoAdjuntaAdj) {
                         try {
                             const fdFoto = new FormData();
                             fdFoto.append('foto', fotoFile);
@@ -4009,7 +4078,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
 
-                    Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'La Declaración Jurada se guardó correctamente.' });
+                    mensajeGuardadoDj(resDniDj, 'La Declaración Jurada se guardó correctamente.');
 
                     const modal = document.getElementById('modalDjGestion');
                     if (modal) {
@@ -4032,7 +4101,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (error.response?.data?.message) msg = error.response.data.message;
                 else if (error.response?.data?.errors) msg = Object.values(error.response.data.errors).flat().join('<br>');
 
-                Swal.fire({ icon: 'error', title: 'Error', html: msg, zIndex: 99999 });
+                const dataErrAdj = error.response?.data || {};
+                const faltaDocsAdj = dataErrAdj.code === 'falta_dni' || dataErrAdj.code === 'falta_foto';
+                if (faltaDocsAdj) {
+                    if (dataErrAdj.falta_foto) {
+                        const inpFotoAdj = document.getElementById('inputFoto');
+                        if (inpFotoAdj) inpFotoAdj.classList.add('ring-2', 'ring-red-500');
+                    }
+                    if (dataErrAdj.falta_anverso || dataErrAdj.falta_reverso) {
+                        ['inputDniAnverso', 'inputDniReverso'].forEach(id => document.getElementById(id)?.classList.add('ring-2', 'ring-red-500'));
+                        const modalDniAdj = document.getElementById('modalDni');
+                        if (modalDniAdj) modalDniAdj.style.display = 'flex';
+                    }
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: faltaDocsAdj ? String(dataErrAdj.message || 'Falta ingresar foto').replace(/\.$/, '') : 'Error',
+                    html: faltaDocsAdj ? 'Debe completar los documentos requeridos para poder guardar la DJ.' : msg,
+                    zIndex: 99999,
+                });
             } finally {
                 if (btnGuardar) btnGuardar.disabled = false;
             }
@@ -4704,6 +4792,92 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+// ── Sistema visual: barras de las cards, indicadores de filas y limpiar búsqueda ──
+(function () {
+    // 1) Barras de proporción de las 3 tarjetas de contadores
+    const gruposCards = [
+        ['countTotalE1', 'countActualizadosE1', 'countSinActualizarE1', 'barTotalE1', 'barActualizadosE1', 'barSinActualizarE1'],
+        ['contadorTotalE2', 'contadorFiltradoE2', 'contadorSinVerificarE2', 'barTotalE2', 'barVerificadosE2', 'barSinVerificarE2'],
+        ['contadorTotalE3', 'contadorGeneradosE3', 'contadorPendientesE3', 'barTotalE3', 'barGeneradosE3', 'barPendientesE3'],
+    ];
+    const leerNum = id => {
+        const el = document.getElementById(id);
+        return el ? (parseInt(String(el.textContent).replace(/[^\d]/g, ''), 10) || 0) : 0;
+    };
+    const ponerBarra = (id, w) => { const el = document.getElementById(id); if (el) el.style.width = w; };
+    const pintarBarras = () => {
+        gruposCards.forEach(g => {
+            const total = leerNum(g[0]);
+            const pct = n => (total > 0 ? Math.max(n > 0 ? 4 : 0, Math.round((n / total) * 100)) : 0);
+            ponerBarra(g[3], total > 0 ? '100%' : '0%');
+            ponerBarra(g[4], pct(leerNum(g[1])) + '%');
+            ponerBarra(g[5], pct(leerNum(g[2])) + '%');
+        });
+    };
+    gruposCards.forEach(g => {
+        [g[0], g[1], g[2]].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el || typeof MutationObserver === 'undefined') return;
+            new MutationObserver(pintarBarras).observe(el, { childList: true, characterData: true, subtree: true });
+        });
+    });
+    pintarBarras();
+
+    // 2) Indicador "Mostrando X–Y de Z" bajo cada tabla
+    const mapaInfo = {
+        '#tblEtapa1': 'tblInfoE1',
+        '#tblPersonasVerificado': 'tblInfoE2',
+        '#tblPersonasEtapa3': 'tblInfoE3',
+        '#tblPersonas_E4C': 'tblInfoE4C',
+        '#tblPersonasEtapa4': 'tblInfoE4',
+        '#tblPersonasMigrado': 'tblInfoMIG',
+    };
+    Object.keys(mapaInfo).forEach(sel => {
+        const info = document.getElementById(mapaInfo[sel]);
+        if (!info || typeof Tabulator.findTable !== 'function') return;
+        const instancias = Tabulator.findTable(sel);
+        const tbl = instancias && instancias[0];
+        if (!tbl) return;
+        let timer = null;
+        const pintarInfo = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                const activas = tbl.getRows('active').length;
+                if (!activas) { info.innerHTML = '<b>0</b> filas'; return; }
+                const pagina = tbl.getPage();
+                if (pagina === 'all') { info.innerHTML = 'Mostrando <b>' + activas + '</b> filas'; return; }
+                const size = tbl.getPageSize() || 20;
+                const totalPag = Math.ceil(activas / size);
+                const desde = ((pagina || 1) - 1) * size + 1;
+                const hasta = Math.min((pagina || 1) * size, activas);
+                info.innerHTML = 'Mostrando <b>' + desde + '–' + hasta + '</b> de <b>' + activas + '</b> filas' +
+                    (totalPag > 1 ? ' · Página <b>' + pagina + '</b>/' + totalPag : '');
+            }, 0);
+        };
+        ['dataLoaded', 'pageLoaded', 'dataFiltered', 'pageSizeChanged', 'renderComplete'].forEach(ev => {
+            tbl.on(ev, pintarInfo);
+        });
+        pintarInfo();
+    });
+
+    // 3) Botones "Limpiar búsqueda" de las etapas
+    [['btnLimpiarBusquedaE1', 'buscarPersonalE1'], ['btnLimpiarBusquedaE2', 'buscarPersonalE2'], ['btnLimpiarBusquedaE3', 'buscarPersonalE3']]
+        .forEach(par => {
+            const btn = document.getElementById(par[0]);
+            const inp = document.getElementById(par[1]);
+            if (!btn || !inp) return;
+            const alternar = () => btn.classList.toggle('hidden', !inp.value);
+            inp.addEventListener('input', alternar);
+            btn.addEventListener('click', () => {
+                inp.value = '';
+                btn.classList.add('hidden');
+                inp.dispatchEvent(new Event('input'));
+                inp.focus();
+            });
+            alternar();
+        });
+})();
+
 }); // fin DOMContentLoaded
 
 // ============================================================
@@ -4714,6 +4888,8 @@ document.addEventListener('DOMContentLoaded', function () {
 async function filtrarCargos(tipoPersonal) {
     const sel = document.getElementById('cargo_ui');
     if (!sel) return;
+    // Solo el rol ADMINS RRHH (tipo 17) puede editar el cargo
+    sel.disabled = String(window.tipoUsuario ?? '').trim() !== '17';
     // Autoguarantía: si el catálogo de cargos no llegó, cargarlo ahora
     if (!window.allCargosDj || !window.allCargosDj.length) await cargarCargosDj();
     const operativos = ['01', '03', '06'];
@@ -4748,7 +4924,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
-            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+            aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj(); limpiarDniHijosDj();
 
             await cargarCatalogos();
             await cargarPaises();
@@ -4810,6 +4986,88 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
 }
 
 // ── Catálogos ────────────────────────────────────────────────
+// ── DNI Anverso / Reverso: vista previa + subida al GUARDAR ─────────
+const djDniFiles = { anverso: null, reverso: null };
+
+function configDniInputsDj() {
+    // Modal "Subir DNI" (abrir/cerrar)
+    const modalDni = document.getElementById('modalDni');
+    document.getElementById('btnSubirDni')?.addEventListener('click', () => { if (modalDni) modalDni.style.display = 'flex'; });
+    document.getElementById('cerrarModalDni')?.addEventListener('click', () => { if (modalDni) modalDni.style.display = 'none'; });
+    const pares = [
+        ['btnDniAnverso', 'inputDniAnverso', 'prevDniAnverso', 'imgDniAnverso', 'clearDniAnverso', 'anverso'],
+        ['btnDniReverso', 'inputDniReverso', 'prevDniReverso', 'imgDniReverso', 'clearDniReverso', 'reverso'],
+    ];
+    pares.forEach(([btnId, inpId, prevId, imgId, clearId, lado]) => {
+        const btn = document.getElementById(btnId), inp = document.getElementById(inpId),
+              prev = document.getElementById(prevId), img = document.getElementById(imgId),
+              clear = document.getElementById(clearId);
+        if (!btn || !inp) return;
+        btn.addEventListener('click', () => inp.click());
+        inp.addEventListener('change', () => {
+            const f = inp.files?.[0];
+            if (!f) return;
+            djDniFiles[lado] = f;
+            if (img)  img.src = URL.createObjectURL(f);
+            if (prev) prev.style.display = 'block';
+        });
+        if (clear) clear.addEventListener('click', () => {
+            djDniFiles[lado] = null;
+            inp.value = '';
+            if (prev) prev.style.display = 'none';
+            if (img)  img.removeAttribute('src');
+        });
+    });
+}
+document.addEventListener('DOMContentLoaded', configDniInputsDj);
+
+function limpiarDniDj() {
+    djDniFiles.anverso = null;
+    djDniFiles.reverso = null;
+    ['inputDniAnverso', 'inputDniReverso'].forEach(id => { const i = document.getElementById(id); if (i) i.value = ''; });
+    ['prevDniAnverso', 'prevDniReverso'].forEach(id => { const p = document.getElementById(id); if (p) p.style.display = 'none'; });
+    const m = document.getElementById('modalDni');
+    if (m) m.style.display = 'none';
+}
+
+async function subirDniDj(codiPers) {
+    if (!codiPers) return { ok: true, sinDni: true };
+    if (!djDniFiles.anverso && !djDniFiles.reverso) return { ok: true, sinDni: true };
+    try {
+        const fd = new FormData();
+        fd.append('codi_pers', codiPers);
+        if (djDniFiles.anverso) fd.append('dni_anverso', djDniFiles.anverso);
+        if (djDniFiles.reverso) fd.append('dni_reverso', djDniFiles.reverso);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const res = await fetch(`${VITE_URL_APP}/api/dj/upload-dni-personal`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: fd,
+        });
+        const json = await res.json();
+        // Limpiar selección tras subir: nunca arrastrar el DNI de una persona a otra
+        if (json.success) limpiarDniDj();
+        return { ok: !!json.success, message: json.message };
+    } catch (err) {
+        console.warn('[ActualizarDJ] Error subiendo DNI:', err);
+        return { ok: false, message: 'Error de conexión al subir el DNI.' };
+    }
+}
+
+function mensajeGuardadoDj(resDni, textoOk) {
+    // La DJ se guardó pero el servidor de archivos no recibió el DNI
+    if (resDni && resDni.pendiente) {
+        Swal.fire({ icon: 'warning', title: 'Guardado, DNI pendiente', text: 'La Declaración Jurada se guardó correctamente, pero el DNI quedó pendiente de subir.' });
+        return;
+    }
+    if (resDni && !resDni.sinDni && !resDni.ok) {
+        Swal.fire({ icon: 'warning', title: 'DJ guardada, pero falló el DNI', text: resDni.message || 'No se pudo subir el DNI.' });
+        return;
+    }
+    Swal.fire({ icon: 'success', title: '¡Éxito!', text: textoOk });
+}
+
 let aj_paisesData = [];
 
 async function cargarPaises() {
@@ -4922,6 +5180,7 @@ async function cargarDatosPersonales(codiPers, source = 'migracion') {
 
 // ── Llenar formulario ────────────────────────────────────────
 async function llenarFormulario(data) {
+    limpiarDniDj();   // pizarra limpia: no arrastrar DNI de otra persona
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
@@ -5102,17 +5361,264 @@ async function llenarFormulario(data) {
 } // <--- 🚀 AQUÍ: Agregamos esta llave para cerrar la función llenarFormulario()
 
 // ── Familiares ───────────────────────────────────────────────
+// ── DNI de hijos: {CODI}_H{N}.jpg → DNI1_HIJOS (anverso) / DNI2_HIJOS (reverso) ──
+// N = par por hijo en orden de fila: hijo 1 → H1/H2, hijo 2 → H3/H4, ...
+let djDniHijosRows = new WeakMap();
+let djDniHijoActivo = null;
+
+function codiPersDniHijos() {
+    return (typeof codiPersActual !== 'undefined' && codiPersActual)
+        ? String(codiPersActual).trim()
+        : ((document.getElementById('cod_postulante')?.value) || '').trim();
+}
+
+function calcEdadHijo(fecha) {
+    if (!fecha) return '';
+    const nac = new Date(String(fecha).slice(0, 10) + 'T00:00:00');
+    if (isNaN(nac)) return '';
+    const hoy = new Date();
+    let anios = hoy.getFullYear() - nac.getFullYear();
+    let meses = hoy.getMonth() - nac.getMonth();
+    if (hoy.getDate() < nac.getDate()) meses--;
+    if (meses < 0) { anios--; meses += 12; }
+    if (anios < 0) return '';
+    return `Edad: ${anios} año${anios === 1 ? '' : 's'}` + (meses ? `, ${meses} mes${meses === 1 ? '' : 'es'}` : '');
+}
+
+function filasHijosDj() {
+    return [...document.querySelectorAll('#familyContainer .family-row')]
+        .filter(f => (f.querySelector('select[name="parentesco[]"]')?.value || '').startsWith('HIJO'));
+}
+
+function estadoDniHijo(fila) {
+    let st = djDniHijosRows.get(fila);
+    if (!st) { st = { anverso: null, reverso: null, tieneAnverso: false, tieneReverso: false }; djDniHijosRows.set(fila, st); }
+    return st;
+}
+
+// Regla DNI del hijo: OBLIGATORIO solo para menores de edad.
+// El rol ADMINS RRHH (tipo 17) está exento de la regla.
+function esMenorDeEdadDj(fecha) {
+    if (!fecha) return false;
+    const nac = new Date(String(fecha).slice(0, 10) + 'T00:00:00');
+    if (isNaN(nac)) return false;
+    const hoy = new Date();
+    let anios = hoy.getFullYear() - nac.getFullYear();
+    const m = hoy.getMonth() - nac.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) anios--;
+    return anios < 18;
+}
+
+function esAdminRrhhDj() {
+    return String(window.tipoUsuario ?? '').trim() === '17';
+}
+
+function actualizarEstadoDniHijo(fila) {
+    const span = fila.querySelector('.dni-hijo-estado');
+    if (!span) return;
+    const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value || '';
+    if (!/^HIJ/i.test(parentesco)) { span.style.display = 'none'; return; }
+    const st = estadoDniHijo(fila);
+    const okA = !!(st.anverso || st.tieneAnverso);
+    const okR = !!(st.reverso || st.tieneReverso);
+    span.style.display = '';
+    if (okA && okR) {
+        span.textContent = '✓ DNI completo';
+        span.style.color = '#16a34a';
+        return;
+    }
+    const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
+    const obligatorio = esMenorDeEdadDj(fecha) && !esAdminRrhhDj();
+    const detalle = (okA || okR) ? 'falta ' + (okA ? 'reverso' : 'anverso') : 'sin DNI';
+    if (obligatorio) {
+        span.textContent = '⚠ ' + detalle + ' (obligatorio)';
+        span.style.color = '#dc2626';
+    } else {
+        span.textContent = '○ ' + detalle + ' (opcional)';
+        span.style.color = '#9ca3af';
+    }
+}
+
+function actualizarExtrasFilaHijo(fila) {
+    if (!fila) return;
+    const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value || '';
+    const esHijo = /^HIJ/i.test(parentesco);
+    const inputFecha = fila.querySelector('input[name="fechaNacimiento[]"]');
+    const edadSpan = fila.querySelector('.family-age');
+    if (edadSpan) {
+        const txt = esHijo ? calcEdadHijo(inputFecha?.value) : '';
+        edadSpan.textContent = txt;
+        edadSpan.style.display = txt ? '' : 'none';
+    }
+    const btnDni = fila.querySelector('.btn-dni-hijo');
+    if (btnDni) btnDni.style.display = esHijo ? '' : 'none';
+    actualizarEstadoDniHijo(fila);
+}
+
+function abrirModalDniHijosDj(fila) {
+    if (!fila) return;
+    djDniHijoActivo = fila;
+    const modal = document.getElementById('modalDniHijos');
+    const idx = filasHijosDj().indexOf(fila);
+    const label = document.getElementById('dni_hijo_label');
+    if (label) label.textContent = 'Hijo ' + (idx + 1);
+    const st = estadoDniHijo(fila);
+    const codi = codiPersDniHijos();
+
+    const mostrar = (lado, prevId, imgId, inpId, carpeta) => {
+        const prev = document.getElementById(prevId), img = document.getElementById(imgId), inp = document.getElementById(inpId);
+        if (inp) inp.value = '';
+        const archivo = lado === 'anverso' ? st.anverso : st.reverso;
+        const tiene   = lado === 'anverso' ? st.tieneAnverso : st.tieneReverso;
+        const nro     = idx * 2 + (lado === 'anverso' ? 1 : 2);
+        if (archivo) {
+            if (img) img.src = URL.createObjectURL(archivo);
+            if (prev) prev.style.display = 'block';
+        } else if (tiene && codi) {
+            if (img) img.src = `http://190.116.178.163/Biblioteca_Grafica/${carpeta}/${codi}_H${nro}.jpg?v=${Date.now()}`;
+            if (prev) prev.style.display = 'block';
+        } else {
+            if (prev) prev.style.display = 'none';
+            if (img)  img.removeAttribute('src');
+        }
+    };
+    mostrar('anverso', 'prevDniHijoAnverso', 'imgDniHijoAnverso', 'inputDniHijoAnverso', 'DNI1_HIJOS');
+    mostrar('reverso', 'prevDniHijoReverso', 'imgDniHijoReverso', 'inputDniHijoReverso', 'DNI2_HIJOS');
+
+    if (modal) modal.style.display = 'flex';
+}
+
+function configDniHijosDj() {
+    const modal = document.getElementById('modalDniHijos');
+    document.getElementById('cerrarModalDniHijos')?.addEventListener('click', () => { if (modal) modal.style.display = 'none'; });
+
+    const pares = [
+        ['btnDniHijoAnverso', 'inputDniHijoAnverso', 'prevDniHijoAnverso', 'imgDniHijoAnverso', 'clearDniHijoAnverso', 'anverso'],
+        ['btnDniHijoReverso', 'inputDniHijoReverso', 'prevDniHijoReverso', 'imgDniHijoReverso', 'clearDniHijoReverso', 'reverso'],
+    ];
+    pares.forEach(([btnId, inpId, prevId, imgId, clearId, lado]) => {
+        const btn = document.getElementById(btnId), inp = document.getElementById(inpId),
+              prev = document.getElementById(prevId), img = document.getElementById(imgId),
+              clear = document.getElementById(clearId);
+        if (!btn || !inp) return;
+        btn.addEventListener('click', () => inp.click());
+        inp.addEventListener('change', () => {
+            const f = inp.files?.[0];
+            if (!f || !djDniHijoActivo) return;
+            const st = estadoDniHijo(djDniHijoActivo);
+            st[lado] = f;
+            if (img)  img.src = URL.createObjectURL(f);
+            if (prev) prev.style.display = 'block';
+            actualizarEstadoDniHijo(djDniHijoActivo);
+        });
+        if (clear) clear.addEventListener('click', () => {
+            if (!djDniHijoActivo) return;
+            const st = estadoDniHijo(djDniHijoActivo);
+            st[lado] = null;
+            if (lado === 'anverso') st.tieneAnverso = false; else st.tieneReverso = false;
+            inp.value = '';
+            if (prev) prev.style.display = 'none';
+            if (img)  img.removeAttribute('src');
+            actualizarEstadoDniHijo(djDniHijoActivo);
+        });
+    });
+
+    // Delegación: botón DNI por fila + edad en vivo
+    const cont = document.getElementById('familyContainer');
+    if (cont) {
+        cont.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-dni-hijo');
+            if (btn) abrirModalDniHijosDj(btn.closest('.family-row'));
+        });
+        cont.addEventListener('change', (e) => {
+            if (e.target.matches('input[name="fechaNacimiento[]"]')) {
+                actualizarExtrasFilaHijo(e.target.closest('.family-row'));
+            }
+        });
+    }
+}
+document.addEventListener('DOMContentLoaded', configDniHijosDj);
+
+function limpiarDniHijosDj() {
+    djDniHijosRows = new WeakMap();
+    djDniHijoActivo = null;
+    const m = document.getElementById('modalDniHijos'); if (m) m.style.display = 'none';
+    const l = document.getElementById('dni_hijo_label'); if (l) l.textContent = '';
+}
+
+async function consultarDniHijosDj(codiPers) {
+    if (!codiPers) return;
+    const filasH = filasHijosDj();
+    if (!filasH.length) return;
+    const nombres = [];
+    filasH.forEach((fila, i) => {
+        nombres.push(`${codiPers}_H${i * 2 + 1}.jpg`);
+        nombres.push(`${codiPers}_H${i * 2 + 2}.jpg`);
+    });
+    try {
+        const qs = nombres.map(n => 'nombres[]=' + encodeURIComponent(n)).join('&');
+        const resp = await axios.get(`${VITE_URL_APP}/api/dj/get-dni-hijos?${qs}`);
+        const map = resp.data?.data || {};
+        filasH.forEach((fila, i) => {
+            const st = estadoDniHijo(fila);
+            st.tieneAnverso = !!map[`${codiPers}_H${i * 2 + 1}.jpg`];
+            st.tieneReverso = !!map[`${codiPers}_H${i * 2 + 2}.jpg`];
+            actualizarEstadoDniHijo(fila);
+        });
+    } catch (e) {
+        console.warn('[ActualizarDJ] Error consultando DNI de hijos:', e);
+    }
+}
+
+async function subirDniHijosDj(codiPers) {
+    if (!codiPers) return { ok: true, sinDni: true };
+    const filasH = filasHijosDj();
+    const fd = new FormData();
+    let n = 0;
+    fd.append('codi_pers', codiPers);
+    filasH.forEach((fila, i) => {
+        const st = estadoDniHijo(fila);
+        if (st.anverso) { fd.append('archivos[]', st.anverso); fd.append('metas[]', `DNI1_HIJOS|${codiPers}_H${i * 2 + 1}.jpg`); n++; }
+        if (st.reverso) { fd.append('archivos[]', st.reverso); fd.append('metas[]', `DNI2_HIJOS|${codiPers}_H${i * 2 + 2}.jpg`); n++; }
+    });
+    if (!n) return { ok: true, sinDni: true };
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const res = await fetch(`${VITE_URL_APP}/api/dj/upload-dni-hijos`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: fd,
+        });
+        const json = await res.json();
+        if (json.success) {
+            filasH.forEach(fila => {
+                const st = estadoDniHijo(fila);
+                if (st.anverso) { st.anverso = null; st.tieneAnverso = true; }
+                if (st.reverso) { st.reverso = null; st.tieneReverso = true; }
+                actualizarEstadoDniHijo(fila);
+            });
+        }
+        return { ok: !!json.success, message: json.message };
+    } catch (err) {
+        console.warn('[ActualizarDJ] Error subiendo DNI de hijos:', err);
+        return { ok: false, message: 'Error de conexión al subir el DNI de hijos.' };
+    }
+}
+
 function actualizarFechaFamiliar(fila) {
     const parentesco = fila.querySelector('select[name="parentesco[]"]')?.value;
     const contenedorFecha = fila.querySelector('.family-date');
     const inputFecha = fila.querySelector('input[name="fechaNacimiento[]"]');
-    const esHijo = parentesco.startsWith('HIJO');
+    const esHijo = /^HIJ/i.test(parentesco);
 
     if (contenedorFecha) contenedorFecha.style.display = esHijo ? '' : 'none';
     if (inputFecha) {
         inputFecha.required = esHijo;
         if (!esHijo) inputFecha.value = '';
     }
+    // Edad del hijo + estado del DNI (obligatorio para hijos)
+    actualizarExtrasFilaHijo(fila);
 }
 
 function renderFamiliares(familiares) {
@@ -5130,6 +5636,8 @@ function renderFamiliares(familiares) {
 
     if (allFam.length === 0) addFamiliarRow({}, container);
     else allFam.forEach(f => addFamiliarRow(f, container));
+    // Consultar qué DNI de hijos ya existen (para no volverlos a pedir)
+    consultarDniHijosDj(codiPersDniHijos());
 }
 
 // ── Opciones del select de Parentesco (catálogo TIPO_VINCULO_FAMILIAR) ──
@@ -5162,7 +5670,7 @@ function addFamiliarRow(data = {}, container = null) {
 
     const row = document.createElement('div');
     row.className = 'family-row';
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:end;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:start;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;';
     row.innerHTML = `
         <div>
             <label class="dj-label">Parentesco</label>
@@ -5177,8 +5685,14 @@ function addFamiliarRow(data = {}, container = null) {
         <div class="family-date">
             <label class="dj-label">Fecha de Nacimiento</label>
             <input type="date" name="fechaNacimiento[]" class="dj-input" value="${fechaFormateada}">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                <span class="family-age" style="display:none;font-size:11px;color:#2563eb;"></span>
+                <button type="button" class="btn-dni-hijo dj-btn-sm" style="display:none;background:#eef2ff;color:#3730a3;border-radius:5px;">SUBIR DNI</button>
+                <span class="dni-hijo-estado" style="display:none;font-size:10px;"></span>
+            </div>
         </div>
         <div>
+            <label class="dj-label" style="visibility:hidden;">.</label>
             <button type="button" class="remove-family dj-btn-sm dj-btn-danger" style="margin-bottom:1px;">Eliminar</button>
         </div>`;
     // row.innerHTML = `
@@ -5763,7 +6277,7 @@ function limpiarSplitView() {
         tipoPersonalEsEspecial = false;
         poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
     }
-    aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+    aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj(); limpiarDniHijosDj();
 
 }
 
@@ -6014,7 +6528,7 @@ document.getElementById('btnResetearDJs')?.addEventListener('click', async funct
             tipoPersonalEsEspecial = false;
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
         }
-        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento('');
+        aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj(); limpiarDniHijosDj();
 
         // Reset No Caduca checkbox y restore caduca
         const noCaducaReset = document.getElementById('no_caduca_dni');

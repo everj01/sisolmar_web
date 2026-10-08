@@ -5,7 +5,7 @@
     <div class="flex flex-col h-full">
         <!-- Sidenav Logo -->
         <div class="sticky top-0 flex h-topbar items-center justify-between px-6">
-            <a href="{{ env('APP_URL') }}">
+            <a href="{{ config('app.url') }}">
                 <img  src="{{ asset('images/logo-light.png') }}" alt="logo" class="flex" width="150">
             </a>
         </div>
