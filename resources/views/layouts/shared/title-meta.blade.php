@@ -5,7 +5,9 @@
 <meta content="MyraStudio" name="author">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
-<link rel="icon" type="image/png" href="{{ asset('images/icono.png') }}">
+<link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 
 <script src="https://kit.fontawesome.com/76256ea07c.js" crossorigin="anonymous"></script>

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Documento no encontrado</title>
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon.png') }}">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
