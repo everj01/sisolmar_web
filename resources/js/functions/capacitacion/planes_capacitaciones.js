@@ -28,64 +28,83 @@ export default document.addEventListener("alpine:init", () => {
         pdfTitulo: "Plan de Capacitación Estándar (PCE)",
         pdfDownloadNombre: "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf",
 
-        async abrirPDF() {
-            this.pdfTitulo = "Plan de Capacitación Estándar (PCE)";
-            this.pdfDownloadNombre = "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf";
+        generarDocEstiloPCE(data, tituloCabecera) {
+            const anio = data.Anio;
 
-            Swal.fire({
-                title: "Generando PDF...",
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
+            const doc = new jsPDF({
+                orientation: "landscape",
+                unit: "mm",
+                format: "a4",
             });
 
-            try {
-                const { data } = await axios.get(
-                    `${VITE_URL_APP}/api/obtener-plan-pce`,
-                );
-                const anio = data.Anio;
+            const months = [
+                "ENERO",
+                "FEBRERO",
+                "MARZO",
+                "ABRIL",
+                "MAYO",
+                "JUNIO",
+                "JULIO",
+                "AGOSTO",
+                "SETIEMBRE",
+                "OCTUBRE",
+                "NOVIEMBRE",
+                "DICIEMBRE",
+            ];
 
-                const doc = new jsPDF({
-                    orientation: "landscape",
-                    unit: "mm",
-                    format: "a4",
-                });
+            const monthHeaders = [
+                "ENE",
+                "FEB",
+                "MAR",
+                "ABR",
+                "MAY",
+                "JUN",
+                "JUL",
+                "AGO",
+                "SEP",
+                "OCT",
+                "NOV",
+                "DIC",
+            ];
+            const esPCA = !(data.Sistemas && data.Sistemas.length) && !!data.Cursos;
+            const TOTAL_COLS = (esPCA ? 4 : 5) + 24;
 
-                const pageWidth = doc.internal.pageSize.getWidth();
+            const rawRows = [];
 
-                const months = [
-                    "ENERO",
-                    "FEBRERO",
-                    "MARZO",
-                    "ABRIL",
-                    "MAYO",
-                    "JUNIO",
-                    "JULIO",
-                    "AGOSTO",
-                    "SETIEMBRE",
-                    "OCTUBRE",
-                    "NOVIEMBRE",
-                    "DICIEMBRE",
-                ];
+            const armarFila = (curso, item) => {
+                const row = {
+                    isSystem: false,
+                    item: String(item),
+                    curso: (curso.Nombre || "").toUpperCase(),
+                    dirigido: (curso.Dirigido_a || "").toUpperCase(),
+                    area: (curso.Area_Resp || "").toUpperCase(),
+                    tiempo: curso.Tiempo_Horas
+                        ? String(curso.Tiempo_Horas).toUpperCase() === "1"
+                            ? "01 HORA"
+                            : String(curso.Tiempo_Horas).toUpperCase()
+                        : "01 HORA",
+                };
 
-                const monthHeaders = [
-                    "ENE",
-                    "FEB",
-                    "MAR",
-                    "ABR",
-                    "MAY",
-                    "JUN",
-                    "JUL",
-                    "AGO",
-                    "SEP",
-                    "OCT",
-                    "NOV",
-                    "DIC",
-                ];
-                const TOTAL_COLS = 5 + 24;
+                for (const m of months) {
+                    row[`${m}_1`] = "";
+                    row[`${m}_2`] = "";
+                }
 
-                let item = 0;
-                const rawRows = [];
+                for (const prog of curso.Programaciones || []) {
+                    let mesNorm = (prog.Mes || "").toUpperCase().trim();
+                    if (mesNorm === "SEPTIEMBRE") mesNorm = "SETIEMBRE";
+                    const idx = months.indexOf(mesNorm);
+                    if (idx < 0) continue;
+                    const key = `${months[idx]}_${prog.Bloque}`;
+                    if (prog.Ejecutado) row[key] = "E";
+                    else if (prog.Programado) row[key] = "P";
+                    else if (prog.Reprogramado) row[key] = "R";
+                }
 
+                return row;
+            };
+
+            if (data.Sistemas && data.Sistemas.length) {
                 for (const sistema of data.Sistemas) {
                     rawRows.push({
                         isSystem: true,
@@ -101,200 +120,239 @@ export default document.addEventListener("alpine:init", () => {
 
                     for (const curso of sistema.Cursos) {
                         item++;
-                        const row = {
-                            isSystem: false,
-                            item: String(item),
-                            curso: curso.Nombre.toUpperCase(),
-                            dirigido: curso.Dirigido_a.toUpperCase(),
-                            area: curso.Area_Resp.toUpperCase(),
-                            tiempo: "01 HORA",
-                        };
-
-                        for (const m of months) {
-                            row[`${m}_1`] = "";
-                            row[`${m}_2`] = "";
-                        }
-
-                        for (const prog of curso.Programaciones) {
-                            const idx = months.indexOf(prog.Mes.toUpperCase());
-                            if (idx < 0) continue;
-                            const key = `${months[idx]}_${prog.Bloque}`;
-                            if (prog.Ejecutado) row[key] = "E";
-                            else if (prog.Programado) row[key] = "P";
-                            else if (prog.Reprogramado) row[key] = "R";
-                        }
-
-                        rawRows.push(row);
+                        rawRows.push(armarFila(curso, item));
                     }
                 }
+            } else {
+                // PCA: lista plana sin agrupación por sistemas
+                let item = 0;
+                for (const curso of data.Cursos || []) {
+                    item++;
+                    rawRows.push(armarFila(curso, item));
+                }
+            }
 
-                const bodyRows = rawRows.map((r) => {
-                    if (r.isSystem) {
-                        return [
-                            {
-                                content: r.label,
-                                colSpan: TOTAL_COLS,
-                                styles: {
-                                    fillColor: [184, 204, 228],
-                                    textColor: [0, 0, 0],
-                                    fontStyle: "bold",
-                                    fontSize: 7,
-                                    halign: "left",
-                                    cellPadding: {
-                                        top: 2,
-                                        bottom: 2,
-                                        left: 2,
-                                        right: 2,
-                                    },
-                                },
-                            },
-                        ];
-                    }
-
-                    if (r.isEmpty) {
-                        return Array.from({ length: TOTAL_COLS }, () => ({
-                            content: "",
+            const bodyRows = rawRows.map((r) => {
+                if (r.isSystem) {
+                    return [
+                        {
+                            content: r.label,
+                            colSpan: TOTAL_COLS,
                             styles: {
+                                fillColor: [184, 204, 228],
+                                textColor: [0, 0, 0],
+                                fontStyle: "bold",
+                                fontSize: 7,
+                                halign: "left",
                                 cellPadding: {
-                                    top: 3,
-                                    bottom: 3,
+                                    top: 2,
+                                    bottom: 2,
                                     left: 2,
                                     right: 2,
                                 },
-                                lineColor: [0, 0, 0],
-                                lineWidth: 0.1,
                             },
-                        }));
-                    }
-
-                    return [
-                        r.item,
-                        r.curso,
-                        r.dirigido,
-                        r.area,
-                        r.tiempo,
-                        ...months.flatMap((m) => [
-                            r[`${m}_1`] || "",
-                            r[`${m}_2`] || "",
-                        ]),
-                    ];
-                });
-
-                autoTable(doc, {
-                    startY: 10,
-                    margin: { left: 5, right: 5 },
-                    head: [
-                        [
-                            {
-                                content: `PROGRAMA DE CAPACITACIÓN ESTÁNDAR DEL AÑO ${anio}`,
-                                colSpan: TOTAL_COLS,
-                                styles: {
-                                    fillColor: [184, 204, 228],
-                                    textColor: [0, 0, 0],
-                                    fontStyle: "bold",
-                                    fontSize: 9,
-                                    halign: "center",
-                                    valign: "middle",
-                                },
-                            },
-                        ],
-                        [
-                            {
-                                content: "ITEM",
-                                rowSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            },
-                            {
-                                content: "TEMA",
-                                rowSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            },
-                            {
-                                content: "DIRIGIDO A",
-                                rowSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            },
-                            {
-                                content: "ÁREA\nRESPONSABLE",
-                                rowSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            },
-                            {
-                                content: "TIEMPO",
-                                rowSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            },
-                            {
-                                content: `CRONOGRAMA ${anio}`,
-                                colSpan: 24,
-                                styles: {
-                                    halign: "center",
-                                    valign: "middle",
-                                    fontStyle: "bold",
-                                },
-                            },
-                        ],
-                        [
-                            ...monthHeaders.map((m) => ({
-                                content: m,
-                                colSpan: 2,
-                                styles: { halign: "center", valign: "middle" },
-                            })),
-                        ],
-                    ],
-                    body: bodyRows,
-                    styles: {
-                        fontSize: 6,
-                        cellPadding: {
-                            top: 1.5,
-                            bottom: 1.5,
-                            left: 1.5,
-                            right: 1.5,
                         },
-                        valign: "middle",
-                        lineColor: [0, 0, 0],
-                        lineWidth: 0.1,
+                    ];
+                }
+
+                if (r.isEmpty) {
+                    return Array.from({ length: TOTAL_COLS }, () => ({
+                        content: "",
+                        styles: {
+                            cellPadding: {
+                                top: 3,
+                                bottom: 3,
+                                left: 2,
+                                right: 2,
+                            },
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.1,
+                        },
+                    }));
+                }
+
+                return esPCA
+                    ? [
+                          r.item,
+                          r.curso,
+                          r.dirigido,
+                          r.tiempo,
+                          ...months.flatMap((m) => [
+                              r[`${m}_1`] || "",
+                              r[`${m}_2`] || "",
+                          ]),
+                      ]
+                    : [
+                          r.item,
+                          r.curso,
+                          r.dirigido,
+                          r.area,
+                          r.tiempo,
+                          ...months.flatMap((m) => [
+                              r[`${m}_1`] || "",
+                              r[`${m}_2`] || "",
+                          ]),
+                      ];
+            });
+
+            const periodoCronograma = esPCA
+                ? `${anio} - ${Number(anio) + 1}`
+                : `${anio}`;
+
+            autoTable(doc, {
+                startY: 10,
+                margin: { left: 5, right: 5 },
+                head: [
+                    [
+                        {
+                            content: tituloCabecera,
+                            colSpan: TOTAL_COLS,
+                            styles: {
+                                fillColor: [184, 204, 228],
+                                textColor: [0, 0, 0],
+                                fontStyle: "bold",
+                                fontSize: 10,
+                                halign: "center",
+                                valign: "middle",
+                                cellPadding: {
+                                    top: 4,
+                                    bottom: 4,
+                                    left: 2,
+                                    right: 2,
+                                },
+                            },
+                        },
+                    ],
+                    [
+                        {
+                            content: "ITEM",
+                            rowSpan: 2,
+                            styles: { halign: "center", valign: "middle" },
+                        },
+                        {
+                            content: "TEMA",
+                            rowSpan: 2,
+                            styles: { halign: "center", valign: "middle" },
+                        },
+                        {
+                            content: "DIRIGIDO A",
+                            rowSpan: 2,
+                            styles: { halign: "center", valign: "middle" },
+                        },
+                        ...(esPCA
+                            ? []
+                            : [
+                                  {
+                                      content: "ÁREA\nRESPONSABLE",
+                                      rowSpan: 2,
+                                      styles: {
+                                          halign: "center",
+                                          valign: "middle",
+                                      },
+                                  },
+                              ]),
+                        {
+                            content: "TIEMPO",
+                            rowSpan: 2,
+                            styles: { halign: "center", valign: "middle" },
+                        },
+                        {
+                            content: `CRONOGRAMA ${periodoCronograma}`,
+                            colSpan: 24,
+                            styles: {
+                                halign: "center",
+                                valign: "middle",
+                                fontStyle: "bold",
+                            },
+                        },
+                    ],
+                    [
+                        ...monthHeaders.map((m) => ({
+                            content: m,
+                            colSpan: 2,
+                            styles: { halign: "center", valign: "middle" },
+                        })),
+                    ],
+                ],
+                body: bodyRows,
+                styles: {
+                    fontSize: 6,
+                    cellPadding: {
+                        top: 1.5,
+                        bottom: 1.5,
+                        left: 1.5,
+                        right: 1.5,
                     },
-                    headStyles: {
-                        fillColor: [255, 255, 255],
-                        textColor: [0, 0, 0],
-                        fontSize: 6,
-                        fontStyle: "bold",
-                        halign: "center",
-                        valign: "middle",
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 8, halign: "center" }, // ITEM
-                        4: { cellWidth: 12, halign: "center" }, // TIEMPO
-                        ...Object.fromEntries(
-                            Array.from({ length: 24 }, (_, i) => [
-                                i + 5,
-                                { cellWidth: 5, halign: "center" },
-                            ]),
-                        ),
-                    },
-                    didParseCell(data) {
-                        if (data.section === "body" && data.column.index >= 5) {
-                            const val = data.cell.text
-                                ?.join("")
-                                ?.trim()
-                                ?.toUpperCase();
-                            if (val === "P") {
-                                data.cell.styles.fillColor = [220, 38, 38];
-                                data.cell.styles.textColor = [255, 255, 255];
-                                data.cell.styles.fontStyle = "bold";
-                            } else if (val === "E") {
-                                data.cell.styles.fillColor = [37, 99, 235];
-                                data.cell.styles.textColor = [255, 255, 255];
-                                data.cell.styles.fontStyle = "bold";
-                            } else if (val === "R") {
-                                data.cell.styles.fillColor = [234, 88, 12];
-                                data.cell.styles.textColor = [255, 255, 255];
-                                data.cell.styles.fontStyle = "bold";
-                            }
+                    valign: "middle",
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
+                },
+                headStyles: {
+                    fillColor: [255, 255, 255],
+                    textColor: [0, 0, 0],
+                    fontSize: 6,
+                    fontStyle: "bold",
+                    halign: "center",
+                    valign: "middle",
+                },
+                columnStyles: {
+                    0: { cellWidth: 8, halign: "center" }, // ITEM
+                    [esPCA ? 3 : 4]: { cellWidth: 12, halign: "center" }, // TIEMPO
+                    ...Object.fromEntries(
+                        Array.from({ length: 24 }, (_, i) => [
+                            i + (esPCA ? 4 : 5),
+                            { cellWidth: 5, halign: "center" },
+                        ]),
+                    ),
+                },
+                didParseCell(data) {
+                    if (
+                        data.section === "body" &&
+                        data.column.index >= (esPCA ? 4 : 5)
+                    ) {
+                        const val = data.cell.text
+                            ?.join("")
+                            ?.trim()
+                            ?.toUpperCase();
+                        if (val === "P") {
+                            data.cell.styles.fillColor = [220, 38, 38];
+                            data.cell.styles.textColor = [255, 255, 255];
+                            data.cell.styles.fontStyle = "bold";
+                        } else if (val === "E") {
+                            data.cell.styles.fillColor = [37, 99, 235];
+                            data.cell.styles.textColor = [255, 255, 255];
+                            data.cell.styles.fontStyle = "bold";
+                        } else if (val === "R") {
+                            data.cell.styles.fillColor = [234, 88, 12];
+                            data.cell.styles.textColor = [255, 255, 255];
+                            data.cell.styles.fontStyle = "bold";
                         }
-                    },
-                });
+                    }
+                },
+            });
+
+            return doc;
+        },
+
+        async abrirPDF() {
+            this.pdfTitulo = "Plan de Capacitación Estándar (PCE)";
+            this.pdfDownloadNombre = "Plan_Capacitacion_Estandar_PCE_" + new Date().getFullYear() + ".pdf";
+
+            Swal.fire({
+                title: "Generando PDF...",
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            try {
+                const { data } = await axios.get(
+                    `${VITE_URL_APP}/api/obtener-plan-pce`,
+                );
+
+                const doc = this.generarDocEstiloPCE(
+                    data,
+                    `PROGRAMA DE CAPACITACIÓN ESTÁNDAR DEL AÑO ${data.Anio}`,
+                );
 
                 const blob = doc.output("blob");
                 if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
@@ -470,138 +528,38 @@ export default document.addEventListener("alpine:init", () => {
 
             try {
                 const { data } = await axios.get(
-                    `${VITE_URL_APP}/api/obtener-cursos-cliente/${codLegacy}`,
+                    `${VITE_URL_APP}/api/obtener-plan-pca/${codLegacy}`,
                 );
-                const cursos = data.Cursos || [];
-                const cliente = this.clientesPCA.find(
-                    (c) => c.cod_legacy === codLegacy,
-                );
-                const nombreCliente = cliente ? cliente.descripcion : "";
 
-                if (data.Total === 0 || cursos.length === 0) {
+                const cliente = this.clientesPCA.find(
+                    (c) => String(c.cod_legacy) === String(codLegacy),
+                );
+                const nombreCliente = (data.Cliente || (cliente ? cliente.descripcion : "") || "").toUpperCase();
+
+                if (!data.Cursos || data.Cursos.length === 0) {
                     Swal.close();
                     Swal.fire({
                         icon: "warning",
                         title: "Sin cursos",
-                        text: "No hay cursos registrados para el cliente seleccionado.",
+                        text: "No hay cursos programados para el cliente seleccionado en el año actual.",
                     });
                     return;
                 }
 
+                const periodo = `${data.Anio} - ${Number(data.Anio) + 1}`;
+
                 this.pdfTitulo =
-                    "Plan de Capacitación Aliado - PCA" +
-                    (nombreCliente ? " - " + nombreCliente : "");
+                    `Plan de Capacitación Aliado | ${nombreCliente} | ${periodo}`;
                 this.pdfDownloadNombre =
-                    "Plan_Capacitacion_Aliado_PCA_" +
-                    new Date().getFullYear() +
+                    "Plan_Capacitacion_Aliado_" +
+                    (nombreCliente ? nombreCliente.replace(/\s+/g, "_") + "_" : "") +
+                    data.Anio +
                     ".pdf";
 
-                const doc = new jsPDF({
-                    orientation: "portrait",
-                    unit: "mm",
-                    format: "a4",
-                });
-
-                const pageWidth = doc.internal.pageSize.getWidth();
-
-                doc.setFontSize(14);
-                doc.setFont(undefined, "bold");
-                doc.text(
-                    "PLAN DE CAPACITACIÓN ALIADO - PCA" +
-                        (nombreCliente
-                            ? " " + nombreCliente.toUpperCase()
-                            : ""),
-                    pageWidth / 2,
-                    15,
-                    { align: "center" },
+                const doc = this.generarDocEstiloPCE(
+                    data,
+                    `PLAN DE CAPACITACIÓN ALIADO | ${nombreCliente} | ${periodo}`,
                 );
-
-                const mesesMap = {
-                    "01": "ENERO",
-                    "02": "FEBRERO",
-                    "03": "MARZO",
-                    "04": "ABRIL",
-                    "05": "MAYO",
-                    "06": "JUNIO",
-                    "07": "JULIO",
-                    "08": "AGOSTO",
-                    "09": "SETIEMBRE",
-                    10: "OCTUBRE",
-                    11: "NOVIEMBRE",
-                    12: "DICIEMBRE",
-                };
-
-                function obtenerMes(fecha) {
-                    if (!fecha) return "";
-                    const partes = fecha.split("/");
-                    if (partes.length < 3) return "";
-                    return mesesMap[partes[1]] || "";
-                }
-
-                const rows = cursos.map((curso, i) => [
-                    String(i + 1),
-                    curso.Completado ? "X" : "",
-                    curso.Nombre,
-                    curso.Dirigido,
-                    obtenerMes(curso.Fecha_Inicio),
-                ]);
-
-                autoTable(doc, {
-                    startY: nombreCliente ? 28 : 22,
-                    margin: { left: 8, right: 8 },
-                    head: [
-                        [
-                            { content: "#", styles: { halign: "center" } },
-                            { content: "100%", styles: { halign: "center" } },
-                            { content: "TEMA", styles: { halign: "center" } },
-                            {
-                                content: "DIRIGIDO",
-                                styles: { halign: "center" },
-                            },
-                            {
-                                content: "PROGRAMACIÓN",
-                                styles: { halign: "center" },
-                            },
-                        ],
-                    ],
-                    body: rows,
-                    styles: {
-                        fontSize: 8,
-                        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
-                        valign: "middle",
-                        lineColor: [0, 0, 0],
-                        lineWidth: 0.1,
-                    },
-                    headStyles: {
-                        fillColor: [250, 209, 90], // Amarillo similar al de la imagen
-                        textColor: [0, 0, 0],
-                        fontSize: 9,
-                        fontStyle: "bold",
-                        halign: "center",
-                        valign: "middle",
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 10, halign: "center" }, // #
-                        1: { cellWidth: 14, halign: "center" }, // 100%
-                        2: { cellWidth: "auto" }, // TEMA
-                        3: { cellWidth: 45, halign: "center" }, // DIRIGIDO
-                        4: { cellWidth: 35, halign: "center" }, // PROGRAMACIÓN
-                    },
-                    // Resalta en rojo con texto blanco en negrita las filas marcadas con "X"
-                    didParseCell: function (data) {
-                        const curso = cursos[data.row.index];
-                        if (
-                            curso &&
-                            curso.Completado &&
-                            data.section === "body" &&
-                            data.column.index === 2
-                        ) {
-                            data.cell.styles.fillColor = [255, 0, 0];
-                            data.cell.styles.textColor = [255, 255, 255];
-                            data.cell.styles.fontStyle = "bold";
-                        }
-                    },
-                });
 
                 const blob = doc.output("blob");
                 if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);

@@ -6395,8 +6395,13 @@ class CapacitacionController extends Controller
                     foreach ($curso->programaciones as $prog) {
                         $fechaInicio = Carbon::parse($prog->fecha_inicio);
 
+                        $mes = strtoupper($fechaInicio->translatedFormat('F'));
+                        if ($mes === 'SEPTIEMBRE') {
+                            $mes = 'SETIEMBRE';
+                        }
+
                         $programacionesData[] = [
-                            'Mes'        => strtoupper($fechaInicio->translatedFormat('F')),
+                            'Mes'        => $mes,
                             'Bloque'     => $fechaInicio->day <= 15 ? 1 : 2,
                             'Ejecutado'  => $fechaInicio->isPast(),
                             'Programado' => $fechaInicio->isFuture(),
@@ -6453,34 +6458,87 @@ class CapacitacionController extends Controller
     public function obtenerPlanPCA(int $codCliente): JsonResponse
     {
         try {
+            $anio = now()->format('Y');
+
             $cliente = DB::table('sw_clientes')
                 ->where('cod_legacy', $codCliente)
                 ->first();
 
+            if (!$cliente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cliente no encontrado.',
+                ], 404);
+            }
+
             $dirigidos = DB::table('sw_cursos_dirigido')
                 ->where('habilitado', 1)
-                ->pluck('nombre', 'codigo')
-                ->toArray();
+                ->pluck('nombre', 'codigo');
 
-            $cursosCliente = DB::table('sw_cursos')
-                ->where('cod_cliente', $codCliente)
+            $areasResp = DB::table('sw_cursos_area')
                 ->where('habilitado', 1)
-                ->get()
-                ->map(function ($curso) use ($dirigidos) {
-                    $aplica = $dirigidos[$curso->dirigido_a] ?? 'Otros';
+                ->pluck('nombre', 'codigo');
 
-                    return [
-                        'Nombre' => mb_strtoupper($curso->nombre),
-                        'Aplica' => mb_strtoupper($aplica),
-                        'Tiempo' => '20 min'
+            // Misma lógica que obtenerPlanPCE pero sin sistemas: lista plana del cliente
+            $cursos = Cursos::with([
+                'programaciones' => function ($q) use ($anio) {
+                    $q->where('habilitado', 1)
+                        ->whereYear('fecha_inicio', $anio);
+                },
+            ])
+                ->where('habilitado', 1)
+                ->where('tipo_curso', 6)
+                ->where('cod_cliente', (string) $codCliente)
+                ->get();
+
+            $cursosData = [];
+
+            foreach ($cursos as $curso) {
+                if ($curso->programaciones->isEmpty()) {
+                    continue;
+                }
+
+                $programacionesData = [];
+
+                foreach ($curso->programaciones as $prog) {
+                    $fechaInicio = Carbon::parse($prog->fecha_inicio);
+
+                    $mes = strtoupper($fechaInicio->translatedFormat('F'));
+                    if ($mes === 'SEPTIEMBRE') {
+                        $mes = 'SETIEMBRE';
+                    }
+
+                    $programacionesData[] = [
+                        'Mes'        => $mes,
+                        'Bloque'     => $fechaInicio->day <= 15 ? 1 : 2,
+                        'Ejecutado'  => $fechaInicio->isPast(),
+                        'Programado' => $fechaInicio->isFuture(),
                     ];
-                });
+                }
+
+                $dirigidoTexto = match ((string) $curso->dirigido_a) {
+                    '0' => 'OTROS',
+                    '2' => 'PERSONAL ADMINISTRATIVO',
+                    '3' => 'PERSONAL OPERATIVO',
+                    default => strtoupper(
+                        $dirigidos->get($curso->dirigido_a) ?? (string) $curso->dirigido_a
+                    ),
+                };
+
+                $cursosData[] = [
+                    'Nombre'         => strtoupper($curso->nombre),
+                    'Dirigido_a'     => $dirigidoTexto,
+                    'Area_Resp'      => strtoupper($areasResp->get($curso->area) ?? ''),
+                    'Tiempo_Horas'   => '20 MIN',
+                    'Programaciones' => $programacionesData,
+                ];
+            }
 
             return response()->json([
                 'success'  => true,
-                'Anio'     => date('y'),
-                'Cliente'  => $cliente->abreviatura,
-                'Cursos'   => $cursosCliente
+                'Anio'     => $anio,
+                'Cliente'  => strtoupper($cliente->abreviatura ?? ''),
+                'Cursos'   => $cursosData,
             ]);
         } catch (\Exception $e) {
             Log::error('Error en obtenerPlanPCA', [

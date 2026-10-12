@@ -7,8 +7,10 @@ use App\Models\CursoProgramacion;
 use App\Models\Personal;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class NewCapacController extends Controller
 {
@@ -252,5 +254,170 @@ class NewCapacController extends Controller
             5 => 'SIMULACROS DE EMERGENCIA',
             default => in_array($courseId, [77, 120]) ? 'INDUCCIÓN' : 'CAPACITACIÓN',
         };
+    }
+
+    /**
+     * Devuelve el siguiente codigo_curso (max + 1, padded a 5).
+     * Usado por el modal nativo "Ingresar directo BD".
+     */
+    public function ultimoCodigoCurso(): JsonResponse
+    {
+        try {
+            $last = DB::table('sw_cursos')->orderBy('codigo_curso', 'desc')->value('codigo_curso');
+            $next = $last ? str_pad(((int) $last) + 1, 5, '0', STR_PAD_LEFT) : '10001';
+
+            return response()->json(['success' => true, 'ultimo' => (string) $last, 'siguiente' => (string) $next]);
+        } catch (\Exception $e) {
+            Log::error('Error en NewCapacController@ultimoCodigoCurso', ['error' => $e->getMessage()]);
+
+            return response()->json(['success' => false, 'message' => 'No se pudo obtener el último código.'], 500);
+        }
+    }
+
+    /**
+     * Catálogo "dirigido a" para el modal nativo (misma fuente que la vista).
+     */
+    public function dirigidos(): JsonResponse
+    {
+        try {
+            $rows = DB::table('sw_cursos_dirigido as d')
+                ->select('codigo', 'nombre as texto')
+                ->where('habilitado', 1)
+                ->orderBy('codigo')
+                ->get();
+
+            return response()->json(['success' => true, 'data' => $rows]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'No se pudo cargar dirigidos.'], 500);
+        }
+    }
+
+    /**
+     * Inserción directa a sw_cursos (modal nativo "Ingresar directo BD").
+     * Inserta solo columnas existentes en la tabla para tolerar
+     * variaciones de nombre (creado_por, codEmpresa, es_demanda, etc.).
+     */
+    public function guardarCursoDirecto(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'nombre' => 'required|string|max:100',
+                'codigo_curso' => 'nullable|string|max:20',
+                'creado_por' => 'nullable|string|max:50',
+                'fecha_creacion' => 'nullable|date',
+                'modificado_por' => 'nullable|string|max:50',
+                'fecha_modificacion' => 'nullable|date',
+                'habilitado' => 'nullable|boolean',
+                'es_periodico' => 'nullable|boolean',
+                'aplica_evaluacion' => 'nullable|boolean',
+                'obligatorio_alta' => 'nullable|boolean',
+                'es_demanda' => 'nullable|boolean',
+                'cod_responsable' => 'nullable|string|max:20',
+                'codigo_moodle' => 'nullable|string|max:50',
+                'descripcion' => 'nullable|string',
+                'dirigido_a' => 'nullable|string|max:20',
+                'cod_cliente' => 'nullable|string|max:50',
+                'sucursal' => 'nullable|string|max:10',
+                'tipo_curso' => 'nullable|integer',
+                'area_conocimiento' => 'nullable|integer',
+                'area' => 'nullable|integer',
+                'categoria' => 'nullable|integer|in:1,2,3,4,5',
+            ]);
+
+            $columnas = [];
+            try {
+                $columnas = Schema::getColumnListing('sw_cursos');
+            } catch (\Exception $e) {
+                $columnas = [];
+            }
+            $existe = fn(string $col) => empty($columnas) || in_array($col, $columnas, true);
+
+            // codigo_curso: si no viene, generar max + 1; si viene, respetar (evita colisión).
+            $codigoCurso = trim((string) $request->input('codigo_curso', ''));
+            if ($codigoCurso === '') {
+                $last = DB::table('sw_cursos')->orderBy('codigo_curso', 'desc')->value('codigo_curso');
+                $codigoCurso = $last ? str_pad(((int) $last) + 1, 5, '0', STR_PAD_LEFT) : '10001';
+            }
+            if (DB::table('sw_cursos')->where('codigo_curso', $codigoCurso)->exists()) {
+                return response()->json(['success' => false, 'message' => "El codigo_curso {$codigoCurso} ya existe."], 422);
+            }
+
+            $bool = fn($v) => ((int) $v) === 1 ? 1 : 0;
+            $fechaODefault = fn($v) => $v
+                ? Carbon::parse($v)->format('Y-m-d\TH:i:s')
+                : Carbon::now()->format('Y-m-d\TH:i:s');
+            $intOrNull = fn($v) => ($v === null || $v === '' || $v === '__NULL__') ? null : (int) $v;
+            $strOrNull = fn($v) => ($v === null || $v === '' || $v === '__NULL__') ? null : (string) $v;
+
+            $dirigido = $strOrNull($request->input('dirigido_a'));
+            if ($dirigido === 'OTROS') {
+                $dirigido = '0';
+            }
+
+            $data = [
+                'codigo_curso' => $codigoCurso,
+                'nombre' => trim((string) $request->input('nombre')),
+                'fecha_creacion' => $fechaODefault($request->input('fecha_creacion')),
+                'fecha_modificacion' => $fechaODefault($request->input('fecha_modificacion')),
+                'habilitado' => $request->has('habilitado') ? $bool($request->input('habilitado')) : 1,
+                'periodicidad' => null, // siempre NULL por requerimiento
+                'es_periodico' => $request->has('es_periodico') ? $bool($request->input('es_periodico')) : 0,
+                'frecuencia' => null, // siempre NULL por requerimiento
+                'aplica_evaluacion' => $request->has('aplica_evaluacion') ? $bool($request->input('aplica_evaluacion')) : 0,
+                'obligatorio_alta' => $request->has('obligatorio_alta') ? $bool($request->input('obligatorio_alta')) : 0,
+                'cod_responsable' => $strOrNull($request->input('cod_responsable')),
+                'codigo_moodle' => $strOrNull($request->input('codigo_moodle')),
+                'descripcion' => $strOrNull($request->input('descripcion')),
+                'dirigido_a' => $dirigido,
+                'cod_cliente' => $strOrNull($request->input('cod_cliente')),
+                'sucursal' => $strOrNull($request->input('sucursal')),
+                'target_group' => 'TODOS', // siempre TODOS
+                'tipo_curso' => $intOrNull($request->input('tipo_curso')),
+                'area_conocimiento' => $intOrNull($request->input('area_conocimiento')),
+                'area' => $intOrNull($request->input('area')),
+                'categoria' => $intOrNull($request->input('categoria')),
+            ];
+
+            // Columnas opcionales (solo si existen en la tabla real).
+            $opcionales = [
+                'creado_por' => $strOrNull($request->input('creado_por')),
+                'modificado_por' => $strOrNull($request->input('modificado_por')),
+                'es_demanda' => $request->has('es_demanda') ? $bool($request->input('es_demanda')) : 0,
+                'codEmpresa' => '01', // siempre 01
+                'cod_empresa' => '01', // variante snake_case por compatibilidad
+            ];
+            foreach ($opcionales as $col => $val) {
+                if ($existe($col)) {
+                    $data[$col] = $val;
+                }
+            }
+
+            // Filtrar a columnas existentes (si se pudo leer el schema).
+            if (!empty($columnas)) {
+                $data = array_intersect_key($data, array_flip($columnas));
+            }
+
+            $pk = DB::table('sw_cursos')->insertGetId($data, 'codigo');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Curso registrado directo en BD.',
+                'codigo' => $pk,
+                'codigo_curso' => $codigoCurso,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Errores de validación.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error en NewCapacController@guardarCursoDirecto', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()], 500);
+        }
     }
 }
