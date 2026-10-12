@@ -6479,7 +6479,6 @@ class CapacitacionController extends Controller
                 ->where('habilitado', 1)
                 ->pluck('nombre', 'codigo');
 
-            // Misma lógica que obtenerPlanPCE pero sin sistemas: lista plana del cliente
             $cursos = Cursos::with([
                 'programaciones' => function ($q) use ($anio) {
                     $q->where('habilitado', 1)

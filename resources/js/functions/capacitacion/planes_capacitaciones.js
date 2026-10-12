@@ -355,7 +355,7 @@ export default document.addEventListener("alpine:init", () => {
                 );
 
                 const blob = doc.output("blob");
-                if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+                if (this.pdfUrl && this.pdfUrl.startsWith("blob:")) URL.revokeObjectURL(this.pdfUrl);
                 this.pdfUrl = URL.createObjectURL(blob);
 
                 Swal.close();
@@ -520,6 +520,42 @@ export default document.addEventListener("alpine:init", () => {
             const codLegacy = this.selectedClientePCA;
             if (!codLegacy) return;
 
+            // COSCO (código 10535): mostrar PDF estático en lugar de generarlo
+            if (String(codLegacy).trim() === "10535") {
+                const cliente = this.clientesPCA.find(
+                    (c) => String(c.cod_legacy) === String(codLegacy),
+                );
+                const nombreCliente = ((cliente ? cliente.descripcion : "") || "COSCO").toUpperCase();
+
+                this.pdfTitulo = `Plan de Capacitación Aliado | ${nombreCliente}`;
+                this.pdfDownloadNombre = "Plan_Capacitacion_Aliado_COSCO.pdf";
+                if (this.pdfUrl && this.pdfUrl.startsWith("blob:")) URL.revokeObjectURL(this.pdfUrl);
+                this.pdfUrl = "/pdfs/PCA_COSCO.pdf";
+
+                this.openSeleccionCliente = false;
+                this.open = true;
+                return;
+            }
+
+            if (String(codLegacy).trim() === "36628") {
+                const cliente = this.clientesPCA.find(
+                    (c) => String(c.cod_legacy) === String(codLegacy),
+                );
+                const nombreCliente = (
+                    (cliente ? cliente.descripcion : "") || "MLL2"
+                ).toUpperCase();
+
+                this.pdfTitulo = `Plan de Capacitación Aliado | ${nombreCliente}`;
+                this.pdfDownloadNombre = "Plan_Capacitacion_Aliado_MLL2.pdf";
+                if (this.pdfUrl && this.pdfUrl.startsWith("blob:"))
+                    URL.revokeObjectURL(this.pdfUrl);
+                this.pdfUrl = "/pdfs/PCA_MLL2.pdf";
+
+                this.openSeleccionCliente = false;
+                this.open = true;
+                return;
+            }
+
             Swal.fire({
                 title: "Generando PDF...",
                 allowOutsideClick: false,
@@ -562,7 +598,7 @@ export default document.addEventListener("alpine:init", () => {
                 );
 
                 const blob = doc.output("blob");
-                if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+                if (this.pdfUrl && this.pdfUrl.startsWith("blob:")) URL.revokeObjectURL(this.pdfUrl);
                 this.pdfUrl = URL.createObjectURL(blob);
 
                 Swal.close();
@@ -619,10 +655,10 @@ export default document.addEventListener("alpine:init", () => {
 
         cerrar() {
             this.open = false;
-            if (this.pdfUrl) {
+            if (this.pdfUrl && this.pdfUrl.startsWith("blob:")) {
                 URL.revokeObjectURL(this.pdfUrl);
-                this.pdfUrl = "";
             }
+            this.pdfUrl = "";
         },
     }));
 });
