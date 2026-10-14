@@ -1,7 +1,6 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@include('layouts.shared/main')
+
 <head>
-    @include('layouts.shared/main')
     @include('layouts.shared/title-meta', ['title' => $title])
     @yield('css')
     @include('layouts.shared/head-css')

@@ -530,7 +530,7 @@ export default document.addEventListener("alpine:init", () => {
                 this.pdfTitulo = `Plan de Capacitación Aliado | ${nombreCliente}`;
                 this.pdfDownloadNombre = "Plan_Capacitacion_Aliado_COSCO.pdf";
                 if (this.pdfUrl && this.pdfUrl.startsWith("blob:")) URL.revokeObjectURL(this.pdfUrl);
-                this.pdfUrl = "/pdfs/PCA_COSCO.pdf";
+                this.pdfUrl = `${VITE_URL_APP}/pdfs/PCA_COSCO.pdf`;
 
                 this.openSeleccionCliente = false;
                 this.open = true;
@@ -549,7 +549,7 @@ export default document.addEventListener("alpine:init", () => {
                 this.pdfDownloadNombre = "Plan_Capacitacion_Aliado_MLL2.pdf";
                 if (this.pdfUrl && this.pdfUrl.startsWith("blob:"))
                     URL.revokeObjectURL(this.pdfUrl);
-                this.pdfUrl = "/pdfs/PCA_MLL2.pdf";
+                this.pdfUrl = `${VITE_URL_APP}/pdfs/PCA_MLL2.pdf`;
 
                 this.openSeleccionCliente = false;
                 this.open = true;

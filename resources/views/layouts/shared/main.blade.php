@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <script>
     // Dark Mode: Inicializar tema antes del render para evitar flash de contenido
     // Por defecto: modo claro. Solo activa dark si el usuario lo guardó previamente

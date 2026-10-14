@@ -744,3 +744,5 @@
 
 @section('script')
 @endsection
+
+@vite(['resources/js/functions/capacitacion/cursos_externos.js'])
