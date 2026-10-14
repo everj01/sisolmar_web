@@ -257,14 +257,11 @@
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="text-xs font-medium text-default-700">
                             Certificados
-                            <span class="text-default-400 font-normal">(máximo <span x-text="MAX_CERTIFICADOS"></span>)</span>
                         </label>
                         <div class="flex items-center gap-3">
-                            <span class="text-[11px] font-medium"
-                                :class="limiteAlcanzado ? 'text-amber-600' : 'text-default-400'">
+                            <span class="text-[11px] font-medium text-default-400">
                                 <span x-text="selectedCertificados.length"></span>
-                                <span class="text-default-300">/</span>
-                                <span x-text="MAX_CERTIFICADOS"></span>
+                                <span> seleccionados</span>
                             </span>
                             <button type="button" x-show="selectedCertificados.length > 0"
                                 @click="selectedCertificados = []; searchCertificado = ''"
@@ -308,12 +305,6 @@
                                 class="flex-1 h-9 text-sm bg-transparent text-default-900 placeholder-default-400 border-0 ring-0 focus:ring-0 focus:outline-none shadow-none">
                         </div>
 
-                        <div x-show="limiteAlcanzado"
-                            class="flex items-center gap-2 px-3 py-2 bg-amber-50 border-b border-amber-100 text-amber-700 text-xs">
-                            <i class="ti ti-alert-triangle text-sm shrink-0"></i>
-                            <span>Límite alcanzado. Solo puedes seleccionar hasta <strong x-text="MAX_CERTIFICADOS"></strong> certificados. Desmarca uno para cambiarlo.</span>
-                        </div>
-
                         <div class="max-h-56 overflow-y-auto divide-y divide-default-100 thin-scroll">
                             <template x-if="loadingCertificados">
                                 <div class="flex items-center justify-center py-5 text-default-400 gap-2">
@@ -327,15 +318,10 @@
                                     <template x-for="option in certificadosFiltrados" :key="option.CODIGO">
                                         <label
                                             class="flex items-center gap-2 px-3 py-2 transition-all"
-                                            :class="[
-                                                selectedCertificados.includes(String(option.CODIGO))
+                                            :class="selectedCertificados.includes(String(option.CODIGO))
                                                     ? 'bg-teal-50 cursor-pointer'
-                                                    : (limiteAlcanzado
-                                                        ? 'opacity-50 cursor-not-allowed'
-                                                        : 'hover:bg-default-100 cursor-pointer')
-                                            ]">
+                                                    : 'hover:bg-default-100 cursor-pointer'">
                                             <input type="checkbox" class="sr-only"
-                                                :disabled="!selectedCertificados.includes(String(option.CODIGO)) && limiteAlcanzado"
                                                 :value="option.CODIGO"
                                                 :checked="selectedCertificados.includes(String(option.CODIGO))"
                                                 @change="toggleCertificado(option.CODIGO)">

@@ -15,9 +15,6 @@ function _escapeHtml(valor) {
         .replace(/'/g, "&#039;");
 }
 
-/** Máximo de certificados que se pueden seleccionar. */
-const MAX_CERTIFICADOS = 5;
-
 /** Códigos de certificados considerados "portuarios". */
 const CERTIFICADOS_PORTUARIOS = ["25", "26", "35", "36", "42"];
 
@@ -88,8 +85,6 @@ export default document.addEventListener("alpine:init", () => {
         open: false,
         /** 'filters' | 'results' */
         view: "filters",
-
-        MAX_CERTIFICADOS,
 
         loadingSucursales: false,
         loadingTiposPers: false,
@@ -222,10 +217,6 @@ export default document.addEventListener("alpine:init", () => {
             );
         },
 
-        get limiteAlcanzado() {
-            return this.selectedCertificados.length >= this.MAX_CERTIFICADOS;
-        },
-
         toggleSoloPortuarios() {
             this.soloPortuarios = !this.soloPortuarios;
 
@@ -252,17 +243,6 @@ export default document.addEventListener("alpine:init", () => {
 
             if (idx !== -1) {
                 this.selectedCertificados.splice(idx, 1);
-                return;
-            }
-
-            if (this.limiteAlcanzado) {
-                Swal.fire({
-                    icon: "warning",
-                    title: "Límite alcanzado",
-                    html: `Solo puedes seleccionar hasta <strong>${this.MAX_CERTIFICADOS}</strong> certificados.<br>Desmarca uno para agregar otro.`,
-                    confirmButtonText: "Entendido",
-                    confirmButtonColor: "#14b8a6",
-                });
                 return;
             }
 
