@@ -1,4 +1,4 @@
- <?php
+<?php
 
 use App\Http\Controllers\BiometricoController;
 use App\Http\Controllers\CapacitacionController;
@@ -308,6 +308,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reporte-personal-datos-generales', [ReportePersonalController::class, 'datosGenerales']);
             Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);
             Route::get('/reporte/personal-documentos', [ReportePersonalController::class, 'documentosPendientes']);
+            Route::get('/reporte/dni-hijos', [ReportePersonalController::class, 'dniHijosPendientes']);
             Route::get('/reporte/descargar/{archivo}', [ReportePersonalController::class, 'descargarReporte'])->where('archivo', '.*')->name('reporte.descargar');
             Route::post('/save-recontratacion', [DjController::class, 'saveRecontratacion']);
             Route::post('/upload-foto-personal', [DjController::class, 'uploadFotoPersonal']);

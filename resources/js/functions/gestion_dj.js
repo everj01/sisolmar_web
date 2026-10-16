@@ -3438,17 +3438,14 @@ document.getElementById('btnReporteActualizacion')?.addEventListener('click', as
 });
 
 // ── Reporte de documentos faltantes (foto / DNI) de todos los vigentes ─────
-// Click normal   → usa el escaneo en caché (se refresca solo cada 6 horas)
-// Shift + click  → fuerza un re-escaneo completo (?refrescar=1)
+// Cada clic vuelve a verificar los archivos en el servidor de imágenes
+// (siempre actualizado, ~10-20 s). Shift + click reinicia el escaneo.
 document.getElementById('btnDocsPendientes')?.addEventListener('click', async function (ev) {
     const refrescar = ev.shiftKey;
 
     Swal.fire({
         title: 'Generando reporte de documentos…',
-        text: 'Se verifica la foto y el DNI de los 1.135 vigentes. ' +
-              (refrescar
-                ? 'Re-escaneando el servidor de archivos (~2 min).'
-                : 'Si es la primera vez puede tardar ~2 min; después es inmediato.'),
+        text: 'Verificando la foto y el DNI de todo el personal vigente en el servidor de archivos (~10-20 s).',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
@@ -3469,6 +3466,49 @@ document.getElementById('btnDocsPendientes')?.addEventListener('click', async fu
         const a = document.createElement('a');
         a.href = data.url;
         a.download = data.nombre || `Reporte_Documentos_Personal_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        Swal.close();
+    } catch {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo generar el reporte. Inténtalo de nuevo.' });
+    }
+});
+
+// ── Reporte de DNI de hijos menores de edad (anverso/reverso) ──────────
+// Cada clic vuelve a verificar los archivos en el servidor de imágenes
+// (siempre actualizado, ~5-10 s). Shift + click reinicia el escaneo.
+document.getElementById('btnDniHijosPendientes')?.addEventListener('click', async function (ev) {
+    const refrescar = ev.shiftKey;
+
+    Swal.fire({
+        title: 'Generando reporte de DNI de hijos…',
+        text: 'Verificando el DNI (anverso y reverso) de los hijos menores de edad en el servidor de archivos (~5-10 s).',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const response = await axios.get(`${VITE_URL_APP}/api/dj/reporte/dni-hijos`, {
+            params: refrescar ? { refrescar: 1 } : {},
+            timeout: 0
+        });
+
+        const data = response.data;
+        if (!data?.url) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin faltantes',
+                text: data?.message || 'Todos los hijos menores de edad cuentan con anverso y reverso del DNI cargados.'
+            });
+            return;
+        }
+
+        // Descarga directa navegando a la URL (mismo criterio que los otros reportes)
+        const a = document.createElement('a');
+        a.href = data.url;
+        a.download = data.nombre || `Reporte_DNI_Hijos_${new Date().toISOString().slice(0, 10)}.xlsx`;
         document.body.appendChild(a);
         a.click();
         a.remove();

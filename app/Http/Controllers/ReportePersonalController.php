@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -224,11 +225,12 @@ class ReportePersonalController extends Controller
      *   · DNI      → Completo / Solo anverso / Solo reverso / No / Sin verificar
      *   · Quién lo registró (y cuándo) y quién lo modificó (y cuándo)
      *
-     * El estado de los archivos se consulta contra el servidor de imágenes
-     * (Biblioteca_Grafica) y se guarda en caché de archivos, de modo que:
-     *   · el primer escaneo tarda ~105 s y queda guardado 6 horas,
-     *   · si la petición se corta a mitad se retoma donde quedó,
-     *   · nada de esto toca la base de datos.
+     * El estado de los archivos se revisa SIEMPRE en cada generación contra el
+     * servidor de imágenes (Biblioteca_Grafica), en paralelo (~10-20 s para los
+     * 3.405 archivos), de modo que una foto o un DNI recién subidos aparecen en
+     * el reporte del momento. La caché solo conserva el avance de un escaneo que
+     * se cortó (10 min) para retomarlo; nunca responde con datos guardados.
+     * Nada de esto toca la base de datos.
      */
     public function documentosPendientes(Request $request)
     {
@@ -321,7 +323,7 @@ class ReportePersonalController extends Controller
             ];
         }
 
-        // ── 2. Escaneo del servidor de archivos (con caché) ───
+        // ── 2. Escaneo del servidor de archivos (siempre, en paralelo) ──
         $estado = $this->estadoDocumentos($codigos, $forzar);
 
         // ── 3. Enriquecer filas + estadísticas ────────────────
@@ -384,10 +386,13 @@ class ReportePersonalController extends Controller
         copy($rutaArchivo, $rutaPublica);
         @unlink($rutaArchivo);
 
-        // Retornar URL para descarga directa via download.php (bypass Laravel)
-        // Esto evita el problema de espacio prepended en el servidor built-in (php artisan serve)
+        // Retornar la URL de la ruta de descarga (autenticada + valida el nombre
+        // del archivo). El frontend solo navega a data.url, así que no cambia nada.
+        // OJO: antes apuntaba a reportes/download.php, un archivo que no existe
+        // (caía en el catch-all → 403/500 y el navegador mostraba "archivo no
+        // encontrado disponible en el sitio").
         return response()->json([
-            'url' => url('reportes/download.php?file=' . $nombreArchivo),
+            'url' => route('reporte.descargar', ['archivo' => $nombreArchivo]),
             'nombre' => $nombreArchivo,
         ]);
     }
@@ -401,7 +406,7 @@ class ReportePersonalController extends Controller
         }
 
         // Verificar que el archivo sea un reporte válido (seguridad básica)
-        if (!preg_match('/^Reporte_(Documentos_Personal|Personal_Sin_Foto_DNI)_\d{4}-\d{2}-\d{2}_\d{6}\.xlsx$/', $archivo)) {
+        if (!preg_match('/^Reporte_(Documentos_Personal|Personal_Sin_Foto_DNI|DNI_Hijos_Pendientes)_\d{4}-\d{2}-\d{2}_\d{6}\.xlsx$/', $archivo)) {
             abort(403, 'Archivo no válido');
         }
 
@@ -410,18 +415,494 @@ class ReportePersonalController extends Controller
         ])->deleteFileAfterSend(true);
     }
 
+    // ── Reporte de DNI de hijos ──────────────────────────────────────────
+
+    // v2: la caché solo guarda avance de un escaneo interrumpido (SCAN_AVANCE_MIN).
+    // La v1 guardaba el último escaneo completo por 6 h, así que se cambia de
+    // clave para que ninguna lectura previa quede como "dato fresco".
+    private const HIJOS_CACHE_KEY = 'reporte_dni_hijos_estado_v2';
+    private const HIJOS_LOTE      = 100;
+
+    /**
+     * GET /api/dj/reporte/dni-hijos   (?refrescar=1)
+     *
+     * Devuelve un .xlsx con el personal vigente que tiene hijos menores de edad
+     * sin el DNI cargado (anverso y/o reverso) en el servidor de imágenes.
+     *
+     * Las imágenes se guardan como DNI1_HIJOS/{CODI}_H{n}.jpg (anverso) y
+     * DNI2_HIJOS/{CODI}_H{n}.jpg (reverso), donde el hijo i ocupa H(2i+1)/H(2i+2)
+     * en el MISMO orden en que el formulario pinta las filas (ORDER BY TIPO_RELA,
+     * ver DjController::getPersonalData), por eso se replica esa consulta y recién
+     * después se filtran los menores de edad.
+     *
+     * El escaneo se hace SIEMPRE en cada generación, en paralelo (~5-10 s para
+     * los ≈780 archivos), de modo que el DNI de un hijo recién cargado aparece
+     * en el reporte del momento. La caché solo conserva el avance de un escaneo
+     * que se cortó (10 min) para retomarlo; nunca responde con datos guardados.
+     * Nada de esto toca la base de datos.
+     */
+    public function dniHijosPendientes(Request $request)
+    {
+        // Mismo criterio que el @if del botón en gestion_dj.blade.php:
+        // solo ADMINS RRHH (17) y SUPERUSUARIO (11).
+        if (!in_array((int) session('tipo_rol'), self::ROLES_REPORTE_DOCUMENTOS, true)) {
+            abort(403, 'Este reporte es exclusivo para ADMINS RRHH y SUPERUSUARIO.');
+        }
+
+        @set_time_limit(0);
+
+        $forzar = in_array((string) $request->query('refrescar'), ['1', 'true'], true);
+
+        // ── 1. Personal vigente con al menos un hijo menor de edad ──────
+        // Mismo universo que el reporte de documentos: todos los vigentes,
+        // todos los tipos de personal y todas las sucursales (sin filtros).
+        $sql = <<<'SQL'
+            SELECT
+                LTRIM(RTRIM(p.CODI_PERS))  AS CODI_PERS,
+                p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2,
+                p.NRO_DOCU_IDEN,
+                ISNULL(s.SUCU_ABREVIATURA, p.SUCU_CODIGO)    AS SUCURSAL,
+                ISNULL(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_DESCRIPCION,
+                ISNULL(c.DESC_CARGO, p.CODI_CARG)            AS CARGO_DESC
+            FROM si_solm.dbo.PERSONAL p
+            INNER JOIN si_solm.dbo.SISO_SUCURSAL s
+                    ON s.SUCU_CODIGO = p.SUCU_CODIGO
+            LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp
+                    ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
+            LEFT JOIN si_solm.dbo.CARGOS c
+                    ON c.CODI_CARG = p.CODI_CARG
+            WHERE p.PERS_VIGENCIA = 'SI'
+              AND p.EMPR_CODIGO   = '01'
+              AND EXISTS (
+                    SELECT 1
+                    FROM si_solm.dbo.DERECHO_HABIENTE d
+                    WHERE LTRIM(RTRIM(d.CODI_PERS)) = LTRIM(RTRIM(p.CODI_PERS))
+                      AND d.TIPO_RELA LIKE 'HIJ%'
+                      AND d.FECH_NACI IS NOT NULL
+                      AND d.FECH_NACI > DATEADD(YEAR, -18, CAST(GETDATE() AS DATE))
+                      AND ISNULL(d.DEHA_VIGENCIA, 'SI') = 'SI'
+                      AND ISNULL(d.FALLECIDO, 0)        = 0
+              )
+            ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1
+            SQL;
+
+        $personal = DB::select($sql);
+
+        $filas   = [];
+        $codigos = [];
+
+        foreach ($personal as $r) {
+            $codi = trim((string) ($r->CODI_PERS ?? ''));
+            if ($codi === '') {
+                continue;
+            }
+
+            $codigos[]    = $codi;
+            $filas[$codi] = [
+                'codi'     => $codi,
+                'nombre'   => trim(implode(' ', array_filter([
+                    trim((string) ($r->APEL_1 ?? '')),
+                    trim((string) ($r->APEL_2 ?? '')),
+                    trim((string) ($r->NOMB_1 ?? '')),
+                    trim((string) ($r->NOMB_2 ?? '')),
+                ], fn ($v) => $v !== ''))),
+                'doc'      => trim((string) ($r->NRO_DOCU_IDEN ?? '')),
+                'sucursal' => trim((string) ($r->SUCURSAL         ?? '')),
+                'tipo'     => trim((string) ($r->TIPO_DESCRIPCION ?? '')),
+                'cargo'    => trim((string) ($r->CARGO_DESC       ?? '')),
+            ];
+        }
+
+        // ── 2. Escaneo del servidor de archivos (siempre, en paralelo) ─────
+        $estado = $this->estadoDniHijos($codigos, $forzar);
+
+        // ── 3. Enriquecer filas + estadísticas ──────────────────────────
+        $evaluados    = 0;
+        $sinFaltantes = 0;
+        $hijosTotal   = 0;
+        $hijosOk      = 0;
+
+        foreach (array_keys($filas) as $codi) {
+            $hijos = $estado['datos'][$codi]['hijos'] ?? [];
+
+            // Sin hijos menores evaluables (p. ej. fecha de nacimiento ausente)
+            if ($hijos === []) {
+                unset($filas[$codi]);
+                continue;
+            }
+
+            $evaluados++;
+            $total     = count($hijos);
+            $ok        = 0;
+            $parcial   = 0;
+            $ninguno   = 0;
+            $sinVerif  = 0;
+            $sinAnverso = 0;
+            $sinReverso = 0;
+            $faltantes = [];
+
+            foreach ($hijos as $h) {
+                if ($h['estado'] === 'Completo') {
+                    $ok++;
+                } elseif ($h['estado'] === 'No') {
+                    $ninguno++;
+                } elseif ($h['estado'] === 'Sin verificar') {
+                    // Fallo de red: NUNCA se reporta como faltante.
+                    $sinVerif++;
+                } else {
+                    $parcial++;
+                }
+
+                // ¿Algún hijo le falta del lado A / lado B?
+                if (in_array($h['estado'], ['Solo reverso', 'No'], true)) {
+                    $sinAnverso++;
+                }
+                if (in_array($h['estado'], ['Solo anverso', 'No'], true)) {
+                    $sinReverso++;
+                }
+
+                if ($h['faltante']) {
+                    $faltantes[] = $h;
+                }
+            }
+
+            $hijosTotal += $total;
+            $hijosOk    += $ok;
+
+            if ($faltantes === []) {
+                $sinFaltantes++;
+                unset($filas[$codi]);
+                continue;
+            }
+
+            $filas[$codi]['total']      = $total;
+            $filas[$codi]['ok']         = $ok;
+            $filas[$codi]['parcial']    = $parcial;
+            $filas[$codi]['sin']        = $ninguno;
+            $filas[$codi]['verificar']  = $sinVerif;
+            // Sí = todos los hijos menores tienen ese lado cargado; No = falta en al menos uno.
+            $filas[$codi]['anverso_txt'] = $sinAnverso > 0 ? 'No' : 'Sí';
+            $filas[$codi]['reverso_txt'] = $sinReverso > 0 ? 'No' : 'Sí';
+            $filas[$codi]['detalle']    = implode(' · ', array_map(
+                static fn (array $h): string => trim($h['nombre']) . ': ' . $h['estado'],
+                $faltantes
+            ));
+        }
+
+        $stats = [
+            'generado'  => date('d/m/Y H:i:s'),
+            'evaluados' => $evaluados,
+            'ok'        => $sinFaltantes,
+            'faltan'    => count($filas),
+            'hijos'     => $hijosTotal,
+            'hijos_ok'  => $hijosOk,
+            'scan_at'   => $estado['scan_at'] ? $this->formatFechaHora($estado['scan_at']) : '—',
+        ];
+
+        if ($filas === []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sin faltantes: todos los hijos menores de edad cuentan con anverso y reverso del DNI cargados.',
+            ]);
+        }
+
+        // ── 4. Excel ────────────────────────────────────────────────────
+        $nombreArchivo = 'Reporte_DNI_Hijos_Pendientes_' . date('Y-m-d_His') . '.xlsx';
+        $rutaArchivo   = $this->generarExcelDniHijos(array_values($filas), $stats);
+
+        // Mismo mecanismo que documentosPendientes: se sirve desde
+        // storage/app/public/reportes vía la ruta autenticada reporte.descargar.
+        $publicDir = storage_path('app/public/reportes');
+        if (! is_dir($publicDir)) {
+            @mkdir($publicDir, 0755, true);
+        }
+        $rutaPublica = $publicDir . DIRECTORY_SEPARATOR . $nombreArchivo;
+        copy($rutaArchivo, $rutaPublica);
+        @unlink($rutaArchivo);
+
+        return response()->json([
+            'url'    => route('reporte.descargar', ['archivo' => $nombreArchivo]),
+            'nombre' => $nombreArchivo,
+        ]);
+    }
+
     // ── Escaneo del servidor de archivos ───────────────────────
 
-    private const DOC_CACHE_KEY = 'reporte_documentos_estado_v1';
+    /**
+     * HEAD simultáneos contra el servidor de imágenes. 50 rinde ~330 req/s
+     * (el escaneo secuencial hacía ~64): si el servidor empezara a responder
+     * 429 por la carga, este es el número a bajar.
+     */
+    private const SCAN_CONCURRENCIA = 50;
+
+    /**
+     * Minutos que sobrevive en caché el avance de un escaneo interrumpido.
+     * Es lo único que se guarda: los reportes nunca responden con caché.
+     */
+    private const SCAN_AVANCE_MIN = 10;
+
+    /**
+     * Verifica un conjunto de URLs con HEAD en paralelo y devuelve
+     * [URL => 'si'|'no'|'desconocido'].
+     *
+     * Los lotes corren de a self::SCAN_CONCURRENCIA peticiones simultáneas
+     * (~330 req/s frente a los ~64 req/s del escaneo secuencial), que es lo
+     * que permite revisar los archivos en cada generación del reporte.
+     *
+     * 200 = existe · 404 = no existe · cualquier otra cosa (timeout, 429,
+     * 5xx) = desconocido: un fallo NUNCA se reporta como "faltante".
+     */
+    private function verificarUrlsEnLotes(array $urls, int $concurrencia = self::SCAN_CONCURRENCIA): array
+    {
+        $urls      = array_values(array_unique($urls));
+        $salida    = [];
+        $limitadas = 0;
+        $sinLote   = 0;
+
+        foreach (array_chunk($urls, $concurrencia) as $lote) {
+            try {
+                $respuestas = Http::pool(fn ($pool) => array_map(
+                    fn (string $url) => $pool->as($url)->timeout(8)->connectTimeout(5)->head($url),
+                    $lote
+                ));
+            } catch (\Throwable $e) {
+                // Una caída de red rechaza la promesa y tira el lote entero.
+                $sinLote++;
+
+                // Si el servidor dejó de responder (3 lotes seguidos caídos) se
+                // abandona el escaneo: lo que queda pasa a "Sin verificar" (que
+                // nunca se cuenta como faltante) y no se le sigue martillando.
+                if ($sinLote >= 3) {
+                    Log::error('reportes: el servidor de imágenes dejó de responder; se interrumpe el escaneo.', [
+                        'error'    => $e->getMessage(),
+                        'quedaron' => count($urls) - count($salida),
+                    ]);
+                    break;
+                }
+
+                // Caída puntual: se reintenta URL por URL, cada una en lo suyo.
+                foreach ($lote as $url) {
+                    $salida[$url] = $this->existeUrl($url);
+                }
+
+                continue;
+            }
+
+            $sinLote = 0;
+
+            foreach ($respuestas as $url => $respuesta) {
+                $codigo = $respuesta instanceof \Illuminate\Http\Client\Response ? $respuesta->status() : 0;
+
+                if ($codigo === 200) {
+                    $salida[$url] = 'si';
+                } elseif ($codigo === 404) {
+                    $salida[$url] = 'no';
+                } else {
+                    $salida[$url] = 'desconocido';
+                    if ($codigo === 429) {
+                        $limitadas++;
+                    }
+                }
+            }
+        }
+
+        if ($limitadas > 0) {
+            Log::warning('reportes: el servidor de imágenes respondió 429 (demasiadas peticiones); esas imágenes quedaron como "Sin verificar".', [
+                'cantidad' => $limitadas,
+            ]);
+        }
+
+        // Lo que no llegó a verificarse (escaneo interrumpido) queda sin verificar.
+        foreach ($urls as $url) {
+            if (! isset($salida[$url])) {
+                $salida[$url] = 'desconocido';
+            }
+        }
+
+        return $salida;
+    }
+
+    /**
+     * Devuelve ['datos' => [CODI => ['hijos' => [...]]], 'scan_at' => fecha]
+     *
+     * El escaneo se hace SIEMPRE de nuevo (los reportes tienen que reflejar al
+     * instante un DNI recién subido); la caché solo conserva el avance de una
+     * petición interrumpida (10 min) y se borra cuando el escaneo termina.
+     */
+    private function estadoDniHijos(array $codigos, bool $forzar): array
+    {
+        if ($forzar) {
+            Cache::forget(self::HIJOS_CACHE_KEY);
+        }
+
+        // Avance de un escaneo anterior que no llegó a terminar (si existe).
+        $estado = Cache::get(self::HIJOS_CACHE_KEY) ?? ['datos' => [], 'scan_at' => null];
+        $estado['datos'] = array_intersect_key($estado['datos'], array_flip($codigos));
+
+        $pendientes = array_values(array_diff($codigos, array_keys($estado['datos'])));
+
+        foreach (array_chunk($pendientes, self::HIJOS_LOTE) as $bloque) {
+            $planes = [];
+            $urls   = [];
+
+            foreach ($bloque as $codi) {
+                $plan = $this->planificarDniHijos($codi);
+                $planes[$codi] = $plan;
+
+                foreach ($plan as $hijo) {
+                    $urls[$hijo['anverso']] = true;
+                    $urls[$hijo['reverso']] = true;
+                }
+            }
+
+            // Un solo barrido en paralelo para todo el bloque.
+            $verificados = $this->verificarUrlsEnLotes(array_keys($urls));
+
+            foreach ($planes as $codi => $plan) {
+                $estado['datos'][$codi] = $this->evaluarDniHijos($plan, $verificados);
+            }
+
+            // Avance: si la petición se corta aquí, la siguiente continúa.
+            Cache::put(self::HIJOS_CACHE_KEY, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
+        }
+
+        $estado['scan_at'] = now()->toDateTimeString();
+
+        if ($pendientes !== []) {
+            // Escaneo terminado: no queda nada que retomar (ni nada viejo que usar).
+            Cache::forget(self::HIJOS_CACHE_KEY);
+        }
+
+        return $estado;
+    }
+
+    /**
+     * Arma el escaneo de un trabajador: sus hijos MENORES DE EDAD con las URLs
+     * del anverso y del reverso, sin hacer todavía ninguna petición.
+     *
+     * El índice del hijo es su posición entre TODOS los hijos (igual que el
+     * formulario), por eso se lee la lista completa antes de filtrar menores.
+     */
+    private function planificarDniHijos(string $codi): array
+    {
+        $plan = [];
+
+        foreach ($this->hijosOrdenados($codi) as $i => $hijo) {
+            if (! $this->esHijoMenor($hijo)) {
+                continue;
+            }
+
+            $nro    = $i * 2 + 1;
+            $nombre = trim((string) ($hijo->NOMBRES ?? ''));
+
+            $plan[] = [
+                'nombre'  => $nombre !== '' ? $nombre : ('Hijo ' . ($i + 1)),
+                'dni'     => trim((string) ($hijo->NRO_DOCU_IDEN ?? '')),
+                'anverso' => self::DOC_BASE . '/DNI1_HIJOS/' . rawurlencode($codi . '_H' . $nro) . '.jpg',
+                'reverso' => self::DOC_BASE . '/DNI2_HIJOS/' . rawurlencode($codi . '_H' . ($nro + 1)) . '.jpg',
+            ];
+        }
+
+        return $plan;
+    }
+
+    /**
+     * Traduce el plan de un trabajador a su estado final según las URLs ya
+     * verificadas (devueltas por verificarUrlsEnLotes()).
+     */
+    private function evaluarDniHijos(array $plan, array $verificados): array
+    {
+        $resultado = [];
+
+        foreach ($plan as $hijo) {
+            $anverso = $verificados[$hijo['anverso']] ?? 'desconocido';
+            $reverso = $verificados[$hijo['reverso']] ?? 'desconocido';
+            $estado  = $this->estadoDni($anverso, $reverso);
+
+            $resultado[] = [
+                'nombre'   => $hijo['nombre'],
+                'dni'      => $hijo['dni'],
+                'estado'   => $estado,
+                'faltante' => in_array($estado, ['Solo anverso', 'Solo reverso', 'No'], true),
+            ];
+        }
+
+        return ['hijos' => $resultado];
+    }
+
+    /**
+     * Lista TODOS los hijos del trabajador en el mismo orden que usa la app para
+     * numerar las imágenes (ORDER BY TIPO_RELA, ver DjController::getPersonalData).
+     */
+    private function hijosOrdenados(string $codi): array
+    {
+        try {
+            return DB::select(
+                "SELECT
+                    ISNULL(APEL_1, '') + ' ' + ISNULL(APEL_2, '') + ' ' +
+                    ISNULL(NOMB_1, '') + ' ' + ISNULL(NOMB_2, '') AS NOMBRES,
+                    LTRIM(RTRIM(ISNULL(NRO_DOCU_IDEN, '')))       AS NRO_DOCU_IDEN,
+                    CONVERT(CHAR(10), FECH_NACI, 120)             AS FECH_NACI,
+                    ISNULL(DEHA_VIGENCIA, 'SI')                   AS DEHA_VIGENCIA,
+                    ISNULL(FALLECIDO, 0)                          AS FALLECIDO
+                 FROM si_solm.dbo.DERECHO_HABIENTE
+                 WHERE LTRIM(RTRIM(CODI_PERS)) = ?
+                   AND TIPO_RELA LIKE 'HIJ%'
+                 ORDER BY TIPO_RELA",
+                [$codi]
+            );
+        } catch (\Throwable $e) {
+            Log::error('dniHijosPendientes: no se pudieron leer los hijos de ' . $codi, [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Mismo criterio que el formulario (gestion_dj.js::esMenorDeEdadDj):
+     * hijo vigente, no fallecido y con menos de 18 años.
+     */
+    private function esHijoMenor(object $hijo): bool
+    {
+        if (strtoupper(trim((string) ($hijo->DEHA_VIGENCIA ?? 'SI'))) !== 'SI') {
+            return false;
+        }
+        if ((int) ($hijo->FALLECIDO ?? 0) !== 0) {
+            return false;
+        }
+
+        $fecha = trim((string) ($hijo->FECH_NACI ?? ''));
+        if ($fecha === '') {
+            return false;
+        }
+
+        try {
+            $nac = \DateTime::createFromFormat('Y-m-d', substr($fecha, 0, 10));
+            if ($nac === false) {
+                $nac = new \DateTime($fecha);
+            }
+
+            return $nac->diff(new \DateTime())->y < 18;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    // v2: ver comentario de HIJOS_CACHE_KEY (antes guardaba el escaneo 6 h).
+    private const DOC_CACHE_KEY = 'reporte_documentos_estado_v2';
     private const DOC_LOTE      = 100;
     private const DOC_BASE      = 'http://190.116.178.163/Biblioteca_Grafica';
 
     /**
      * Devuelve ['datos' => [CODI => ['foto'|'anverso'|'reverso' => si|no|desconocido]],
-     *           'scan_at' => fecha, 'completo' => bool]
+     *           'scan_at' => fecha]
      *
-     * Solo consulta los códigos que aún no fueron escaneados y guarda el
-     * avance en cada lote, de forma que una petición interrumpida se retoma.
+     * El escaneo se hace SIEMPRE completo en cada generación (una foto subida
+     * recién tiene que salir en el reporte del momento). La caché solo sirve
+     * para retomar un escaneo que se cortó a mitad de camino y se borra apenas
+     * el escaneo termina.
      */
     private function estadoDocumentos(array $codigos, bool $forzar): array
     {
@@ -429,53 +910,52 @@ class ReportePersonalController extends Controller
             Cache::forget(self::DOC_CACHE_KEY);
         }
 
-        $estado = Cache::get(self::DOC_CACHE_KEY) ?? [
-            'datos'    => [],
-            'scan_at'  => null,
-            'completo' => false,
-        ];
+        // Avance de un escaneo anterior que no llegó a terminar (si existe).
+        $estado = Cache::get(self::DOC_CACHE_KEY) ?? ['datos' => [], 'scan_at' => null];
+        $estado['datos'] = array_intersect_key($estado['datos'], array_flip($codigos));
 
         $pendientes = array_values(array_diff($codigos, array_keys($estado['datos'])));
 
-        if ($pendientes !== []) {
-            foreach (array_chunk($pendientes, self::DOC_LOTE) as $lote) {
-                foreach ($lote as $codi) {
-                    $estado['datos'][$codi] = $this->consultarDocumentos($codi);
-                }
+        foreach (array_chunk($pendientes, self::DOC_LOTE) as $bloque) {
+            $urls = [];
 
-                // Avance parcial: si la petición se corta aquí, la siguiente continúa.
-                Cache::put(self::DOC_CACHE_KEY, $estado, now()->addHours(12));
+            foreach ($bloque as $codi) {
+                foreach (['Fotos' => 'foto', 'DNI1_1' => 'anverso', 'DNI2_1' => 'reverso'] as $carpeta => $clave) {
+                    $urls[self::DOC_BASE . '/' . $carpeta . '/' . rawurlencode($codi) . '.jpg'] = [$codi, $clave];
+                }
             }
 
-            $estado['completo'] = true;
-            $estado['scan_at']  = now()->toDateTimeString();
-            Cache::put(self::DOC_CACHE_KEY, $estado, now()->addHours(6));
+            $verificados = $this->verificarUrlsEnLotes(array_keys($urls));
+
+            foreach ($urls as $url => [$codi, $clave]) {
+                $estado['datos'][$codi][$clave] = $verificados[$url] ?? 'desconocido';
+            }
+
+            // Avance: si la petición se corta aquí, la siguiente continúa.
+            Cache::put(self::DOC_CACHE_KEY, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
+        }
+
+        $estado['scan_at'] = now()->toDateTimeString();
+
+        if ($pendientes !== []) {
+            // Escaneo terminado: no queda nada que retomar (ni nada viejo que usar).
+            Cache::forget(self::DOC_CACHE_KEY);
         }
 
         return $estado;
-    }
-
-    private function consultarDocumentos(string $codi): array
-    {
-        return [
-            'foto'    => $this->existeEnServidor('Fotos', $codi),
-            'anverso' => $this->existeEnServidor('DNI1_1', $codi),
-            'reverso' => $this->existeEnServidor('DNI2_1', $codi),
-        ];
     }
 
     /**
      * 200 = sí existe · 404 = no existe · cualquier otra cosa = desconocido.
      * Un fallo de red NUNCA se reporta como "faltante".
      */
-    private function existeEnServidor(string $carpeta, string $codi): string
+    private function existeUrl(string $url): string
     {
         try {
-            $respuesta = Http::timeout(8)
+            $codigo = Http::timeout(8)
                 ->connectTimeout(5)
-                ->head(self::DOC_BASE . '/' . $carpeta . '/' . rawurlencode($codi) . '.jpg');
-
-            $codigo = $respuesta->status();
+                ->head($url)
+                ->status();
 
             if ($codigo === 200) {
                 return 'si';
@@ -529,7 +1009,9 @@ class ReportePersonalController extends Controller
         $hoja->setShowGridlines(false);
 
         // ── Anchos de columna ─────────────────────────────────
-        $anchos = [6, 10, 34, 15, 16, 20, 26, 9, 15, 26, 17, 26, 17];
+        // B = 16 deja A+B en ~164 px, por encima de los 130 px del logo
+        // anclado en A1: así el logo no invade el título de C1.
+        $anchos = [6, 16, 34, 15, 16, 20, 26, 9, 15, 26, 17, 26, 17];
         foreach ($anchos as $i => $ancho) {
             $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
         }
@@ -563,15 +1045,6 @@ class ReportePersonalController extends Controller
         $hoja->getStyle('C2')->getFont()->setBold(true)->setSize(11)
               ->getColor()->setRGB('990000');
         $hoja->getStyle('C2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-
-        $hoja->mergeCells('C3:' . $ultima . '3');
-        $hoja->setCellValue(
-            'C3',
-            'Fuente: si_solm.dbo.PERSONAL (PERS_VIGENCIA = SI · EMPR_CODIGO = 01) · ' .
-            'Archivos: Biblioteca_Grafica/{Fotos, DNI1_1, DNI2_1}'
-        );
-        $hoja->getStyle('C3')->getFont()->setSize(9)->getColor()->setRGB('6B7280');
-        $hoja->getStyle('C3')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
         $hoja->getRowDimension(4)->setRowHeight(6);
 
@@ -732,6 +1205,223 @@ class ReportePersonalController extends Controller
 
         $ruta = $dir . DIRECTORY_SEPARATOR
               . 'rep_documentos_' . date('Ymd_His') . '_' . uniqid() . '.xlsx';
+
+        (new Xlsx($ss))->save($ruta);
+        $ss->disconnectWorksheets();
+        unset($ss);
+
+        return $ruta;
+    }
+
+    // ── Reporte de DNI de hijos ─────────────────────────────────────────
+
+    /**
+     * Devuelve la ruta temporal del .xlsx generado con el personal que tiene
+     * hijos menores de edad sin el DNI (anverso/reverso) cargado.
+     */
+    private function generarExcelDniHijos(array $filas, array $stats): string
+    {
+        $columnas = [
+            'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Sucursal',
+            'Tipo', 'Cargo', 'Hijos <18', 'Anverso', 'Reverso', 'Sin imagen',
+            'Detalle de faltantes',
+        ];
+        $ultima = 'L';
+
+        $ss   = new Spreadsheet();
+        $hoja = $ss->getActiveSheet();
+        $hoja->setTitle('DNI hijos');
+        $hoja->setShowGridlines(false);
+
+        // ── Anchos de columna ─────────────────────────────────────────────
+        $anchos = [6, 16, 34, 15, 16, 20, 26, 11, 11, 11, 11, 64];
+        foreach ($anchos as $i => $ancho) {
+            $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
+        }
+
+        // ── Logo ──────────────────────────────────────────────────────────
+        $rutaLogo = public_path('images/logo_sol.png');
+        if (is_file($rutaLogo)) {
+            $logo = new Drawing();
+            $logo->setPath($rutaLogo);
+            $logo->setResizeProportional(false);
+            $logo->setCoordinates('A1');
+            $logo->setWidth(130);
+            $logo->setHeight(62);
+            $logo->setWorksheet($hoja);
+        }
+
+        // ── Encabezado ────────────────────────────────────────────────────
+        $hoja->getRowDimension(1)->setRowHeight(64);
+        $hoja->mergeCells('C1:' . $ultima . '1');
+        $hoja->setCellValue('C1', 'REPORTE DE DNI DE HIJOS MENORES DE EDAD PENDIENTES');
+        $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(14)
+              ->getColor()->setRGB('990000');
+        $hoja->getStyle('C1')->getAlignment()
+              ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+              ->setVertical(Alignment::VERTICAL_CENTER);
+
+        $hoja->mergeCells('C2:' . $ultima . '2');
+        $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
+        $hoja->getStyle('C2')->getFont()->setBold(true)->setSize(11)
+              ->getColor()->setRGB('990000');
+        $hoja->getStyle('C2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+        $hoja->getRowDimension(4)->setRowHeight(6);
+
+        // ── Bloque de estadísticas ────────────────────────────────────────
+        $bloquesStats = [
+            'A' => 'B',  // Generado
+            'C' => 'D',  // Personal evaluado
+            'E' => 'F',  // Con DNI completo
+            'G' => 'H',  // Con faltantes
+            'I' => 'J',  // Hijos <18
+            'K' => 'L',  // Últ. escaneo
+        ];
+        $etiquetas = [
+            'Generado', 'Personal evaluado', 'Sin faltantes',
+            'Con faltantes', 'Hijos <18', 'Últ. escaneo de archivos',
+        ];
+
+        $totalEval = max($stats['evaluados'], 1);
+        $valores = [
+            $stats['generado'],
+            number_format($stats['evaluados'], 0, ',', '.'),
+            number_format($stats['ok'], 0, ',', '.') . '  (' . number_format($stats['ok'] / $totalEval * 100, 1, ',', '.') . '%)',
+            number_format($stats['faltan'], 0, ',', '.'),
+            number_format($stats['hijos'], 0, ',', '.'),
+            $stats['scan_at'],
+        ];
+
+        $indice = 0;
+        foreach ($bloquesStats as $desde => $hasta) {
+            $rango = $desde . '5:' . $hasta . '5';
+            $hoja->mergeCells($rango);
+            $hoja->setCellValue($desde . '5', $etiquetas[$indice]);
+
+            $rangoValor = $desde . '6:' . $hasta . '6';
+            $hoja->mergeCells($rangoValor);
+            $hoja->setCellValue($desde . '6', $valores[$indice]);
+
+            $indice++;
+        }
+
+        $hoja->getStyle('A5:' . $ultima . '6')->getFill()
+              ->setFillType(Fill::FILL_SOLID)
+              ->getStartColor()->setRGB('E5E7EB');
+        $hoja->getStyle('A5:' . $ultima . '5')->getFont()->setBold(true)->setSize(9)
+              ->getColor()->setRGB('374151');
+        $hoja->getStyle('A6:' . $ultima . '6')->getFont()->setBold(true)->setSize(10)
+              ->getColor()->setRGB('111827');
+        $hoja->getStyle('A5:' . $ultima . '6')->getBorders()->getAllBorders()
+              ->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
+        $hoja->getStyle('A5:' . $ultima . '6')->getAlignment()
+              ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+              ->setVertical(Alignment::VERTICAL_CENTER);
+
+        $hoja->getRowDimension(7)->setRowHeight(6);
+
+        // ── Cabecera de la tabla ──────────────────────────────────────────
+        $filaCabecera = 8;
+        foreach ($columnas as $i => $titulo) {
+            $hoja->setCellValue(Coordinate::stringFromColumnIndex($i + 1) . $filaCabecera, $titulo);
+        }
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)
+            ->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4B5563');
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)
+            ->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('FFFFFF');
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER)
+            ->setWrapText(true);
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)
+            ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)
+            ->getColor()->setRGB('D1D5DB');
+        $hoja->getRowDimension($filaCabecera)->setRowHeight(30);
+
+        // ── Filas ─────────────────────────────────────────────────────────
+        $filaInicial = $filaCabecera + 1;
+        $matriz      = [];
+
+        $num = 0;
+        foreach ($filas as $d) {
+            $num++;
+
+            $matriz[] = [
+                $num,
+                $d['codi'],
+                $d['nombre'],
+                $d['doc'],
+                $d['sucursal'],
+                $d['tipo'],
+                $d['cargo'],
+                $d['total'],
+                $d['anverso_txt'],
+                $d['reverso_txt'],
+                $d['sin'],
+                $d['detalle'],
+            ];
+        }
+
+        $filaFinal = $filaCabecera + count($matriz);
+
+        if ($matriz !== []) {
+            $hoja->fromArray($matriz, null, 'A' . $filaInicial, true);
+
+            // Estilos base del bloque (una sola pasada)
+            $base = $hoja->getStyle('A' . $filaInicial . ':' . $ultima . $filaFinal);
+            $base->getFont()->setSize(9);
+            $base->getBorders()->getAllBorders()
+                 ->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
+            $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // Columnas cortas centradas
+            foreach (['A', 'D', 'H', 'I', 'J', 'K'] as $col) {
+                $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()
+                     ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+
+            // Semáforo de Anverso/Reverso: Sí = verde, No = rojo.
+            $hoja->getStyle('I' . $filaInicial . ':' . 'I' . $filaFinal)
+                 ->getFont()->setBold(true)->getColor()->setRGB('15803D');
+            $hoja->getStyle('J' . $filaInicial . ':' . 'J' . $filaFinal)
+                 ->getFont()->setBold(true)->getColor()->setRGB('15803D');
+
+            // Fondo: rojo claro si algún hijo quedó sin ninguna imagen,
+            // ámbar si solo faltan anverso/reverso sueltos.
+            foreach ($filas as $i => $d) {
+                $f = $filaInicial + $i;
+
+                $hoja->getStyle('A' . $f . ':' . $ultima . $f)->getFill()
+                     ->setFillType(Fill::FILL_SOLID)
+                     ->getStartColor()->setRGB($d['sin'] > 0 ? 'FEE2E2' : 'FEF3C7');
+
+                $hoja->getStyle('I' . $f)->getFont()->setBold(true)
+                     ->getColor()->setRGB($d['anverso_txt'] === 'No' ? 'B91C1C' : '15803D');
+
+                $hoja->getStyle('J' . $f)->getFont()->setBold(true)
+                     ->getColor()->setRGB($d['reverso_txt'] === 'No' ? 'B91C1C' : '15803D');
+
+                if ((int) $d['sin'] > 0) {
+                    $hoja->getStyle('K' . $f)->getFont()->setBold(true)->getColor()->setRGB('B91C1C');
+                }
+            }
+        }
+
+        // ── Filtros y panel congelado ─────────────────────────────────────
+        $hoja->setAutoFilter('A' . $filaCabecera . ':' . $ultima . $filaCabecera);
+        $hoja->freezePane('A' . ($filaCabecera + 1));
+
+        // sys_get_temp_dir() queda redirigido a <proyecto>/temp por AppServiceProvider
+        $dir = sys_get_temp_dir();
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        $ruta = $dir . DIRECTORY_SEPARATOR
+              . 'rep_dni_hijos_' . date('Ymd_His') . '_' . uniqid() . '.xlsx';
 
         (new Xlsx($ss))->save($ruta);
         $ss->disconnectWorksheets();
