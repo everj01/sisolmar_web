@@ -4909,6 +4909,24 @@ async function filtrarCargos(tipoPersonal) {
         });
 }
 
+// ── Foto pendiente ───────────────────────────────────────────
+// Global (fuera del DOMContentLoaded) para poder llamarla desde
+// abrirFormularioDJ()/llenarFormulario(). Sin esto, el archivo elegido en
+// <input type="file" id="inputFoto"> se arrastraba de una persona a otra al
+// cambiar de fila: al guardar, el servidor lo guardaba con el CODI de la
+// persona nueva y quedaba registrada la foto de la persona anterior.
+// (El DNI ya tenía su "pizarra limpia" en limpiarDniDj().)
+function limpiarFotoPendienteDj() {
+    const inp = document.getElementById('inputFoto');
+    if (inp) inp.value = '';
+    const prv = document.getElementById('previewFoto');
+    if (prv) { prv.src = ''; prv.classList.add('hidden'); }
+    const ph = document.getElementById('placeholderFoto');
+    if (ph) ph.classList.remove('hidden');
+    const btn = document.getElementById('btnEliminarFoto');
+    if (btn) btn.classList.add('hidden');
+}
+
 // ── Abrir modal DJ ──────────────────────────────────────────
 async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
     try {
@@ -4925,6 +4943,7 @@ async function abrirFormularioDJ(codiPers = null, source = 'migracion') {
             poblarSelectTiposPersonal(window.allTiposPersonalDj || []);
             setValue('#tipo_personal_ui', '');
             aplicarSctr(''); cargarFechasIngresoCese({}); aplicarExtranjeriaNacimiento(''); limpiarDniDj(); limpiarDniHijosDj();
+            limpiarFotoPendienteDj();   // pizarra limpia: no arrastrar la FOTO de otra persona
 
             await cargarCatalogos();
             await cargarPaises();
@@ -5180,7 +5199,8 @@ async function cargarDatosPersonales(codiPers, source = 'migracion') {
 
 // ── Llenar formulario ────────────────────────────────────────
 async function llenarFormulario(data) {
-    limpiarDniDj();   // pizarra limpia: no arrastrar DNI de otra persona
+    limpiarDniDj();             // pizarra limpia: no arrastrar DNI de otra persona
+    limpiarFotoPendienteDj();   // pizarra limpia: no arrastrar la FOTO de otra persona
     setValue('cod_postulante', data.CODI_PERS);
 
     const tipotrab = data.PERS_TIPOTRAB ? String(data.PERS_TIPOTRAB).trim() : '';
