@@ -220,7 +220,7 @@ class ReportePersonalController extends Controller
     /**
      * GET /api/reporte/personal-documentos   (?refrescar=1&solo_faltantes=1)
      *
-     * Devuelve un .xlsx con el personal vigente e indica:
+     * Devuelve un .xlsx con el personal que coincide con los filtros e indica:
      *   · Foto     → Sí / No / Sin verificar
      *   · DNI      → Completo / Solo anverso / Solo reverso / No / Sin verificar
      *   · Quién lo registró (y cuándo) y quién lo modificó (y cuándo)
@@ -234,7 +234,7 @@ class ReportePersonalController extends Controller
      */
     public function documentosPendientes(Request $request)
     {
-        // El reporte expone el DNI y la trazabilidad de todo el personal vigente:
+        // El reporte expone el DNI y la trazabilidad del personal filtrado:
         // solo ADMINS RRHH (17) y SUPERUSUARIO (11). Mismo criterio que el @if
         // del botón en gestion_dj.blade.php, para que ambos siempre concuerden.
         if (!in_array((int) session('tipo_rol'), self::ROLES_REPORTE_DOCUMENTOS, true)) {
@@ -246,15 +246,28 @@ class ReportePersonalController extends Controller
         $forzar = in_array((string) $request->query('refrescar'), ['1', 'true'], true);
         $soloFaltantes = in_array((string) $request->query('solo_faltantes'), ['1', 'true'], true);
 
+        $filtros = $request->validate([
+            'codSucursal' => 'nullable|string|max:20',
+            'tipoPer' => 'nullable|in:01,02,03,05',
+            'cargo' => 'nullable|string|max:20',
+            'vigente' => 'nullable|in:SI,NO',
+        ]);
+        $incremental = $request->boolean('incremental');
+        $scanId = $request->query('scan_id');
+        if ($incremental && (!is_string($scanId) || !preg_match('/^[a-f0-9-]{36}$/i', $scanId))) {
+            abort(422, 'Identificador de escaneo inválido.');
+        }
+
         // ── 1. Población ──────────────────────────────────────
-        // Réplica de SW_LISTAR_PERSONAL_DJ_2026_GESTION (la misma que
-        // alimenta la pantalla de Gestión DJ): todos los vigentes,
-        // todos los tipos de personal y todas las sucursales.
+        // Parte de la misma fuente que Gestión DJ y aplica los mismos filtros
+        // elegidos en la pantalla antes de revisar archivos.
         $sql = <<<'SQL'
             SELECT
                 LTRIM(RTRIM(p.CODI_PERS))  AS CODI_PERS,
                 p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2,
                 p.NRO_DOCU_IDEN,
+                p.FECH_INGRE,
+                p.FECH_INGRE_PLANILLA,
                 ISNULL(s.SUCU_ABREVIATURA, p.SUCU_CODIGO)    AS SUCURSAL,
                 ISNULL(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_DESCRIPCION,
                 ISNULL(c.DESC_CARGO, p.CODI_CARG)            AS CARGO_DESC,
@@ -287,12 +300,25 @@ class ReportePersonalController extends Controller
                 FROM si_solm.dbo.USUARIOS u
                 WHERE u.LOGIN = LTRIM(RTRIM(p.USUA_CODIGO_MOD))
             ) mod
-            WHERE p.PERS_VIGENCIA = 'SI'
-              AND p.EMPR_CODIGO   = '01'
-            ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1
             SQL;
 
-        $personal = DB::select($sql);
+        $condiciones = ['p.EMPR_CODIGO = ?'];
+        $parametros = ['01'];
+        foreach ([
+            'codSucursal' => 'p.SUCU_CODIGO',
+            'tipoPer' => 'p.PERS_TIPOTRAB',
+            'cargo' => 'p.CODI_CARG',
+            'vigente' => 'p.PERS_VIGENCIA',
+        ] as $filtro => $columna) {
+            if (!empty($filtros[$filtro])) {
+                $condiciones[] = $columna . ' = ?';
+                $parametros[] = $filtros[$filtro];
+            }
+        }
+        $sql .= " WHERE " . implode(' AND ', $condiciones)
+              . ' ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1';
+
+        $personal = DB::select($sql, $parametros);
 
         $filas   = [];
         $codigos = [];
@@ -316,6 +342,8 @@ class ReportePersonalController extends Controller
                 'sucursal' => trim((string) ($r->SUCURSAL         ?? '')),
                 'tipo'     => trim((string) ($r->TIPO_DESCRIPCION ?? '')),
                 'cargo'    => trim((string) ($r->CARGO_DESC       ?? '')),
+                'ingreso_solmar' => $this->formatFecha($r->FECH_INGRE ?? null),
+                'ingreso_planilla' => $this->formatFecha($r->FECH_INGRE_PLANILLA ?? null),
                 'reg'      => $this->usuarioLegible($r->USUA_CODIGO_REG, $r->REG_NOMBRE),
                 'freg'     => $this->formatFechaHora($r->USUA_FECHA_REG),
                 'mod'      => $this->usuarioLegible($r->USUA_CODIGO_MOD, $r->MOD_NOMBRE),
@@ -324,7 +352,14 @@ class ReportePersonalController extends Controller
         }
 
         // ── 2. Escaneo del servidor de archivos (siempre, en paralelo) ──
-        $estado = $this->estadoDocumentos($codigos, $forzar);
+        $estado = $this->estadoDocumentos($codigos, $forzar, $scanId, $incremental);
+        if ($incremental && !$estado['completo']) {
+            return response()->json([
+                'completo' => false,
+                'procesados' => $estado['procesados'],
+                'total' => $estado['total'],
+            ]);
+        }
 
         // ── 3. Enriquecer filas + estadísticas ────────────────
         $fotoOk   = 0;
@@ -356,11 +391,10 @@ class ReportePersonalController extends Controller
 
         $stats = [
             'generado' => date('d/m/Y H:i:s'),
-            'vigentes' => count($filas),
+            'personal' => count($filas),
             'foto_ok'  => $fotoOk,
             'dni_ok'   => $dniOk,
             'faltan'   => $faltan,
-            'scan_at'  => $estado['scan_at'] ? $this->formatFechaHora($estado['scan_at']) : '—',
         ];
 
         if ($soloFaltantes) {
@@ -370,11 +404,35 @@ class ReportePersonalController extends Controller
             ));
         }
 
+        if ($request->boolean('previsualizar')) {
+            $muestra = array_map(static fn (array $fila, int $indice): array => [
+                'numero' => $indice + 1,
+                'codigo' => $fila['codi'],
+                'personal' => $fila['nombre'],
+                'dni' => $fila['doc'],
+                'sucursal' => $fila['sucursal'],
+                'tipo' => $fila['tipo'],
+                'cargo' => $fila['cargo'],
+                'ingreso_solmar' => $fila['ingreso_solmar'],
+                'ingreso_planilla' => $fila['ingreso_planilla'],
+                'foto' => $fila['foto_txt'],
+                'dni_estado' => $fila['dni_txt'],
+                'registrado_por' => $fila['reg'],
+                'fecha_registro' => $fila['freg'],
+                'modificado_por' => $fila['mod'],
+                'fecha_modificacion' => $fila['fmod'],
+            ], array_values($filas), array_keys(array_values($filas)));
+
+            return response()->json([
+                'preview' => $muestra,
+                'total' => count($filas),
+            ]);
+        }
+
         // ── 4. Excel ──────────────────────────────────────────
-        $nombreArchivo = ($soloFaltantes
-            ? 'Reporte_Personal_Sin_Foto_DNI_'
-            : 'Reporte_Documentos_Personal_') . date('Y-m-d_His') . '.xlsx';
-        $rutaArchivo   = $this->generarExcelDocumentos(array_values($filas), $stats);
+        $tituloExcel = $this->tituloExcelDocumentos($filtros, $soloFaltantes);
+        $nombreArchivo = $this->nombreArchivoExcel($tituloExcel);
+        $rutaArchivo   = $this->generarExcelDocumentos(array_values($filas), $stats, $tituloExcel);
 
         // Copiar a storage/app/public/reportes para servir vía URL directa
         // (evita el problema de espacio prepended en respuestas AJAX del servidor built-in)
@@ -397,6 +455,59 @@ class ReportePersonalController extends Controller
         ]);
     }
 
+    private function tituloExcelDocumentos(array $filtros, bool $soloFaltantes): string
+    {
+        $sucursal = 'TODAS';
+        if (!empty($filtros['codSucursal'])) {
+            $registro = DB::selectOne(
+                'SELECT TOP 1 SUCU_ABREVIATURA FROM si_solm.dbo.SISO_SUCURSAL WHERE SUCU_CODIGO = ?',
+                [$filtros['codSucursal']]
+            );
+            $sucursal = trim((string) ($registro->SUCU_ABREVIATURA ?? $filtros['codSucursal']));
+        }
+
+        $tipo = 'TODOS';
+        if (!empty($filtros['tipoPer'])) {
+            $registro = DB::selectOne(
+                'SELECT TOP 1 TIPE_DESCRIPCION FROM si_solm.dbo.ADMI_TIPO_PERSONAL WHERE TIPE_CODIGO = ?',
+                [$filtros['tipoPer']]
+            );
+            $tipo = trim((string) ($registro->TIPE_DESCRIPCION ?? $filtros['tipoPer']));
+        }
+
+        $cargo = 'TODOS';
+        if (!empty($filtros['cargo'])) {
+            $registro = DB::selectOne(
+                'SELECT TOP 1 DESC_CARGO FROM si_solm.dbo.CARGOS WHERE CODI_CARG = ?',
+                [$filtros['cargo']]
+            );
+            $cargo = trim((string) ($registro->DESC_CARGO ?? $filtros['cargo']));
+        }
+
+        $estado = match ($filtros['vigente'] ?? '') {
+            'SI' => 'ACTIVOS',
+            'NO' => 'CESADOS',
+            default => 'ACTIVOS Y CESADOS',
+        };
+
+        $reporte = $soloFaltantes ? 'REPORTE DE PENDIENTES DE FOTOS / DNI' : 'REPORTE DE DOCUMENTOS';
+
+        return "{$reporte} | {$sucursal} | {$tipo} | {$cargo} | {$estado}";
+    }
+
+    private function nombreArchivoExcel(string $titulo): string
+    {
+        $titulo = str_replace('|', ' ', $titulo);
+        $titulo = preg_replace('/^PENDIENTES\b/u', 'REPORTE DE PENDIENTES', $titulo) ?? $titulo;
+        $titulo = preg_replace('/([45])\s*[°º]/u', '$1TA', $titulo) ?? $titulo;
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $titulo);
+        $nombre = strtoupper($ascii === false ? $titulo : $ascii);
+        $nombre = preg_replace('/[^A-Z0-9]+/', '_', $nombre) ?? 'REPORTE';
+        $nombre = trim(substr($nombre, 0, 210), '_');
+
+        return $nombre . '_' . date('Y-m-d') . '.xlsx';
+    }
+
     public function descargarReporte(Request $request, string $archivo)
     {
         $ruta = storage_path('app/public/reportes/' . $archivo);
@@ -406,7 +517,7 @@ class ReportePersonalController extends Controller
         }
 
         // Verificar que el archivo sea un reporte válido (seguridad básica)
-        if (!preg_match('/^Reporte_(Documentos_Personal|Personal_Sin_Foto_DNI|DNI_Hijos_Pendientes)_\d{4}-\d{2}-\d{2}_\d{6}\.xlsx$/', $archivo)) {
+        if (!preg_match('/^[A-Z0-9]+(?:_[A-Z0-9]+)*_\d{4}-\d{2}-\d{2}\.xlsx$/', $archivo)) {
             abort(403, 'Archivo no válido');
         }
 
@@ -421,7 +532,7 @@ class ReportePersonalController extends Controller
     // La v1 guardaba el último escaneo completo por 6 h, así que se cambia de
     // clave para que ninguna lectura previa quede como "dato fresco".
     private const HIJOS_CACHE_KEY = 'reporte_dni_hijos_estado_v2';
-    private const HIJOS_LOTE      = 100;
+    private const HIJOS_LOTE      = 10;
 
     /**
      * GET /api/dj/reporte/dni-hijos   (?refrescar=1)
@@ -452,6 +563,17 @@ class ReportePersonalController extends Controller
         @set_time_limit(0);
 
         $forzar = in_array((string) $request->query('refrescar'), ['1', 'true'], true);
+        $filtros = $request->validate([
+            'codSucursal' => 'nullable|string|max:20',
+            'tipoPer' => 'nullable|in:01,02,03,05',
+            'cargo' => 'nullable|string|max:20',
+            'vigente' => 'nullable|in:SI,NO',
+        ]);
+        $incremental = $request->boolean('incremental');
+        $scanId = $request->query('scan_id');
+        if ($incremental && (!is_string($scanId) || !preg_match('/^[a-f0-9-]{36}$/i', $scanId))) {
+            abort(422, 'Identificador de escaneo inválido.');
+        }
 
         // ── 1. Personal vigente con al menos un hijo menor de edad ──────
         // Mismo universo que el reporte de documentos: todos los vigentes,
@@ -461,6 +583,9 @@ class ReportePersonalController extends Controller
                 LTRIM(RTRIM(p.CODI_PERS))  AS CODI_PERS,
                 p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2,
                 p.NRO_DOCU_IDEN,
+                p.FECH_INGRE,
+                p.FECH_INGRE_PLANILLA,
+                p.ASIG_FAMI,
                 ISNULL(s.SUCU_ABREVIATURA, p.SUCU_CODIGO)    AS SUCURSAL,
                 ISNULL(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_DESCRIPCION,
                 ISNULL(c.DESC_CARGO, p.CODI_CARG)            AS CARGO_DESC
@@ -471,8 +596,7 @@ class ReportePersonalController extends Controller
                     ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
             LEFT JOIN si_solm.dbo.CARGOS c
                     ON c.CODI_CARG = p.CODI_CARG
-            WHERE p.PERS_VIGENCIA = 'SI'
-              AND p.EMPR_CODIGO   = '01'
+            WHERE p.EMPR_CODIGO = '01'
               AND EXISTS (
                     SELECT 1
                     FROM si_solm.dbo.DERECHO_HABIENTE d
@@ -486,7 +610,23 @@ class ReportePersonalController extends Controller
             ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1
             SQL;
 
-        $personal = DB::select($sql);
+        $parametros = [];
+        $condiciones = [];
+        foreach ([
+            'codSucursal' => 'p.SUCU_CODIGO',
+            'tipoPer' => 'p.PERS_TIPOTRAB',
+            'cargo' => 'p.CODI_CARG',
+            'vigente' => 'p.PERS_VIGENCIA',
+        ] as $filtro => $columna) {
+            if (!empty($filtros[$filtro])) {
+                $condiciones[] = $columna . ' = ?';
+                $parametros[] = $filtros[$filtro];
+            }
+        }
+        if ($condiciones !== []) {
+            $sql = str_replace('AND EXISTS (', 'AND ' . implode(' AND ', $condiciones) . ' AND EXISTS (', $sql);
+        }
+        $personal = DB::select($sql, $parametros);
 
         $filas   = [];
         $codigos = [];
@@ -507,6 +647,13 @@ class ReportePersonalController extends Controller
                     trim((string) ($r->NOMB_2 ?? '')),
                 ], fn ($v) => $v !== ''))),
                 'doc'      => trim((string) ($r->NRO_DOCU_IDEN ?? '')),
+                'ingreso_solmar' => $this->formatFecha($r->FECH_INGRE ?? null),
+                'ingreso_planilla' => $this->formatFecha($r->FECH_INGRE_PLANILLA ?? null),
+                'asignacion_familiar' => match (strtoupper(trim((string) ($r->ASIG_FAMI ?? '')))) {
+                    'SI', 'SÍ', '1' => 'Sí',
+                    'NO', '0' => 'No',
+                    default => 'Sin dato',
+                },
                 'sucursal' => trim((string) ($r->SUCURSAL         ?? '')),
                 'tipo'     => trim((string) ($r->TIPO_DESCRIPCION ?? '')),
                 'cargo'    => trim((string) ($r->CARGO_DESC       ?? '')),
@@ -514,7 +661,14 @@ class ReportePersonalController extends Controller
         }
 
         // ── 2. Escaneo del servidor de archivos (siempre, en paralelo) ─────
-        $estado = $this->estadoDniHijos($codigos, $forzar);
+        $estado = $this->estadoDniHijos($codigos, $forzar, $scanId, $incremental);
+        if ($incremental && !$estado['completo']) {
+            return response()->json([
+                'completo' => false,
+                'procesados' => $estado['procesados'],
+                'total' => $estado['total'],
+            ]);
+        }
 
         // ── 3. Enriquecer filas + estadísticas ──────────────────────────
         $evaluados    = 0;
@@ -599,6 +753,31 @@ class ReportePersonalController extends Controller
             'scan_at'   => $estado['scan_at'] ? $this->formatFechaHora($estado['scan_at']) : '—',
         ];
 
+        if ($request->boolean('previsualizar')) {
+            $muestra = array_map(static fn (array $fila, int $indice): array => [
+                'numero' => $indice + 1,
+                'codigo' => $fila['codi'],
+                'personal' => $fila['nombre'],
+                'dni' => $fila['doc'],
+                'sucursal' => $fila['sucursal'],
+                'tipo' => $fila['tipo'],
+                'cargo' => $fila['cargo'],
+                'ingreso_solmar' => $fila['ingreso_solmar'],
+                'ingreso_planilla' => $fila['ingreso_planilla'],
+                'asignacion_familiar' => $fila['asignacion_familiar'],
+                'hijos_menores' => $fila['total'],
+                'anverso' => $fila['anverso_txt'],
+                'reverso' => $fila['reverso_txt'],
+                'sin_imagen' => $fila['sin'],
+                'detalle' => $fila['detalle'],
+            ], array_values($filas), array_keys(array_values($filas)));
+
+            return response()->json([
+                'preview' => $muestra,
+                'total' => count($filas),
+            ]);
+        }
+
         if ($filas === []) {
             return response()->json([
                 'success' => false,
@@ -607,8 +786,13 @@ class ReportePersonalController extends Controller
         }
 
         // ── 4. Excel ────────────────────────────────────────────────────
-        $nombreArchivo = 'Reporte_DNI_Hijos_Pendientes_' . date('Y-m-d_His') . '.xlsx';
-        $rutaArchivo   = $this->generarExcelDniHijos(array_values($filas), $stats);
+        $titulo = str_replace(
+            'REPORTE DE PENDIENTES DE FOTOS / DNI',
+            'REPORTE DE PENDIENTES DE FOTOS DE DNI DE HIJOS MENORES DE EDAD',
+            $this->tituloExcelDocumentos($filtros, true)
+        );
+        $nombreArchivo = $this->nombreArchivoExcel($titulo);
+        $rutaArchivo   = $this->generarExcelDniHijos(array_values($filas), $stats, $titulo);
 
         // Mismo mecanismo que documentosPendientes: se sirve desde
         // storage/app/public/reportes vía la ruta autenticada reporte.descargar.
@@ -642,53 +826,48 @@ class ReportePersonalController extends Controller
     private const SCAN_AVANCE_MIN = 10;
 
     /**
-     * Verifica un conjunto de URLs con HEAD en paralelo y devuelve
-     * [URL => 'si'|'no'|'desconocido'].
-     *
-     * Los lotes corren de a self::SCAN_CONCURRENCIA peticiones simultáneas
-     * (~330 req/s frente a los ~64 req/s del escaneo secuencial), que es lo
-     * que permite revisar los archivos en cada generación del reporte.
+     * Verifica URLs en lotes paralelos. Si el servidor remoto no responde,
+     * los archivos quedan como desconocidos y se detiene el escaneo tras tres
+     * lotes fallidos; nunca se reintentan en serie, lo que bloquearía PHP.
      *
      * 200 = existe · 404 = no existe · cualquier otra cosa (timeout, 429,
      * 5xx) = desconocido: un fallo NUNCA se reporta como "faltante".
      */
-    private function verificarUrlsEnLotes(array $urls, int $concurrencia = self::SCAN_CONCURRENCIA): array
+    private function verificarUrlsEnLotes(array $urls, int $concurrencia = self::SCAN_CONCURRENCIA, ?bool &$servidorNoDisponible = null): array
     {
         $urls      = array_values(array_unique($urls));
         $salida    = [];
         $limitadas = 0;
         $sinLote   = 0;
+        $servidorNoDisponible = false;
 
         foreach (array_chunk($urls, $concurrencia) as $lote) {
             try {
                 $respuestas = Http::pool(fn ($pool) => array_map(
-                    fn (string $url) => $pool->as($url)->timeout(8)->connectTimeout(5)->head($url),
+                    fn (string $url) => $pool->as($url)->timeout(5)->connectTimeout(2)->head($url),
                     $lote
                 ));
             } catch (\Throwable $e) {
                 // Una caída de red rechaza la promesa y tira el lote entero.
                 $sinLote++;
+                foreach ($lote as $url) {
+                    $salida[$url] = 'desconocido';
+                }
 
-                // Si el servidor dejó de responder (3 lotes seguidos caídos) se
-                // abandona el escaneo: lo que queda pasa a "Sin verificar" (que
-                // nunca se cuenta como faltante) y no se le sigue martillando.
-                if ($sinLote >= 3) {
+                // Si el servidor dejó de responder, no se sigue ocupando PHP
+                // con peticiones en serie ni se le sigue martillando.
+                if ($sinLote >= 2) {
+                    $servidorNoDisponible = true;
                     Log::error('reportes: el servidor de imágenes dejó de responder; se interrumpe el escaneo.', [
                         'error'    => $e->getMessage(),
                         'quedaron' => count($urls) - count($salida),
                     ]);
                     break;
                 }
-
-                // Caída puntual: se reintenta URL por URL, cada una en lo suyo.
-                foreach ($lote as $url) {
-                    $salida[$url] = $this->existeUrl($url);
-                }
-
                 continue;
             }
 
-            $sinLote = 0;
+            $sinVerificarLote = 0;
 
             foreach ($respuestas as $url => $respuesta) {
                 $codigo = $respuesta instanceof \Illuminate\Http\Client\Response ? $respuesta->status() : 0;
@@ -699,10 +878,27 @@ class ReportePersonalController extends Controller
                     $salida[$url] = 'no';
                 } else {
                     $salida[$url] = 'desconocido';
+                    $sinVerificarLote++;
                     if ($codigo === 429) {
                         $limitadas++;
                     }
                 }
+            }
+
+            // Incluye respuestas de timeout, 429 y errores 5xx: si casi todo
+            // el lote es inconcluso, cuenta como una caída del servidor remoto.
+            if ($sinVerificarLote >= max(1, (int) ceil(count($lote) * 0.8))) {
+                $sinLote++;
+                if ($sinLote >= 2) {
+                    $servidorNoDisponible = true;
+                    Log::error('reportes: el servidor de imágenes no dio respuestas concluyentes; se interrumpe el escaneo.', [
+                        'lote_inconcluso' => $sinVerificarLote,
+                        'quedaron' => count($urls) - count($salida),
+                    ]);
+                    break;
+                }
+            } else {
+                $sinLote = 0;
             }
         }
 
@@ -729,19 +925,26 @@ class ReportePersonalController extends Controller
      * instante un DNI recién subido); la caché solo conserva el avance de una
      * petición interrumpida (10 min) y se borra cuando el escaneo termina.
      */
-    private function estadoDniHijos(array $codigos, bool $forzar): array
+    private function estadoDniHijos(array $codigos, bool $forzar, ?string $scanId = null, bool $incremental = false): array
     {
+        $cacheKey = $scanId
+            ? self::HIJOS_CACHE_KEY . ':' . hash('sha256', session()->getId() . '|' . $scanId)
+            : self::HIJOS_CACHE_KEY;
         if ($forzar) {
-            Cache::forget(self::HIJOS_CACHE_KEY);
+            Cache::forget($cacheKey);
         }
 
         // Avance de un escaneo anterior que no llegó a terminar (si existe).
-        $estado = Cache::get(self::HIJOS_CACHE_KEY) ?? ['datos' => [], 'scan_at' => null];
+        $estado = Cache::get($cacheKey) ?? ['datos' => [], 'scan_at' => null];
         $estado['datos'] = array_intersect_key($estado['datos'], array_flip($codigos));
 
         $pendientes = array_values(array_diff($codigos, array_keys($estado['datos'])));
+        $bloques = array_chunk($pendientes, self::HIJOS_LOTE);
+        if ($incremental) {
+            $bloques = array_slice($bloques, 0, 1);
+        }
 
-        foreach (array_chunk($pendientes, self::HIJOS_LOTE) as $bloque) {
+        foreach ($bloques as $bloque) {
             $planes = [];
             $urls   = [];
 
@@ -755,24 +958,35 @@ class ReportePersonalController extends Controller
                 }
             }
 
-            // Un solo barrido en paralelo para todo el bloque.
-            $verificados = $this->verificarUrlsEnLotes(array_keys($urls));
+            // Si ya falló el servidor remoto en un lote anterior, no se vuelve
+            // a esperar timeouts por cada bloque restante de personal.
+            $servidorNoDisponible = (bool) ($estado['servidor_no_disponible'] ?? false);
+            if ($servidorNoDisponible) {
+                $verificados = array_fill_keys(array_keys($urls), 'desconocido');
+            } else {
+                $verificados = $this->verificarUrlsEnLotes(array_keys($urls), self::SCAN_CONCURRENCIA, $servidorNoDisponible);
+            }
+            $estado['servidor_no_disponible'] = $servidorNoDisponible;
 
             foreach ($planes as $codi => $plan) {
                 $estado['datos'][$codi] = $this->evaluarDniHijos($plan, $verificados);
             }
 
             // Avance: si la petición se corta aquí, la siguiente continúa.
-            Cache::put(self::HIJOS_CACHE_KEY, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
+            Cache::put($cacheKey, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
         }
 
-        $estado['scan_at'] = now()->toDateTimeString();
-
-        if ($pendientes !== []) {
-            // Escaneo terminado: no queda nada que retomar (ni nada viejo que usar).
-            Cache::forget(self::HIJOS_CACHE_KEY);
+        $completo = count($estado['datos']) >= count($codigos);
+        if ($completo) {
+            $estado['scan_at'] = now()->toDateTimeString();
+            Cache::forget($cacheKey);
+        } else {
+            Cache::put($cacheKey, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
         }
 
+        $estado['completo'] = $completo;
+        $estado['procesados'] = count($estado['datos']);
+        $estado['total'] = count($codigos);
         return $estado;
     }
 
@@ -892,7 +1106,7 @@ class ReportePersonalController extends Controller
 
     // v2: ver comentario de HIJOS_CACHE_KEY (antes guardaba el escaneo 6 h).
     private const DOC_CACHE_KEY = 'reporte_documentos_estado_v2';
-    private const DOC_LOTE      = 100;
+    private const DOC_LOTE      = 20;
     private const DOC_BASE      = 'http://190.116.178.163/Biblioteca_Grafica';
 
     /**
@@ -904,19 +1118,26 @@ class ReportePersonalController extends Controller
      * para retomar un escaneo que se cortó a mitad de camino y se borra apenas
      * el escaneo termina.
      */
-    private function estadoDocumentos(array $codigos, bool $forzar): array
+    private function estadoDocumentos(array $codigos, bool $forzar, ?string $scanId = null, bool $incremental = false): array
     {
+        $cacheKey = $scanId
+            ? self::DOC_CACHE_KEY . ':' . hash('sha256', session()->getId() . '|' . $scanId)
+            : self::DOC_CACHE_KEY;
         if ($forzar) {
-            Cache::forget(self::DOC_CACHE_KEY);
+            Cache::forget($cacheKey);
         }
 
         // Avance de un escaneo anterior que no llegó a terminar (si existe).
-        $estado = Cache::get(self::DOC_CACHE_KEY) ?? ['datos' => [], 'scan_at' => null];
+        $estado = Cache::get($cacheKey) ?? ['datos' => [], 'scan_at' => null];
         $estado['datos'] = array_intersect_key($estado['datos'], array_flip($codigos));
 
         $pendientes = array_values(array_diff($codigos, array_keys($estado['datos'])));
+        $bloques = array_chunk($pendientes, self::DOC_LOTE);
+        if ($incremental) {
+            $bloques = array_slice($bloques, 0, 1);
+        }
 
-        foreach (array_chunk($pendientes, self::DOC_LOTE) as $bloque) {
+        foreach ($bloques as $bloque) {
             $urls = [];
 
             foreach ($bloque as $codi) {
@@ -925,49 +1146,34 @@ class ReportePersonalController extends Controller
                 }
             }
 
-            $verificados = $this->verificarUrlsEnLotes(array_keys($urls));
+            $servidorNoDisponible = (bool) ($estado['servidor_no_disponible'] ?? false);
+            if ($servidorNoDisponible) {
+                $verificados = array_fill_keys(array_keys($urls), 'desconocido');
+            } else {
+                $verificados = $this->verificarUrlsEnLotes(array_keys($urls), self::SCAN_CONCURRENCIA, $servidorNoDisponible);
+            }
+            $estado['servidor_no_disponible'] = $servidorNoDisponible;
 
             foreach ($urls as $url => [$codi, $clave]) {
                 $estado['datos'][$codi][$clave] = $verificados[$url] ?? 'desconocido';
             }
 
             // Avance: si la petición se corta aquí, la siguiente continúa.
-            Cache::put(self::DOC_CACHE_KEY, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
+            Cache::put($cacheKey, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
         }
 
-        $estado['scan_at'] = now()->toDateTimeString();
-
-        if ($pendientes !== []) {
-            // Escaneo terminado: no queda nada que retomar (ni nada viejo que usar).
-            Cache::forget(self::DOC_CACHE_KEY);
+        $completo = count($estado['datos']) >= count($codigos);
+        if ($completo) {
+            $estado['scan_at'] = now()->toDateTimeString();
+            Cache::forget($cacheKey);
+        } else {
+            Cache::put($cacheKey, $estado, now()->addMinutes(self::SCAN_AVANCE_MIN));
         }
 
+        $estado['completo'] = $completo;
+        $estado['procesados'] = count($estado['datos']);
+        $estado['total'] = count($codigos);
         return $estado;
-    }
-
-    /**
-     * 200 = sí existe · 404 = no existe · cualquier otra cosa = desconocido.
-     * Un fallo de red NUNCA se reporta como "faltante".
-     */
-    private function existeUrl(string $url): string
-    {
-        try {
-            $codigo = Http::timeout(8)
-                ->connectTimeout(5)
-                ->head($url)
-                ->status();
-
-            if ($codigo === 200) {
-                return 'si';
-            }
-            if ($codigo === 404) {
-                return 'no';
-            }
-
-            return 'desconocido';
-        } catch (\Throwable) {
-            return 'desconocido';
-        }
     }
 
     private function estadoFoto(string $valor): string
@@ -994,14 +1200,15 @@ class ReportePersonalController extends Controller
     /**
      * Devuelve la ruta temporal del .xlsx generado.
      */
-    private function generarExcelDocumentos(array $filas, array $stats): string
+    private function generarExcelDocumentos(array $filas, array $stats, string $titulo): string
     {
         $columnas = [
             'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Sucursal',
-            'Tipo', 'Cargo', 'Foto', 'DNI', 'Registrado por', 'F. Registro',
+            'Tipo', 'Cargo', 'Fecha de ingreso a Solmar', 'Fecha de ingreso a planillas',
+            'Foto', 'DNI', 'Registrado por', 'F. Registro',
             'Modificado por', 'F. Modificación',
         ];
-        $ultima = 'M';
+        $ultima = 'O';
 
         $ss   = new Spreadsheet();
         $hoja = $ss->getActiveSheet();
@@ -1011,7 +1218,7 @@ class ReportePersonalController extends Controller
         // ── Anchos de columna ─────────────────────────────────
         // B = 16 deja A+B en ~164 px, por encima de los 130 px del logo
         // anclado en A1: así el logo no invade el título de C1.
-        $anchos = [6, 16, 34, 15, 16, 20, 26, 9, 15, 26, 17, 26, 17];
+        $anchos = [6, 16, 34, 15, 16, 20, 26, 20, 23, 9, 15, 26, 17, 26, 17];
         foreach ($anchos as $i => $ancho) {
             $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
         }
@@ -1033,12 +1240,13 @@ class ReportePersonalController extends Controller
         // ── Encabezado ────────────────────────────────────────
         $hoja->getRowDimension(1)->setRowHeight(64);
         $hoja->mergeCells('C1:' . $ultima . '1');
-        $hoja->setCellValue('C1', 'REPORTE DE DOCUMENTOS DE PERSONAL VIGENTE');
-        $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(14)
+        $hoja->setCellValue('C1', $titulo);
+        $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(12)
               ->getColor()->setRGB('990000');
         $hoja->getStyle('C1')->getAlignment()
               ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-              ->setVertical(Alignment::VERTICAL_CENTER);
+              ->setVertical(Alignment::VERTICAL_CENTER)
+              ->setWrapText(true);
 
         $hoja->mergeCells('C2:' . $ultima . '2');
         $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
@@ -1051,22 +1259,20 @@ class ReportePersonalController extends Controller
         // ── Bloque de estadísticas ────────────────────────────
         $bloquesStats = [
             'A' => 'B',  // Generado
-            'C' => 'D',  // Vigentes
+            'C' => 'D',  // Personal evaluado
             'E' => 'F',  // Foto OK
             'G' => 'H',  // DNI completo
-            'I' => 'J',  // Incompletos
-            'K' => 'M',  // Últ. escaneo
+            'I' => 'O',  // Incompletos
         ];
-        $etiquetas = ['Generado', 'Vigentes', 'Foto OK', 'DNI completo', 'Incompletos', 'Últ. escaneo de archivos'];
+        $etiquetas = ['Generado', 'Personal evaluado', 'Foto OK', 'DNI completo', 'Incompletos'];
 
-        $total = max($stats['vigentes'], 1);
+        $total = max($stats['personal'], 1);
         $valores = [
             $stats['generado'],
-            number_format($stats['vigentes'], 0, ',', '.'),
+            number_format($stats['personal'], 0, ',', '.'),
             number_format($stats['foto_ok'], 0, ',', '.') . '  (' . number_format($stats['foto_ok'] / $total * 100, 1, ',', '.') . '%)',
             number_format($stats['dni_ok'],  0, ',', '.') . '  (' . number_format($stats['dni_ok'] / $total * 100, 1, ',', '.') . '%)',
             number_format($stats['faltan'],  0, ',', '.'),
-            $stats['scan_at'],
         ];
 
         $indice = 0;
@@ -1137,6 +1343,8 @@ class ReportePersonalController extends Controller
                 $d['sucursal'],
                 $d['tipo'],
                 $d['cargo'],
+                $d['ingreso_solmar'],
+                $d['ingreso_planilla'],
                 $d['foto_txt'],
                 $d['dni_txt'],
                 $d['reg'],
@@ -1163,15 +1371,17 @@ class ReportePersonalController extends Controller
             $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
             // Columnas cortas centradas (6 rangos en vez de 1.135 x 6)
-            foreach (['A', 'D', 'H', 'I', 'K', 'M'] as $col) {
+            foreach (['A', 'D', 'H', 'I', 'J', 'L', 'N', 'O'] as $col) {
                 $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()
                      ->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
+            $hoja->getStyle('B' . $filaInicial . ':B' . $filaFinal)->getAlignment()
+                 ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
             // Estados correctos en verde; abajo se sobrescriben las excepciones
-            $hoja->getStyle('H' . $filaInicial . ':' . 'H' . $filaFinal)
+            $hoja->getStyle('J' . $filaInicial . ':' . 'J' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
-            $hoja->getStyle('I' . $filaInicial . ':' . 'I' . $filaFinal)
+            $hoja->getStyle('K' . $filaInicial . ':' . 'K' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
 
             // Solo las filas con documentos faltantes: relleno ámbar + color
@@ -1187,8 +1397,8 @@ class ReportePersonalController extends Controller
                     default                         => 'B45309',
                 };
 
-                $hoja->getStyle('H' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorFoto);
-                $hoja->getStyle('I' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorDni);
+                $hoja->getStyle('J' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorFoto);
+                $hoja->getStyle('K' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorDni);
             }
         }
 
@@ -1219,14 +1429,15 @@ class ReportePersonalController extends Controller
      * Devuelve la ruta temporal del .xlsx generado con el personal que tiene
      * hijos menores de edad sin el DNI (anverso/reverso) cargado.
      */
-    private function generarExcelDniHijos(array $filas, array $stats): string
+    private function generarExcelDniHijos(array $filas, array $stats, string $titulo): string
     {
         $columnas = [
             'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Sucursal',
-            'Tipo', 'Cargo', 'Hijos <18', 'Anverso', 'Reverso', 'Sin imagen',
+            'Tipo', 'Cargo', 'Fecha de ingreso a Solmar', 'Fecha de ingreso a planillas',
+            'Asignación familiar', 'Hijos <18', 'Anverso', 'Reverso', 'Sin imagen',
             'Detalle de faltantes',
         ];
-        $ultima = 'L';
+        $ultima = 'O';
 
         $ss   = new Spreadsheet();
         $hoja = $ss->getActiveSheet();
@@ -1234,7 +1445,7 @@ class ReportePersonalController extends Controller
         $hoja->setShowGridlines(false);
 
         // ── Anchos de columna ─────────────────────────────────────────────
-        $anchos = [6, 16, 34, 15, 16, 20, 26, 11, 11, 11, 11, 64];
+        $anchos = [6, 16, 34, 15, 16, 20, 26, 20, 23, 20, 11, 11, 11, 11, 82];
         foreach ($anchos as $i => $ancho) {
             $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
         }
@@ -1254,12 +1465,13 @@ class ReportePersonalController extends Controller
         // ── Encabezado ────────────────────────────────────────────────────
         $hoja->getRowDimension(1)->setRowHeight(64);
         $hoja->mergeCells('C1:' . $ultima . '1');
-        $hoja->setCellValue('C1', 'REPORTE DE DNI DE HIJOS MENORES DE EDAD PENDIENTES');
-        $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(14)
+        $hoja->setCellValue('C1', $titulo);
+        $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(12)
               ->getColor()->setRGB('990000');
         $hoja->getStyle('C1')->getAlignment()
               ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-              ->setVertical(Alignment::VERTICAL_CENTER);
+              ->setVertical(Alignment::VERTICAL_CENTER)
+              ->setWrapText(true);
 
         $hoja->mergeCells('C2:' . $ultima . '2');
         $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
@@ -1276,7 +1488,7 @@ class ReportePersonalController extends Controller
             'E' => 'F',  // Con DNI completo
             'G' => 'H',  // Con faltantes
             'I' => 'J',  // Hijos <18
-            'K' => 'L',  // Últ. escaneo
+            'K' => 'O',  // Últ. escaneo
         ];
         $etiquetas = [
             'Generado', 'Personal evaluado', 'Sin faltantes',
@@ -1357,6 +1569,9 @@ class ReportePersonalController extends Controller
                 $d['sucursal'],
                 $d['tipo'],
                 $d['cargo'],
+                $d['ingreso_solmar'],
+                $d['ingreso_planilla'],
+                $d['asignacion_familiar'],
                 $d['total'],
                 $d['anverso_txt'],
                 $d['reverso_txt'],
@@ -1378,15 +1593,17 @@ class ReportePersonalController extends Controller
             $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
             // Columnas cortas centradas
-            foreach (['A', 'D', 'H', 'I', 'J', 'K'] as $col) {
+            foreach (['A', 'D', 'H', 'I', 'J', 'K', 'L', 'M', 'N'] as $col) {
                 $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()
                      ->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
+            $hoja->getStyle('B' . $filaInicial . ':B' . $filaFinal)->getAlignment()
+                 ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
             // Semáforo de Anverso/Reverso: Sí = verde, No = rojo.
-            $hoja->getStyle('I' . $filaInicial . ':' . 'I' . $filaFinal)
+            $hoja->getStyle('L' . $filaInicial . ':' . 'L' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
-            $hoja->getStyle('J' . $filaInicial . ':' . 'J' . $filaFinal)
+            $hoja->getStyle('M' . $filaInicial . ':' . 'M' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
 
             // Fondo: rojo claro si algún hijo quedó sin ninguna imagen,
@@ -1398,14 +1615,14 @@ class ReportePersonalController extends Controller
                      ->setFillType(Fill::FILL_SOLID)
                      ->getStartColor()->setRGB($d['sin'] > 0 ? 'FEE2E2' : 'FEF3C7');
 
-                $hoja->getStyle('I' . $f)->getFont()->setBold(true)
+                $hoja->getStyle('L' . $f)->getFont()->setBold(true)
                      ->getColor()->setRGB($d['anverso_txt'] === 'No' ? 'B91C1C' : '15803D');
 
-                $hoja->getStyle('J' . $f)->getFont()->setBold(true)
+                $hoja->getStyle('M' . $f)->getFont()->setBold(true)
                      ->getColor()->setRGB($d['reverso_txt'] === 'No' ? 'B91C1C' : '15803D');
 
                 if ((int) $d['sin'] > 0) {
-                    $hoja->getStyle('K' . $f)->getFont()->setBold(true)->getColor()->setRGB('B91C1C');
+                    $hoja->getStyle('N' . $f)->getFont()->setBold(true)->getColor()->setRGB('B91C1C');
                 }
             }
         }
@@ -1472,13 +1689,17 @@ class ReportePersonalController extends Controller
 
     private function formatFecha($valor): string
     {
-        if (empty($valor)) return '—';
-        $str = trim((string) $valor);
-        if (preg_match('/^(\d{4})(\d{2})(\d{2})$/', $str, $m))
-            return "{$m[3]}/{$m[2]}/{$m[1]}";
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $str, $m))
-            return "{$m[3]}/{$m[2]}/{$m[1]}";
-        return $str;
+        if ($valor === null || $valor === '') return '—';
+
+        try {
+            $fecha = $valor instanceof \DateTimeInterface
+                ? $valor
+                : new \DateTime(trim((string) $valor));
+
+            return $fecha->format('d/m/Y');
+        } catch (\Throwable) {
+            return trim((string) $valor);
+        }
     }
 
     private function calcularEdad($fechNaci): string

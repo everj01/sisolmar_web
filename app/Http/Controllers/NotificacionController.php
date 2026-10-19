@@ -137,12 +137,18 @@ public function getDemandasAdmin()
         ]);
     }
 
+    /**
+     * Atiende una notificación SIP desde la campanita.
+     * La archiva (habilitado = 0); NO la borra, para conservar el historial.
+     * Siempre responde success: si ya estaba archivada (doble clic) también
+     * debe quitarse de la campanita.
+     */
     public function deleteDemandaAdmin(Request $request)
     {
         $id = $request->input('id');
-        $deleted = NotificacionModel::borrarDemanda($id);
+        $archivadas = NotificacionModel::archivarDemanda($id);
 
-        return response()->json(['success' => $deleted > 0]);
+        return response()->json(['success' => true, 'archivadas' => $archivadas]);
     }
 
 }

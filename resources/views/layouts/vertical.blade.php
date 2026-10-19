@@ -263,14 +263,14 @@
                                     toast.style.cssText = "background: white; border-left: 5px solid #3b82f6; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 320px; position: relative; opacity: 0; transform: translateX(100%); transition: all 0.4s ease;";
                                     
                                     toast.innerHTML = `
-                                        <button onclick="cerrarToastSip('${demanda.id}')" style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #9ca3af; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
+                                        <button onclick="cerrarToastSip('${demanda.id}')" title="Ocultar por ahora (se mostrará de nuevo en el próximo inicio de sesión)" style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #9ca3af; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
                                             <i class="bx bx-x"></i>
                                         </button>
                                         <div style="font-weight:600; margin-bottom:5px; color: #1e3a8a; padding-right: 15px;">
-                                            <i class="bx bx-info-circle"></i> DJ Registrada por SIP
+                                            <i class="bx bx-info-circle"></i> Nueva solicitud desde el SIP
                                         </div>
                                         <div style="font-size:13px; color: #4b5563; line-height: 1.4;">
-                                            El personal <b>${demanda.personal}</b> ha registrado su DJ por demanda.
+                                            El personal <b>${demanda.personal}</b> ha enviado una nueva solicitud desde el SIP para actualizar sus datos.
                                         </div>
                                     `;
 
@@ -294,11 +294,11 @@
                                                 <i class="bx bx-info-circle text-lg"></i>
                                             </div>
                                             <div class="flex flex-col">
-                                                <span class="text-sm font-bold text-gray-700">DJ por SIP</span>
-                                                <span class="text-[11px] text-gray-500"><b>${demanda.personal}</b> Actualizó DJ (Demanda)</span>
+                                                <span class="text-sm font-bold text-gray-700">Solicitud SIP</span>
+                                                <span class="text-[11px] text-gray-500"><b>${demanda.personal}</b> Solicitó actualizar sus datos (SIP)</span>
                                             </div>
                                         </div>
-                                        <button onclick="event.stopPropagation(); borrarDemandaSip('${demanda.id}')" class="text-gray-400 hover:text-red-500 px-2" title="Descartar">
+                                        <button onclick="event.stopPropagation(); borrarDemandaSip('${demanda.id}')" class="text-gray-400 hover:text-red-500 px-2" title="Marcar como atendida (ya no volverá a aparecer)">
                                             <i class="bx bx-x text-lg"></i>
                                         </button>
                                     `;
@@ -319,7 +319,22 @@
                     .catch(error => console.error('Error revisando demandas del SIP:', error));
             }
 
-            // Función para ELIMINAR definitivamente de la base de datos (Desde la Campanita)
+            // ── CERRAR EL POP-UP: solo lo oculta en esta sesión ──
+            // La notificación NO se borra: sigue en la campanita y volverá a
+            // popupear en el PRÓXIMO LOGIN hasta que alguien la atienda desde
+            // la campanita. Por eso NO se saca de `notificacionesMostradas`.
+            window.cerrarToastSip = function(id) {
+                const toast = document.getElementById(`demanda-toast-${id}`);
+                if (!toast) return;
+
+                toast.style.opacity = "0";
+                toast.style.transform = "translateX(100%)";
+                setTimeout(() => toast.remove(), 400);
+            };
+
+            // ── ATENDER DESDE LA CAMPANITA: archiva la notificación ──
+            // Pone habilitado = 0 en la BD (NO borra la fila, se conserva el
+            // historial) y la quita del popup y de la campanita para siempre.
             window.borrarDemandaSip = function(id) {
                 fetch("{{ url('/api/notificaciones/demandas-admin/borrar') }}", {
                     method: 'POST',
@@ -332,13 +347,8 @@
                 .then(response => response.json())
                 .then(data => {
                     if(data.success) {
-                        const toast = document.getElementById(`demanda-toast-${id}`);
-                        if (toast) {
-                            toast.style.opacity = "0";
-                            toast.style.transform = "translateX(100%)";
-                            setTimeout(() => toast.remove(), 400);
-                        }
-                        
+                        window.cerrarToastSip(id);
+
                         const itemCampana = document.getElementById(`campana-demanda-${id}`);
                         if (itemCampana) {
                             itemCampana.remove();
@@ -351,13 +361,7 @@
                         notificacionesMostradas.delete(id);
                     }
                 })
-                .catch(err => console.error('Error al borrar la notificación', err));
-            };
-
-            // Función para CERRAR el pop-up: descarta la notificación definitivamente
-            // (se elimina de la BD y ya no vuelve a aparecer en ningún login)
-            window.cerrarToastSip = function(id) {
-                window.borrarDemandaSip(id);
+                .catch(err => console.error('Error al atender la notificación', err));
             };
 
             setInterval(checkDemandasAdmin, 5000); 

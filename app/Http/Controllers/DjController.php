@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ExcepcionEdadMail;
+use App\Models\NotificacionModel;
 
 class DjController extends Controller
 {
@@ -1370,6 +1371,26 @@ class DjController extends Controller
             WHERE CODI_PERS = ?',
                 [$codiPers]
             );
+
+            // ✅ 1.5. NOTIFICACIÓN SIP ATENDIDA ──────────────────────────────
+            // Cuando una solicitud llega desde el SIP, aparece en el popup y en
+            // la campanita para todo el equipo. Aquí se archiva sola en cuanto
+            // alguien la valida y guarda desde ACTUALIZAR DJ.
+            //
+            // `origen` lo envía únicamente actualizar_dj.js, así que sirve para
+            // distinguir pantallas: una edición desde Gestión DJ NO archiva.
+            // Se acepta también `cambios` como respaldo para los navegadores que
+            // todavía tengan en caché el bundle JS anterior (sin el flag).
+            if (($data['origen'] ?? '') === 'actualizar_dj' || array_key_exists('cambios', $data)) {
+                $notifsAtendidas = NotificacionModel::archivarNotificacionesDePersonal($codiPers);
+                if ($notifsAtendidas > 0) {
+                    Log::info('NotificacionSIP: archivada automáticamente al validar en Actualizar DJ', [
+                        'CODI_PERS'     => $codiPers,
+                        'notificaciones' => $notifsAtendidas,
+                        'usuario'       => session('usuario'),
+                    ]);
+                }
+            }
 
             // ✅ 2. INSERTAR/ACTUALIZAR DIRECTAMENTE en DJ2026_PERSONAL
             // Fecha Ingreso a Solmar: editable SOLO para Admins RRHH (tipo_rol 17);

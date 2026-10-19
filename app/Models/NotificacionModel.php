@@ -80,50 +80,101 @@ class NotificacionModel extends Model
 
 public static function obtenerDemandasNuevas()
     {
-        $columnaPersonal = 'codigoPers'; 
-
-        try {
-            return DB::table('sw_dj_notificaciones_act as n')
-                ->join('sw_MIGRA_PERSONAL as p', function ($join) use ($columnaPersonal) {
-                    $join->whereRaw("
-                        (TRY_CAST(n.$columnaPersonal AS INT) = TRY_CAST(p.CODI_PERS AS INT) AND TRY_CAST(n.$columnaPersonal AS INT) IS NOT NULL)
-                        OR
-                        (n.$columnaPersonal COLLATE DATABASE_DEFAULT = p.CODI_PERS COLLATE DATABASE_DEFAULT AND TRY_CAST(n.$columnaPersonal AS INT) IS NULL)
-                    ");
-                })
-                ->select(
-                    'n.id', 
-                    DB::raw("CONCAT(p.APEL_1 COLLATE DATABASE_DEFAULT, ' ', p.APEL_2 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_1 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_2 COLLATE DATABASE_DEFAULT) as personal")
-                )
-                ->where('n.tipo', 'demanda') // <--- Devolvemos el filtro original aquí
-                ->where('p.tipo_actualizacion', 'demanda')
-                ->get();
-        } catch (\Exception $e) {
-            return DB::table('sw_dj_notificaciones_act as n')
-                ->join('sw_MIGRA_PERSONAL as p', function ($join) use ($columnaPersonal) {
-                    $join->whereRaw("
-                        (TRY_CAST(n.$columnaPersonal AS INT) = TRY_CAST(p.CODI_PERS AS INT) AND TRY_CAST(n.$columnaPersonal AS INT) IS NOT NULL)
-                        OR
-                        (n.$columnaPersonal COLLATE DATABASE_DEFAULT = p.CODI_PERS COLLATE DATABASE_DEFAULT AND TRY_CAST(n.$columnaPersonal AS INT) IS NULL)
-                    ");
-                })
-                ->select(
-                    'n.codigo as id', 
-                    DB::raw("CONCAT(p.APEL_1 COLLATE DATABASE_DEFAULT, ' ', p.APEL_2 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_1 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_2 COLLATE DATABASE_DEFAULT) as personal")
-                )
-                ->where('n.tipo', 'demanda') // <--- Y aquí también
-                ->where('p.tipo_actualizacion', 'demanda')
-                ->get();
-        }
+        // Cada fila de sw_dj_notificaciones_act es una DJ registrada desde el SIP
+        // (tipo 'anual' o 'demanda'), o sea una NUEVA SOLICITUD de actualización de
+        // datos. NO se filtra por `tipo` ni por `tipo_actualizacion`: antes lo hacía
+        // y en la práctica el popup devolvía 0 notificaciones aunque hubiera filas
+        // pendientes (en la BD todas eran tipo 'anual').
+        //
+        // 'n.codigo as id' (antes 'n.id'): la columna de la tabla es `codigo`, no
+        // `id`. Seleccionar `n.id` lanzaba SQLSTATE[42S22] en CADA consulta y un
+        // try/catch con una copia idéntica del query la tragaba en silencio.
+        //
+        // LEFT JOIN + COALESCE: si el personal no está en sw_MIGRA_PERSONAL, la
+        // notificación AUN ASÍ se muestra, usando el código como nombre. Antes un
+        // INNER JOIN la descartaba en silencio.
+        return DB::table('sw_dj_notificaciones_act as n')
+            ->leftJoin('sw_MIGRA_PERSONAL as p', function ($join) {
+                $join->whereRaw("
+                    (TRY_CAST(n.codigoPers AS INT) = TRY_CAST(p.CODI_PERS AS INT) AND TRY_CAST(n.codigoPers AS INT) IS NOT NULL)
+                    OR
+                    (n.codigoPers COLLATE DATABASE_DEFAULT = p.CODI_PERS COLLATE DATABASE_DEFAULT AND TRY_CAST(n.codigoPers AS INT) IS NULL)
+                ");
+            })
+            // DISTINCT: sw_MIGRA_PERSONAL puede tener CODI_PERS repetidos y el
+            // JOIN multiplicaría la misma notificación varias veces.
+            ->distinct()
+            ->select(
+                'n.codigo as id',
+                'n.codigoPers',
+                // DISTINCT + SQL Server exige que el ORDER BY también esté en el SELECT
+                'n.fecha_creacion',
+                DB::raw("COALESCE(
+                    NULLIF(LTRIM(RTRIM(CONCAT(p.APEL_1 COLLATE DATABASE_DEFAULT, ' ', p.APEL_2 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_1 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_2 COLLATE DATABASE_DEFAULT))), ''),
+                    'Personal ' + LTRIM(RTRIM(n.codigoPers))
+                ) as personal")
+            )
+            // Solo las notificaciones vigentes: `habilitado = 0` significa que ya
+            // fueron atendidas desde la campanita y no deben volver a aparecer.
+            ->where('n.habilitado', 1)
+            ->orderBy('fecha_creacion', 'desc')
+            ->get();
     }
 
-    public static function borrarDemanda($id)
+    /**
+     * Marca una notificación como ATENDIDA (habilitado = 0).
+     *
+     * NO borra la fila: se conserva el historial. Simplemente deja de aparecer
+     * en el popup y en la campanita. Antes aquí se hacía un DELETE sobre la
+     * columna `id`, que no existe (es `codigo`), así que siempre lanzaba una
+     * excepción y el catch repetía el borrado físico.
+     */
+    public static function archivarDemanda($id)
     {
-        try {
-            return DB::table('sw_dj_notificaciones_act')->where('id', $id)->delete();
-        } catch (\Exception $e) {
-            return DB::table('sw_dj_notificaciones_act')->where('codigo', $id)->delete();
+        return DB::table('sw_dj_notificaciones_act')
+            ->where('codigo', $id)
+            ->update([
+                'habilitado'         => 0,
+                // Auditoría: quién la atendió (escape manual desde la campanita)
+                'atendida_por'       => session('usuario'),
+                // GETDATE() en vez de now(): con sesión SQL Server en español, el
+                // string que arma Carbon para un datetime se interpreta mal y lanza
+                // SQLSTATE[22007] ("valor fuera de intervalo").
+                'fecha_modificacion' => DB::raw('GETDATE()'),
+            ]);
+    }
+
+    /**
+     * Archiva TODAS las notificaciones SIP pendientes de una persona.
+     *
+     * Se llama desde DjController::saveDjCompleto() cuando se procesa/guarda la
+     * DJ: el trabajo ya se hizo, así que la notificación deja de popupear para
+     * todo el equipo. Nadie tiene que recordar darle X a la campanita.
+     *
+     * Devuelve el número de notificaciones archivadas (0 si no había ninguna).
+     */
+    public static function archivarNotificacionesDePersonal($codiPers)
+    {
+        $codiPers = trim((string) $codiPers);
+        if ($codiPers === '') {
+            return 0;
         }
+
+        return DB::table('sw_dj_notificaciones_act')
+            ->where('habilitado', 1)
+            // codigoPers es `char` y CODI_PERS no coincide de tipo, así que se
+            // compara igual que en el LEFT JOIN de obtenerDemandasNuevas():
+            // numérico si ambos se pueden convertir, COLLATE si no.
+            ->whereRaw("
+                (TRY_CAST(codigoPers AS INT) = TRY_CAST(? AS INT) AND TRY_CAST(codigoPers AS INT) IS NOT NULL)
+                OR
+                (codigoPers COLLATE DATABASE_DEFAULT = ? COLLATE DATABASE_DEFAULT AND TRY_CAST(codigoPers AS INT) IS NULL)
+            ", [$codiPers, $codiPers])
+            ->update([
+                'habilitado'         => 0,
+                'atendida_por'       => session('usuario'),
+                'fecha_modificacion' => DB::raw('GETDATE()'),
+            ]);
     }
 
 }

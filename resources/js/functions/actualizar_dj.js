@@ -4005,6 +4005,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const payload = {
                     ...data,
                     cambios: cambios,
+                    // Discrimina esta pantalla de Gestión DJ: el backend archiva la
+                    // notificación SIP solo cuando el guardado viene de aquí.
+                    origen: 'actualizar_dj',
                     source: tabActiva,
                     no_caduca_dni: data.no_caduca_dni === 'on' ? '1' : '0',
                     FAM_PARENTESCO: formData.getAll('parentesco[]'),

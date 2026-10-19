@@ -19,6 +19,26 @@ use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
+    public function indexReportesDj()
+    {
+        $sucursales = FileControl::getSucursales();
+        $tiposPersonal = DB::select(
+            'SELECT TIPE_CODIGO AS codigo, TIPE_DESCRIPCION AS nombre
+             FROM si_solm.dbo.ADMI_TIPO_PERSONAL
+             WHERE TIPE_CODIGO <> ?
+             ORDER BY TIPE_DESCRIPCION'
+            , ['06']
+        );
+        $cargosDj = DB::select(
+            "SELECT CODI_CARG AS codigo, DESC_CARGO AS nombre, CARGO_TIPO AS tipo
+             FROM si_solm.dbo.CARGOS WITH (NOLOCK)
+             WHERE CARG_VIGENCIA = 'SI' AND DESC_CARGO IS NOT NULL
+             ORDER BY DESC_CARGO"
+        );
+
+        return view('file_control.reportes_dj', compact('sucursales', 'tiposPersonal', 'cargosDj'));
+    }
+
     public function index()
     {
         $personal = FileControl::getPersonal();

@@ -280,23 +280,6 @@
                                      <i class='bx bx-file-find text-base'></i>
                                      <span>Reporte General</span>
                                  </button>
-
-                                 {{-- Reporte de documentos: solo ADMINS RRHH (17) y SUPERUSUARIO (11) --}}
-                                 @if($tipoUsuario == 17 || $tipoUsuario == 11)
-                                 <button type="button" id="btnDocsPendientes"
-                                     title="Personal vigente que aún no tiene foto o DNI. Se revisa en cada clic contra el servidor de imágenes."
-                                     class="hs-dropdown-close w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-warning/15 hover:text-warning transition-colors">
-                                     <i class='bx bx-download text-base'></i>
-                                     <span>Sin foto / DNI</span>
-                                 </button>
-
-                                 <button type="button" id="btnDniHijosPendientes"
-                                     title="Personal vigente con hijos menores de edad sin DNI cargado (anverso/reverso). Se revisa en cada clic contra el servidor de imágenes."
-                                     class="hs-dropdown-close w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-warning/15 hover:text-warning transition-colors">
-                                     <i class='bx bx-group text-base'></i>
-                                     <span>DNI de hijos</span>
-                                 </button>
-                                 @endif
                              </div>
                          </div>
                      </div>
