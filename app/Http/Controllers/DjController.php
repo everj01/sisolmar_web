@@ -2387,9 +2387,17 @@ class DjController extends Controller
                 'correo'       => $correo,
             ];
 
-            Mail::mailer('sip')->to($correo)->send(new \App\Mail\BienvenidaSipMail($datos));
+            // Copia a Control de Archivo: si la carta le llega al usuario, también
+            // les llega a ellos. (El valor por defecto está en config/mail.php → sip_cc,
+            // por si la configuración cacheada no tuviera esa clave.)
+            $ccSip = config('mail.sip_cc') ?: ['filecontrol@solsecurity.pe'];
 
-            Log::info('BienvenidaSip: correo enviado exitosamente.', ['dni' => $dni, 'correo' => $correo]);
+            Mail::mailer('sip')
+                ->to($correo)
+                ->cc($ccSip)
+                ->send(new \App\Mail\BienvenidaSipMail($datos));
+
+            Log::info('BienvenidaSip: correo enviado exitosamente.', ['dni' => $dni, 'correo' => $correo, 'cc' => $ccSip]);
         } catch (\Exception $e) {
             Log::error('BienvenidaSip: error en el proceso: ' . $e->getMessage(), ['dni' => $dni, 'codiPers' => $codiPers]);
         }
@@ -4142,6 +4150,70 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
  
+            // ── Documentos obligatorios: foto del personal + DNI (anverso y reverso) ──
+            // MISMA REGLA que saveNuevaDj: sin foto/DNI no se recontrata.
+            // Diferencia: aquí la persona ya pudo haber dejado imágenes del contrato
+            // anterior, así que se exige solo lo que FALTE en el servidor de archivos
+            // (mismo criterio que saveDjCompleto). Si el servidor de archivos no
+            // responde no se bloquea el guardado. Los usuarios con
+            // "exento_validaciones" no están obligados a adjuntarlos.
+            $exentoValidaciones = in_array('exento_validaciones', session('funcionalidades', []));
+            $fotoReq            = $request->file('foto');
+            $dniAnversoReq      = $request->file('dni_anverso');
+            $dniReversoReq      = $request->file('dni_reverso');
+
+            if (!$exentoValidaciones) {
+                $estadoFoto = $this->fotoPersonalEnServidor($codiPers);
+                $estadoDni  = $this->dniPersonalEnServidor($codiPers);
+
+                $faltaFoto = ($estadoFoto === false && !$fotoReq);
+
+                $faltanLados = [];
+                if ($estadoDni['consultado']) {
+                    if (!$estadoDni['anverso'] && !$dniAnversoReq) $faltanLados[] = 'anverso';
+                    if (!$estadoDni['reverso'] && !$dniReversoReq) $faltanLados[] = 'reverso';
+                }
+
+                $faltanPartes = [];
+                if ($faltaFoto)           $faltanPartes[] = 'foto del personal';
+                if (!empty($faltanLados)) $faltanPartes[] = 'foto del DNI';
+
+                if (!empty($faltanPartes)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success'        => false,
+                        'code'           => $faltaFoto ? 'falta_foto' : 'falta_dni',
+                        'message'        => 'Falta ingresar ' . implode(' y ', $faltanPartes) . '.',
+                        'falta_foto'     => $faltaFoto,
+                        'falta_anverso'  => in_array('anverso', $faltanLados, true),
+                        'falta_reverso'  => in_array('reverso', $faltanLados, true),
+                    ], 422);
+                }
+            }
+
+            foreach ([$fotoReq, $dniAnversoReq, $dniReversoReq] as $archivo) {
+                if (!$archivo) {
+                    continue;
+                }
+                $extension = strtolower((string) $archivo->getClientOriginalExtension());
+                if (!in_array($extension, ['jpg', 'jpeg'], true)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'documento_invalido',
+                        'message' => 'La foto del personal y la del DNI deben ser imágenes JPG.',
+                    ], 422);
+                }
+                if ($archivo->getSize() > 10 * 1024 * 1024) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'documento_invalido',
+                        'message' => 'Cada imagen no debe superar los 10 MB.',
+                    ], 422);
+                }
+            }
+
             $str2 = fn($v) => strtoupper(substr(trim($v ?? ''), 0, 2));
             $str1 = fn($v) => strtoupper(substr(trim($v ?? ''), 0, 1));
             $trim = fn($v) => strlen(trim($v ?? '')) ? trim($v) : null;
@@ -4278,6 +4350,15 @@ $tipotrab    = $tipoPer;
             $this->aplicarScrt($codiPers, $data);
             $this->aplicarAsigFami($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
+
+            // ── Subir foto y DNI al servidor de archivos ──────────────────
+            // MISMO FLUJO que saveNuevaDj: si el servidor de archivos falla NO
+            // se bloquea la recontratación; se guarda igual y se avisa qué
+            // quedó pendiente de subir (foto_pendiente / dni_pendiente).
+            $subidaFoto    = $this->subirFotoAlServidor($codiPers, $fotoReq);
+            $subidaDni     = $this->subirDniAlServidor($codiPers, $dniAnversoReq, $dniReversoReq);
+            $fotoPendiente = !$subidaFoto['ok'];
+            $dniPendiente  = !$subidaDni['ok'];
  
             DB::commit();
  
@@ -4288,10 +4369,19 @@ $tipotrab    = $tipoPer;
                 $this->enviarCorreoBienvenidaSip($data, $personal->NRO_DOCU_IDEN, $codiPers);
             }
  
+            $pendientesMsg = [];
+            if ($fotoPendiente) $pendientesMsg[] = 'la foto del personal';
+            if ($dniPendiente)  $pendientesMsg[] = 'el DNI';
+
             return response()->json([
-                'success'   => true,
-                'message'   => 'Recontratación realizada correctamente. El personal está VIGENTE nuevamente.',
-                'codi_pers' => $codiPers,
+                'success'        => true,
+                'message'        => !empty($pendientesMsg)
+                    ? 'Recontratación realizada correctamente, pero ' . implode(' y ', $pendientesMsg) . ' quedó pendiente de subir.'
+                    : 'Recontratación realizada correctamente. El personal está VIGENTE nuevamente.',
+                'codi_pers'      => $codiPers,
+                'foto_pendiente' => $fotoPendiente,
+                'dni_pendiente'  => $dniPendiente,
+                'dni_faltan'     => $subidaDni['faltan'],
             ]);
  
         } catch (\Exception $e) {

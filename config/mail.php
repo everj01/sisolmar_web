@@ -125,6 +125,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Copia de la carta de bienvenida SIP
+    |--------------------------------------------------------------------------
+    |
+    | Destinatarios que reciben SIEMPRE una copia de la carta de bienvenida SIP
+    | (se envía a la vez que la copia al usuario). Se pueden indicar varios
+    | separados por coma en MAIL_SIP_CC, p. ej.: "a@sol.pe,b@sol.pe".
+    |
+    */
+
+    'sip_cc' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('MAIL_SIP_CC', 'filecontrol@solsecurity.pe'))
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |
