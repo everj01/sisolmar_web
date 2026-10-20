@@ -248,6 +248,23 @@ function getValue(id) {
     return el ? (el.value || '--') : '--';
 }
 
+// Ajusta un texto dentro de un ancho de celda: primero reduce la fuente y,
+// si aun asi no cabe, trunca con "..." para que nunca se superponga a la celda vecina.
+// El caller debe fijar la fuente (setFont/setFontSize) antes de llamar.
+function fitCellText(pdf, text, maxWidth, maxFontSize = 8, minFontSize = 5) {
+    let str = String(text ?? "");
+    if (!str || maxWidth <= 0) return "";
+    let size = maxFontSize;
+    pdf.setFontSize(size);
+    while (pdf.getTextWidth(str) > maxWidth && size > minFontSize) {
+        size -= 0.2;
+        pdf.setFontSize(size);
+    }
+    if (pdf.getTextWidth(str) <= maxWidth) return str;
+    while (pdf.getTextWidth(str + "...") > maxWidth && str.length > 1) str = str.slice(0, -1);
+    return str + "...";
+}
+
 function getCleanSelectText(id) {
     const el = document.getElementById(id);
     if (!el) return "";
@@ -339,7 +356,13 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             while (pdf.getTextWidth(label) > maxLabelW && lblSize > 5) {
                 lblSize -= 0.2; pdf.setFontSize(lblSize);
             }
-            pdf.text(label, x + 1, fieldY + inputHeight / 2 + 1, { align: "left" });
+            // Si aun asi no cabe, truncar para no invadir la celda del valor
+            let lblText = label;
+            if (pdf.getTextWidth(lblText) > maxLabelW) {
+                while (pdf.getTextWidth(lblText + "...") > maxLabelW && lblText.length > 1) lblText = lblText.slice(0, -1);
+                lblText += "...";
+            }
+            pdf.text(lblText, x + 1, fieldY + inputHeight / 2 + 1, { align: "left" });
 
             pdf.setFont(FONT_FAMILY, boldValue ? "bold" : "normal"); pdf.setTextColor(...colors.inputText);
             const maxValW     = valueWidth - (alignValue === "center" ? 1 : 2);
@@ -386,7 +409,7 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             pdf.setFont(FONT_FAMILY, "normal"); pdf.setTextColor(0);
             const lblFontSize = fitText(label, labelW - 2, 7.5, 5);
             pdf.setFontSize(lblFontSize);
-            pdf.text(label, x + labelW / 2, yPos + h / 2 + 1, { align: "center" });
+            pdf.text(fitCellText(pdf, label, labelW - 2, lblFontSize, 5), x + labelW / 2, yPos + h / 2 + 1, { align: "center" });
             pdf.setFont(FONT_FAMILY, "normal");
             if (!value) return;
             const maxValW = valW - 2;
@@ -721,9 +744,10 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             pdf.line(boxX + fmC1,         y, boxX + fmC1,         y + rowH);
             pdf.line(boxX + fmC1 + fmC2,  y, boxX + fmC1 + fmC2,  y + rowH);
             pdf.setFont(FONT_FAMILY, "normal"); pdf.setFontSize(8); pdf.setTextColor(0);
-            pdf.text(par.toUpperCase(), boxX + 2,               y + rowH / 2 + 1);
-            pdf.text(nom.toUpperCase(), boxX + fmC1 + 2,        y + rowH / 2 + 1);
-            pdf.text(fec,               boxX + fmC1 + fmC2 + 2, y + rowH / 2 + 1);
+            // Encoger/truncar para que el texto nunca cruce los separadores de columna
+            pdf.text(fitCellText(pdf, par.toUpperCase(), fmC1 - 4, 8, 5), boxX + 2,               y + rowH / 2 + 1);
+            pdf.text(fitCellText(pdf, nom.toUpperCase(), fmC2 - 4, 8, 5), boxX + fmC1 + 2,        y + rowH / 2 + 1);
+            pdf.text(fitCellText(pdf, fec,               fmC3 - 4, 8, 5), boxX + fmC1 + fmC2 + 2, y + rowH / 2 + 1);
             y += rowH;
         }
  
@@ -839,9 +863,9 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
  
         pdf.setTextColor(0); pdf.setFont(FONT_FAMILY, "normal"); pdf.setFontSize(7.5);
         pdf.text("Fecha de la declaración", boxX + 2,            footerY + footerRowH / 2 + 1);
-        pdf.text(formatDateToDMY(new Date()), boxX + fechaW + 2,  footerY + footerRowH / 2 + 1);
+        pdf.text(fitCellText(pdf, formatDateToDMY(new Date()), fechaValW - 4, 7.5, 5), boxX + fechaW + 2,  footerY + footerRowH / 2 + 1);
         pdf.text("Nombre",                   nombreLabelStart + 2, footerY + footerRowH / 2 + 1);
-        pdf.text(nombres,                     nombreLabelEnd + 2,   footerY + footerRowH / 2 + 1);
+        pdf.text(fitCellText(pdf, nombres, (boxX + boxWidth) - nombreLabelEnd - 4, 7.5, 5), nombreLabelEnd + 2, footerY + footerRowH / 2 + 1);
 
         const f = new Date();
         const fechaHora = f.getFullYear() + String(f.getMonth()+1).padStart(2,'0') + String(f.getDate()).padStart(2,'0')
@@ -940,7 +964,7 @@ export async function generarReporteFaltantesPDF(data, todosLosDatos = null) {
     function drawTableHeader() {
         pdf.setFillColor(40, 40, 40); pdf.rect(mL, y, usableW, headerH, 'F');
         pdf.setFontSize(7); pdf.setFont(FONT_FAMILY, 'bold'); pdf.setTextColor(255);
-        let hx = mL + 1; cols.forEach(c => { pdf.text(c.header, hx, y + 4.5); hx += c.w; });
+        let hx = mL + 1; cols.forEach(c => { pdf.text(fitCellText(pdf, c.header, c.w - 2, 7, 5), hx, y + 4.5); hx += c.w; });
         y += headerH;
     }
     drawTableHeader();
