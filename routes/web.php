@@ -309,6 +309,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reporte/proxy-imagen', [ReportePersonalController::class, 'proxyImagen']);
             Route::get('/reporte/personal-documentos', [ReportePersonalController::class, 'documentosPendientes']);
             Route::get('/reporte/dni-hijos', [ReportePersonalController::class, 'dniHijosPendientes']);
+            Route::get('/reporte/asignacion-familiar-hijos-mayores', [ReportePersonalController::class, 'asignacionFamiliarHijosMayores']);
+            Route::get('/reporte/personal-sin-dj-escaneada', [ReportePersonalController::class, 'personalSinDjEscaneada']);
             Route::get('/reporte/descargar/{archivo}', [ReportePersonalController::class, 'descargarReporte'])->where('archivo', '.*')->name('reporte.descargar');
             Route::post('/save-recontratacion', [DjController::class, 'saveRecontratacion']);
             Route::post('/upload-foto-personal', [DjController::class, 'uploadFotoPersonal']);

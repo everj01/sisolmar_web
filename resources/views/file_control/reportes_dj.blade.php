@@ -9,7 +9,7 @@
                 <h1 class="text-xl font-semibold text-default-900 dark:text-white">Centro de reportes</h1>
                 <p class="mt-1 text-sm text-default-600 dark:text-slate-400">Busca y selecciona un reporte para configurar sus filtros y exportarlo.</p>
             </div>
-            <span id="reporteDjTotal" class="rounded-full bg-default-100 px-3 py-1 text-xs font-semibold text-default-600 dark:bg-slate-700 dark:text-slate-300">2 reportes</span>
+            <span id="reporteDjTotal" class="rounded-full bg-default-100 px-3 py-1 text-xs font-semibold text-default-600 dark:bg-slate-700 dark:text-slate-300">4 reportes</span>
         </div>
 
         <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -24,17 +24,31 @@
                 <div id="listaReportesDj" class="max-h-[60vh] space-y-2 overflow-y-auto bg-slate-50 p-3 overscroll-contain">
                     <button type="button" data-reporte="sin-foto-dni" class="reporte-dj-opcion w-full rounded-lg border border-default-200 bg-white p-3 text-left transition hover:border-primary-200 hover:bg-primary-50 dark:border-slate-200 dark:bg-white dark:hover:bg-primary-50" aria-pressed="false">
                         <span class="flex items-start justify-between gap-2">
-                            <span class="font-semibold text-default-900 dark:text-white">Personal sin foto o DNI</span>
-                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel</span>
+                            <span class="font-semibold text-default-900 dark:text-white">Personal Sin Foto o DNI</span>
+                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel · PDF</span>
                         </span>
                         <span class="mt-1 block text-xs leading-5 text-default-600 dark:text-slate-400">Personal con foto o documento de identidad pendiente.</span>
                     </button>
                     <button type="button" data-reporte="dni-hijos" class="reporte-dj-opcion w-full rounded-lg border border-default-200 bg-white p-3 text-left transition hover:border-primary-200 hover:bg-primary-50 dark:border-slate-200 dark:bg-white dark:hover:bg-primary-50" aria-pressed="false">
                         <span class="flex items-start justify-between gap-2">
                             <span class="font-semibold text-default-900 dark:text-white">DNI de Hijo Menores de Edad</span>
-                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel</span>
+                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel · PDF</span>
                         </span>
                         <span class="mt-1 block text-xs leading-5 text-default-600 dark:text-slate-400">Hijos menores de edad con DNI pendiente de cargar.</span>
+                    </button>
+                    <button type="button" data-reporte="asig-hijos-mayores" class="reporte-dj-opcion w-full rounded-lg border border-default-200 bg-white p-3 text-left transition hover:border-primary-200 hover:bg-primary-50 dark:border-slate-200 dark:bg-white dark:hover:bg-primary-50" aria-pressed="false">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="font-semibold text-default-900 dark:text-white">Asignación Familiar Con Hijos Mayores De Edad</span>
+                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel · PDF</span>
+                        </span>
+                        <span class="mt-1 block text-xs leading-5 text-default-600 dark:text-slate-400">Personal con asignación familiar y todos sus hijos registrados mayores de edad.</span>
+                    </button>
+                    <button type="button" data-reporte="sin-dj-escaneada" class="reporte-dj-opcion w-full rounded-lg border border-default-200 bg-white p-3 text-left transition hover:border-primary-200 hover:bg-primary-50 dark:border-slate-200 dark:bg-white dark:hover:bg-primary-50" aria-pressed="false">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="font-semibold text-default-900 dark:text-white">Personal sin DJ escaneada</span>
+                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel · PDF</span>
+                        </span>
+                        <span class="mt-1 block text-xs leading-5 text-default-600 dark:text-slate-400">Personal sin registro de carga ni PDF de DJ escaneada en el servidor.</span>
                     </button>
                     <p id="sinReportesDj" class="hidden px-2 py-5 text-center text-sm text-default-500">No se encontraron reportes.</p>
                 </div>
@@ -47,7 +61,7 @@
                     </div>
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="text-lg font-semibold text-default-900 dark:text-white">Personal sin foto o DNI</h2>
+                            <h2 class="text-lg font-semibold text-default-900 dark:text-white">Personal Sin Foto o DNI</h2>
                             <span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel</span>
                         </div>
                         <p class="mt-1 text-sm text-default-600 dark:text-slate-300">Configura los filtros para definir qué personal se incluirá en el reporte.</p>
@@ -104,7 +118,35 @@
                         <button id="btnExportarSinFotoDni" type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
                             <i class="i-ph-file-xls"></i> Exportar Excel
                         </button>
+                        <button id="btnExportarPdfSinFotoDni" type="button" class="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60">
+                            <i class="i-ph-file-pdf"></i> Exportar PDF
+                        </button>
                         <span id="reporteDjEstadoCarga" class="text-sm text-default-500 dark:text-slate-400" aria-live="polite">El archivo incluirá únicamente los registros con foto o DNI pendientes.</span>
+                    </div>
+                </div>
+            </main>
+            <main id="configReporteSinDjEscaneada" class="hidden rounded-xl border border-default-200 bg-white shadow-sm dark:border-slate-700 dark:bg-white">
+                <div class="flex items-start gap-3 border-b border-default-200 p-5 dark:border-slate-700">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600"><i class="i-ph-file-pdf text-2xl"></i></div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2"><h2 class="text-lg font-semibold text-default-900 dark:text-white">Personal sin DJ escaneada</h2><span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Excel · PDF</span></div>
+                        <p class="mt-1 text-sm text-default-600 dark:text-slate-300">Personal sin registro de carga ni PDF de DJ escaneada encontrado en las ubicaciones del servidor.</p>
+                    </div>
+                </div>
+                <div class="p-5">
+                    <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-default-500 dark:text-slate-400">Filtros del reporte</h3>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Sucursal<select id="sinDjSucursal" class="mt-1 block w-full rounded-lg border-default-300 text-sm"><option value="">Todas las sucursales</option>@foreach($sucursales as $sucursal) @if(($sucursal->codigo ?? '0') !== '0')<option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura ?? $sucursal->nombre ?? $sucursal->codigo }}</option>@endif @endforeach</select></label>
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Tipo de personal<select id="sinDjTipo" class="mt-1 block w-full rounded-lg border-default-300 text-sm"><option value="">Todos los tipos</option>@foreach($tiposPersonal as $tipo)<option value="{{ trim($tipo->codigo) }}">{{ $tipo->nombre }}</option>@endforeach</select></label>
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Cargo<select id="sinDjCargo" disabled class="mt-1 block w-full rounded-lg border-default-300 text-sm disabled:cursor-not-allowed disabled:bg-gray-100"><option value="">Selecciona primero el tipo</option></select></label>
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Estado<select id="sinDjEstado" class="mt-1 block w-full rounded-lg border-default-300 text-sm"><option value="">Activos y cesados</option><option value="SI">Activo</option><option value="NO">Cesado</option></select></label>
+                    </div>
+                    <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-default-200 pt-5 dark:border-slate-700">
+                        <button id="btnLimpiarSinDj" type="button" class="rounded-lg border border-default-300 px-4 py-2 text-sm font-medium text-default-700"><i class="i-ph-arrow-counter-clockwise mr-1"></i> Limpiar filtros</button>
+                        <button id="btnPrevisualizarSinDj" type="button" class="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"><i class="i-ph-eye"></i> Vista previa</button>
+                        <button id="btnExportarSinDj" type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"><i class="i-ph-file-xls"></i> Exportar Excel</button>
+                        <button id="btnExportarPdfSinDj" type="button" class="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"><i class="i-ph-file-pdf"></i> Exportar PDF</button>
+                        <span id="estadoSinDj" class="text-sm text-default-500" aria-live="polite">Se buscarán DJ escaneadas en las ubicaciones del servidor y en sus registros.</span>
                     </div>
                 </div>
             </main>
@@ -126,7 +168,31 @@
                         <button id="btnLimpiarDniHijos" type="button" class="rounded-lg border border-default-300 px-4 py-2 text-sm font-medium text-default-700"><i class="i-ph-arrow-counter-clockwise mr-1"></i> Limpiar filtros</button>
                         <button id="btnPrevisualizarDniHijos" type="button" class="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"><i class="i-ph-eye"></i> Vista previa</button>
                         <button id="btnExportarDniHijos" type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"><i class="i-ph-file-xls"></i> Exportar Excel</button>
+                        <button id="btnExportarPdfDniHijos" type="button" class="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"><i class="i-ph-file-pdf"></i> Exportar PDF</button>
                         <span id="estadoDniHijos" class="text-sm text-default-500" aria-live="polite">Se revisará el DNI de hijos menores del personal filtrado.</span>
+                    </div>
+                </div>
+            </main>
+
+            <main id="configReporteAsigHijosMayores" class="hidden rounded-xl border border-default-200 bg-white shadow-sm dark:border-slate-700 dark:bg-white">
+                <div class="flex items-start gap-3 border-b border-default-200 p-5 dark:border-slate-700">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><i class="i-ph-users-three text-2xl"></i></div>
+                    <div><div class="flex flex-wrap items-center gap-2"><h2 class="text-lg font-semibold text-default-900 dark:text-white">Asignación Familiar Con Hijos Mayores De Edad</h2><span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Excel · PDF</span></div><p class="mt-1 text-sm text-default-600 dark:text-slate-300">Incluye personal marcado con asignación familiar cuyos hijos registrados tienen todos 18 años o más. Se excluye a quien tenga algún hijo menor o sin fecha de nacimiento.</p></div>
+                </div>
+                <div class="p-5">
+                    <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-default-500 dark:text-slate-400">Filtros del reporte</h3>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Sucursal<select id="mayoresSucursal" class="mt-1 block w-full rounded-lg border-default-300 text-sm"><option value="">Todas las sucursales</option>@foreach($sucursales as $sucursal) @if(($sucursal->codigo ?? '0') !== '0')<option value="{{ $sucursal->codigo }}">{{ $sucursal->abreviatura ?? $sucursal->nombre ?? $sucursal->codigo }}</option>@endif @endforeach</select></label>
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Tipo de personal<select id="mayoresTipo" class="mt-1 block w-full rounded-lg border-default-300 text-sm"><option value="">Todos los tipos</option>@foreach($tiposPersonal as $tipo)<option value="{{ trim($tipo->codigo) }}">{{ $tipo->nombre }}</option>@endforeach</select></label>
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Cargo<select id="mayoresCargo" disabled class="mt-1 block w-full rounded-lg border-default-300 text-sm disabled:cursor-not-allowed disabled:bg-gray-100"><option value="">Selecciona primero el tipo</option></select></label>
+                        <label class="block text-sm font-medium text-default-700 dark:text-slate-200">Estado<select id="mayoresEstado" class="mt-1 block w-full rounded-lg border-default-300 text-sm"><option value="">Activos y cesados</option><option value="SI">Activo</option><option value="NO">Cesado</option></select></label>
+                    </div>
+                    <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-default-200 pt-5 dark:border-slate-700">
+                        <button id="btnLimpiarMayores" type="button" class="rounded-lg border border-default-300 px-4 py-2 text-sm font-medium text-default-700"><i class="i-ph-arrow-counter-clockwise mr-1"></i> Limpiar filtros</button>
+                        <button id="btnPrevisualizarMayores" type="button" class="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"><i class="i-ph-eye"></i> Vista previa</button>
+                        <button id="btnExportarMayores" type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"><i class="i-ph-file-xls"></i> Exportar Excel</button>
+                        <button id="btnExportarPdfMayores" type="button" class="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"><i class="i-ph-file-pdf"></i> Exportar PDF</button>
+                        <span id="estadoMayores" class="text-sm text-default-500" aria-live="polite">Se listará únicamente al personal cuyo indicador de asignación familiar figura como Sí y todos sus hijos son mayores de edad.</span>
                     </div>
                 </div>
             </main>

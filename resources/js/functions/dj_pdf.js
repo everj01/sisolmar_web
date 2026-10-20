@@ -609,8 +609,15 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             drawField("Vehículo Propio", getValue('vehiculo_propio'),boxX + boxWidth * 0.756,  boxWidth * 0.244,  y, rowH, 0.52);
             y += rowH;
         } else {
+            // Tiempo de experiencia: "3 AÑOS 6 MESES" / "1 AÑO" / "6 MESES" / "---" si no tiene
+            const expAnios = parseInt(getValue('experiencia_anios'), 10) || 0;
+            const expMeses = parseInt(getValue('experiencia_meses'), 10) || 0;
+            const partesExp = [];
+            if (expAnios > 0) partesExp.push(`${expAnios} ${expAnios === 1 ? 'AÑO' : 'AÑOS'}`);
+            if (expMeses > 0) partesExp.push(`${expMeses} ${expMeses === 1 ? 'MES' : 'MESES'}`);
+            const tiempoExperiencia = partesExp.length ? partesExp.join(' ') : '---';
             drawField("Profesión u Ocupación Principal", getValue('ocupacion_principal'), boxX,                     boxWidth * 0.5264, y, rowH, 0.475);
-            drawField("Tiempo Experiencia",              getValue('experiencia_anios'),   boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4);
+            drawField("Tiempo Experiencia",              tiempoExperiencia,              boxX + boxWidth * 0.5264, boxWidth * 0.4736, y, rowH, 0.4);
             y += rowH;
             drawField("Familiar en la Empresa", getValue('familiar_empresa'),   boxX,                      boxWidth * 0.25,    y, rowH, 0.816);
             

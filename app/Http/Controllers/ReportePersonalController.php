@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -429,6 +430,25 @@ class ReportePersonalController extends Controller
             ]);
         }
 
+        if ($request->query('formato') === 'pdf') {
+            $tituloPdf = $this->tituloExcelDocumentos($filtros, $soloFaltantes);
+            return $this->descargarPdfReporte(
+                'file_control.reportes_dj_pdf',
+                $this->nombreArchivoExcel($tituloPdf, 'pdf'),
+                $tituloPdf,
+                array_values($filas),
+                [
+                    'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre',
+                    'N° documento' => 'doc', 'Sucursal' => 'sucursal', 'Tipo' => 'tipo',
+                    'Cargo' => 'cargo', 'Ingreso a Solmar' => 'ingreso_solmar',
+                    'Ingreso a planillas' => 'ingreso_planilla', 'Foto' => 'foto_txt',
+                    'DNI' => 'dni_txt', 'Registrado por' => 'reg', 'F. registro' => 'freg',
+                    'Modificado por' => 'mod', 'F. modificación' => 'fmod',
+                ],
+                $stats
+            );
+        }
+
         // ── 4. Excel ──────────────────────────────────────────
         $tituloExcel = $this->tituloExcelDocumentos($filtros, $soloFaltantes);
         $nombreArchivo = $this->nombreArchivoExcel($tituloExcel);
@@ -495,7 +515,7 @@ class ReportePersonalController extends Controller
         return "{$reporte} | {$sucursal} | {$tipo} | {$cargo} | {$estado}";
     }
 
-    private function nombreArchivoExcel(string $titulo): string
+    private function nombreArchivoExcel(string $titulo, string $extension = 'xlsx'): string
     {
         $titulo = str_replace('|', ' ', $titulo);
         $titulo = preg_replace('/^PENDIENTES\b/u', 'REPORTE DE PENDIENTES', $titulo) ?? $titulo;
@@ -505,7 +525,27 @@ class ReportePersonalController extends Controller
         $nombre = preg_replace('/[^A-Z0-9]+/', '_', $nombre) ?? 'REPORTE';
         $nombre = trim(substr($nombre, 0, 210), '_');
 
-        return $nombre . '_' . date('Y-m-d') . '.xlsx';
+        return $nombre . '_' . date('Y-m-d') . '.' . $extension;
+    }
+
+    private function descargarPdfReporte(string $vista, string $nombre, string $titulo, array $filas, array $columnas, array $stats)
+    {
+        // Dompdf conserva el árbol de estilos y las páginas completas en
+        // memoria. El límite PHP predeterminado de 128 MB no alcanza para los
+        // reportes de personal con cientos o miles de filas.
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(0);
+
+        $filas = array_values(array_map(static function (array $fila, int $indice): array {
+            $fila['numero'] = $indice + 1;
+            return $fila;
+        }, $filas, array_keys($filas)));
+
+        $pdf = Pdf::loadView($vista, compact('titulo', 'filas', 'columnas', 'stats'))
+            ->setPaper('a3', 'landscape')
+            ->setOption('dpi', 72);
+
+        return $pdf->download($nombre);
     }
 
     public function descargarReporte(Request $request, string $archivo)
@@ -778,7 +818,7 @@ class ReportePersonalController extends Controller
             ]);
         }
 
-        if ($filas === []) {
+        if ($filas === [] && $request->query('formato') !== 'pdf') {
             return response()->json([
                 'success' => false,
                 'message' => 'Sin faltantes: todos los hijos menores de edad cuentan con anverso y reverso del DNI cargados.',
@@ -791,6 +831,24 @@ class ReportePersonalController extends Controller
             'REPORTE DE PENDIENTES DE FOTOS DE DNI DE HIJOS MENORES DE EDAD',
             $this->tituloExcelDocumentos($filtros, true)
         );
+
+        if ($request->query('formato') === 'pdf') {
+            return $this->descargarPdfReporte(
+                'file_control.reportes_dj_pdf',
+                $this->nombreArchivoExcel($titulo, 'pdf'),
+                $titulo,
+                array_values($filas),
+                [
+                    'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre',
+                    'N° documento' => 'doc', 'Sucursal' => 'sucursal', 'Tipo' => 'tipo',
+                    'Cargo' => 'cargo', 'Ingreso a Solmar' => 'ingreso_solmar',
+                    'Ingreso a planillas' => 'ingreso_planilla', 'Asignación familiar' => 'asignacion_familiar',
+                    'Hijos <18' => 'total', 'Anverso' => 'anverso_txt', 'Reverso' => 'reverso_txt',
+                    'Sin imagen' => 'sin', 'Detalle de faltantes' => 'detalle',
+                ],
+                $stats
+            );
+        }
         $nombreArchivo = $this->nombreArchivoExcel($titulo);
         $rutaArchivo   = $this->generarExcelDniHijos(array_values($filas), $stats, $titulo);
 
@@ -808,6 +866,383 @@ class ReportePersonalController extends Controller
             'url'    => route('reporte.descargar', ['archivo' => $nombreArchivo]),
             'nombre' => $nombreArchivo,
         ]);
+    }
+
+    /**
+     * Personal con ASIG_FAMI = SI y exclusivamente hijos mayores de edad.
+     * Excluye a cualquier persona con un hijo menor o sin fecha de nacimiento
+     * verificable, para cumplir la condición de que TODOS sean mayores.
+     */
+    public function asignacionFamiliarHijosMayores(Request $request)
+    {
+        if (!in_array((int) session('tipo_rol'), self::ROLES_REPORTE_DOCUMENTOS, true)) {
+            abort(403, 'Este reporte es exclusivo para ADMINS RRHH y SUPERUSUARIO.');
+        }
+
+        $filtros = $request->validate([
+            'codSucursal' => 'nullable|string|max:20',
+            'tipoPer' => 'nullable|in:01,02,03,05',
+            'cargo' => 'nullable|string|max:20',
+            'vigente' => 'nullable|in:SI,NO',
+        ]);
+
+        $condiciones = [
+            "p.EMPR_CODIGO = '01'",
+            "UPPER(LTRIM(RTRIM(ISNULL(p.ASIG_FAMI, '')))) IN ('SI', 'SÍ', '1')",
+            "EXISTS (SELECT 1 FROM si_solm.dbo.DERECHO_HABIENTE dh WHERE LTRIM(RTRIM(dh.CODI_PERS)) = LTRIM(RTRIM(p.CODI_PERS)) AND dh.TIPO_RELA LIKE 'HIJ%')",
+            "NOT EXISTS (SELECT 1 FROM si_solm.dbo.DERECHO_HABIENTE dm WHERE LTRIM(RTRIM(dm.CODI_PERS)) = LTRIM(RTRIM(p.CODI_PERS)) AND dm.TIPO_RELA LIKE 'HIJ%' AND (dm.FECH_NACI IS NULL OR dm.FECH_NACI > DATEADD(YEAR, -18, CAST(GETDATE() AS DATE))))",
+        ];
+        $parametros = [];
+        foreach ([
+            'codSucursal' => 'p.SUCU_CODIGO',
+            'tipoPer' => 'p.PERS_TIPOTRAB',
+            'cargo' => 'p.CODI_CARG',
+            'vigente' => 'p.PERS_VIGENCIA',
+        ] as $filtro => $columna) {
+            if (!empty($filtros[$filtro])) {
+                $condiciones[] = $columna . ' = ?';
+                $parametros[] = $filtros[$filtro];
+            }
+        }
+
+        $sql = <<<'SQL'
+            SELECT LTRIM(RTRIM(p.CODI_PERS)) AS CODI_PERS,
+                   p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2, p.NRO_DOCU_IDEN,
+                   p.FECH_INGRE, p.FECH_INGRE_PLANILLA, p.ASIG_FAMI, p.PERS_VIGENCIA,
+                   ISNULL(s.SUCU_ABREVIATURA, p.SUCU_CODIGO) AS SUCURSAL,
+                   ISNULL(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_DESCRIPCION,
+                   ISNULL(c.DESC_CARGO, p.CODI_CARG) AS CARGO_DESC,
+                   LTRIM(RTRIM(ISNULL(d.APEL_1, ''))) + ' ' + LTRIM(RTRIM(ISNULL(d.APEL_2, ''))) + ' ' +
+                   LTRIM(RTRIM(ISNULL(d.NOMB_1, ''))) + ' ' + LTRIM(RTRIM(ISNULL(d.NOMB_2, ''))) AS HIJO_NOMBRE,
+                   LTRIM(RTRIM(ISNULL(d.NRO_DOCU_IDEN, ''))) AS HIJO_DNI,
+                   CONVERT(CHAR(10), d.FECH_NACI, 103) AS HIJO_FECHA_NACIMIENTO,
+                   DATEDIFF(YEAR, d.FECH_NACI, GETDATE()) -
+                       CASE WHEN DATEADD(YEAR, DATEDIFF(YEAR, d.FECH_NACI, GETDATE()), d.FECH_NACI) > CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END AS HIJO_EDAD
+            FROM si_solm.dbo.PERSONAL p
+            INNER JOIN si_solm.dbo.DERECHO_HABIENTE d
+                    ON LTRIM(RTRIM(d.CODI_PERS)) = LTRIM(RTRIM(p.CODI_PERS))
+                   AND d.TIPO_RELA LIKE 'HIJ%'
+            LEFT JOIN si_solm.dbo.SISO_SUCURSAL s ON s.SUCU_CODIGO = p.SUCU_CODIGO
+            LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
+            LEFT JOIN si_solm.dbo.CARGOS c ON c.CODI_CARG = p.CODI_CARG
+            WHERE __CONDICIONES__
+              AND d.FECH_NACI IS NOT NULL
+              AND d.FECH_NACI <= DATEADD(YEAR, -18, CAST(GETDATE() AS DATE))
+            ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1, d.TIPO_RELA, d.APEL_1, d.APEL_2, d.NOMB_1
+            SQL;
+        $sql = str_replace('__CONDICIONES__', implode(' AND ', $condiciones), $sql);
+
+        $registros = DB::select($sql, $parametros);
+        $porPersonal = [];
+        foreach ($registros as $r) {
+            $codigo = trim((string) ($r->CODI_PERS ?? ''));
+            if ($codigo === '') continue;
+            if (!isset($porPersonal[$codigo])) {
+                $porPersonal[$codigo] = [
+                    'codi' => $codigo,
+                    'nombre' => trim(implode(' ', array_filter([
+                        trim((string) ($r->APEL_1 ?? '')), trim((string) ($r->APEL_2 ?? '')),
+                        trim((string) ($r->NOMB_1 ?? '')), trim((string) ($r->NOMB_2 ?? '')),
+                    ], static fn ($v) => $v !== ''))),
+                    'doc' => trim((string) ($r->NRO_DOCU_IDEN ?? '')),
+                    'sucursal' => trim((string) ($r->SUCURSAL ?? '')),
+                    'tipo' => trim((string) ($r->TIPO_DESCRIPCION ?? '')),
+                    'cargo' => trim((string) ($r->CARGO_DESC ?? '')),
+                    'estado' => strtoupper(trim((string) ($r->PERS_VIGENCIA ?? ''))) === 'SI' ? 'Activo' : 'Cesado',
+                    'ingreso_solmar' => $this->formatFecha($r->FECH_INGRE ?? null),
+                    'ingreso_planilla' => $this->formatFecha($r->FECH_INGRE_PLANILLA ?? null),
+                    'asignacion_familiar' => 'Sí',
+                    'hijos' => [],
+                ];
+            }
+            $nombreHijo = trim((string) ($r->HIJO_NOMBRE ?? ''));
+            $porPersonal[$codigo]['hijos'][] = trim($nombreHijo
+                . ' | DNI: ' . (trim((string) ($r->HIJO_DNI ?? '')) ?: 'Sin dato')
+                . ' | Nac.: ' . (trim((string) ($r->HIJO_FECHA_NACIMIENTO ?? '')) ?: 'Sin dato')
+                . ' | Edad: ' . (int) ($r->HIJO_EDAD ?? 0));
+        }
+
+        $filas = array_values(array_map(static function (array $fila): array {
+            $fila['numero_hijos'] = count($fila['hijos']);
+            $fila['detalle_hijos'] = implode("\n", $fila['hijos']);
+            return $fila;
+        }, $porPersonal));
+
+        $titulo = str_replace(
+            'REPORTE DE DOCUMENTOS',
+            'REPORTE DE ASIGNACIÓN FAMILIAR CON HIJOS MAYORES DE EDAD',
+            $this->tituloExcelDocumentos($filtros, false)
+        );
+        $stats = [
+            'generado' => date('d/m/Y H:i:s'),
+            'personal' => count($filas),
+            'hijos_mayores' => array_sum(array_column($filas, 'numero_hijos')),
+        ];
+
+        $columnas = [
+            'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre', 'N° documento' => 'doc',
+            'Sucursal' => 'sucursal', 'Tipo' => 'tipo', 'Cargo' => 'cargo', 'Estado' => 'estado',
+            'Ingreso a Solmar' => 'ingreso_solmar', 'Ingreso a planillas' => 'ingreso_planilla',
+            'Asignación familiar' => 'asignacion_familiar', 'N° hijos mayores' => 'numero_hijos',
+            'Detalle de hijos mayores' => 'detalle_hijos',
+        ];
+
+        if ($request->boolean('previsualizar')) {
+            $preview = array_map(static fn (array $fila, int $i): array => [
+                'numero' => $i + 1, 'codigo' => $fila['codi'], 'personal' => $fila['nombre'],
+                'dni' => $fila['doc'], 'sucursal' => $fila['sucursal'], 'tipo' => $fila['tipo'],
+                'cargo' => $fila['cargo'], 'estado' => $fila['estado'],
+                'ingreso_solmar' => $fila['ingreso_solmar'], 'ingreso_planilla' => $fila['ingreso_planilla'],
+                'asignacion_familiar' => $fila['asignacion_familiar'], 'numero_hijos' => $fila['numero_hijos'],
+                'detalle_hijos' => $fila['detalle_hijos'],
+            ], $filas, array_keys($filas));
+            return response()->json(['preview' => $preview, 'total' => count($preview)]);
+        }
+
+        if ($request->query('formato') === 'pdf') {
+            return $this->descargarPdfReporte('file_control.reportes_dj_pdf', $this->nombreArchivoExcel($titulo, 'pdf'), $titulo, $filas, $columnas, $stats);
+        }
+
+        $nombreArchivo = $this->nombreArchivoExcel($titulo);
+        $rutaArchivo = $this->generarExcelHijosMayoresAsignacion($filas, $stats, $titulo, $columnas);
+        $publicDir = storage_path('app/public/reportes');
+        if (!is_dir($publicDir)) @mkdir($publicDir, 0755, true);
+        copy($rutaArchivo, $publicDir . DIRECTORY_SEPARATOR . $nombreArchivo);
+        @unlink($rutaArchivo);
+        return response()->json(['url' => route('reporte.descargar', ['archivo' => $nombreArchivo]), 'nombre' => $nombreArchivo]);
+    }
+
+    /** Personal sin DJ escaneada ni registrada en las ubicaciones de carga conocidas. */
+    public function personalSinDjEscaneada(Request $request)
+    {
+        if (!in_array((int) session('tipo_rol'), self::ROLES_REPORTE_DOCUMENTOS, true)) {
+            abort(403, 'Este reporte es exclusivo para ADMINS RRHH y SUPERUSUARIO.');
+        }
+
+        $filtros = $request->validate([
+            'codSucursal' => 'nullable|string|max:20',
+            'tipoPer' => 'nullable|in:01,02,03,05',
+            'cargo' => 'nullable|string|max:20',
+            'vigente' => 'nullable|in:SI,NO',
+        ]);
+
+        $condiciones = ["p.EMPR_CODIGO = '01'"];
+        $parametros = [];
+        foreach ([
+            'codSucursal' => 'p.SUCU_CODIGO',
+            'tipoPer' => 'p.PERS_TIPOTRAB',
+            'cargo' => 'p.CODI_CARG',
+            'vigente' => 'p.PERS_VIGENCIA',
+        ] as $filtro => $columna) {
+            if (!empty($filtros[$filtro])) {
+                $condiciones[] = $columna . ' = ?';
+                $parametros[] = $filtros[$filtro];
+            }
+        }
+
+        $sql = <<<'SQL'
+            SELECT LTRIM(RTRIM(p.CODI_PERS)) AS CODI_PERS,
+                   p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2, p.NRO_DOCU_IDEN,
+                   p.PERS_VIGENCIA, p.FECH_INGRE, p.FECH_INGRE_PLANILLA,
+                   ISNULL(s.SUCU_ABREVIATURA, p.SUCU_CODIGO) AS SUCURSAL,
+                   ISNULL(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_DESCRIPCION,
+                   ISNULL(c.DESC_CARGO, p.CODI_CARG) AS CARGO_DESC
+            FROM si_solm.dbo.PERSONAL p
+            LEFT JOIN si_solm.dbo.SISO_SUCURSAL s ON s.SUCU_CODIGO = p.SUCU_CODIGO
+            LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
+            LEFT JOIN si_solm.dbo.CARGOS c ON c.CODI_CARG = p.CODI_CARG
+            WHERE __CONDICIONES__
+            ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1
+            SQL;
+        $personal = DB::select(str_replace('__CONDICIONES__', implode(' AND ', $condiciones), $sql), $parametros);
+
+        // El folio 25 registra las cargas de DJ. También se consideran PDFs
+        // que aparezcan en las carpetas aunque no tengan registro asociado.
+        $registrosDj = DB::table('sw_folios_detalles')
+            ->where('codFolio', 25)
+            ->get(['codPersonal']);
+        $codigosRegistrados = [];
+        foreach ($registrosDj as $registro) {
+            $codigo = trim((string) ($registro->codPersonal ?? ''));
+            if ($codigo === '') continue;
+            $codigosRegistrados[$codigo] = true;
+        }
+
+        // Enumerar cada carpeta una sola vez evita comprobar cientos/miles de
+        // archivos de forma serial contra la carpeta compartida de red.
+        $codigosConArchivo = [];
+        $directoriosDj = [
+            storage_path('app/dj/2026'),
+            '\\\\192.168.10.2\\Biblioteca_Grafica\\DOCUMENTOS_PERS\\DJ_2026',
+            '\\\\192.168.10.5\\Extranet_2024\\apps\\sisolmar\\storage\\app\\dj\\2026',
+        ];
+        foreach ($directoriosDj as $directorio) {
+            $archivos = @scandir($directorio);
+            if ($archivos === false) continue;
+            foreach ($archivos as $archivo) {
+                if (strtolower(pathinfo($archivo, PATHINFO_EXTENSION)) !== 'pdf') continue;
+                $codigosConArchivo[pathinfo($archivo, PATHINFO_FILENAME)] = true;
+            }
+        }
+
+        $filas = [];
+        foreach ($personal as $r) {
+            $codigo = trim((string) ($r->CODI_PERS ?? ''));
+            if ($codigo === '' || isset($codigosRegistrados[$codigo]) || isset($codigosConArchivo[$codigo])) continue;
+
+            $filas[] = [
+                'codi' => $codigo,
+                'nombre' => trim(implode(' ', array_filter([
+                    trim((string) ($r->APEL_1 ?? '')), trim((string) ($r->APEL_2 ?? '')),
+                    trim((string) ($r->NOMB_1 ?? '')), trim((string) ($r->NOMB_2 ?? '')),
+                ], static fn ($v) => $v !== ''))),
+                'doc' => trim((string) ($r->NRO_DOCU_IDEN ?? '')),
+                'sucursal' => trim((string) ($r->SUCURSAL ?? '')),
+                'tipo' => trim((string) ($r->TIPO_DESCRIPCION ?? '')),
+                'cargo' => trim((string) ($r->CARGO_DESC ?? '')),
+                'estado' => strtoupper(trim((string) ($r->PERS_VIGENCIA ?? ''))) === 'SI' ? 'Activo' : 'Cesado',
+                'ingreso_solmar' => $this->formatFecha($r->FECH_INGRE ?? null),
+                'ingreso_planilla' => $this->formatFecha($r->FECH_INGRE_PLANILLA ?? null),
+                'dj' => 'No encontrada',
+            ];
+        }
+
+        $titulo = str_replace('REPORTE DE DOCUMENTOS', 'REPORTE DE PERSONAL SIN DJ ESCANEADA', $this->tituloExcelDocumentos($filtros, false));
+        $columnas = [
+            'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre', 'N° documento' => 'doc',
+            'Sucursal' => 'sucursal', 'Tipo' => 'tipo', 'Cargo' => 'cargo', 'Estado' => 'estado',
+            'Ingreso a Solmar' => 'ingreso_solmar', 'Ingreso a planillas' => 'ingreso_planilla', 'DJ escaneada' => 'dj',
+        ];
+        $stats = ['generado' => date('d/m/Y H:i:s'), 'personal' => count($personal), 'sin_dj' => count($filas)];
+
+        if ($request->boolean('previsualizar')) {
+            $preview = array_map(static fn (array $fila, int $i): array => [
+                'numero' => $i + 1, 'codigo' => $fila['codi'], 'personal' => $fila['nombre'], 'dni' => $fila['doc'],
+                'sucursal' => $fila['sucursal'], 'tipo' => $fila['tipo'], 'cargo' => $fila['cargo'], 'estado' => $fila['estado'],
+                'ingreso_solmar' => $fila['ingreso_solmar'], 'ingreso_planilla' => $fila['ingreso_planilla'], 'dj' => $fila['dj'],
+            ], $filas, array_keys($filas));
+            return response()->json(['preview' => $preview, 'total' => count($preview)]);
+        }
+
+        if ($request->query('formato') === 'pdf') {
+            return $this->descargarPdfReporte('file_control.reportes_dj_pdf', $this->nombreArchivoExcel($titulo, 'pdf'), $titulo, $filas, $columnas, $stats);
+        }
+
+        $nombreArchivo = $this->nombreArchivoExcel($titulo);
+        $rutaArchivo = $this->generarExcelHijosMayoresAsignacion($filas, $stats, $titulo, $columnas);
+        $publicDir = storage_path('app/public/reportes');
+        if (!is_dir($publicDir)) @mkdir($publicDir, 0755, true);
+        copy($rutaArchivo, $publicDir . DIRECTORY_SEPARATOR . $nombreArchivo);
+        @unlink($rutaArchivo);
+        return response()->json(['url' => route('reporte.descargar', ['archivo' => $nombreArchivo]), 'nombre' => $nombreArchivo]);
+    }
+
+    private function generarExcelHijosMayoresAsignacion(array $filas, array $stats, string $titulo, array $columnas): string
+    {
+        $ss = new Spreadsheet();
+        $hoja = $ss->getActiveSheet();
+        $hoja->setTitle(isset($stats['sin_dj']) ? 'Sin DJ escaneada' : 'Hijos mayores');
+        $hoja->setShowGridlines(false);
+        $totalColumnas = count($columnas);
+        $ultima = Coordinate::stringFromColumnIndex($totalColumnas);
+
+        foreach (array_slice([6, 16, 34, 15, 16, 20, 26, 13, 20, 23, 20, 16, 78], 0, $totalColumnas) as $i => $ancho) {
+            $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
+        }
+        $rutaLogo = public_path('images/logo_sol.png');
+        if (is_file($rutaLogo)) {
+            $logo = new Drawing();
+            $logo->setPath($rutaLogo);
+            $logo->setResizeProportional(false);
+            $logo->setCoordinates('A1');
+            $logo->setWidth(130);
+            $logo->setHeight(62);
+            $logo->setWorksheet($hoja);
+        }
+
+        $hoja->getRowDimension(1)->setRowHeight(64);
+        $hoja->mergeCells('C1:' . $ultima . '1');
+        $hoja->setCellValue('C1', $titulo);
+        $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(12)->getColor()->setRGB('990000');
+        $hoja->getStyle('C1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $hoja->mergeCells('C2:' . $ultima . '2');
+        $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
+        $hoja->getStyle('C2')->getFont()->setBold(true)->setSize(11)->getColor()->setRGB('990000');
+        $hoja->getStyle('C2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        $hoja->getRowDimension(4)->setRowHeight(6);
+
+        $bloquesStats = isset($stats['sin_dj'])
+            ? ['A' => 'B', 'C' => 'F', 'G' => $ultima]
+            : ['A' => 'B', 'C' => 'H', 'I' => 'M'];
+        $etiquetasStats = isset($stats['sin_dj'])
+            ? ['Generado', 'Personal evaluado', 'Sin DJ escaneada']
+            : ['Generado', 'Personal evaluado', 'Hijos mayores de edad'];
+        $valoresStats = [
+            $stats['generado'],
+            number_format($stats['personal'], 0, ',', '.'),
+            number_format($stats['sin_dj'] ?? $stats['hijos_mayores'], 0, ',', '.'),
+        ];
+        $indiceStats = 0;
+        foreach ($bloquesStats as $desde => $hasta) {
+            $hoja->mergeCells($desde . '5:' . $hasta . '5');
+            $hoja->mergeCells($desde . '6:' . $hasta . '6');
+            $hoja->setCellValue($desde . '5', $etiquetasStats[$indiceStats]);
+            $hoja->setCellValue($desde . '6', $valoresStats[$indiceStats]);
+            $indiceStats++;
+        }
+        $hoja->getStyle('A5:' . $ultima . '6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E5E7EB');
+        $hoja->getStyle('A5:' . $ultima . '5')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('374151');
+        $hoja->getStyle('A6:' . $ultima . '6')->getFont()->setBold(true)->setSize(10)->getColor()->setRGB('111827');
+        $hoja->getStyle('A5:' . $ultima . '6')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
+        $hoja->getStyle('A5:' . $ultima . '6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $hoja->getRowDimension(7)->setRowHeight(6);
+
+        $filaCabecera = 8;
+        foreach (array_keys($columnas) as $i => $etiqueta) {
+            $hoja->setCellValue(Coordinate::stringFromColumnIndex($i + 1) . $filaCabecera, $etiqueta);
+        }
+        $matriz = [];
+        foreach ($filas as $i => $fila) {
+            $fila['numero'] = $i + 1;
+            $matriz[] = array_map(static fn (string $clave) => $fila[$clave] ?? '', array_values($columnas));
+        }
+        $filaInicial = $filaCabecera + 1;
+        $filaFinal = $filaCabecera + count($matriz);
+        if ($matriz !== []) {
+            $hoja->fromArray($matriz, null, 'A' . $filaInicial, true);
+            $base = $hoja->getStyle('A' . $filaInicial . ':' . $ultima . $filaFinal);
+            $base->getFont()->setSize(9);
+            $base->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
+            $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            foreach (array_filter(['A', 'D', 'H', 'I', 'J', 'K', 'L'], static fn (string $col): bool => Coordinate::columnIndexFromString($col) <= $totalColumnas) as $col) {
+                $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+            $hoja->getStyle('B' . $filaInicial . ':B' . $filaFinal)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $hoja->getStyle('K' . $filaInicial . ':K' . $filaFinal)->getFont()->setBold(true)->getColor()->setRGB(isset($stats['sin_dj']) ? 'B91C1C' : '15803D');
+            if (!isset($stats['sin_dj'])) {
+                $hoja->getStyle('M' . $filaInicial . ':M' . $filaFinal)->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+            }
+            $hoja->getStyle('A' . $filaInicial . ':' . $ultima . $filaFinal)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(isset($stats['sin_dj']) ? 'FEE2E2' : 'FEF3C7');
+        }
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('4B5563');
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('FFFFFF');
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaCabecera)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('4B5563');
+        $hoja->getRowDimension($filaCabecera)->setRowHeight(30);
+        if ($matriz !== []) {
+            $hoja->getStyle('A' . $filaCabecera . ':' . $ultima . $filaFinal)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
+        }
+        $hoja->setAutoFilter('A' . $filaCabecera . ':' . $ultima . $filaCabecera);
+        $hoja->freezePane('A' . ($filaCabecera + 1));
+
+        $dir = sys_get_temp_dir();
+        if (!is_dir($dir)) @mkdir($dir, 0755, true);
+        $prefijo = isset($stats['sin_dj']) ? 'rep_sin_dj_' : 'rep_hijos_mayores_';
+        $ruta = $dir . DIRECTORY_SEPARATOR . $prefijo . date('Ymd_His') . '_' . uniqid() . '.xlsx';
+        (new Xlsx($ss))->save($ruta);
+        $ss->disconnectWorksheets();
+        unset($ss);
+        return $ruta;
     }
 
     // ── Escaneo del servidor de archivos ───────────────────────
@@ -1487,12 +1922,11 @@ class ReportePersonalController extends Controller
             'C' => 'D',  // Personal evaluado
             'E' => 'F',  // Con DNI completo
             'G' => 'H',  // Con faltantes
-            'I' => 'J',  // Hijos <18
-            'K' => 'O',  // Últ. escaneo
+            'I' => 'O',  // Hijos <18
         ];
         $etiquetas = [
             'Generado', 'Personal evaluado', 'Sin faltantes',
-            'Con faltantes', 'Hijos <18', 'Últ. escaneo de archivos',
+            'Con faltantes', 'Hijos <18',
         ];
 
         $totalEval = max($stats['evaluados'], 1);
@@ -1502,7 +1936,6 @@ class ReportePersonalController extends Controller
             number_format($stats['ok'], 0, ',', '.') . '  (' . number_format($stats['ok'] / $totalEval * 100, 1, ',', '.') . '%)',
             number_format($stats['faltan'], 0, ',', '.'),
             number_format($stats['hijos'], 0, ',', '.'),
-            $stats['scan_at'],
         ];
 
         $indice = 0;
