@@ -4,13 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadNotifications() {
+    const list = document.getElementById('notif-list');
+    const badge = document.getElementById('notif-count');
+    if (!list || !badge) return;
+
     try {
-        const response = await fetch(`${VITE_URL_APP}/api/notificaciones/pendientes-etapa2`);
+        const response = await fetch(list.dataset.etapa2Url || '/api/notificaciones/pendientes-etapa2', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
 
-        const list = document.getElementById('notif-list');
-        const badge = document.getElementById('notif-count');
-        
         // Elementos del Modal
         const modalList = document.getElementById('modal-etapa2-list');
         const modalTotal = document.getElementById('modal-etapa2-total');
@@ -21,7 +26,7 @@ async function loadNotifications() {
         const demandasVivas = Array.from(list.querySelectorAll('[id^="campana-demanda-"]')).map(el => el.outerHTML).join('');
         const cantidadDemandas = list.querySelectorAll('[id^="campana-demanda-"]').length;
 
-        if (!result.success || result.total === 0) {
+        if (!result.success || Number(result.total) === 0) {
             // Si Etapa 2 es cero, pero SÍ hay Demandas, no borramos nada
             if (demandasVivas === '') {
                 list.innerHTML = `
@@ -98,7 +103,7 @@ async function loadNotifications() {
 
     } catch (error) {
         console.error('Error cargando notificaciones', error);
-        document.getElementById('notif-list').innerHTML = `
+        list.innerHTML = `
             <div class="px-4 py-6 text-center text-red-500 flex flex-col items-center">
                 <i class="bx bx-error text-3xl mb-2"></i>
                 <span class="font-bold text-sm">Error de sincronización</span>

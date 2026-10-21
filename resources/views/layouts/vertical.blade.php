@@ -204,6 +204,82 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
 
+            // Mostrar Etapa 2 como aviso flotante al iniciar sesión, igual que
+            // las solicitudes SIP. El detalle sigue disponible en la campana.
+            if (@json($notifPopupsAutoshow)) {
+                fetch("{{ url('/api/notificaciones/pendientes-etapa2') }}", {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin'
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.json();
+                    })
+                    .then(result => {
+                        const total = Number(result.total) || 0;
+                        const container = document.getElementById('demandas-toast-container');
+                        if (!result.success || total === 0 || !container) return;
+
+                        const modalList = document.getElementById('modal-etapa2-list');
+                        const modalTotal = document.getElementById('modal-etapa2-total');
+                        if (modalTotal) modalTotal.textContent = total;
+                        if (modalList) {
+                            modalList.replaceChildren();
+                            Object.entries(result.data || {}).forEach(([sucursal, cantidad]) => {
+                                const row = document.createElement('div');
+                                row.className = 'flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors';
+                                const name = document.createElement('span');
+                                name.className = 'text-sm font-bold text-gray-700 uppercase';
+                                name.textContent = sucursal;
+                                const count = document.createElement('span');
+                                count.className = 'text-xs font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-100 shadow-sm';
+                                count.textContent = `${cantidad} pend.`;
+                                row.append(name, count);
+                                modalList.appendChild(row);
+                            });
+                        }
+
+                        const toast = document.createElement('div');
+                        toast.id = 'etapa2-toast-resumen';
+                        toast.style.cssText = 'order:2;background:white;border-left:5px solid #f97316;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;cursor:pointer;';
+                        toast.setAttribute('role', 'button');
+                        toast.setAttribute('tabindex', '0');
+                        toast.setAttribute('aria-label', `Ver ${total} pendientes de Etapa 2`);
+
+                        const close = document.createElement('button');
+                        close.type = 'button';
+                        close.setAttribute('aria-label', 'Cerrar aviso');
+                        close.style.cssText = 'position:absolute;top:10px;right:10px;background:transparent;border:0;font-size:20px;cursor:pointer;color:#9ca3af;';
+                        close.innerHTML = '<i class="bx bx-x"></i>';
+                        close.addEventListener('click', event => {
+                            event.stopPropagation();
+                            window.cerrarToastEtapa2();
+                        });
+
+                        const title = document.createElement('div');
+                        title.style.cssText = 'font-weight:600;margin-bottom:5px;color:#9a3412;padding-right:15px;';
+                        title.innerHTML = '<i class="bx bx-task"></i> Pendientes Etapa 2';
+                        const message = document.createElement('div');
+                        message.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
+                        message.textContent = `Hay ${total} personas pendientes de verificación. Haz clic para ver el detalle.`;
+                        toast.append(close, title, message);
+                        toast.addEventListener('click', () => {
+                            document.getElementById('btn-open-modal-etapa2')?.click();
+                            window.cerrarToastEtapa2();
+                        });
+                        toast.addEventListener('keydown', event => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                toast.click();
+                            }
+                        });
+                        container.appendChild(toast);
+                        setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; }, 100);
+                        setTimeout(() => window.cerrarToastEtapa2(), 10000);
+                    })
+                    .catch(error => console.error('Error revisando pendientes de Etapa 2:', error));
+            }
+
             // 🔹 Solo una vez por login (y sin repetir en el mismo navegador)
             if (!@json($notifPopupsAutoshow) || sessionStorage.getItem("folioToastShown")) {
                 return;
@@ -380,7 +456,7 @@
                                 popupResumenMostrado = true;
                                 const toast = document.createElement('div');
                                 toast.id = 'demanda-toast-resumen';
-                                toast.style.cssText = 'background:white;border-left:5px solid #3b82f6;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;';
+                                toast.style.cssText = 'order:1;background:white;border-left:5px solid #3b82f6;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;';
                                 const cerrar = document.createElement('button');
                                 cerrar.type = 'button';
                                 cerrar.setAttribute('aria-label', 'Cerrar aviso');
@@ -419,6 +495,14 @@
 
                 toast.style.opacity = "0";
                 toast.style.transform = "translateX(100%)";
+                setTimeout(() => toast.remove(), 400);
+            };
+
+            window.cerrarToastEtapa2 = function() {
+                const toast = document.getElementById('etapa2-toast-resumen');
+                if (!toast) return;
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
                 setTimeout(() => toast.remove(), 400);
             };
 

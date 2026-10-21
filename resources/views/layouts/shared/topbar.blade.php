@@ -34,7 +34,7 @@
                         Centro de Notificaciones
                     </div>
                     <div class="max-h-[350px] overflow-y-auto">
-                        <div class="flex flex-col" id="notif-list">
+                        <div class="flex flex-col" id="notif-list" data-etapa2-url="{{ url('/api/notificaciones/pendientes-etapa2') }}">
                             <div class="px-4 py-6 text-center text-sm text-gray-500">
                                 Cargando notificaciones...
                             </div>
