@@ -94,13 +94,23 @@ public static function obtenerDemandasNuevas()
         // notificación AUN ASÍ se muestra, usando el código como nombre. Antes un
         // INNER JOIN la descartaba en silencio.
         return DB::table('sw_dj_notificaciones_act as n')
-            ->leftJoin('sw_MIGRA_PERSONAL as p', function ($join) {
+            ->leftJoin('sw_MIGRA_PERSONAL as m', function ($join) {
+                $join->whereRaw("
+                    (TRY_CAST(n.codigoPers AS INT) = TRY_CAST(m.CODI_PERS AS INT) AND TRY_CAST(n.codigoPers AS INT) IS NOT NULL)
+                    OR
+                    (n.codigoPers COLLATE DATABASE_DEFAULT = m.CODI_PERS COLLATE DATABASE_DEFAULT AND TRY_CAST(n.codigoPers AS INT) IS NULL)
+                ");
+            })
+            ->leftJoin('si_solm.dbo.PERSONAL as p', function ($join) {
                 $join->whereRaw("
                     (TRY_CAST(n.codigoPers AS INT) = TRY_CAST(p.CODI_PERS AS INT) AND TRY_CAST(n.codigoPers AS INT) IS NOT NULL)
                     OR
                     (n.codigoPers COLLATE DATABASE_DEFAULT = p.CODI_PERS COLLATE DATABASE_DEFAULT AND TRY_CAST(n.codigoPers AS INT) IS NULL)
                 ");
             })
+            ->leftJoin('si_solm.dbo.SISO_SUCURSAL as s', 's.SUCU_CODIGO', '=', 'p.SUCU_CODIGO')
+            ->leftJoin('si_solm.dbo.ADMI_TIPO_PERSONAL as tp', 'tp.TIPE_CODIGO', '=', 'p.PERS_TIPOTRAB')
+            ->leftJoin('si_solm.dbo.CARGOS as c', 'c.CODI_CARG', '=', 'p.CODI_CARG')
             // DISTINCT: sw_MIGRA_PERSONAL puede tener CODI_PERS repetidos y el
             // JOIN multiplicaría la misma notificación varias veces.
             ->distinct()
@@ -111,8 +121,13 @@ public static function obtenerDemandasNuevas()
                 'n.fecha_creacion',
                 DB::raw("COALESCE(
                     NULLIF(LTRIM(RTRIM(CONCAT(p.APEL_1 COLLATE DATABASE_DEFAULT, ' ', p.APEL_2 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_1 COLLATE DATABASE_DEFAULT, ' ', p.NOMB_2 COLLATE DATABASE_DEFAULT))), ''),
+                    NULLIF(LTRIM(RTRIM(CONCAT(m.APEL_1 COLLATE DATABASE_DEFAULT, ' ', m.APEL_2 COLLATE DATABASE_DEFAULT, ' ', m.NOMB_1 COLLATE DATABASE_DEFAULT, ' ', m.NOMB_2 COLLATE DATABASE_DEFAULT))), ''),
                     'Personal ' + LTRIM(RTRIM(n.codigoPers))
-                ) as personal")
+                ) as personal"),
+                DB::raw("COALESCE(s.SUCU_ABREVIATURA, p.SUCU_CODIGO, m.SUCU_CODIGO, '—') as sucursal"),
+                DB::raw("COALESCE(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB, m.PERS_TIPOTRAB, '—') as tipo_trabajador"),
+                DB::raw("COALESCE(c.DESC_CARGO, p.CODI_CARG, m.CODI_CARG, '—') as cargo"),
+                DB::raw("COALESCE(p.NRO_DOCU_IDEN, m.NRO_DOCU_IDEN, '—') as dni")
             )
             // Solo las notificaciones vigentes: `habilitado = 0` significa que ya
             // fueron atendidas desde la campanita y no deben volver a aparecer.

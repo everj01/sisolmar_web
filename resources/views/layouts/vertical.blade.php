@@ -31,6 +31,20 @@
     <div id="demandas-toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;">
     </div>
 
+    <div id="modal-detalle-solicitud-sip" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-detalle-solicitud-sip">
+        <section class="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-slate-800">
+            <header class="flex items-start justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+                <div>
+                    <h2 id="titulo-detalle-solicitud-sip" class="text-lg font-semibold text-slate-900 dark:text-white">Solicitud de actualización desde el SIP</h2>
+                    <p id="subtitulo-detalle-solicitud-sip" class="mt-1 text-sm text-slate-500">Datos del personal que envió solicitudes desde el SIP.</p>
+                </div>
+                <button type="button" onclick="cerrarDetalleDemandaSip()" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Cerrar"><i class="bx bx-x text-xl"></i></button>
+            </header>
+            <div id="detalle-solicitudes-sip-lista" class="max-h-[65vh] space-y-3 overflow-y-auto px-5 py-5"></div>
+            <footer class="flex justify-end border-t border-slate-200 px-5 py-3 dark:border-slate-700"><button type="button" onclick="cerrarDetalleDemandaSip()" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">Cerrar</button></footer>
+        </section>
+    </div>
+
     <!-- Popup notificación folios por vencer -->
     <div id="folio-toast"
         style="
@@ -236,9 +250,77 @@
 <script>
         document.addEventListener("DOMContentLoaded", function() {
             let notificacionesMostradas = new Set();
+            const demandasPorId = new Map();
+            const listaNotificacionesSip = document.getElementById('notif-list');
             // Pop-ups solo una vez por login: el primer check los muestra;
             // los checks siguientes (cada 5s) solo actualizan la campanita.
             let popupsActivos = @json($notifPopupsAutoshow);
+            let popupResumenMostrado = false;
+
+            window.abrirDetalleDemandaSip = function(id) {
+                const demandas = [...demandasPorId.values()];
+                if (!demandas.length) return;
+                const lista = document.getElementById('detalle-solicitudes-sip-lista');
+                document.getElementById('subtitulo-detalle-solicitud-sip').textContent =
+                    `${demandas.length} ${demandas.length === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'} de actualización desde el SIP.`;
+                lista.replaceChildren();
+                demandas.forEach(demanda => {
+                    const tarjeta = document.createElement('article');
+                    tarjeta.className = 'rounded-lg border border-slate-200 p-4 dark:border-slate-700';
+                    const nombre = document.createElement('h3');
+                    nombre.className = 'mb-3 font-semibold text-slate-900 dark:text-white';
+                    nombre.textContent = demanda.personal || `Personal ${demanda.codigoPers}`;
+                    const datos = document.createElement('dl');
+                    datos.className = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
+                    [
+                        ['Sucursal', demanda.sucursal],
+                        ['Tipo de trabajador', demanda.tipo_trabajador],
+                        ['Cargo', demanda.cargo],
+                        ['DNI', demanda.dni],
+                    ].forEach(([etiqueta, valor]) => {
+                        const campo = document.createElement('div');
+                        const titulo = document.createElement('dt');
+                        titulo.className = 'text-xs font-medium uppercase tracking-wide text-slate-500';
+                        titulo.textContent = etiqueta;
+                        const contenido = document.createElement('dd');
+                        contenido.className = 'mt-1 text-sm text-slate-800 dark:text-slate-200';
+                        contenido.textContent = valor || '—';
+                        campo.append(titulo, contenido);
+                        datos.appendChild(campo);
+                    });
+                    tarjeta.append(nombre, datos);
+                    lista.appendChild(tarjeta);
+                });
+                const modal = document.getElementById('modal-detalle-solicitud-sip');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            window.cerrarDetalleDemandaSip = function() {
+                const modal = document.getElementById('modal-detalle-solicitud-sip');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+
+            document.getElementById('modal-detalle-solicitud-sip').addEventListener('click', event => {
+                if (event.target.id === 'modal-detalle-solicitud-sip') window.cerrarDetalleDemandaSip();
+            });
+            // Delegamos los eventos porque notifications.js vuelve a dibujar
+            // #notif-list periódicamente y reemplaza los nodos de cada solicitud.
+            listaNotificacionesSip?.addEventListener('click', event => {
+                const fila = event.target.closest('[data-demanda-sip-grupo]');
+                if (!fila) return;
+                window.abrirDetalleDemandaSip('grupo');
+            });
+            listaNotificacionesSip?.addEventListener('keydown', event => {
+                const fila = event.target.closest('[data-demanda-sip-grupo]');
+                if (!fila || (event.key !== 'Enter' && event.key !== ' ')) return;
+                event.preventDefault();
+                window.abrirDetalleDemandaSip('grupo');
+            });
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') window.cerrarDetalleDemandaSip();
+            });
 
             function checkDemandasAdmin() {
                 fetch("{{ url('/api/notificaciones/demandas-admin') }}")
@@ -253,64 +335,72 @@
                                 notifList.innerHTML = '';
                             }
 
+                            const nuevasSolicitudes = result.data.filter(demanda => !notificacionesMostradas.has(String(demanda.id)));
+                            demandasPorId.clear();
                             result.data.forEach(demanda => {
-                                // --- 1. POP-UP SUPERIOR DERECHA ---
-                                if (popupsActivos && !notificacionesMostradas.has(demanda.id)) {
-                                    notificacionesMostradas.add(demanda.id);
-
-                                    const toast = document.createElement("div");
-                                    toast.id = `demanda-toast-${demanda.id}`;
-                                    toast.style.cssText = "background: white; border-left: 5px solid #3b82f6; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 320px; position: relative; opacity: 0; transform: translateX(100%); transition: all 0.4s ease;";
-                                    
-                                    toast.innerHTML = `
-                                        <button onclick="cerrarToastSip('${demanda.id}')" title="Ocultar por ahora (se mostrará de nuevo en el próximo inicio de sesión)" style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #9ca3af; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
-                                            <i class="bx bx-x"></i>
-                                        </button>
-                                        <div style="font-weight:600; margin-bottom:5px; color: #1e3a8a; padding-right: 15px;">
-                                            <i class="bx bx-info-circle"></i> Nueva solicitud desde el SIP
-                                        </div>
-                                        <div style="font-size:13px; color: #4b5563; line-height: 1.4;">
-                                            El personal <b>${demanda.personal}</b> ha enviado una nueva solicitud desde el SIP para actualizar sus datos.
-                                        </div>
-                                    `;
-
-                                    if(container) {
-                                        container.appendChild(toast);
-                                        setTimeout(() => {
-                                            toast.style.opacity = "1";
-                                            toast.style.transform = "translateX(0)";
-                                        }, 100);
-                                    }
-                                }
-
-                                // --- 2. CAMPANITA INTERNA ---
-                                if (notifList && !document.getElementById(`campana-demanda-${demanda.id}`)) {
-                                    const itemCampana = document.createElement("div");
-                                    itemCampana.id = `campana-demanda-${demanda.id}`;
-                                    itemCampana.className = "flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors border-b border-gray-100";
-                                    itemCampana.innerHTML = `
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                                                <i class="bx bx-info-circle text-lg"></i>
-                                            </div>
-                                            <div class="flex flex-col">
-                                                <span class="text-sm font-bold text-gray-700">Solicitud SIP</span>
-                                                <span class="text-[11px] text-gray-500"><b>${demanda.personal}</b> Solicitó actualizar sus datos (SIP)</span>
-                                            </div>
-                                        </div>
-                                        <button onclick="event.stopPropagation(); borrarDemandaSip('${demanda.id}')" class="text-gray-400 hover:text-red-500 px-2" title="Marcar como atendida (ya no volverá a aparecer)">
-                                            <i class="bx bx-x text-lg"></i>
-                                        </button>
-                                    `;
-                                    notifList.prepend(itemCampana); 
-                                    
-                                    if(badge) {
-                                        let currentCount = parseInt(badge.textContent) || 0;
-                                        badge.textContent = currentCount + 1;
-                                        badge.classList.remove('hidden');
-                                    }
-                                }
+                                demandasPorId.set(String(demanda.id), demanda);
                             });
+
+                            // Una sola notificación en la campanita para todo el grupo SIP.
+                            if (notifList) {
+                                let itemGrupo = document.getElementById('campana-demanda-sip-grupo');
+                                if (!itemGrupo) {
+                                    itemGrupo = document.createElement('div');
+                                    itemGrupo.id = 'campana-demanda-sip-grupo';
+                                    itemGrupo.dataset.demandaSipGrupo = '1';
+                                    itemGrupo.className = 'flex cursor-pointer items-center justify-between border-b border-gray-100 px-4 py-3 transition-colors hover:bg-slate-50';
+                                    itemGrupo.setAttribute('role', 'button');
+                                    itemGrupo.setAttribute('tabindex', '0');
+                                    itemGrupo.innerHTML = `
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-md border border-blue-100 bg-blue-50 text-blue-600"><i class="bx bx-info-circle text-lg"></i></div>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm font-bold text-gray-700">Solicitudes de actualización desde el SIP</span>
+                                                <span class="text-[11px] text-gray-500 demanda-sip-resumen"></span>
+                                            </div>
+                                        </div>
+                                        <span class="demanda-sip-total ml-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-bold text-blue-700"></span>
+                                    `;
+                                    notifList.prepend(itemGrupo);
+                                }
+                                itemGrupo.querySelector('.demanda-sip-resumen').textContent =
+                                    `${result.data.length} ${result.data.length === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}. Haz clic para ver el detalle.`;
+                                itemGrupo.querySelector('.demanda-sip-total').textContent = result.data.length;
+                                if (badge) {
+                                    const count = parseInt(badge.textContent) || 0;
+                                    badge.textContent = Math.min(99, count + (itemGrupo.dataset.badgeCuenta === '1' ? 0 : 1));
+                                    badge.classList.remove('hidden');
+                                    itemGrupo.dataset.badgeCuenta = '1';
+                                }
+                            }
+
+                            // Un único aviso resumido por inicio de sesión, sin duplicarlo por cada persona.
+                            if (popupsActivos && !popupResumenMostrado && nuevasSolicitudes.length && container) {
+                                nuevasSolicitudes.forEach(demanda => notificacionesMostradas.add(String(demanda.id)));
+                                popupResumenMostrado = true;
+                                const toast = document.createElement('div');
+                                toast.id = 'demanda-toast-resumen';
+                                toast.style.cssText = 'background:white;border-left:5px solid #3b82f6;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;';
+                                const cerrar = document.createElement('button');
+                                cerrar.type = 'button';
+                                cerrar.setAttribute('aria-label', 'Cerrar aviso');
+                                cerrar.style.cssText = 'position:absolute;top:10px;right:10px;background:transparent;border:0;font-size:20px;cursor:pointer;color:#9ca3af;';
+                                cerrar.innerHTML = '<i class="bx bx-x"></i>';
+                                cerrar.addEventListener('click', () => window.cerrarToastSip('resumen'));
+                                const titulo = document.createElement('div');
+                                titulo.style.cssText = 'font-weight:600;margin-bottom:5px;color:#1e3a8a;padding-right:15px;';
+                                titulo.innerHTML = '<i class="bx bx-info-circle"></i> Solicitudes de actualización desde el SIP';
+                                const mensaje = document.createElement('div');
+                                mensaje.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
+                                mensaje.textContent = `Hay ${nuevasSolicitudes.length} ${nuevasSolicitudes.length === 1 ? 'solicitud nueva' : 'solicitudes nuevas'} de actualización de datos desde el SIP. Revisa el detalle en la campanita.`;
+                                toast.append(cerrar, titulo, mensaje);
+                                container.appendChild(toast);
+                                setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; }, 100);
+                                setTimeout(() => window.cerrarToastSip('resumen'), 7000);
+                            }
+                        } else if (result.success) {
+                            demandasPorId.clear();
+                            document.getElementById('campana-demanda-sip-grupo')?.remove();
                         }
 
                         // Después del primer check ya no se muestran más pop-ups
@@ -324,7 +414,7 @@
             // popupear en el PRÓXIMO LOGIN hasta que alguien la atienda desde
             // la campanita. Por eso NO se saca de `notificacionesMostradas`.
             window.cerrarToastSip = function(id) {
-                const toast = document.getElementById(`demanda-toast-${id}`);
+                const toast = document.getElementById(id === 'resumen' ? 'demanda-toast-resumen' : `demanda-toast-${id}`);
                 if (!toast) return;
 
                 toast.style.opacity = "0";
