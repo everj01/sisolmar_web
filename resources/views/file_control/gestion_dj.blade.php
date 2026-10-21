@@ -265,23 +265,6 @@
                             <i class='bx bx-plus text-base'></i>
                             <span>Nueva DJ</span>
                         </button>
-                         {{-- REPORTES: un solo dropdown (agregar aquí los próximos reportes) --}}
-                         <div id="ddReportesDJ" class="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                             <button type="button" aria-haspopup="menu" aria-expanded="false"
-                                 class="hs-dropdown-toggle btn rounded-full bg-dark/25 text-dark hover:bg-dark hover:text-white flex items-center gap-1 px-4 py-1">
-                                 <i class='bx bx-file-find'></i>
-                                 <span>Reportes</span>
-                                 <i class='bx bx-chevron-down text-base'></i>
-                             </button>
-
-                             <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-64 transition-[opacity,margin] mt-2 opacity-0 hidden z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5">
-                                 <button type="button" id="btnAbrirReporte"
-                                     class="hs-dropdown-close w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-dark/10 hover:text-dark transition-colors">
-                                     <i class='bx bx-file-find text-base'></i>
-                                     <span>Reporte General</span>
-                                 </button>
-                             </div>
-                         </div>
                      </div>
                         
                     @endif
@@ -556,7 +539,6 @@
     @include('file_control.rrhh.partials_modal_dj')
     @include('file_control.rrhh.partials_modal_nueva_dj')
     @include('file_control.rrhh.partials_modal_ext_firmahuella')
-    @include('file_control.rrhh.partials_modal_reporte')
 
     {{-- MODAL BIOMÉTRICO (Migrado desde Actualizar DJ) --}}
     <button id="btn-modal-biometrico" data-hs-overlay="#modal-biometrico" class="hidden"></button>
@@ -641,6 +623,5 @@
 
  @vite([
         'resources/js/functions/gestion_dj.js',
-       'resources/js/functions/nueva_dj.js', 
-       'resources/js/functions/modal_reporte.js'
+       'resources/js/functions/nueva_dj.js'
     ])

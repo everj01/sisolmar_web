@@ -96,7 +96,7 @@ class ReportePersonalController extends Controller
     {
         $codSucursal  = trim($request->get('codSucursal',  ''));
         $tipoPer      = trim($request->get('tipoPer',      ''));
-        $vigente      = $request->get('vigente', '1');
+        $vigente      = $request->get('vigente', '');
         $apPaterno    = trim($request->get('apPaterno',    ''));
         $docIdentidad = trim($request->get('docIdentidad', ''));
 
@@ -157,7 +157,9 @@ class ReportePersonalController extends Controller
             ]);
 
         // ── Vigente ───────────────────────────────────────────
-        $query->where('p.PERS_VIGENCIA', $vigente === '1' ? 'SI' : 'NO');
+        if ($vigente === '1' || $vigente === '0') {
+            $query->where('p.PERS_VIGENCIA', $vigente === '1' ? 'SI' : 'NO');
+        }
 
         // ── Sucursal ──────────────────────────────────────────
         if ($codSucursal !== '') {

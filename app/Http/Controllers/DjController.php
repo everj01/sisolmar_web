@@ -1324,9 +1324,9 @@ class DjController extends Controller
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'No está permitido ese cambio de tipo de personal.'], 422);
             }
-            // ── Validación de edad (igual que en Nueva DJ) ──────────────────
-            // Si la edad queda fuera del rango se exige una excepción autorizada por
-            // un ADMIN RRHH (rol tipo_rol 17). Se pide en cada edición.
+            // En este flujo se actualiza la DJ de un personal ya existente.
+            // La restricción de rango de edad se aplica al crear personal en
+            // saveNuevaDj; no debe impedir actualizar su DJ ni la caducidad del DNI.
             $fechaNacimiento = trim((string) ($data['fecha_nacimiento'] ?? ''));
             $fechaNacimientoCarbon = $this->parsearFechaNacimiento($fechaNacimiento);
 
@@ -1340,26 +1340,6 @@ class DjController extends Controller
             if ($fechaNacimientoCarbon->isToday() || $fechaNacimientoCarbon->isFuture()) {
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'La fecha de nacimiento debe ser anterior a hoy.'], 422);
-            }
-
-            $edad = $fechaNacimientoCarbon->age;
-            $reglasEdad = $this->obtenerReglasEdad();
-            $excepcionValidaEdad = false;
-
-            if (!$exentoValidaciones && ($edad < $reglasEdad['minima'] || $edad > $reglasEdad['maxima'])) {
-                $excepcionValidaEdad = $this->excepcionEdadAutorizada($fechaNacimiento, $edad);
-
-                if (!$excepcionValidaEdad) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => "La edad calculada ({$edad} años) está fuera del rango permitido de {$reglasEdad['minima']} a {$reglasEdad['maxima']} años.",
-                        'edad_fuera_rango' => true,
-                        'edad' => $edad,
-                        'edad_minima' => $reglasEdad['minima'],
-                        'edad_maxima' => $reglasEdad['maxima'],
-                    ], 422);
-                }
             }
 
             $source = $request->input('source', 'migracion');

@@ -9,7 +9,7 @@
                 <h1 class="text-xl font-semibold text-default-900 dark:text-white">Centro de reportes</h1>
                 <p class="mt-1 text-sm text-default-600 dark:text-slate-400">Busca y selecciona un reporte para configurar sus filtros y exportarlo.</p>
             </div>
-            <span id="reporteDjTotal" class="rounded-full bg-default-100 px-3 py-1 text-xs font-semibold text-default-600 dark:bg-slate-700 dark:text-slate-300">4 reportes</span>
+            <span id="reporteDjTotal" class="rounded-full bg-default-100 px-3 py-1 text-xs font-semibold text-default-600 dark:bg-slate-700 dark:text-slate-300">5 reportes</span>
         </div>
 
         <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -17,11 +17,18 @@
                 <div class="border-b border-default-200 bg-slate-50 p-4 dark:border-slate-200 dark:bg-slate-50">
                     <h2 class="font-semibold !text-slate-900">Reportes disponibles</h2>
                     <label class="relative mt-3 block">
-                        <i class="i-ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-default-400"></i>
-                        <input id="buscarReporteDj" type="search" placeholder="Buscar reporte..." class="block w-full rounded-lg border-default-300 py-2 pl-9 pr-3 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                        <i class="i-ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-default-400"></i>
+                        <input id="buscarReporteDj" type="search" placeholder="Buscar reporte..." class="block w-full rounded-lg border-default-300 py-2 !pl-10 pr-3 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white">
                     </label>
                 </div>
                 <div id="listaReportesDj" class="max-h-[60vh] space-y-2 overflow-y-auto bg-slate-50 p-3 overscroll-contain">
+                    <button type="button" data-reporte="reporte-general" class="reporte-dj-opcion w-full rounded-lg border border-default-200 bg-white p-3 text-left transition hover:border-primary-200 hover:bg-primary-50 dark:border-slate-200 dark:bg-white dark:hover:bg-primary-50" aria-pressed="false">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="font-semibold text-default-900 dark:text-white">Reporte General</span>
+                            <span class="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Excel · PDF</span>
+                        </span>
+                        <span class="mt-1 block text-xs leading-5 text-default-600 dark:text-slate-400">Consulta y exporta los datos básicos del personal.</span>
+                    </button>
                     <button type="button" data-reporte="sin-foto-dni" class="reporte-dj-opcion w-full rounded-lg border border-default-200 bg-white p-3 text-left transition hover:border-primary-200 hover:bg-primary-50 dark:border-slate-200 dark:bg-white dark:hover:bg-primary-50" aria-pressed="false">
                         <span class="flex items-start justify-between gap-2">
                             <span class="font-semibold text-default-900 dark:text-white">Personal Sin Foto o DNI</span>
@@ -53,6 +60,10 @@
                     <p id="sinReportesDj" class="hidden px-2 py-5 text-center text-sm text-default-500">No se encontraron reportes.</p>
                 </div>
             </aside>
+
+            <main id="configReporteGeneral" class="hidden min-w-0 !p-0 max-w-none">
+                @include('file_control.rrhh.partials_modal_reporte')
+            </main>
 
             <main id="configReporteSinFotoDni" class="hidden rounded-xl border border-default-200 bg-white shadow-sm dark:border-slate-700 dark:bg-white">
                 <div class="flex items-start gap-3 border-b border-default-200 p-5 dark:border-slate-700">
@@ -211,7 +222,10 @@
 
     <script>
         window.reportesDjCargos = @json($cargosDj);
+        window.logoUrl = @json(asset('images/logo_sol.png'));
     </script>
-    @vite(['resources/js/functions/reportes_dj.js'])
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
+    @vite(['resources/js/functions/reportes_dj.js', 'resources/js/functions/modal_reporte.js'])
 @endsection
 

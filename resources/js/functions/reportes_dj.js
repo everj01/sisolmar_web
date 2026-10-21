@@ -64,6 +64,7 @@ const esperarSiguienteLote = () => new Promise(resolve => setTimeout(resolve, 12
 const buscarReporte = document.getElementById('buscarReporteDj');
 const opcionesReporte = [...document.querySelectorAll('.reporte-dj-opcion')];
 const mensajeSinReportes = document.getElementById('sinReportesDj');
+const panelReporteGeneral = document.getElementById('configReporteGeneral');
 buscarReporte.addEventListener('input', () => {
     const busqueda = buscarReporte.value.trim().toLocaleLowerCase('es');
     let visibles = 0;
@@ -87,6 +88,12 @@ opcionesReporte.forEach(opcion => opcion.addEventListener('click', () => {
         item.classList.toggle('bg-white', !seleccionado);
     });
     Object.values(reportes).forEach(reporte => reporte.panel.classList.add('hidden'));
+    panelReporteGeneral.classList.add('hidden');
+    if (opcion.dataset.reporte === 'reporte-general') {
+        panelReporteGeneral.classList.remove('hidden');
+        panelReporteGeneral.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+    }
     const reporte = reportes[opcion.dataset.reporte];
     reporte.panel.classList.remove('hidden');
     reporte.panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -242,6 +249,7 @@ function cerrarPreview() {
     modalPreview.classList.remove('flex');
     modalPreview.style.display = 'none';
     document.body.classList.remove('overflow-hidden');
+    window.dispatchEvent(new Event('dj:cerrar-vista-previa'));
 }
 
 async function abrirPreview(id, reporte, boton) {

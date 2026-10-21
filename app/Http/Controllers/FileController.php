@@ -22,6 +22,7 @@ class FileController extends Controller
     public function indexReportesDj()
     {
         $sucursales = FileControl::getSucursales();
+        $tipoPerLimitar = session('limitarTipoPer');
         $tiposPersonal = DB::select(
             'SELECT TIPE_CODIGO AS codigo, TIPE_DESCRIPCION AS nombre
              FROM si_solm.dbo.ADMI_TIPO_PERSONAL
@@ -36,7 +37,7 @@ class FileController extends Controller
              ORDER BY DESC_CARGO"
         );
 
-        return view('file_control.reportes_dj', compact('sucursales', 'tiposPersonal', 'cargosDj'));
+        return view('file_control.reportes_dj', compact('sucursales', 'tiposPersonal', 'cargosDj', 'tipoPerLimitar'));
     }
 
     public function index()
