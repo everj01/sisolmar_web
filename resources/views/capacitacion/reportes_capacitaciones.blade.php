@@ -1321,7 +1321,9 @@
 
     {{-- Modal Record Histórico de Capacitaciones por Personal --}}
     <div id="modal-record-personal" x-data="modalRecordPersonal" x-show="open" x-cloak
-        @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        @keydown.escape.window="cerrar()"
+        @dnis-importados.window="aplicarDnisImportados($event.detail)"
+        class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
@@ -1430,13 +1432,47 @@
                         </div>
 
                         <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs text-default-500" x-text="selectedUsernames.length + ' personal(es) seleccionado(s)'"></span>
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="text-xs text-default-500" x-text="selectedUsernames.length + ' personal(es) seleccionado(s)'"></span>
+                                    <button type="button"
+                                        @click="$dispatch('abrir-importar-dnis', { target: 'record', cursoSeleccionado: selectedCourseIds.length > 0 })"
+                                        class="inline-flex items-center gap-1 px-2 h-6 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold hover:bg-emerald-100 transition-colors cursor-pointer shrink-0">
+                                        <i class="ti ti-file-spreadsheet text-[11px]"></i>
+                                        Importar Excel
+                                    </button>
+                                </div>
                                 <button type="button" @click="toggleAllPersonal()"
-                                    class="text-xs text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer"
+                                    class="text-xs text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer shrink-0"
                                     x-text="selectAllPersonal ? 'Deseleccionar todos' : 'Seleccionar todos'">
                                 </button>
                             </div>
+
+                            {{-- DNIs importados desde Excel --}}
+                            <template x-if="importados.length > 0">
+                                <div class="mb-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+                                            <i class="ti ti-file-spreadsheet text-xs"></i>
+                                            <span x-text="importados.length"></span> importado(s) desde Excel
+                                        </span>
+                                        <button type="button" @click="quitarImportados()"
+                                            class="text-[11px] font-medium text-danger hover:text-danger/80 transition-colors cursor-pointer">
+                                            Quitar
+                                        </button>
+                                    </div>
+                                    <div class="mt-1.5 flex flex-wrap gap-1 max-h-14 overflow-y-auto custom-scrollbar">
+                                        <template x-for="imp in importados" :key="'importado-record-' + imp.dni">
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-default-200 text-[10px] text-default-600"
+                                                :title="(imp.nombre_completo || '') + ' · ' + imp.dni">
+                                                <span class="font-mono" x-text="imp.dni"></span>
+                                                <span class="text-default-400 truncate max-w-[90px]" x-text="imp.nombre_completo || ''"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
                             <div class="border border-default-200 rounded-lg max-h-64 overflow-y-auto custom-scrollbar">
                                 <template x-if="loadingPersonal">
                                     <div class="flex items-center justify-center py-6 text-default-400">
@@ -2962,7 +2998,9 @@
 
     {{-- Modal Reporte Formato --}}
     <div id="modal-reporte-formato" x-data="modalReporteFormato" x-show="open" x-cloak
-        @keydown.escape.window="cerrar()" class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        @keydown.escape.window="cerrar()"
+        @dnis-importados.window="aplicarDnisImportados($event.detail)"
+        class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
@@ -3253,13 +3291,47 @@
                         </div>
 
                         <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs text-default-500" x-text="selectedPersonalDnis.length + ' personal(es) seleccionado(s)'"></span>
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="text-xs text-default-500" x-text="selectedPersonalDnis.length + ' personal(es) seleccionado(s)'"></span>
+                                    <button type="button"
+                                        @click="$dispatch('abrir-importar-dnis', { target: 'formato', cursoSeleccionado: selectedCursoId !== null })"
+                                        class="inline-flex items-center gap-1 px-2 h-6 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold hover:bg-emerald-100 transition-colors cursor-pointer shrink-0">
+                                        <i class="ti ti-file-spreadsheet text-[11px]"></i>
+                                        Importar Excel
+                                    </button>
+                                </div>
                                 <button type="button" @click="toggleAllPersonal()"
-                                    class="text-xs text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer"
+                                    class="text-xs text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer shrink-0"
                                     x-text="selectAllPersonal ? 'Deseleccionar todos' : 'Seleccionar todos'">
                                 </button>
                             </div>
+
+                            {{-- DNIs importados desde Excel --}}
+                            <template x-if="importados.length > 0">
+                                <div class="mb-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+                                            <i class="ti ti-file-spreadsheet text-xs"></i>
+                                            <span x-text="importados.length"></span> importado(s) desde Excel
+                                        </span>
+                                        <button type="button" @click="quitarImportados()"
+                                            class="text-[11px] font-medium text-danger hover:text-danger/80 transition-colors cursor-pointer">
+                                            Quitar
+                                        </button>
+                                    </div>
+                                    <div class="mt-1.5 flex flex-wrap gap-1 max-h-14 overflow-y-auto custom-scrollbar">
+                                        <template x-for="imp in importados" :key="'importado-formato-' + imp.dni">
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-default-200 text-[10px] text-default-600"
+                                                :title="(imp.nombre_completo || '') + ' · ' + imp.dni">
+                                                <span class="font-mono" x-text="imp.dni"></span>
+                                                <span class="text-default-400 truncate max-w-[90px]" x-text="imp.nombre_completo || ''"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
                             <div class="border border-default-200 rounded-lg max-h-64 overflow-y-auto custom-scrollbar">
                                 <template x-if="loadingPersonal">
                                     <div class="flex items-center justify-center py-6 text-default-400">
@@ -3540,6 +3612,215 @@
                         </button>
                     </div>
                 </template>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Importar DNIs desde Excel --}}
+    <div x-data="modalImportarDnis" @abrir-importar-dnis.window="abrir($event.detail || {})">
+        <input type="file" x-ref="archivo" accept=".xlsx" class="sr-only" tabindex="-1" @change="onFile($event)">
+
+        <div x-show="open" x-cloak @keydown.escape.window="cerrar()"
+            class="fixed inset-0 z-[95] flex items-center justify-center p-4"
+            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+            style="background: rgba(36,39,70,0.45);">
+
+            <div class="flex flex-col w-full max-w-xl bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-default-200 overflow-hidden"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+
+                {{-- Encabezado --}}
+                <div class="flex items-start justify-between gap-4 px-6 py-4 border-b border-default-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                            <i class="ti ti-file-spreadsheet text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-[15px] font-semibold text-default-900 leading-tight">
+                                Importar personal desde Excel
+                            </h3>
+                            <p class="text-xs text-default-500 mt-0.5">
+                                Columna A: Nro · Columna B: DNI · Datos desde la fila 2
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="cerrar()" :disabled="procesando"
+                        class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg text-default-400 hover:text-default-700 hover:bg-default-100 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                        <i class="ti ti-x text-base"></i>
+                    </button>
+                </div>
+
+                {{-- Loader --}}
+                <template x-if="procesando">
+                    <div class="flex flex-col items-center justify-center py-14 text-default-400">
+                        <i class="ti ti-loader animate-spin text-3xl mb-3 text-emerald-500"></i>
+                        <p class="text-sm font-medium text-default-700" x-text="textoEtapa"></p>
+                        <p class="text-xs text-default-400 mt-1">No cierres esta ventana.</p>
+                    </div>
+                </template>
+
+                {{-- Error --}}
+                <template x-if="stage === 'error'">
+                    <div class="px-6 py-8">
+                        <div class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                            <i class="ti ti-alert-triangle text-red-500 text-lg shrink-0"></i>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-red-700">No se pudo procesar el archivo</p>
+                                <p class="text-xs text-red-600 mt-1 break-words" x-text="errorMsg"></p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Resultado --}}
+                <template x-if="stage === 'resultado'">
+                    <div class="px-6 py-4 space-y-4 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                        {{-- Contadores --}}
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="rounded-lg border border-default-200 bg-default-50/60 px-2 py-2 text-center">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-default-400">Válidos</p>
+                                <p class="text-base font-bold text-default-800" x-text="resumen.validos"></p>
+                            </div>
+                            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-center">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Encontrados</p>
+                                <p class="text-base font-bold text-emerald-700" x-text="resumen.encontrados"></p>
+                            </div>
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-2 text-center">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-amber-600">No encontrados</p>
+                                <p class="text-base font-bold text-amber-700" x-text="resumen.noEncontrados"></p>
+                            </div>
+                            <div class="rounded-lg border border-default-200 bg-default-50/60 px-2 py-2 text-center">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-default-400">Descartados</p>
+                                <p class="text-base font-bold text-default-800" x-text="descartadosTotal"></p>
+                            </div>
+                        </div>
+
+                        <p class="text-[10px] text-default-400 text-right">
+                            Filas de datos leídas:
+                            <span class="font-semibold text-default-600" x-text="resumen.totalFilas"></span>
+                        </p>
+
+                        {{-- Advertencias --}}
+                        <template x-if="advertencias.length > 0">
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 space-y-1">
+                                <template x-for="(advertencia, ai) in advertencias" :key="'advertencia-' + ai">
+                                    <p class="flex items-start gap-1.5 text-[11px] text-amber-700">
+                                        <i class="ti ti-info-circle text-xs mt-0.5 shrink-0"></i>
+                                        <span x-text="advertencia"></span>
+                                    </p>
+                                </template>
+                            </div>
+                        </template>
+
+                        {{-- Encontrados --}}
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-default-500">
+                                    Encontrados
+                                </span>
+                                <span class="text-[11px] text-default-400">
+                                    <span x-text="encontrados.length"></span> DNI(s)
+                                </span>
+                            </div>
+                            <div class="border border-default-200 rounded-lg max-h-44 overflow-y-auto custom-scrollbar divide-y divide-default-100">
+                                <template x-if="encontrados.length === 0">
+                                    <p class="px-3 py-4 text-center text-xs text-default-400">
+                                        Ningún DNI fue encontrado en el sistema.
+                                    </p>
+                                </template>
+                                <template x-for="persona in encontrados" :key="'encontrado-' + persona.dni">
+                                    <div class="flex items-center gap-2 px-3 py-2">
+                                        <i class="ti ti-user-check text-emerald-500 text-sm shrink-0"></i>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-xs font-medium text-default-800 truncate"
+                                                x-text="persona.nombre_completo || '—'"></p>
+                                            <p class="text-[10px] text-default-400 font-mono" x-text="persona.dni"></p>
+                                        </div>
+                                        <span class="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold"
+                                            :class="persona.vigente ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-500 border border-red-200'"
+                                            x-text="persona.vigente ? 'VIGENTE' : 'NO VIGENTE'">
+                                        </span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        {{-- No encontrados --}}
+                        <template x-if="noEncontrados.length > 0">
+                            <div>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-600">
+                                        No encontrados
+                                    </span>
+                                    <span class="text-[11px] text-default-400">
+                                        <span x-text="noEncontrados.length"></span> DNI(s)
+                                    </span>
+                                </div>
+                                <div class="border border-amber-200 rounded-lg bg-amber-50/40 px-3 py-2 flex flex-wrap gap-1 max-h-24 overflow-y-auto custom-scrollbar">
+                                    <template x-for="dni in noEncontrados" :key="'no-encontrado-' + dni">
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-amber-200 text-[10px] text-amber-700 font-mono"
+                                            x-text="dni">
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Descartados por formato o duplicados --}}
+                        <template x-if="descartadosTotal > 0">
+                            <div>
+                                <button type="button" @click="mostrarDescartados = !mostrarDescartados"
+                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-default-500 hover:text-default-700 transition-colors cursor-pointer">
+                                    <i class="ti text-xs" :class="mostrarDescartados ? 'ti-chevron-down' : 'ti-chevron-right'"></i>
+                                    Ver descartados (<span x-text="descartadosTotal"></span>)
+                                </button>
+                                <div x-show="mostrarDescartados" x-cloak
+                                    class="mt-1.5 border border-default-200 rounded-lg max-h-28 overflow-y-auto custom-scrollbar divide-y divide-default-100">
+                                    <template x-for="(item, ii) in invalidos" :key="'invalido-' + ii">
+                                        <div class="flex items-center gap-2 px-3 py-1.5">
+                                            <span class="text-[10px] text-default-400 font-mono w-10 shrink-0" x-text="'F' + item.fila"></span>
+                                            <span class="text-[11px] text-default-600 font-mono truncate flex-1" x-text="item.valor"></span>
+                                            <span class="text-[10px] text-red-500 shrink-0" x-text="item.motivo"></span>
+                                        </div>
+                                    </template>
+                                    <template x-for="(item, di) in duplicados" :key="'duplicado-' + di">
+                                        <div class="flex items-center gap-2 px-3 py-1.5">
+                                            <span class="text-[10px] text-default-400 font-mono w-10 shrink-0" x-text="'F' + item.fila"></span>
+                                            <span class="text-[11px] text-default-600 font-mono truncate flex-1" x-text="item.valor"></span>
+                                            <span class="text-[10px] text-default-400 shrink-0">Duplicado</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Aviso de curso pendiente --}}
+                        <template x-if="!cursoSeleccionado && encontrados.length > 0">
+                            <p class="flex items-start gap-1.5 text-[11px] text-amber-600">
+                                <i class="ti ti-info-circle text-xs mt-0.5 shrink-0"></i>
+                                <span>Luego de agregarlos, selecciona la capacitación para habilitar el botón de generar.</span>
+                            </p>
+                        </template>
+                    </div>
+                </template>
+
+                {{-- Footer --}}
+                <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-default-100">
+                    <button type="button" @click="cerrar()" :disabled="procesando"
+                        class="px-4 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-default-600 bg-default-100 hover:bg-default-200 hover:text-default-800 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        Cancelar
+                    </button>
+                    <template x-if="stage === 'resultado'">
+                        <button type="button" @click="confirmar()" :disabled="encontrados.length === 0"
+                            class="px-5 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ti ti-download text-sm"></i>
+                            <span x-text="'Agregar ' + encontrados.length + ' DNI(s)'"></span>
+                        </button>
+                    </template>
+                </div>
             </div>
         </div>
     </div>

@@ -235,6 +235,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/obtener-memos-personal', [CapacitacionController::class, 'obtenerMemosPersonal']);
         Route::get('/obtener-info-memo/{nroDoc}', [CapacitacionController::class, 'obtenerInfoMemo']);
         Route::get('/obtener-personal', [CapacitacionController::class, 'obtenerPersonal']);
+        Route::post('/resolver-personal-dnis', [CapacitacionController::class, 'resolverPersonalPorDnis']);
         Route::get('/obtener-personal-todas-empresas', [CapacitacionController::class, 'obtenerPersonalTodasEmpresas']);
         Route::post('/obtener-personal-record', [CapacitacionController::class, 'obtenerPersonalParaRecord']);
         Route::post('/obtener-reporte-general', [CapacitacionController::class, 'obtenerReporteGeneral']);

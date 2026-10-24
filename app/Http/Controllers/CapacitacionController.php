@@ -3077,6 +3077,89 @@ class CapacitacionController extends Controller
         }
     }
 
+    public function resolverPersonalPorDnis(Request $request): JsonResponse
+    {
+        $request->validate([
+            'dnis' => 'required|array|min:1|max:5000',
+            'dnis.*' => 'string|max:20',
+        ]);
+
+        try {
+            $dnis = collect($request->input('dnis', []))
+                ->map(function ($dni) {
+                    $valor = trim((string) $dni);
+                    $valor = preg_replace('/\.0+$/', '', $valor);
+                    $valor = preg_replace('/[\s.\-]/', '', $valor);
+
+                    return $valor;
+                })
+                ->filter(fn($dni) => preg_match('/^\d{6,15}$/', $dni) === 1)
+                ->unique()
+                ->values();
+
+            if ($dnis->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'encontrados' => [],
+                    'no_encontrados' => [],
+                ]);
+            }
+
+            // Indexa el personal por DNI normalizado para tolerar espacios,
+            // guiones o puntos que pueda traer el NRO_DOC en base de datos.
+            $normalizarDni = function ($valor) {
+                return preg_replace('/[^0-9]/', '', (string) $valor);
+            };
+
+            $personal = collect(
+                DB::connection('sqlsrv')->select("EXEC SP_OBTENER_PERSONAL_BETA @VIGENTE = NULL")
+            )
+                ->filter(fn($p) => $normalizarDni($p->NRO_DOC ?? '') !== '')
+                ->keyBy(fn($p) => $normalizarDni($p->NRO_DOC ?? ''));
+
+            $encontrados = [];
+            $noEncontrados = [];
+
+            foreach ($dnis as $dni) {
+                $persona = $personal->get($dni);
+
+                if (!$persona) {
+                    $noEncontrados[] = $dni;
+                    continue;
+                }
+
+                $encontrados[] = [
+                    // Se devuelve el valor tal como está en base de datos para
+                    // que el payload use el mismo formato que el catálogo.
+                    'dni' => trim((string) ($persona->NRO_DOC ?? '')),
+                    'dni_normalizado' => $dni,
+                    'nombre_completo' => trim((string) ($persona->NOMBRE_COMPLETO ?? '')),
+                    'cargo' => trim((string) ($persona->CARGO ?? '')),
+                    'sucursal' => trim((string) ($persona->SUCURSAL ?? '')),
+                    'codigo' => trim((string) ($persona->CODIGO_PERSONAL ?? '')),
+                    'vigente' => match ($persona->VIGENTE ?? null) {
+                        'SI' => true,
+                        'NO' => false,
+                        default => null,
+                    },
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'encontrados' => $encontrados,
+                'no_encontrados' => $noEncontrados,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error al resolver DNIs de personal: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudieron validar los DNIs.',
+            ], 500);
+        }
+    }
+
     public function obtenerProgramaciones(int $cursoId): JsonResponse
     {
         try {

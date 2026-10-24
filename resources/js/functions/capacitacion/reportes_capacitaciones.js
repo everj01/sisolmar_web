@@ -291,6 +291,157 @@ async function ensureCatalogsLoaded() {
     return _catalogsPromise;
 }
 
+/* -------------------------------------------------------------------------
+ * Importación de DNIs desde Excel
+ * Formato esperado: columna A = Nro, columna B = DNI, fila 1 = encabezados.
+ * ---------------------------------------------------------------------- */
+
+const MAX_DNIS_IMPORTACION = 5000;
+const MAX_TAMANO_XLSX_MB = 5;
+
+// Bandera compartida para que los modales de reporte no se cierren con Escape
+// mientras el modal de importación está abierto.
+let _importarDnisAbierto = false;
+
+function _esperarPintado() {
+    return new Promise((resolve) => setTimeout(resolve, 30));
+}
+
+function _valorCeldaExcel(cell) {
+    const valor = cell?.value;
+    if (valor === null || valor === undefined) return "";
+
+    if (typeof valor === "object") {
+        if (Array.isArray(valor.richText)) {
+            return valor.richText.map((t) => t.text || "").join("");
+        }
+        if (Object.prototype.hasOwnProperty.call(valor, "text")) {
+            return String(valor.text ?? "");
+        }
+        if (Object.prototype.hasOwnProperty.call(valor, "result")) {
+            return String(valor.result ?? "");
+        }
+        if (valor instanceof Date) {
+            return valor.toISOString().slice(0, 10);
+        }
+        return "";
+    }
+
+    return String(valor);
+}
+
+function _normalizarEncabezadoExcel(valor) {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+}
+
+function _normalizarDniExcel(valor) {
+    if (valor === null || valor === undefined) return { dni: "", motivo: "" };
+
+    const texto = String(valor).trim();
+    if (!texto) return { dni: "", motivo: "" };
+
+    if (/^\d+\.\d+$/.test(texto) && !/\.0+$/.test(texto)) {
+        return { dni: "", motivo: "Número con decimales" };
+    }
+    if (/[eE][+-]?\d+$/.test(texto)) {
+        return { dni: "", motivo: "Notación científica" };
+    }
+
+    const limpio = texto.replace(/\.0+$/, "").replace(/[\s.\-]/g, "");
+
+    if (!/^\d+$/.test(limpio)) {
+        return { dni: "", motivo: "Contiene caracteres no numéricos" };
+    }
+    if (limpio.length < 6 || limpio.length > 15) {
+        return { dni: "", motivo: "Longitud inválida" };
+    }
+
+    return { dni: limpio, motivo: "" };
+}
+
+async function _extraerDnisExcel(file) {
+    if (!/\.xlsx$/i.test(file.name)) {
+        throw new Error("El archivo debe tener formato .xlsx.");
+    }
+    if (file.size > MAX_TAMANO_XLSX_MB * 1024 * 1024) {
+        throw new Error(
+            `El archivo supera el límite de ${MAX_TAMANO_XLSX_MB} MB.`,
+        );
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await file.arrayBuffer());
+
+    const hoja =
+        workbook.worksheets.find((ws) => ws.rowCount > 1) ||
+        workbook.worksheets[0];
+
+    if (!hoja || hoja.rowCount < 2) {
+        throw new Error(
+            "El archivo no contiene datos. Se esperan encabezados en la fila 1 y DNIs desde la fila 2.",
+        );
+    }
+
+    const advertencias = [];
+    const encabezadoB = _normalizarEncabezadoExcel(
+        _valorCeldaExcel(hoja.getCell(1, 2)),
+    );
+
+    if (!encabezadoB.includes("DNI") && !encabezadoB.includes("DOC")) {
+        advertencias.push(
+            'La celda B1 no tiene el encabezado "DNI". Se leerán igualmente los valores de la columna B.',
+        );
+    }
+
+    const dnis = [];
+    const vistos = new Set();
+    const invalidos = [];
+    const duplicados = [];
+    const ultimaFila = hoja.rowCount;
+
+    for (let fila = 2; fila <= ultimaFila; fila++) {
+        const crudo = _valorCeldaExcel(hoja.getCell(fila, 2));
+        if (!String(crudo).trim()) continue;
+
+        const { dni, motivo } = _normalizarDniExcel(crudo);
+
+        if (!dni) {
+            invalidos.push({
+                fila,
+                valor: String(crudo).trim(),
+                motivo: motivo || "Formato inválido",
+            });
+            continue;
+        }
+
+        if (vistos.has(dni)) {
+            duplicados.push({ fila, valor: dni });
+            continue;
+        }
+
+        if (dnis.length >= MAX_DNIS_IMPORTACION) {
+            throw new Error(
+                `El archivo supera el máximo de ${MAX_DNIS_IMPORTACION} DNIs.`,
+            );
+        }
+
+        vistos.add(dni);
+        dnis.push(dni);
+    }
+
+    return {
+        dnis,
+        invalidos,
+        duplicados,
+        advertencias,
+        totalFilas: Math.max(0, ultimaFila - 1),
+    };
+}
+
 export default document.addEventListener("alpine:init", () => {
     Alpine.data("reportesApp", () => ({
         init() {
@@ -2820,6 +2971,7 @@ export default document.addEventListener("alpine:init", () => {
 
         selectedCourseIds: [],
         selectedUsernames: [],
+        importados: [],
         selectAllCursos: false,
         selectAllPersonal: false,
 
@@ -3176,6 +3328,7 @@ export default document.addEventListener("alpine:init", () => {
             }
             this.personalesFiltrados = resultados;
             this.personalPage = 1;
+            this.recalcularSeleccionPersonal();
         },
 
         toggleCurso(id) {
@@ -3208,23 +3361,69 @@ export default document.addEventListener("alpine:init", () => {
                 this.selectedUsernames.push(dni);
             } else {
                 this.selectedUsernames.splice(idx, 1);
+                this.importados = this.importados.filter(
+                    (i) => i.dni !== dni,
+                );
             }
-            this.selectAllPersonal =
-                this.selectedUsernames.length ===
-                    this.personalesFiltrados.length &&
-                this.personalesFiltrados.length > 0;
+            this.recalcularSeleccionPersonal();
         },
 
         toggleAllPersonal() {
             if (this.selectAllPersonal) {
                 this.selectedUsernames = [];
+                this.importados = [];
                 this.selectAllPersonal = false;
-            } else {
-                this.selectedUsernames = this.personalesFiltrados
-                    .map((p) => p.dni)
-                    .filter(Boolean);
-                this.selectAllPersonal = true;
+                return;
             }
+
+            const dnis = [
+                ...this.personalesFiltrados.map((p) => p.dni).filter(Boolean),
+                ...this.importados.map((i) => i.dni),
+            ];
+            this.selectedUsernames = [...new Set(dnis)];
+            this.selectAllPersonal = true;
+        },
+
+        recalcularSeleccionPersonal() {
+            this.selectAllPersonal =
+                this.personalesFiltrados.length > 0 &&
+                this.personalesFiltrados.every((p) =>
+                    this.selectedUsernames.includes(p.dni),
+                );
+        },
+
+        aplicarDnisImportados(detalle) {
+            if (!detalle || detalle.target !== "record") return;
+
+            const encontrados = Array.isArray(detalle.encontrados)
+                ? detalle.encontrados
+                : [];
+
+            if (encontrados.length === 0) return;
+
+            const seleccionados = new Set(this.selectedUsernames);
+            const mapa = new Map(this.importados.map((i) => [i.dni, i]));
+
+            encontrados.forEach((persona) => {
+                if (!persona?.dni) return;
+                seleccionados.add(persona.dni);
+                mapa.set(persona.dni, persona);
+            });
+
+            this.selectedUsernames = [...seleccionados];
+            this.importados = [...mapa.values()];
+            this.recalcularSeleccionPersonal();
+        },
+
+        quitarImportados() {
+            if (this.importados.length === 0) return;
+
+            const dnis = new Set(this.importados.map((i) => i.dni));
+            this.selectedUsernames = this.selectedUsernames.filter(
+                (dni) => !dnis.has(dni),
+            );
+            this.importados = [];
+            this.recalcularSeleccionPersonal();
         },
 
         async obtenerPersonalRecord() {
@@ -3349,6 +3548,8 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         cerrar() {
+            if (_importarDnisAbierto) return;
+
             this.open = false;
             this.view = "filters";
             this.selectedSistema = "";
@@ -3365,6 +3566,7 @@ export default document.addEventListener("alpine:init", () => {
             this.selectedAnio = "";
             this.selectedCourseIds = [];
             this.selectedUsernames = [];
+            this.importados = [];
             this.selectAllCursos = false;
             this.selectAllPersonal = false;
             this.resultados = [];
@@ -5029,6 +5231,7 @@ export default document.addEventListener("alpine:init", () => {
 
         selectedCursoId: null,
         selectedPersonalDnis: [],
+        importados: [],
         selectAllPersonal: false,
 
         cursosPerPage: 15,
@@ -5196,6 +5399,7 @@ export default document.addEventListener("alpine:init", () => {
 
             this.personales = resultados;
             this.personalPage = 1;
+            this.recalcularSeleccionPersonal();
         },
 
         get cargosDisponibles() {
@@ -5257,21 +5461,68 @@ export default document.addEventListener("alpine:init", () => {
                 this.selectedPersonalDnis.push(dni);
             } else {
                 this.selectedPersonalDnis.splice(idx, 1);
+                this.importados = this.importados.filter(
+                    (i) => i.dni !== dni,
+                );
             }
-            this.selectAllPersonal =
-                this.selectedPersonalDnis.length === this.personales.length &&
-                this.personales.length > 0;
+            this.recalcularSeleccionPersonal();
         },
         toggleAllPersonal() {
             if (this.selectAllPersonal) {
                 this.selectedPersonalDnis = [];
+                this.importados = [];
                 this.selectAllPersonal = false;
-            } else {
-                this.selectedPersonalDnis = this.personales
-                    .map((p) => p.dni)
-                    .filter(Boolean);
-                this.selectAllPersonal = true;
+                return;
             }
+
+            const dnis = [
+                ...this.personales.map((p) => p.dni).filter(Boolean),
+                ...this.importados.map((i) => i.dni),
+            ];
+            this.selectedPersonalDnis = [...new Set(dnis)];
+            this.selectAllPersonal = true;
+        },
+
+        recalcularSeleccionPersonal() {
+            this.selectAllPersonal =
+                this.personales.length > 0 &&
+                this.personales.every((p) =>
+                    this.selectedPersonalDnis.includes(p.dni),
+                );
+        },
+
+        aplicarDnisImportados(detalle) {
+            if (!detalle || detalle.target !== "formato") return;
+
+            const encontrados = Array.isArray(detalle.encontrados)
+                ? detalle.encontrados
+                : [];
+
+            if (encontrados.length === 0) return;
+
+            const seleccionados = new Set(this.selectedPersonalDnis);
+            const mapa = new Map(this.importados.map((i) => [i.dni, i]));
+
+            encontrados.forEach((persona) => {
+                if (!persona?.dni) return;
+                seleccionados.add(persona.dni);
+                mapa.set(persona.dni, persona);
+            });
+
+            this.selectedPersonalDnis = [...seleccionados];
+            this.importados = [...mapa.values()];
+            this.recalcularSeleccionPersonal();
+        },
+
+        quitarImportados() {
+            if (this.importados.length === 0) return;
+
+            const dnis = new Set(this.importados.map((i) => i.dni));
+            this.selectedPersonalDnis = this.selectedPersonalDnis.filter(
+                (dni) => !dnis.has(dni),
+            );
+            this.importados = [];
+            this.recalcularSeleccionPersonal();
         },
 
         async generarReporte() {
@@ -6167,6 +6418,8 @@ export default document.addEventListener("alpine:init", () => {
         },
 
         cerrar() {
+            if (_importarDnisAbierto) return;
+
             this.open = false;
             this.view = "filtros";
             this.generando = false;
@@ -6184,6 +6437,7 @@ export default document.addEventListener("alpine:init", () => {
             this.searchPersonal = "";
             this.selectedCursoId = null;
             this.selectedPersonalDnis = [];
+            this.importados = [];
             this.selectAllPersonal = false;
             this.cursosPage = 1;
             this.personalPage = 1;
@@ -6191,6 +6445,159 @@ export default document.addEventListener("alpine:init", () => {
             this.sortDir = "asc";
             this.todosLosPersonales = [];
             this.personales = [];
+        },
+    }));
+
+    Alpine.data("modalImportarDnis", () => ({
+        open: false,
+        target: null,
+        cursoSeleccionado: false,
+        stage: "idle",
+        errorMsg: "",
+        mostrarDescartados: false,
+
+        resumen: {
+            totalFilas: 0,
+            validos: 0,
+            encontrados: 0,
+            noEncontrados: 0,
+            invalidos: 0,
+            duplicados: 0,
+        },
+        encontrados: [],
+        noEncontrados: [],
+        invalidos: [],
+        duplicados: [],
+        advertencias: [],
+
+        get procesando() {
+            return ["leyendo", "limpiando", "validando"].includes(this.stage);
+        },
+
+        get textoEtapa() {
+            return (
+                {
+                    leyendo: "Leyendo archivo...",
+                    limpiando: "Limpiando y validando datos...",
+                    validando: "Validando DNIs en el sistema...",
+                }[this.stage] || "Procesando..."
+            );
+        },
+
+        get descartadosTotal() {
+            return this.invalidos.length + this.duplicados.length;
+        },
+
+        abrir(detalle = {}) {
+            this.target = detalle.target || null;
+            this.cursoSeleccionado = Boolean(detalle.cursoSeleccionado);
+            this.reiniciar();
+
+            // Debe ejecutarse dentro del gesto del usuario para que el
+            // navegador permita abrir el selector de archivos.
+            this.$refs.archivo?.click();
+        },
+
+        reiniciar() {
+            this.stage = "idle";
+            this.errorMsg = "";
+            this.mostrarDescartados = false;
+            this.encontrados = [];
+            this.noEncontrados = [];
+            this.invalidos = [];
+            this.duplicados = [];
+            this.advertencias = [];
+            this.resumen = {
+                totalFilas: 0,
+                validos: 0,
+                encontrados: 0,
+                noEncontrados: 0,
+                invalidos: 0,
+                duplicados: 0,
+            };
+        },
+
+        cerrar() {
+            if (this.procesando) return;
+
+            this.open = false;
+            this.stage = "idle";
+            _importarDnisAbierto = false;
+        },
+
+        async onFile(event) {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+
+            this.open = true;
+            _importarDnisAbierto = true;
+            this.reiniciar();
+
+            try {
+                this.stage = "leyendo";
+                await _esperarPintado();
+
+                this.stage = "limpiando";
+                await _esperarPintado();
+
+                const resultado = await _extraerDnisExcel(file);
+
+                this.invalidos = resultado.invalidos;
+                this.duplicados = resultado.duplicados;
+                this.advertencias = resultado.advertencias;
+                this.resumen.totalFilas = resultado.totalFilas;
+                this.resumen.validos = resultado.dnis.length;
+                this.resumen.invalidos = resultado.invalidos.length;
+                this.resumen.duplicados = resultado.duplicados.length;
+
+                if (resultado.dnis.length === 0) {
+                    throw new Error(
+                        "No se encontraron DNIs válidos en la columna B del archivo.",
+                    );
+                }
+
+                this.stage = "validando";
+                await _esperarPintado();
+
+                const { data } = await axios.post(
+                    `${VITE_URL_APP}/api/resolver-personal-dnis`,
+                    { dnis: resultado.dnis },
+                );
+
+                if (!data.success) {
+                    throw new Error(
+                        data.message || "No se pudieron validar los DNIs.",
+                    );
+                }
+
+                this.encontrados = data.encontrados || [];
+                this.noEncontrados = data.no_encontrados || [];
+                this.resumen.encontrados = this.encontrados.length;
+                this.resumen.noEncontrados = this.noEncontrados.length;
+                this.stage = "resultado";
+            } catch (error) {
+                console.error(error);
+                this.errorMsg =
+                    error.response?.data?.message ||
+                    error.message ||
+                    "No se pudo procesar el archivo.";
+                this.stage = "error";
+            }
+        },
+
+        confirmar() {
+            if (this.encontrados.length === 0) return;
+
+            this.$dispatch("dnis-importados", {
+                target: this.target,
+                dnis: this.encontrados.map((p) => p.dni),
+                encontrados: this.encontrados,
+            });
+
+            this.open = false;
+            this.stage = "idle";
+            _importarDnisAbierto = false;
         },
     }));
 });
