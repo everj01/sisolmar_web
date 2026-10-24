@@ -265,18 +265,40 @@
                             <i class='bx bx-plus text-base'></i>
                             <span>Nueva DJ</span>
                         </button>
-                         <button type="button" id="btnAbrirReporte" class="btn rounded-full  bg-dark/25 text-dark hover:bg-dark hover:text-white flex items-center gap-1 px-4 py-1">
-                            <i class='bx bx-file-find'></i> Reporte General
-                        </button>
-                         {{-- Reporte de documentos: solo ADMINS RRHH (17) y SUPERUSUARIO (11) --}}
-                         @if($tipoUsuario == 17 || $tipoUsuario == 11)
-                         <button type="button" id="btnDocsPendientes"
-                             title="Personal vigente que aún no tiene foto o DNI. Clic = usa caché · Shift+Clic = re-escanear"
-                             class="btn rounded-full bg-warning/25 text-warning hover:bg-warning hover:text-white flex items-center gap-1 px-4 py-1">
-                             <i class='bx bx-download text-base'></i>
-                             <span>Sin foto / DNI</span>
-                         </button>
-                         @endif
+                         {{-- REPORTES: un solo dropdown (agregar aquí los próximos reportes) --}}
+                         <div id="ddReportesDJ" class="hs-dropdown relative inline-flex [--placement:bottom-right]">
+                             <button type="button" aria-haspopup="menu" aria-expanded="false"
+                                 class="hs-dropdown-toggle btn rounded-full bg-dark/25 text-dark hover:bg-dark hover:text-white flex items-center gap-1 px-4 py-1">
+                                 <i class='bx bx-file-find'></i>
+                                 <span>Reportes</span>
+                                 <i class='bx bx-chevron-down text-base'></i>
+                             </button>
+
+                             <div class="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-64 transition-[opacity,margin] mt-2 opacity-0 hidden z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5">
+                                 <button type="button" id="btnAbrirReporte"
+                                     class="hs-dropdown-close w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-dark/10 hover:text-dark transition-colors">
+                                     <i class='bx bx-file-find text-base'></i>
+                                     <span>Reporte General</span>
+                                 </button>
+
+                                 {{-- Reporte de documentos: solo ADMINS RRHH (17) y SUPERUSUARIO (11) --}}
+                                 @if($tipoUsuario == 17 || $tipoUsuario == 11)
+                                 <button type="button" id="btnDocsPendientes"
+                                     title="Personal vigente que aún no tiene foto o DNI. Se revisa en cada clic contra el servidor de imágenes."
+                                     class="hs-dropdown-close w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-warning/15 hover:text-warning transition-colors">
+                                     <i class='bx bx-download text-base'></i>
+                                     <span>Sin foto / DNI</span>
+                                 </button>
+
+                                 <button type="button" id="btnDniHijosPendientes"
+                                     title="Personal vigente con hijos menores de edad sin DNI cargado (anverso/reverso). Se revisa en cada clic contra el servidor de imágenes."
+                                     class="hs-dropdown-close w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-warning/15 hover:text-warning transition-colors">
+                                     <i class='bx bx-group text-base'></i>
+                                     <span>DNI de hijos</span>
+                                 </button>
+                                 @endif
+                             </div>
+                         </div>
                      </div>
                         
                     @endif
