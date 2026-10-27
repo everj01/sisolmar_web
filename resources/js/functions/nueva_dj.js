@@ -1356,7 +1356,7 @@ import Swal from 'sweetalert2';
         return st;
     }
 
-    // Regla DNI del hijo: OBLIGATORIO solo para menores de edad.
+    // Regla DNI: obligatorio para todos los parentescos de hijo.
     // El rol ADMINS RRHH (tipo 17) está exento de la regla.
     function ndj_esMenorDeEdad(fecha) {
         if (!fecha) return false;
@@ -1387,8 +1387,7 @@ import Swal from 'sweetalert2';
             span.style.color = '#16a34a';
             return;
         }
-        const fecha = fila.querySelector('input[name="ndj_fechaNacimiento[]"]')?.value;
-        const obligatorio = ndj_esMenorDeEdad(fecha) && !ndj_esAdminRrhh();
+        const obligatorio = !ndj_esAdminRrhh();
         const detalle = (okA || okR) ? 'falta ' + (okA ? 'reverso' : 'anverso') : 'sin DNI';
         if (obligatorio) {
             span.textContent = '⚠ ' + detalle + ' (obligatorio)';
@@ -1752,13 +1751,11 @@ import Swal from 'sweetalert2';
             return;
         }
 
-        // DNI obligatorio: solo para hijos MENORES de edad
+        // DNI obligatorio para todos los hijos, independientemente de la edad.
         // (la regla NO aplica para el rol ADMINS RRHH)
         if (!ndj_esAdminRrhh()) {
             const filasHijosDni = ndj_filasHijos();
             for (let i = 0; i < filasHijosDni.length; i++) {
-                const fechaH = filasHijosDni[i].querySelector('input[name="ndj_fechaNacimiento[]"]')?.value;
-                if (!ndj_esMenorDeEdad(fechaH)) continue;   // solo menores de edad
                 const stH = ndj_estadoDniHijo(filasHijosDni[i]);
                 const okA = !!(stH.anverso || stH.tieneAnverso);
                 const okR = !!(stH.reverso || stH.tieneReverso);

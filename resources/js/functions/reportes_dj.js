@@ -15,6 +15,10 @@ const reportes = {
         panel: document.getElementById('configReporteAsigHijosMayores'), sucursal: document.getElementById('mayoresSucursal'),
         tipo: document.getElementById('mayoresTipo'), cargo: document.getElementById('mayoresCargo'), estado: document.getElementById('mayoresEstado'),
     },
+    'mayoria-edad-proxima': {
+        panel: document.getElementById('configReporteMayoriaEdadProxima'), sucursal: document.getElementById('mayoriaSucursal'),
+        tipo: document.getElementById('mayoriaTipo'), cargo: document.getElementById('mayoriaCargo'), estado: document.getElementById('mayoriaEstado'),
+    },
     'sin-dj-escaneada': {
         panel: document.getElementById('configReporteSinDjEscaneada'), sucursal: document.getElementById('sinDjSucursal'),
         tipo: document.getElementById('sinDjTipo'), cargo: document.getElementById('sinDjCargo'), estado: document.getElementById('sinDjEstado'),
@@ -38,7 +42,7 @@ function actualizarCargos(reporte) {
 function limpiarFiltros(reporte) {
     reporte.sucursal.value = '';
     reporte.tipo.value = '';
-    reporte.estado.value = '';
+    if (reporte.estado) reporte.estado.value = '';
     actualizarCargos(reporte);
 }
 
@@ -47,7 +51,7 @@ function parametrosFiltros(reporte) {
     if (reporte.sucursal.value) params.set('codSucursal', reporte.sucursal.value);
     if (reporte.tipo.value) params.set('tipoPer', reporte.tipo.value);
     if (reporte.cargo.value) params.set('cargo', reporte.cargo.value);
-    if (reporte.estado.value) params.set('vigente', reporte.estado.value);
+    if (reporte.estado?.value) params.set('vigente', reporte.estado.value);
     return params;
 }
 
@@ -101,8 +105,8 @@ opcionesReporte.forEach(opcion => opcion.addEventListener('click', () => {
 
 Object.entries(reportes).forEach(([id, reporte]) => {
     reporte.tipo.addEventListener('change', () => actualizarCargos(reporte));
-    const limpiar = ({ 'dni-hijos': 'btnLimpiarDniHijos', 'asig-hijos-mayores': 'btnLimpiarMayores', 'sin-foto-dni': 'btnLimpiarReportesDj', 'sin-dj-escaneada': 'btnLimpiarSinDj' })[id];
-    const estado = ({ 'dni-hijos': 'estadoDniHijos', 'asig-hijos-mayores': 'estadoMayores', 'sin-foto-dni': 'reporteDjEstadoCarga', 'sin-dj-escaneada': 'estadoSinDj' })[id];
+    const limpiar = ({ 'dni-hijos': 'btnLimpiarDniHijos', 'asig-hijos-mayores': 'btnLimpiarMayores', 'mayoria-edad-proxima': 'btnLimpiarMayoria', 'sin-foto-dni': 'btnLimpiarReportesDj', 'sin-dj-escaneada': 'btnLimpiarSinDj' })[id];
+    const estado = ({ 'dni-hijos': 'estadoDniHijos', 'asig-hijos-mayores': 'estadoMayores', 'mayoria-edad-proxima': 'estadoMayoria', 'sin-foto-dni': 'reporteDjEstadoCarga', 'sin-dj-escaneada': 'estadoSinDj' })[id];
     document.getElementById(limpiar).addEventListener('click', () => {
         limpiarFiltros(reporte);
         document.getElementById(estado).textContent = 'Filtros limpiados.';
@@ -172,7 +176,7 @@ document.getElementById('btnExportarSinFotoDni').addEventListener('click', event
 
 document.getElementById('btnExportarDniHijos').addEventListener('click', event => {
     const params = parametrosFiltros(reportes['dni-hijos']);
-    descargarReporte(event.currentTarget, document.getElementById('estadoDniHijos'), '/dj/reporte/dni-hijos', params, 'Reporte_DNI_Hijos_Pendientes.xlsx');
+    descargarReporte(event.currentTarget, document.getElementById('estadoDniHijos'), '/dj/reporte/dni-hijos', params, 'Personal_Con_Asignacion_Familiar_Sin_Sustento.xlsx');
 });
 
 document.getElementById('btnExportarPdfSinFotoDni').addEventListener('click', event => {
@@ -183,17 +187,27 @@ document.getElementById('btnExportarPdfSinFotoDni').addEventListener('click', ev
 
 document.getElementById('btnExportarPdfDniHijos').addEventListener('click', event => {
     const params = parametrosFiltros(reportes['dni-hijos']);
-    descargarReporte(event.currentTarget, document.getElementById('estadoDniHijos'), '/dj/reporte/dni-hijos', params, 'Reporte_Pendientes_DNI_Hijos.pdf', 'pdf');
+    descargarReporte(event.currentTarget, document.getElementById('estadoDniHijos'), '/dj/reporte/dni-hijos', params, 'Personal_Con_Asignacion_Familiar_Sin_Sustento.pdf', 'pdf');
 });
 
 const endpointHijosMayores = '/dj/reporte/asignacion-familiar-hijos-mayores';
 document.getElementById('btnExportarMayores').addEventListener('click', event => {
     const params = parametrosFiltros(reportes['asig-hijos-mayores']);
-    descargarReporte(event.currentTarget, document.getElementById('estadoMayores'), endpointHijosMayores, params, 'Reporte_Asignacion_Familiar_Hijos_Mayores.xlsx');
+    descargarReporte(event.currentTarget, document.getElementById('estadoMayores'), endpointHijosMayores, params, 'Asignacion_Familiar_Por_Hijos_Mayores_De_Edad.xlsx');
 });
 document.getElementById('btnExportarPdfMayores').addEventListener('click', event => {
     const params = parametrosFiltros(reportes['asig-hijos-mayores']);
-    descargarReporte(event.currentTarget, document.getElementById('estadoMayores'), endpointHijosMayores, params, 'Reporte_Asignacion_Familiar_Hijos_Mayores.pdf', 'pdf');
+    descargarReporte(event.currentTarget, document.getElementById('estadoMayores'), endpointHijosMayores, params, 'Asignacion_Familiar_Por_Hijos_Mayores_De_Edad.pdf', 'pdf');
+});
+
+const endpointMayoriaEdad = '/dj/reporte/asignacion-familiar-proxima-vencer';
+document.getElementById('btnExportarMayoria').addEventListener('click', event => {
+    const params = parametrosFiltros(reportes['mayoria-edad-proxima']);
+    descargarReporte(event.currentTarget, document.getElementById('estadoMayoria'), endpointMayoriaEdad, params, 'Asignacion_Familiar_Proxima_a_Vencer.xlsx');
+});
+document.getElementById('btnExportarPdfMayoria').addEventListener('click', event => {
+    const params = parametrosFiltros(reportes['mayoria-edad-proxima']);
+    descargarReporte(event.currentTarget, document.getElementById('estadoMayoria'), endpointMayoriaEdad, params, 'Asignacion_Familiar_Proxima_a_Vencer.pdf', 'pdf');
 });
 
 const endpointSinDj = '/dj/reporte/personal-sin-dj-escaneada';
@@ -210,6 +224,22 @@ const modalPreview = document.getElementById('modalVistaPreviaReporte');
 const tituloPreview = document.getElementById('tituloVistaPreviaReporte');
 const subtituloPreview = document.getElementById('subtituloVistaPreviaReporte');
 const contenidoPreview = document.getElementById('contenidoVistaPreviaReporte');
+const exportacionesPreview = {
+    'sin-foto-dni': document.getElementById('previewExportSinFotoDni'),
+    'sin-dj-escaneada': document.getElementById('previewExportSinDj'),
+    'dni-hijos': document.getElementById('previewExportDniHijos'),
+    'asig-hijos-mayores': document.getElementById('previewExportMayores'),
+    'mayoria-edad-proxima': document.getElementById('previewExportMayoria'),
+};
+
+function prepararExportacionesPreview(id = null, habilitar = false) {
+    Object.entries(exportacionesPreview).forEach(([reporteId, contenedor]) => {
+        if (!contenedor) return;
+        contenedor.classList.toggle('hidden', reporteId !== id);
+        contenedor.querySelectorAll('button').forEach(boton => { boton.disabled = !habilitar; });
+    });
+}
+
 const definicionColumnasPreview = {
     'sin-foto-dni': [
         ['numero', 'N°'], ['codigo', 'Código'], ['personal', 'Apellidos y Nombres'], ['dni', 'N° Documento'], ['sucursal', 'Sucursal'],
@@ -231,10 +261,16 @@ const definicionColumnasPreview = {
         ['ingreso_solmar', 'Ingreso a Solmar'], ['ingreso_planilla', 'Ingreso a planillas'],
         ['asignacion_familiar', 'Asignación familiar'], ['numero_hijos', 'N° hijos mayores'], ['detalle_hijos', 'Detalle de hijos mayores'],
     ],
+    'mayoria-edad-proxima': [
+        ['numero', 'N°'], ['sucursal', 'Sucursal'], ['personal', 'Personal'], ['dni', 'DNI del personal'],
+        ['hijo', 'Hijo(a)'], ['fecha_nacimiento', 'Fecha de nacimiento'], ['fecha_mayoria', 'Cumple 18 años'],
+        ['dias_restantes', 'Días restantes'], ['aviso', 'Aviso'],
+    ],
     'sin-dj-escaneada': [
         ['numero', 'N°'], ['codigo', 'Código'], ['personal', 'Apellidos y nombres'], ['dni', 'N° documento'],
         ['sucursal', 'Sucursal'], ['tipo', 'Tipo'], ['cargo', 'Cargo'], ['estado', 'Estado'],
         ['ingreso_solmar', 'Ingreso a Solmar'], ['ingreso_planilla', 'Ingreso a planillas'], ['dj', 'DJ escaneada'],
+        ['usuario_registro', 'Usuario de registro'], ['fecha_registro', 'Fecha de registro'],
     ],
 };
 
@@ -245,6 +281,7 @@ function escaparHtml(valor) {
 }
 
 function cerrarPreview() {
+    prepararExportacionesPreview();
     modalPreview.classList.add('hidden');
     modalPreview.classList.remove('flex');
     modalPreview.style.display = 'none';
@@ -255,20 +292,22 @@ function cerrarPreview() {
 async function abrirPreview(id, reporte, boton) {
     const titulos = {
         'sin-foto-dni': 'Personal Sin Foto o DNI',
-        'dni-hijos': 'DNI de Hijo Menores de Edad',
-        'asig-hijos-mayores': 'Asignación Familiar Con Hijos Mayores De Edad',
+        'dni-hijos': 'Personal Con Asignación Familiar Sin Sustento',
+        'asig-hijos-mayores': 'Asignación Familiar Por Hijos Mayores De Edad',
+        'mayoria-edad-proxima': 'Asignación Familiar Próxima a Vencer',
         'sin-dj-escaneada': 'Personal sin DJ escaneada',
     };
     const titulo = titulos[id];
+    prepararExportacionesPreview(id, false);
     const params = parametrosFiltros(reporte);
     params.set('previsualizar', '1');
     params.set('incremental', '1');
     params.set('scan_id', nuevoIdEscaneo());
     tituloPreview.textContent = `Vista previa: ${titulo}`;
-    subtituloPreview.textContent = id === 'asig-hijos-mayores'
+    subtituloPreview.textContent = ['asig-hijos-mayores', 'mayoria-edad-proxima'].includes(id)
         ? 'Aplicando filtros y consultando derechohabientes…'
         : 'Aplicando los filtros seleccionados…';
-    contenidoPreview.innerHTML = id === 'asig-hijos-mayores'
+    contenidoPreview.innerHTML = ['asig-hijos-mayores', 'mayoria-edad-proxima'].includes(id)
         ? '<p class="text-sm text-slate-500">Consultando datos de personal e hijos…</p>'
         : '<p class="text-sm text-slate-500">Consultando datos y verificando documentos…</p>';
     modalPreview.classList.remove('hidden');
@@ -282,6 +321,7 @@ async function abrirPreview(id, reporte, boton) {
             'sin-foto-dni': '/dj/reporte/personal-documentos',
             'dni-hijos': '/dj/reporte/dni-hijos',
             'asig-hijos-mayores': endpointHijosMayores,
+            'mayoria-edad-proxima': endpointMayoriaEdad,
             'sin-dj-escaneada': endpointSinDj,
         };
         const ruta = rutas[id];
@@ -302,14 +342,17 @@ async function abrirPreview(id, reporte, boton) {
         const filas = resultado.preview;
         subtituloPreview.textContent = `${Number(resultado.total || 0).toLocaleString('es-PE')} registros encontrados con estos filtros.`;
         if (filas.length === 0) {
+            prepararExportacionesPreview();
             contenidoPreview.innerHTML = '<div class="py-10 text-center text-sm text-slate-500">No se encontraron registros para mostrar con los filtros seleccionados.</div>';
             return;
         }
 
-        const encabezados = columnas.map(([, etiqueta]) => `<th class="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">${escaparHtml(etiqueta)}</th>`).join('');
-        const cuerpo = filas.map(fila => `<tr class="border-t border-slate-100">${columnas.map(([clave]) => `<td class="whitespace-nowrap px-3 py-2 text-sm text-slate-700">${escaparHtml(fila[clave])}</td>`).join('')}</tr>`).join('');
+        const encabezados = columnas.map(([clave, etiqueta]) => `<th class="${clave === 'personal' ? 'min-w-[320px]' : ''} whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">${escaparHtml(etiqueta)}</th>`).join('');
+        const cuerpo = filas.map(fila => `<tr class="border-t border-slate-100">${columnas.map(([clave]) => `<td class="${clave === 'personal' ? 'min-w-[320px]' : ''} whitespace-nowrap px-3 py-2 text-sm text-slate-700">${escaparHtml(fila[clave])}</td>`).join('')}</tr>`).join('');
         contenidoPreview.innerHTML = `<div class="h-full w-full overflow-x-scroll overflow-y-auto rounded-lg border border-slate-200"><table class="w-max min-w-full divide-y divide-slate-200"><thead class="sticky top-0 z-10 bg-slate-50"><tr>${encabezados}</tr></thead><tbody>${cuerpo}</tbody></table></div>`;
+        prepararExportacionesPreview(id, true);
     } catch (error) {
+        prepararExportacionesPreview();
         console.error('No se pudo cargar la vista previa:', error);
         subtituloPreview.textContent = 'No se pudo consultar el reporte.';
         contenidoPreview.innerHTML = `<p class="py-8 text-center text-sm text-red-600">${escaparHtml(error.message || 'Intenta nuevamente.')}</p>`;
@@ -321,6 +364,7 @@ async function abrirPreview(id, reporte, boton) {
 document.getElementById('btnPrevisualizarSinFotoDni').addEventListener('click', event => abrirPreview('sin-foto-dni', reportes['sin-foto-dni'], event.currentTarget));
 document.getElementById('btnPrevisualizarDniHijos').addEventListener('click', event => abrirPreview('dni-hijos', reportes['dni-hijos'], event.currentTarget));
 document.getElementById('btnPrevisualizarMayores').addEventListener('click', event => abrirPreview('asig-hijos-mayores', reportes['asig-hijos-mayores'], event.currentTarget));
+document.getElementById('btnPrevisualizarMayoria').addEventListener('click', event => abrirPreview('mayoria-edad-proxima', reportes['mayoria-edad-proxima'], event.currentTarget));
 document.getElementById('btnPrevisualizarSinDj').addEventListener('click', event => abrirPreview('sin-dj-escaneada', reportes['sin-dj-escaneada'], event.currentTarget));
 document.getElementById('cerrarVistaPreviaReporte').addEventListener('click', cerrarPreview);
 document.getElementById('cerrarVistaPreviaReportePie').addEventListener('click', cerrarPreview);

@@ -494,6 +494,24 @@ import Swal from 'sweetalert2';
             const doc   = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [216, 356] });
             const pageW = doc.internal.pageSize.getWidth();
             const marginX = 6;
+            let logoBase64 = null;
+            if (window.logoUrl) {
+                try {
+                    const response = await fetch(window.logoUrl);
+                    if (response.ok) {
+                        const logoBlob = await response.blob();
+                        const logoData = await new Promise(resolve => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(logoBlob);
+                        });
+                        doc.addImage(logoData, 'PNG', marginX, 4, 34, 16);
+                        logoBase64 = logoData;
+                    }
+                } catch (logoError) {
+                    console.warn('No se pudo incluir el logo en el PDF:', logoError);
+                }
+            }
             const sucursalTexto = selSucursal?.selectedOptions[0]?.textContent.trim() || 'Todas las sucursales';
             const tipoTexto = selTipo?.selectedOptions[0]?.textContent.trim() || 'Todos los tipos';
             const estadoTexto = document.getElementById('rptVigente')?.selectedOptions[0]?.textContent.trim() || 'Todos';
@@ -502,7 +520,7 @@ import Swal from 'sweetalert2';
             doc.setFontSize(13);
             doc.setTextColor(18, 59, 89);
             const lineasTitulo = doc.splitTextToSize(titulo, pageW - marginX * 2);
-            doc.text(lineasTitulo, marginX, 11);
+            doc.text(lineasTitulo, pageW / 2, 11, { align: 'center' });
 
             const yTituloFin = 11 + lineasTitulo.length * 5.2;
             const datosResumen = [[
@@ -536,6 +554,7 @@ import Swal from 'sweetalert2';
                     fontSize:    5.5,
                     cellPadding: 1.5,
                     overflow:    'linebreak',
+                    halign:      'center',
                     valign:      'middle',
                     lineColor:   [203, 213, 225],
                     lineWidth:   0.15,
@@ -554,18 +573,18 @@ import Swal from 'sweetalert2';
                     0:  { cellWidth: 5,  halign: 'center' }, // It
                     1:  { cellWidth: 12, halign: 'center' }, // Sucursal
                     2:  { cellWidth: 9,  halign: 'center' }, // Cód
-                    3:  { cellWidth: 40 },                   // Nombres
-                    4:  { cellWidth: 12 },                   // País
+                    3:  { cellWidth: 40, halign: 'center' }, // Nombres
+                    4:  { cellWidth: 12, halign: 'center' }, // País
                     5:  { cellWidth: 8,  halign: 'center' }, // Tipo Doc
                     6:  { cellWidth: 18, halign: 'center' }, // Doc Iden
                     7:  { cellWidth: 16, halign: 'center' }, // Caduca Doc
                     8:  { cellWidth: 7,  halign: 'center' }, // Sexo
                     9:  { cellWidth: 7,  halign: 'center' }, // Edad
-                    10: { cellWidth: 40 },                   // Email
-                    11: { cellWidth: 20 },                   // Teléfono
-                    12: { cellWidth: 48 },                   // Dirección
+                    10: { cellWidth: 40, halign: 'center' }, // Email
+                    11: { cellWidth: 20, halign: 'center' }, // Teléfono
+                    12: { cellWidth: 48, halign: 'center' }, // Dirección
                     13: { cellWidth: 16, halign: 'center' }, // F. Ingreso
-                    14: { cellWidth: 28 },                   // Cargo
+                    14: { cellWidth: 28, halign: 'center' }, // Cargo
                     15: { cellWidth: 14, halign: 'center' }, // Tipo Pers
                     16: { cellWidth: 16, halign: 'center' }, // Caduca EMO
                     17: { cellWidth: 16, halign: 'center' }, // Fin Contrato
@@ -634,9 +653,6 @@ import Swal from 'sweetalert2';
             worksheet.getCell('C1').font = { bold: true, color: { argb: 'FF990000' }, size: 11 };
             worksheet.getCell('C1').alignment = { horizontal: 'left', vertical: 'center', wrapText: true };
             worksheet.mergeCells(`C2:${ultimaColumna}2`);
-            worksheet.getCell('C2').value = 'Sistema Integrado Solmar — SISOL Web';
-            worksheet.getCell('C2').font = { bold: true, color: { argb: 'FF990000' }, size: 11 };
-            worksheet.getCell('C2').alignment = { horizontal: 'left', vertical: 'center' };
             worksheet.getRow(4).height = 6;
 
             const bloques = [
@@ -691,7 +707,7 @@ import Swal from 'sweetalert2';
                 const row = worksheet.addRow(COLUMNAS_EXPORT.map(c => c.key === '_it' ? index + 1 : (registro[c.key] ?? '')));
                 row.eachCell(cell => {
                     cell.font = { size: 9 };
-                    cell.alignment = { vertical: 'middle', horizontal: cell.col === 4 || cell.col === 13 || cell.col === 15 ? 'left' : 'center' };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
                     cell.border = {
                         top: { style: 'thin', color: { argb: 'FFD1D5DB' } },

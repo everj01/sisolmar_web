@@ -136,6 +136,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/notificaciones-matriculas/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
         Route::get('/notificaciones/folios-por-vencer', [NotificacionController::class, 'foliosPorVencer'])->name('notificaciones.foliosPorVencer');
         Route::get('/notificaciones/pendientes-etapa2', [NotificacionController::class, 'pendientesEtapa2']);
+        Route::get('/notificaciones/hijos-por-cumplir-mayoria-edad', [NotificacionController::class, 'hijosPorCumplirMayoriaEdad']);
         Route::get('/notificaciones/demandas-admin', [NotificacionController::class, 'getDemandasAdmin']);
         Route::post('/notificaciones/demandas-admin/borrar', [NotificacionController::class, 'deleteDemandaAdmin']);
 
@@ -286,6 +287,8 @@ Route::middleware(['auth'])->group(function () {
 
         // DJ módulo (antes con prefix 'dj')
         Route::prefix('dj')->middleware('throttle:dj_api')->group(function () {
+            Route::get('/solicitudes-sip/{id}', [DjController::class, 'detalleSolicitudSip']);
+            Route::post('/solicitudes-sip/{id}/resolver', [DjController::class, 'resolverSolicitudSip']);
             Route::get('/get-personal-data', [DjController::class, 'getPersonalData']);
             Route::get('/get-catalogs', [DjController::class, 'getCatalogs']);
             Route::get('/get-ubicacion', [DjController::class, 'getUbicacion']);
@@ -310,6 +313,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reporte/personal-documentos', [ReportePersonalController::class, 'documentosPendientes']);
             Route::get('/reporte/dni-hijos', [ReportePersonalController::class, 'dniHijosPendientes']);
             Route::get('/reporte/asignacion-familiar-hijos-mayores', [ReportePersonalController::class, 'asignacionFamiliarHijosMayores']);
+            Route::get('/reporte/asignacion-familiar-proxima-vencer', [ReportePersonalController::class, 'asignacionFamiliarProximaVencer']);
             Route::get('/reporte/personal-sin-dj-escaneada', [ReportePersonalController::class, 'personalSinDjEscaneada']);
             Route::get('/reporte/descargar/{archivo}', [ReportePersonalController::class, 'descargarReporte'])->where('archivo', '.*')->name('reporte.descargar');
             Route::post('/save-recontratacion', [DjController::class, 'saveRecontratacion']);

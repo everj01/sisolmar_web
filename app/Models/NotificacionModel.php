@@ -78,6 +78,115 @@ class NotificacionModel extends Model
         return $conteos;
     }
 
+    /**
+     * Hijos registrados en la DJ que cumplen 18 años dentro de los próximos 30 días.
+     * La fecha de mayoría se calcula exclusivamente desde FECH_NACI de DERECHO_HABIENTE.
+     */
+    public static function hijosPorCumplirMayoriaEdad(array $filtros = [], bool $soloActivos = true)
+    {
+        $sql = "SELECT
+                p.CODI_PERS AS codigo_personal,
+                LTRIM(RTRIM(CONCAT(
+                    p.APEL_1 COLLATE DATABASE_DEFAULT, ' ',
+                    p.APEL_2 COLLATE DATABASE_DEFAULT, ' ',
+                    p.NOMB_1 COLLATE DATABASE_DEFAULT, ' ',
+                    p.NOMB_2 COLLATE DATABASE_DEFAULT
+                ))) AS personal,
+                p.NRO_DOCU_IDEN AS dni,
+                COALESCE(s.SUCU_ABREVIATURA COLLATE DATABASE_DEFAULT,
+                    CONVERT(NVARCHAR(100), p.SUCU_CODIGO) COLLATE DATABASE_DEFAULT, N'SIN SUCURSAL') AS sucursal,
+                COALESCE(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS tipo_personal,
+                COALESCE(c.DESC_CARGO, p.CODI_CARG) AS cargo,
+                LTRIM(RTRIM(CONCAT(
+                    dh.APEL_1 COLLATE DATABASE_DEFAULT, ' ',
+                    dh.APEL_2 COLLATE DATABASE_DEFAULT, ' ',
+                    dh.NOMB_1 COLLATE DATABASE_DEFAULT, ' ',
+                    dh.NOMB_2 COLLATE DATABASE_DEFAULT
+                ))) AS hijo,
+                CONVERT(VARCHAR(10), nacimiento.fecha_nacimiento, 103) AS fecha_nacimiento,
+                CONVERT(VARCHAR(10), fechas.fecha_mayoria, 103) AS fecha_mayoria,
+                DATEDIFF(DAY, CONVERT(DATE, GETDATE()), fechas.fecha_mayoria) AS dias_restantes,
+                CASE WHEN DATEDIFF(DAY, CONVERT(DATE, GETDATE()), fechas.fecha_mayoria) <= 15 THEN 15 ELSE 30 END AS dias_aviso
+            FROM si_solm.dbo.PERSONAL AS p
+            INNER JOIN si_solm.dbo.DERECHO_HABIENTE AS dh
+                ON dh.CODI_PERS = p.CODI_PERS
+            LEFT JOIN si_solm.dbo.SISO_SUCURSAL AS s
+                ON s.SUCU_CODIGO = p.SUCU_CODIGO
+            LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL AS tp
+                ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
+            LEFT JOIN si_solm.dbo.CARGOS AS c
+                ON c.CODI_CARG = p.CODI_CARG
+            CROSS APPLY (SELECT TRY_CONVERT(DATE, dh.FECH_NACI) AS fecha_nacimiento) AS nacimiento
+            CROSS APPLY (SELECT CASE
+                WHEN nacimiento.fecha_nacimiento <= CONVERT(DATE, '99811231', 112)
+                THEN DATEADD(YEAR, 18, nacimiento.fecha_nacimiento)
+                ELSE NULL
+            END AS fecha_mayoria) AS fechas
+            WHERE UPPER(LTRIM(RTRIM(dh.TIPO_RELA))) LIKE N'HIJO%'
+                AND nacimiento.fecha_nacimiento IS NOT NULL
+                AND fechas.fecha_mayoria IS NOT NULL
+                AND UPPER(LTRIM(RTRIM(ISNULL(p.ASIG_FAMI, '')))) = 'SI'
+                AND DATEDIFF(DAY, CONVERT(DATE, GETDATE()), fechas.fecha_mayoria) BETWEEN 0 AND 30
+            ";
+
+        $parametros = [];
+        if ($soloActivos) {
+            $sql .= " AND UPPER(LTRIM(RTRIM(ISNULL(p.PERS_VIGENCIA, '')))) = 'SI'";
+        } elseif (!empty($filtros['vigente'])) {
+            $sql .= ' AND p.PERS_VIGENCIA = ?';
+            $parametros[] = $filtros['vigente'];
+        }
+        foreach ([
+            'codSucursal' => 'p.SUCU_CODIGO',
+            'tipoPer' => 'p.PERS_TIPOTRAB',
+            'cargo' => 'p.CODI_CARG',
+        ] as $filtro => $columna) {
+            if (!empty($filtros[$filtro])) {
+                $sql .= " AND {$columna} = ?";
+                $parametros[] = $filtros[$filtro];
+            }
+        }
+        $sql .= ' ORDER BY s.SUCU_ABREVIATURA, personal, hijo';
+
+        return DB::select($sql, $parametros);
+    }
+
+public static function obtenerSolicitudesDjPendientes()
+    {
+        // Las bases usan collations diferentes. Normalizamos expresamente los
+        // campos de texto tanto en las uniones como en COALESCE para que el
+        // endpoint no falle al cruzar sisolm_web con si_solm.
+        return DB::select("SELECT DISTINCT
+                r.SOLI_CODIGO AS id,
+                r.CODI_PERS AS codigoPers,
+                r.SOLI_FECHA_REG AS fecha_creacion,
+                COALESCE(
+                    NULLIF(LTRIM(RTRIM(CONCAT(
+                        p.APEL_1 COLLATE DATABASE_DEFAULT, N' ',
+                        p.APEL_2 COLLATE DATABASE_DEFAULT, N' ',
+                        p.NOMB_1 COLLATE DATABASE_DEFAULT, N' ',
+                        p.NOMB_2 COLLATE DATABASE_DEFAULT
+                    ))), N''),
+                    N'Personal ' + LTRIM(RTRIM(r.CODI_PERS COLLATE DATABASE_DEFAULT))
+                ) AS personal,
+                COALESCE(s.SUCU_ABREVIATURA COLLATE DATABASE_DEFAULT, CONVERT(NVARCHAR(100), p.SUCU_CODIGO) COLLATE DATABASE_DEFAULT, N'—') AS sucursal,
+                COALESCE(tp.TIPE_DESCRIPCION COLLATE DATABASE_DEFAULT, CONVERT(NVARCHAR(100), p.PERS_TIPOTRAB) COLLATE DATABASE_DEFAULT, N'—') AS tipo_trabajador,
+                COALESCE(c.DESC_CARGO COLLATE DATABASE_DEFAULT, CONVERT(NVARCHAR(100), p.CODI_CARG) COLLATE DATABASE_DEFAULT, N'—') AS cargo,
+                COALESCE(CONVERT(NVARCHAR(100), p.NRO_DOCU_IDEN) COLLATE DATABASE_DEFAULT, N'—') AS dni
+            FROM sisolm_web.dbo.sw_DJ_SOLICITUD r
+            LEFT JOIN si_solm.dbo.PERSONAL p
+                ON LTRIM(RTRIM(r.CODI_PERS COLLATE DATABASE_DEFAULT)) = LTRIM(RTRIM(p.CODI_PERS COLLATE DATABASE_DEFAULT))
+            LEFT JOIN si_solm.dbo.SISO_SUCURSAL s
+                ON CONVERT(NVARCHAR(100), s.SUCU_CODIGO) COLLATE DATABASE_DEFAULT = CONVERT(NVARCHAR(100), p.SUCU_CODIGO) COLLATE DATABASE_DEFAULT
+            LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp
+                ON CONVERT(NVARCHAR(100), tp.TIPE_CODIGO) COLLATE DATABASE_DEFAULT = CONVERT(NVARCHAR(100), p.PERS_TIPOTRAB) COLLATE DATABASE_DEFAULT
+            LEFT JOIN si_solm.dbo.CARGOS c
+                ON CONVERT(NVARCHAR(100), c.CODI_CARG) COLLATE DATABASE_DEFAULT = CONVERT(NVARCHAR(100), p.CODI_CARG) COLLATE DATABASE_DEFAULT
+            WHERE r.SOLI_ESTADO = 'PENDIENTE'
+              AND r.EMPR_CODIGO <> '05'
+            ORDER BY r.SOLI_FECHA_REG DESC");
+    }
+
 public static function obtenerDemandasNuevas()
     {
         // Cada fila de sw_dj_notificaciones_act es una DJ registrada desde el SIP

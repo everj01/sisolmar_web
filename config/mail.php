@@ -81,11 +81,11 @@ return [
 
         'sip' => [
             'transport' => 'smtp',
-            'host' => 'smtp.gmail.com',
-            'port' => 465,
-            'encryption' => 'ssl',
-            'username' => 'robotsisolmar@solsecurity.pe',
-            'password' => 'dpmw ethh oabr byak',
+            'host' => env('MAIL_SIP_HOST', 'smtp.gmail.com'),
+            'port' => env('MAIL_SIP_PORT', 465),
+            'encryption' => env('MAIL_SIP_ENCRYPTION', 'ssl'),
+            'username' => env('MAIL_SIP_USERNAME'),
+            'password' => env('MAIL_SIP_PASSWORD'),
             'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
         ],
@@ -137,6 +137,11 @@ return [
     'sip_cc' => array_values(array_filter(array_map(
         'trim',
         explode(',', (string) env('MAIL_SIP_CC', 'filecontrol@solsecurity.pe'))
+    ))),
+
+    'dj_aprobada_cc' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('MAIL_DJ_APROBADA_CC', 'filecontrol@solsecurity.pe,jhordantapiaespinoza@gmail.com'))
     ))),
 
     /*

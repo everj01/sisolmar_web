@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Models\NotificacionModel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -441,8 +442,7 @@ class ReportePersonalController extends Controller
                 array_values($filas),
                 [
                     'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre',
-                    'N° documento' => 'doc', 'Sucursal' => 'sucursal', 'Tipo' => 'tipo',
-                    'Cargo' => 'cargo', 'Ingreso a Solmar' => 'ingreso_solmar',
+                    'N° documento' => 'doc', 'Cargo' => 'cargo', 'Ingreso a Solmar' => 'ingreso_solmar',
                     'Ingreso a planillas' => 'ingreso_planilla', 'Foto' => 'foto_txt',
                     'DNI' => 'dni_txt', 'Registrado por' => 'reg', 'F. registro' => 'freg',
                     'Modificado por' => 'mod', 'F. modificación' => 'fmod',
@@ -543,7 +543,12 @@ class ReportePersonalController extends Controller
             return $fila;
         }, $filas, array_keys($filas)));
 
-        $pdf = Pdf::loadView($vista, compact('titulo', 'filas', 'columnas', 'stats'))
+        $rutaLogo = public_path('images/logo_sol.png');
+        $logoDataUri = is_file($rutaLogo)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($rutaLogo))
+            : null;
+
+        $pdf = Pdf::loadView($vista, compact('titulo', 'filas', 'columnas', 'stats', 'logoDataUri'))
             ->setPaper('a3', 'landscape')
             ->setOption('dpi', 72);
 
@@ -830,7 +835,7 @@ class ReportePersonalController extends Controller
         // ── 4. Excel ────────────────────────────────────────────────────
         $titulo = str_replace(
             'REPORTE DE PENDIENTES DE FOTOS / DNI',
-            'REPORTE DE PENDIENTES DE FOTOS DE DNI DE HIJOS MENORES DE EDAD',
+            'PERSONAL CON ASIGNACIÓN FAMILIAR SIN SUSTENTO',
             $this->tituloExcelDocumentos($filtros, true)
         );
 
@@ -842,8 +847,7 @@ class ReportePersonalController extends Controller
                 array_values($filas),
                 [
                     'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre',
-                    'N° documento' => 'doc', 'Sucursal' => 'sucursal', 'Tipo' => 'tipo',
-                    'Cargo' => 'cargo', 'Ingreso a Solmar' => 'ingreso_solmar',
+                    'N° documento' => 'doc', 'Cargo' => 'cargo', 'Ingreso a Solmar' => 'ingreso_solmar',
                     'Ingreso a planillas' => 'ingreso_planilla', 'Asignación familiar' => 'asignacion_familiar',
                     'Hijos <18' => 'total', 'Anverso' => 'anverso_txt', 'Reverso' => 'reverso_txt',
                     'Sin imagen' => 'sin', 'Detalle de faltantes' => 'detalle',
@@ -972,7 +976,7 @@ class ReportePersonalController extends Controller
 
         $titulo = str_replace(
             'REPORTE DE DOCUMENTOS',
-            'REPORTE DE ASIGNACIÓN FAMILIAR CON HIJOS MAYORES DE EDAD',
+            'ASIGNACIÓN FAMILIAR POR HIJOS MAYORES DE EDAD',
             $this->tituloExcelDocumentos($filtros, false)
         );
         $stats = [
@@ -983,9 +987,9 @@ class ReportePersonalController extends Controller
 
         $columnas = [
             'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre', 'N° documento' => 'doc',
-            'Sucursal' => 'sucursal', 'Tipo' => 'tipo', 'Cargo' => 'cargo', 'Estado' => 'estado',
+            'Cargo' => 'cargo', 'Estado' => 'estado',
             'Ingreso a Solmar' => 'ingreso_solmar', 'Ingreso a planillas' => 'ingreso_planilla',
-            'Asignación familiar' => 'asignacion_familiar', 'N° hijos mayores' => 'numero_hijos',
+            'N° hijos mayores' => 'numero_hijos',
             'Detalle de hijos mayores' => 'detalle_hijos',
         ];
 
@@ -1012,6 +1016,85 @@ class ReportePersonalController extends Controller
         copy($rutaArchivo, $publicDir . DIRECTORY_SEPARATOR . $nombreArchivo);
         @unlink($rutaArchivo);
         return response()->json(['url' => route('reporte.descargar', ['archivo' => $nombreArchivo]), 'nombre' => $nombreArchivo]);
+    }
+
+    /** Reporte de hijos registrados en DJ que cumplen 18 dentro de los próximos 30 días. */
+    public function asignacionFamiliarProximaVencer(Request $request)
+    {
+        if (!in_array((int) session('tipo_rol'), self::ROLES_REPORTE_DOCUMENTOS, true)) {
+            abort(403, 'Este reporte es exclusivo para ADMINS RRHH y SUPERUSUARIO.');
+        }
+
+        $filtros = $request->validate([
+            'codSucursal' => 'nullable|string|max:20',
+            'tipoPer' => 'nullable|in:01,02,03,05',
+            'cargo' => 'nullable|string|max:20',
+            'vigente' => 'nullable|in:SI,NO',
+        ]);
+
+        $filas = [];
+        $personasEvaluadas = [];
+        foreach (NotificacionModel::hijosPorCumplirMayoriaEdad($filtros, false) as $r) {
+            $personasEvaluadas[trim((string) $r->codigo_personal)] = true;
+            $filas[] = [
+                'sucursal' => trim((string) $r->sucursal),
+                'personal' => trim((string) $r->personal),
+                'dni' => trim((string) ($r->dni ?? '')),
+                'hijo' => trim((string) $r->hijo),
+                'fecha_nacimiento' => $r->fecha_nacimiento,
+                'fecha_mayoria' => $r->fecha_mayoria,
+                'dias_restantes' => (int) $r->dias_restantes,
+                'aviso' => (int) $r->dias_aviso === 15
+                    ? 'Recordatorio (15 días o menos)'
+                    : 'Aviso inicial (hasta 30 días)',
+            ];
+        }
+
+        $columnas = [
+            'N°' => 'numero', 'Sucursal' => 'sucursal', 'Personal' => 'personal',
+            'DNI del personal' => 'dni', 'Hijo(a)' => 'hijo',
+            'Fecha de nacimiento' => 'fecha_nacimiento', 'Cumple 18 años' => 'fecha_mayoria',
+            'Días restantes' => 'dias_restantes', 'Aviso' => 'aviso',
+        ];
+
+        if ($request->boolean('previsualizar')) {
+            $preview = array_map(static fn (array $fila, int $i): array => ['numero' => $i + 1] + $fila, $filas, array_keys($filas));
+            return response()->json(['preview' => $preview, 'total' => count($preview)]);
+        }
+
+        $titulo = str_replace(
+            'REPORTE DE DOCUMENTOS',
+            'REPORTE DE ASIGNACIÓN FAMILIAR PRÓXIMA A VENCER',
+            $this->tituloExcelDocumentos($filtros, false)
+        );
+        $stats = [
+            'generado' => date('d/m/Y H:i:s'),
+            'personal' => count($personasEvaluadas),
+            'mayoria_edad' => count($filas),
+        ];
+
+        if ($request->query('formato') === 'pdf') {
+            return $this->descargarPdfReporte(
+                'file_control.reportes_dj_pdf',
+                $this->nombreArchivoExcel($titulo, 'pdf'),
+                $titulo,
+                $filas,
+                $columnas,
+                $stats
+            );
+        }
+
+        $nombreArchivo = $this->nombreArchivoExcel($titulo);
+        $rutaArchivo = $this->generarExcelHijosMayoresAsignacion($filas, $stats, $titulo, $columnas);
+        $publicDir = storage_path('app/public/reportes');
+        if (!is_dir($publicDir)) @mkdir($publicDir, 0755, true);
+        copy($rutaArchivo, $publicDir . DIRECTORY_SEPARATOR . $nombreArchivo);
+        @unlink($rutaArchivo);
+
+        return response()->json([
+            'url' => route('reporte.descargar', ['archivo' => $nombreArchivo]),
+            'nombre' => $nombreArchivo,
+        ]);
     }
 
     /** Personal sin DJ escaneada ni registrada en las ubicaciones de carga conocidas. */
@@ -1046,13 +1129,24 @@ class ReportePersonalController extends Controller
             SELECT LTRIM(RTRIM(p.CODI_PERS)) AS CODI_PERS,
                    p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2, p.NRO_DOCU_IDEN,
                    p.PERS_VIGENCIA, p.FECH_INGRE, p.FECH_INGRE_PLANILLA,
+                   p.USUA_CODIGO_REG, p.USUA_FECHA_REG,
                    ISNULL(s.SUCU_ABREVIATURA, p.SUCU_CODIGO) AS SUCURSAL,
                    ISNULL(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_DESCRIPCION,
-                   ISNULL(c.DESC_CARGO, p.CODI_CARG) AS CARGO_DESC
+                   ISNULL(c.DESC_CARGO, p.CODI_CARG) AS CARGO_DESC,
+                   reg.NOMBRE_USUARIO AS REG_NOMBRE
             FROM si_solm.dbo.PERSONAL p
             LEFT JOIN si_solm.dbo.SISO_SUCURSAL s ON s.SUCU_CODIGO = p.SUCU_CODIGO
             LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
             LEFT JOIN si_solm.dbo.CARGOS c ON c.CODI_CARG = p.CODI_CARG
+            OUTER APPLY (
+                SELECT TOP 1
+                       LTRIM(RTRIM(ISNULL(u.NOMB_1, ''))) + ' ' +
+                       LTRIM(RTRIM(ISNULL(u.NOMB_2, ''))) + ' ' +
+                       LTRIM(RTRIM(ISNULL(u.APEL_1, ''))) + ' ' +
+                       LTRIM(RTRIM(ISNULL(u.APEL_2, ''))) AS NOMBRE_USUARIO
+                FROM si_solm.dbo.USUARIOS u
+                WHERE u.LOGIN = LTRIM(RTRIM(p.USUA_CODIGO_REG))
+            ) reg
             WHERE __CONDICIONES__
             ORDER BY p.APEL_1, p.APEL_2, p.NOMB_1
             SQL;
@@ -1106,14 +1200,17 @@ class ReportePersonalController extends Controller
                 'ingreso_solmar' => $this->formatFecha($r->FECH_INGRE ?? null),
                 'ingreso_planilla' => $this->formatFecha($r->FECH_INGRE_PLANILLA ?? null),
                 'dj' => 'No encontrada',
+                'usuario_registro' => $this->usuarioLegible($r->USUA_CODIGO_REG ?? null, $r->REG_NOMBRE ?? null),
+                'fecha_registro' => $this->formatFechaHora($r->USUA_FECHA_REG ?? null),
             ];
         }
 
         $titulo = str_replace('REPORTE DE DOCUMENTOS', 'REPORTE DE PERSONAL SIN DJ ESCANEADA', $this->tituloExcelDocumentos($filtros, false));
         $columnas = [
             'N°' => 'numero', 'Código' => 'codi', 'Apellidos y nombres' => 'nombre', 'N° documento' => 'doc',
-            'Sucursal' => 'sucursal', 'Tipo' => 'tipo', 'Cargo' => 'cargo', 'Estado' => 'estado',
+            'Cargo' => 'cargo',
             'Ingreso a Solmar' => 'ingreso_solmar', 'Ingreso a planillas' => 'ingreso_planilla', 'DJ escaneada' => 'dj',
+            'Usuario de registro' => 'usuario_registro', 'Fecha de registro' => 'fecha_registro',
         ];
         $stats = ['generado' => date('d/m/Y H:i:s'), 'personal' => count($personal), 'sin_dj' => count($filas)];
 
@@ -1122,6 +1219,7 @@ class ReportePersonalController extends Controller
                 'numero' => $i + 1, 'codigo' => $fila['codi'], 'personal' => $fila['nombre'], 'dni' => $fila['doc'],
                 'sucursal' => $fila['sucursal'], 'tipo' => $fila['tipo'], 'cargo' => $fila['cargo'], 'estado' => $fila['estado'],
                 'ingreso_solmar' => $fila['ingreso_solmar'], 'ingreso_planilla' => $fila['ingreso_planilla'], 'dj' => $fila['dj'],
+                'usuario_registro' => $fila['usuario_registro'], 'fecha_registro' => $fila['fecha_registro'],
             ], $filas, array_keys($filas));
             return response()->json(['preview' => $preview, 'total' => count($preview)]);
         }
@@ -1143,13 +1241,23 @@ class ReportePersonalController extends Controller
     {
         $ss = new Spreadsheet();
         $hoja = $ss->getActiveSheet();
-        $hoja->setTitle(isset($stats['sin_dj']) ? 'Sin DJ escaneada' : 'Hijos mayores');
+        $hoja->setTitle(isset($stats['sin_dj']) ? 'Sin DJ escaneada' : (isset($stats['mayoria_edad']) ? 'Mayoria de edad' : 'Hijos mayores'));
         $hoja->setShowGridlines(false);
         $totalColumnas = count($columnas);
         $ultima = Coordinate::stringFromColumnIndex($totalColumnas);
 
-        foreach (array_slice([6, 16, 34, 15, 16, 20, 26, 13, 20, 23, 20, 16, 78], 0, $totalColumnas) as $i => $ancho) {
-            $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
+        $anchosPorColumna = [
+            'numero' => 6, 'codi' => 16, 'nombre' => 34, 'doc' => 15,
+            'sucursal' => 16, 'tipo' => 20, 'cargo' => 26, 'estado' => 13,
+            'ingreso_solmar' => 20, 'ingreso_planilla' => 23, 'asignacion_familiar' => 20,
+            'numero_hijos' => 16, 'detalle_hijos' => 78, 'dj' => 16,
+            'usuario_registro' => 40, 'fecha_registro' => 20,
+            'personal' => 48, 'dni' => 16, 'hijo' => 34, 'fecha_nacimiento' => 20,
+            'fecha_mayoria' => 20, 'dias_restantes' => 16, 'aviso' => 30,
+        ];
+        foreach (array_values($columnas) as $i => $clave) {
+            $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))
+                ->setWidth($anchosPorColumna[$clave] ?? 16);
         }
         $rutaLogo = public_path('images/logo_sol.png');
         if (is_file($rutaLogo)) {
@@ -1168,21 +1276,22 @@ class ReportePersonalController extends Controller
         $hoja->getStyle('C1')->getFont()->setBold(true)->setSize(12)->getColor()->setRGB('990000');
         $hoja->getStyle('C1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
         $hoja->mergeCells('C2:' . $ultima . '2');
-        $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
-        $hoja->getStyle('C2')->getFont()->setBold(true)->setSize(11)->getColor()->setRGB('990000');
-        $hoja->getStyle('C2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
         $hoja->getRowDimension(4)->setRowHeight(6);
 
-        $bloquesStats = isset($stats['sin_dj'])
-            ? ['A' => 'B', 'C' => 'F', 'G' => $ultima]
-            : ['A' => 'B', 'C' => 'H', 'I' => 'M'];
-        $etiquetasStats = isset($stats['sin_dj'])
-            ? ['Generado', 'Personal evaluado', 'Sin DJ escaneada']
-            : ['Generado', 'Personal evaluado', 'Hijos mayores de edad'];
+        $bloquesStats = isset($stats['mayoria_edad'])
+            ? ['A' => 'C', 'D' => 'F', 'G' => $ultima]
+            : (isset($stats['sin_dj'])
+                ? ['A' => 'B', 'C' => 'F', 'G' => $ultima]
+                : ['A' => 'B', 'C' => 'H', 'I' => $ultima]);
+        $etiquetasStats = isset($stats['mayoria_edad'])
+            ? ['Generado', 'Personal', 'Hijos por cumplir 18']
+            : (isset($stats['sin_dj'])
+                ? ['Generado', 'Personal evaluado', 'Sin DJ escaneada']
+                : ['Generado', 'Personal evaluado', 'Hijos mayores de edad']);
         $valoresStats = [
             $stats['generado'],
             number_format($stats['personal'], 0, ',', '.'),
-            number_format($stats['sin_dj'] ?? $stats['hijos_mayores'], 0, ',', '.'),
+            number_format($stats['sin_dj'] ?? $stats['mayoria_edad'] ?? $stats['hijos_mayores'], 0, ',', '.'),
         ];
         $indiceStats = 0;
         foreach ($bloquesStats as $desde => $hasta) {
@@ -1215,14 +1324,15 @@ class ReportePersonalController extends Controller
             $base = $hoja->getStyle('A' . $filaInicial . ':' . $ultima . $filaFinal);
             $base->getFont()->setSize(9);
             $base->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
-            $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $base->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
             foreach (array_filter(['A', 'D', 'H', 'I', 'J', 'K', 'L'], static fn (string $col): bool => Coordinate::columnIndexFromString($col) <= $totalColumnas) as $col) {
                 $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
-            $hoja->getStyle('B' . $filaInicial . ':B' . $filaFinal)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $hoja->getStyle('K' . $filaInicial . ':K' . $filaFinal)->getFont()->setBold(true)->getColor()->setRGB(isset($stats['sin_dj']) ? 'B91C1C' : '15803D');
-            if (!isset($stats['sin_dj'])) {
-                $hoja->getStyle('M' . $filaInicial . ':M' . $filaFinal)->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+            if (isset($stats['sin_dj'])) {
+                $hoja->getStyle($ultima . $filaInicial . ':' . $ultima . $filaFinal)->getFont()->setBold(true)->getColor()->setRGB('B91C1C');
+            } else {
+                $hoja->getStyle($ultima . $filaInicial . ':' . $ultima . $filaFinal)
+                    ->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
             }
             $hoja->getStyle('A' . $filaInicial . ':' . $ultima . $filaFinal)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(isset($stats['sin_dj']) ? 'FEE2E2' : 'FEF3C7');
         }
@@ -1239,7 +1349,7 @@ class ReportePersonalController extends Controller
 
         $dir = sys_get_temp_dir();
         if (!is_dir($dir)) @mkdir($dir, 0755, true);
-        $prefijo = isset($stats['sin_dj']) ? 'rep_sin_dj_' : 'rep_hijos_mayores_';
+        $prefijo = isset($stats['sin_dj']) ? 'rep_sin_dj_' : (isset($stats['mayoria_edad']) ? 'rep_mayoria_edad_' : 'rep_hijos_mayores_');
         $ruta = $dir . DIRECTORY_SEPARATOR . $prefijo . date('Ymd_His') . '_' . uniqid() . '.xlsx';
         (new Xlsx($ss))->save($ruta);
         $ss->disconnectWorksheets();
@@ -1640,12 +1750,12 @@ class ReportePersonalController extends Controller
     private function generarExcelDocumentos(array $filas, array $stats, string $titulo): string
     {
         $columnas = [
-            'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Sucursal',
-            'Tipo', 'Cargo', 'Fecha de ingreso a Solmar', 'Fecha de ingreso a planillas',
+            'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Cargo',
+            'Fecha de ingreso a Solmar', 'Fecha de ingreso a planillas',
             'Foto', 'DNI', 'Registrado por', 'F. Registro',
             'Modificado por', 'F. Modificación',
         ];
-        $ultima = 'O';
+        $ultima = 'M';
 
         $ss   = new Spreadsheet();
         $hoja = $ss->getActiveSheet();
@@ -1655,7 +1765,7 @@ class ReportePersonalController extends Controller
         // ── Anchos de columna ─────────────────────────────────
         // B = 16 deja A+B en ~164 px, por encima de los 130 px del logo
         // anclado en A1: así el logo no invade el título de C1.
-        $anchos = [6, 16, 34, 15, 16, 20, 26, 20, 23, 9, 15, 26, 17, 26, 17];
+        $anchos = [6, 16, 34, 15, 26, 20, 23, 9, 15, 26, 17, 26, 17];
         foreach ($anchos as $i => $ancho) {
             $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
         }
@@ -1686,10 +1796,6 @@ class ReportePersonalController extends Controller
               ->setWrapText(true);
 
         $hoja->mergeCells('C2:' . $ultima . '2');
-        $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
-        $hoja->getStyle('C2')->getFont()->setBold(true)->setSize(11)
-              ->getColor()->setRGB('990000');
-        $hoja->getStyle('C2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
         $hoja->getRowDimension(4)->setRowHeight(6);
 
@@ -1699,7 +1805,7 @@ class ReportePersonalController extends Controller
             'C' => 'D',  // Personal evaluado
             'E' => 'F',  // Foto OK
             'G' => 'H',  // DNI completo
-            'I' => 'O',  // Incompletos
+            'I' => 'M',  // Incompletos
         ];
         $etiquetas = ['Generado', 'Personal evaluado', 'Foto OK', 'DNI completo', 'Incompletos'];
 
@@ -1777,8 +1883,6 @@ class ReportePersonalController extends Controller
                 $d['codi'],
                 $d['nombre'],
                 $d['doc'],
-                $d['sucursal'],
-                $d['tipo'],
                 $d['cargo'],
                 $d['ingreso_solmar'],
                 $d['ingreso_planilla'],
@@ -1805,20 +1909,18 @@ class ReportePersonalController extends Controller
             $base->getFont()->setSize(9);
             $base->getBorders()->getAllBorders()
                  ->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
-            $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $base->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
-            // Columnas cortas centradas (6 rangos en vez de 1.135 x 6)
-            foreach (['A', 'D', 'H', 'I', 'J', 'L', 'N', 'O'] as $col) {
+            // Columnas compactas con alineación centrada.
+            foreach (['A', 'D', 'F', 'G', 'H', 'I', 'K', 'M'] as $col) {
                 $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()
                      ->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
-            $hoja->getStyle('B' . $filaInicial . ':B' . $filaFinal)->getAlignment()
-                 ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
             // Estados correctos en verde; abajo se sobrescriben las excepciones
-            $hoja->getStyle('J' . $filaInicial . ':' . 'J' . $filaFinal)
+            $hoja->getStyle('H' . $filaInicial . ':' . 'H' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
-            $hoja->getStyle('K' . $filaInicial . ':' . 'K' . $filaFinal)
+            $hoja->getStyle('I' . $filaInicial . ':' . 'I' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
 
             // Solo las filas con documentos faltantes: relleno ámbar + color
@@ -1834,8 +1936,8 @@ class ReportePersonalController extends Controller
                     default                         => 'B45309',
                 };
 
-                $hoja->getStyle('J' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorFoto);
-                $hoja->getStyle('K' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorDni);
+                $hoja->getStyle('H' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorFoto);
+                $hoja->getStyle('I' . $f)->getFont()->setBold(true)->getColor()->setRGB($colorDni);
             }
         }
 
@@ -1869,12 +1971,12 @@ class ReportePersonalController extends Controller
     private function generarExcelDniHijos(array $filas, array $stats, string $titulo): string
     {
         $columnas = [
-            'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Sucursal',
-            'Tipo', 'Cargo', 'Fecha de ingreso a Solmar', 'Fecha de ingreso a planillas',
+            'N°', 'Código', 'Apellidos y Nombres', 'N° Documento', 'Cargo',
+            'Fecha de ingreso a Solmar', 'Fecha de ingreso a planillas',
             'Asignación familiar', 'Hijos <18', 'Anverso', 'Reverso', 'Sin imagen',
             'Detalle de faltantes',
         ];
-        $ultima = 'O';
+        $ultima = 'M';
 
         $ss   = new Spreadsheet();
         $hoja = $ss->getActiveSheet();
@@ -1882,7 +1984,7 @@ class ReportePersonalController extends Controller
         $hoja->setShowGridlines(false);
 
         // ── Anchos de columna ─────────────────────────────────────────────
-        $anchos = [6, 16, 34, 15, 16, 20, 26, 20, 23, 20, 11, 11, 11, 11, 82];
+        $anchos = [6, 16, 34, 15, 26, 20, 23, 20, 11, 11, 11, 11, 82];
         foreach ($anchos as $i => $ancho) {
             $hoja->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($ancho);
         }
@@ -1911,10 +2013,6 @@ class ReportePersonalController extends Controller
               ->setWrapText(true);
 
         $hoja->mergeCells('C2:' . $ultima . '2');
-        $hoja->setCellValue('C2', 'Sistema Integrado Solmar — SISOL Web');
-        $hoja->getStyle('C2')->getFont()->setBold(true)->setSize(11)
-              ->getColor()->setRGB('990000');
-        $hoja->getStyle('C2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
         $hoja->getRowDimension(4)->setRowHeight(6);
 
@@ -1924,7 +2022,7 @@ class ReportePersonalController extends Controller
             'C' => 'D',  // Personal evaluado
             'E' => 'F',  // Con DNI completo
             'G' => 'H',  // Con faltantes
-            'I' => 'O',  // Hijos <18
+            'I' => 'M',  // Hijos <18
         ];
         $etiquetas = [
             'Generado', 'Personal evaluado', 'Sin faltantes',
@@ -2001,8 +2099,6 @@ class ReportePersonalController extends Controller
                 $d['codi'],
                 $d['nombre'],
                 $d['doc'],
-                $d['sucursal'],
-                $d['tipo'],
                 $d['cargo'],
                 $d['ingreso_solmar'],
                 $d['ingreso_planilla'],
@@ -2025,20 +2121,18 @@ class ReportePersonalController extends Controller
             $base->getFont()->setSize(9);
             $base->getBorders()->getAllBorders()
                  ->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('D1D5DB');
-            $base->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $base->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
             // Columnas cortas centradas
-            foreach (['A', 'D', 'H', 'I', 'J', 'K', 'L', 'M', 'N'] as $col) {
+            foreach (['A', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L'] as $col) {
                 $hoja->getStyle($col . $filaInicial . ':' . $col . $filaFinal)->getAlignment()
                      ->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
-            $hoja->getStyle('B' . $filaInicial . ':B' . $filaFinal)->getAlignment()
-                 ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
             // Semáforo de Anverso/Reverso: Sí = verde, No = rojo.
-            $hoja->getStyle('L' . $filaInicial . ':' . 'L' . $filaFinal)
+            $hoja->getStyle('J' . $filaInicial . ':' . 'J' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
-            $hoja->getStyle('M' . $filaInicial . ':' . 'M' . $filaFinal)
+            $hoja->getStyle('K' . $filaInicial . ':' . 'K' . $filaFinal)
                  ->getFont()->setBold(true)->getColor()->setRGB('15803D');
 
             // Fondo: rojo claro si algún hijo quedó sin ninguna imagen,
@@ -2050,14 +2144,14 @@ class ReportePersonalController extends Controller
                      ->setFillType(Fill::FILL_SOLID)
                      ->getStartColor()->setRGB($d['sin'] > 0 ? 'FEE2E2' : 'FEF3C7');
 
-                $hoja->getStyle('L' . $f)->getFont()->setBold(true)
+                $hoja->getStyle('J' . $f)->getFont()->setBold(true)
                      ->getColor()->setRGB($d['anverso_txt'] === 'No' ? 'B91C1C' : '15803D');
 
-                $hoja->getStyle('M' . $f)->getFont()->setBold(true)
+                $hoja->getStyle('K' . $f)->getFont()->setBold(true)
                      ->getColor()->setRGB($d['reverso_txt'] === 'No' ? 'B91C1C' : '15803D');
 
                 if ((int) $d['sin'] > 0) {
-                    $hoja->getStyle('N' . $f)->getFont()->setBold(true)->getColor()->setRGB('B91C1C');
+                    $hoja->getStyle('L' . $f)->getFont()->setBold(true)->getColor()->setRGB('B91C1C');
                 }
             }
         }

@@ -31,8 +31,8 @@
     <div id="demandas-toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;">
     </div>
 
-    <div id="modal-detalle-solicitud-sip" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-detalle-solicitud-sip">
-        <section class="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-slate-800">
+    <div id="modal-detalle-solicitud-sip" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-slate-950/50 p-4 opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="titulo-detalle-solicitud-sip">
+        <section id="modal-detalle-solicitud-sip-panel" class="w-full max-w-2xl translate-y-4 overflow-hidden rounded-xl bg-white opacity-0 shadow-2xl transition-all duration-300 dark:bg-slate-800">
             <header class="flex items-start justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
                 <div>
                     <h2 id="titulo-detalle-solicitud-sip" class="text-lg font-semibold text-slate-900 dark:text-white">Solicitud de actualización desde el SIP</h2>
@@ -195,7 +195,8 @@
     @php
         // Pop-ups de notificaciones: solo se muestran UNA VEZ por login.
         // La primera renderización consume el flag; al navegar entre vistas ya no aparecen.
-        $notifPopupsAutoshow = !session('notif_popups_ya_mostrados');
+        $ocultarNotificacionesDj = $ocultarNotificacionesDj ?? false;
+        $notifPopupsAutoshow = !$ocultarNotificacionesDj && !session('notif_popups_ya_mostrados');
         if ($notifPopupsAutoshow) {
             session(['notif_popups_ya_mostrados' => true]);
         }
@@ -203,11 +204,12 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            if (@json($ocultarNotificacionesDj)) return;
+            const ETAPA2_RECORDATORIO_KEY = 'etapa2PopupSiguiente_{{ auth()->id() ?? 'usuario' }}';
+            const INTERVALO_RECORDATORIO_POPUP = 2 * 60 * 60 * 1000;
 
-            // Mostrar Etapa 2 como aviso flotante al iniciar sesión, igual que
-            // las solicitudes SIP. El detalle sigue disponible en la campana.
-            if (@json($notifPopupsAutoshow)) {
-                fetch("{{ url('/api/notificaciones/pendientes-etapa2') }}", {
+            function consultarPendientesEtapa2(mostrarPopup) {
+                return fetch("{{ url('/api/notificaciones/pendientes-etapa2') }}", {
                     headers: { Accept: 'application/json' },
                     credentials: 'same-origin'
                 })
@@ -239,6 +241,9 @@
                             });
                         }
 
+                        if (!mostrarPopup) return;
+
+                        document.getElementById('etapa2-toast-resumen')?.remove();
                         const toast = document.createElement('div');
                         toast.id = 'etapa2-toast-resumen';
                         toast.style.cssText = 'order:2;background:white;border-left:5px solid #f97316;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;cursor:pointer;';
@@ -258,7 +263,7 @@
 
                         const title = document.createElement('div');
                         title.style.cssText = 'font-weight:600;margin-bottom:5px;color:#9a3412;padding-right:15px;';
-                        title.innerHTML = '<i class="bx bx-task"></i> Pendientes Etapa 2';
+                        title.innerHTML = '<i class="bx bx-task"></i> Pendiente actualización Anual';
                         const message = document.createElement('div');
                         message.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
                         message.textContent = `Hay ${total} personas pendientes de verificación. Haz clic para ver el detalle.`;
@@ -279,6 +284,132 @@
                     })
                     .catch(error => console.error('Error revisando pendientes de Etapa 2:', error));
             }
+
+            function consultarMayoriaEdad(mostrarPopup) {
+                return fetch("{{ url('/api/notificaciones/hijos-por-cumplir-mayoria-edad') }}", {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin'
+                }).then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                }).then(result => {
+                    const avisos = result.avisos || { '30': [], '15': [] };
+                    const porSucursal = new Map();
+                    ['30', '15'].forEach(dias => (avisos[dias] || []).forEach(persona => {
+                        const sucursal = persona.sucursal || 'SIN SUCURSAL';
+                        if (!porSucursal.has(sucursal)) porSucursal.set(sucursal, []);
+                        porSucursal.get(sucursal).push({ ...persona, diasAviso: Number(dias) });
+                    }));
+
+                    const lista = document.getElementById('modal-mayoria-edad-list');
+                    const total30 = document.getElementById('mayoria-edad-total-30');
+                    const total15 = document.getElementById('mayoria-edad-total-15');
+                    if (total30) total30.textContent = (avisos['30'] || []).length;
+                    if (total15) total15.textContent = (avisos['15'] || []).length;
+                    if (lista) {
+                        lista.replaceChildren();
+                        porSucursal.forEach((personas, sucursal) => {
+                            const grupo = document.createElement('section');
+                            const encabezado = document.createElement('div');
+                            encabezado.className = 'sticky top-0 z-10 flex items-center justify-between bg-slate-50 px-3 py-2 border-b border-gray-100';
+                            const nombreSucursal = document.createElement('strong');
+                            nombreSucursal.className = 'text-sm text-gray-700 uppercase';
+                            nombreSucursal.textContent = sucursal;
+                            const cantidad = document.createElement('span');
+                            cantidad.className = 'text-xs text-gray-500';
+                            cantidad.textContent = `${personas.length} ${personas.length === 1 ? 'hijo' : 'hijos'}`;
+                            encabezado.append(nombreSucursal, cantidad);
+                            grupo.appendChild(encabezado);
+
+                            personas.forEach(persona => {
+                                const fila = document.createElement('div');
+                                fila.className = 'px-3 py-3 border-b border-gray-100 last:border-b-0';
+                                const titulo = document.createElement('div');
+                                titulo.className = 'flex flex-wrap items-center gap-2';
+                                const nombrePersonal = document.createElement('strong');
+                                nombrePersonal.className = 'text-sm text-gray-800';
+                                nombrePersonal.textContent = persona.personal || `Personal ${persona.codigo_personal}`;
+                                const codigo = document.createElement('span');
+                                codigo.className = 'text-xs text-gray-500';
+                                codigo.textContent = `DNI ${persona.dni || '—'}`;
+                                const etiqueta = document.createElement('span');
+                                etiqueta.className = persona.diasAviso === 15
+                                    ? 'rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-[10px] font-bold'
+                                    : 'rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[10px] font-bold';
+                                etiqueta.textContent = persona.diasAviso === 15 ? 'RECORDATORIO · 15 DÍAS O MENOS' : 'AVISO · HASTA 30 DÍAS';
+                                titulo.append(nombrePersonal, codigo, etiqueta);
+                                const detalle = document.createElement('p');
+                                detalle.className = 'mt-1 text-xs text-gray-600';
+                                detalle.textContent = `${persona.hijo || 'Hijo(a)'} · nació el ${persona.fecha_nacimiento} · cumple 18 años el ${persona.fecha_mayoria} · faltan ${persona.dias_restantes} días`;
+                                fila.append(titulo, detalle);
+                                grupo.appendChild(fila);
+                            });
+                            lista.appendChild(grupo);
+                        });
+                    }
+
+                    const total = Number(result.total) || 0;
+                    if (!mostrarPopup || total === 0) return;
+                    const container = document.getElementById('demandas-toast-container');
+                    if (!container) return;
+
+                    const toast = document.createElement('div');
+                    toast.id = 'mayoria-edad-toast-resumen';
+                    toast.style.cssText = 'order:3;background:white;border-left:5px solid #f97316;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;cursor:pointer;';
+                    toast.setAttribute('role', 'button');
+                    toast.setAttribute('tabindex', '0');
+                    toast.setAttribute('aria-label', 'Ver detalle por sucursal de asignación familiar próxima a vencer');
+                    const cerrar = document.createElement('button');
+                    cerrar.type = 'button';
+                    cerrar.setAttribute('aria-label', 'Cerrar aviso');
+                    cerrar.style.cssText = 'position:absolute;top:10px;right:10px;background:transparent;border:0;font-size:20px;cursor:pointer;color:#9ca3af;';
+                    cerrar.innerHTML = '<i class="bx bx-x"></i>';
+                    cerrar.addEventListener('click', event => { event.stopPropagation(); toast.remove(); });
+                    const titulo = document.createElement('div');
+                    titulo.style.cssText = 'font-weight:600;margin-bottom:5px;color:#9a3412;padding-right:15px;';
+                    titulo.innerHTML = '<i class="bx bx-child"></i> Asignación familiar próxima a vencer';
+                    const mensaje = document.createElement('div');
+                    mensaje.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
+                    mensaje.textContent = `${total} hijos próximos a cumplir 18 años. Aviso inicial (hasta 30 días): ${(avisos['30'] || []).length}; recordatorio (15 días o menos): ${(avisos['15'] || []).length}. Haz clic para ver el detalle por sucursal.`;
+                    toast.append(cerrar, titulo, mensaje);
+                    toast.addEventListener('click', () => {
+                        document.getElementById('btn-open-modal-mayoria-edad')?.click();
+                        toast.remove();
+                    });
+                    toast.addEventListener('keydown', event => {
+                        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toast.click(); }
+                    });
+                    container.appendChild(toast);
+                    setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; }, 100);
+                    setTimeout(() => toast.remove(), 10000);
+                }).catch(error => console.error('Error revisando hijos próximos a cumplir 18 años:', error));
+            }
+            window.cargarDetalleMayoriaEdad = () => consultarMayoriaEdad(false);
+            window.abrirDetalleMayoriaEdad = () => consultarMayoriaEdad(false).finally(() => {
+                document.getElementById('btn-open-modal-mayoria-edad')?.click();
+            });
+
+            // El aviso de inicio de sesión conserva su comportamiento. Además,
+            // se recuerda cada dos horas mientras la sesión siga abierta.
+            if (@json($notifPopupsAutoshow)) {
+                consultarPendientesEtapa2(true);
+                consultarMayoriaEdad(true);
+            }
+            let siguienteRecordatorioEtapa2 = Number(sessionStorage.getItem(ETAPA2_RECORDATORIO_KEY)) || 0;
+            if (!siguienteRecordatorioEtapa2) {
+                siguienteRecordatorioEtapa2 = Date.now() + INTERVALO_RECORDATORIO_POPUP;
+                sessionStorage.setItem(ETAPA2_RECORDATORIO_KEY, String(siguienteRecordatorioEtapa2));
+            }
+            function programarRecordatorioEtapa2() {
+                window.setTimeout(function() {
+                    consultarPendientesEtapa2(true).finally(function() {
+                        siguienteRecordatorioEtapa2 = Date.now() + INTERVALO_RECORDATORIO_POPUP;
+                        sessionStorage.setItem(ETAPA2_RECORDATORIO_KEY, String(siguienteRecordatorioEtapa2));
+                        programarRecordatorioEtapa2();
+                    });
+                }, Math.max(1000, siguienteRecordatorioEtapa2 - Date.now()));
+            }
+            programarRecordatorioEtapa2();
 
             // 🔹 Solo una vez por login (y sin repetir en el mismo navegador)
             if (!@json($notifPopupsAutoshow) || sessionStorage.getItem("folioToastShown")) {
@@ -325,13 +456,115 @@
 
 <script>
         document.addEventListener("DOMContentLoaded", function() {
+            if (@json($ocultarNotificacionesDj)) return;
+            // v3 invalida IDs que se marcaron como vistos por versiones anteriores
+            // aunque el popup nunca se hubiese podido mostrar.
+            const solicitudesVistasKey = `sipDjSolicitudesVistas_v3_{{ auth()->id() ?? 'usuario' }}`;
+            const SIP_RECORDATORIO_KEY = `sipDjPopupSiguiente_{{ auth()->id() ?? 'usuario' }}`;
+            const INTERVALO_RECORDATORIO_POPUP = 2 * 60 * 60 * 1000;
             let notificacionesMostradas = new Set();
+            try {
+                notificacionesMostradas = new Set(JSON.parse(sessionStorage.getItem(solicitudesVistasKey) || '[]').map(String));
+            } catch (_) {}
             const demandasPorId = new Map();
             const listaNotificacionesSip = document.getElementById('notif-list');
-            // Pop-ups solo una vez por login: el primer check los muestra;
-            // los checks siguientes (cada 5s) solo actualizan la campanita.
-            let popupsActivos = @json($notifPopupsAutoshow);
-            let popupResumenMostrado = false;
+            let primeraConsultaDemandas = true;
+            let mostrarResumenRecordatorio = false;
+            // El mismo flag de sesión que controla el popup de Pendientes Etapa 2:
+            // al iniciar sesión debe avisar de todas las solicitudes SIP pendientes.
+            let popupSolicitudAlInicio = @json($notifPopupsAutoshow);
+
+            function guardarSolicitudesVistas() {
+                try {
+                    sessionStorage.setItem(solicitudesVistasKey, JSON.stringify([...notificacionesMostradas].slice(-300)));
+                } catch (_) {}
+            }
+
+            function mostrarPopupResumenSolicitudesSip(demandas, container) {
+                if (!container || !demandas.length) return false;
+
+                // Evita duplicar el aviso si la primera consulta se reintenta.
+                document.getElementById('demanda-toast-resumen')?.remove();
+                const toast = document.createElement('div');
+                toast.id = 'demanda-toast-resumen';
+                toast.style.cssText = 'order:1;background:white;border-left:5px solid #3b82f6;padding:16px 42px 16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;cursor:pointer;';
+                toast.setAttribute('role', 'button');
+                toast.setAttribute('tabindex', '0');
+                toast.setAttribute('aria-label', 'Ver solicitudes de actualización DJ pendientes desde el SIP');
+                toast.addEventListener('click', event => {
+                    if (event.target.closest('button')) return;
+                    window.abrirDetalleDemandaSip('grupo');
+                });
+                toast.addEventListener('keydown', event => {
+                    if (event.target !== toast || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    window.abrirDetalleDemandaSip('grupo');
+                });
+
+                const cerrar = document.createElement('button');
+                cerrar.type = 'button';
+                cerrar.setAttribute('aria-label', 'Cerrar aviso');
+                cerrar.style.cssText = 'position:absolute;top:10px;right:10px;background:transparent;border:0;font-size:20px;cursor:pointer;color:#9ca3af;';
+                cerrar.innerHTML = '<i class="bx bx-x"></i>';
+                cerrar.addEventListener('click', () => window.cerrarToastSip('resumen'));
+
+                const titulo = document.createElement('div');
+                titulo.style.cssText = 'font-weight:600;margin-bottom:5px;color:#1e3a8a;';
+                titulo.innerHTML = '<i class="bx bx-info-circle"></i> Solicitud de actualización desde el SIP';
+                const mensaje = document.createElement('div');
+                mensaje.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
+                if (demandas.length === 1) {
+                    const nombre = demandas[0].personal || `personal ${demandas[0].codigoPers}`;
+                    mensaje.textContent = `El usuario ${nombre} ha solicitado una actualización de su DJ a demanda mediante el SIP.`;
+                } else {
+                    mensaje.textContent = `Hay ${demandas.length} solicitudes pendientes de actualización de DJ desde el SIP. Haz clic para ver el detalle.`;
+                }
+
+                toast.append(cerrar, titulo, mensaje);
+                container.appendChild(toast);
+                requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; });
+                setTimeout(() => window.cerrarToastSip('resumen'), 10000);
+                return true;
+            }
+
+            function mostrarPopupSolicitudSip(demanda) {
+                const container = document.getElementById('demandas-toast-container');
+                if (!container) return false;
+                const id = String(demanda.id);
+                const toast = document.createElement('div');
+                toast.id = `demanda-toast-${id}`;
+                toast.dataset.solicitudSipId = id;
+                toast.style.cssText = 'order:1;background:white;border-left:5px solid #3b82f6;padding:16px 42px 16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;cursor:pointer;';
+                toast.setAttribute('role', 'button');
+                toast.setAttribute('tabindex', '0');
+                toast.setAttribute('aria-label', `Abrir solicitud de actualización DJ de ${demanda.personal || demanda.codigoPers}`);
+                toast.addEventListener('click', event => {
+                    if (event.target.closest('button')) return;
+                    window.abrirDetalleDemandaSip(id);
+                });
+                toast.addEventListener('keydown', event => {
+                    if (event.target !== toast || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    window.abrirDetalleDemandaSip(id);
+                });
+                const cerrar = document.createElement('button');
+                cerrar.type = 'button';
+                cerrar.setAttribute('aria-label', 'Cerrar aviso');
+                cerrar.style.cssText = 'position:absolute;top:10px;right:10px;background:transparent;border:0;font-size:20px;cursor:pointer;color:#9ca3af;';
+                cerrar.innerHTML = '<i class="bx bx-x"></i>';
+                cerrar.addEventListener('click', () => window.cerrarToastSip(id));
+                const titulo = document.createElement('div');
+                titulo.style.cssText = 'font-weight:600;margin-bottom:5px;color:#1e3a8a;';
+                titulo.innerHTML = '<i class="bx bx-info-circle"></i> Solicitud de actualización DJ';
+                const mensaje = document.createElement('div');
+                mensaje.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
+                mensaje.textContent = `El usuario ${demanda.personal || demanda.codigoPers} ha solicitado una actualización de su DJ a demanda mediante el SIP.`;
+                toast.append(cerrar, titulo, mensaje);
+                container.appendChild(toast);
+                requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; });
+                setTimeout(() => window.cerrarToastSip(id), 10000);
+                return true;
+            }
 
             window.abrirDetalleDemandaSip = function(id) {
                 const demandas = [...demandasPorId.values()];
@@ -364,18 +597,40 @@
                         campo.append(titulo, contenido);
                         datos.appendChild(campo);
                     });
-                    tarjeta.append(nombre, datos);
+                    const revisar = document.createElement('a');
+                    revisar.className = 'mt-4 inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700';
+                    revisar.textContent = 'Revisar solicitud';
+                    revisar.href = `/dj/actualizar_dj?tab=etapa2&solicitud_id=${encodeURIComponent(demanda.id)}`;
+                    tarjeta.append(nombre, datos, revisar);
                     lista.appendChild(tarjeta);
                 });
                 const modal = document.getElementById('modal-detalle-solicitud-sip');
+                const panel = document.getElementById('modal-detalle-solicitud-sip-panel');
+                modal.dataset.open = 'true';
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
+                requestAnimationFrame(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.classList.add('opacity-100');
+                    panel?.classList.remove('opacity-0', 'translate-y-4');
+                    panel?.classList.add('opacity-100', 'translate-y-0');
+                });
             };
 
             window.cerrarDetalleDemandaSip = function() {
                 const modal = document.getElementById('modal-detalle-solicitud-sip');
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                const panel = document.getElementById('modal-detalle-solicitud-sip-panel');
+                modal.dataset.open = 'false';
+                modal.classList.remove('opacity-100');
+                modal.classList.add('opacity-0');
+                panel?.classList.remove('opacity-100', 'translate-y-0');
+                panel?.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => {
+                    if (modal.dataset.open === 'false') {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                    }
+                }, 300);
             };
 
             document.getElementById('modal-detalle-solicitud-sip').addEventListener('click', event => {
@@ -399,7 +654,7 @@
             });
 
             function checkDemandasAdmin() {
-                fetch("{{ url('/api/notificaciones/demandas-admin') }}")
+                return fetch("{{ url('/api/notificaciones/demandas-admin') }}")
                     .then(response => response.json())
                     .then(result => {
                         if (result.success && result.data.length > 0) {
@@ -450,40 +705,56 @@
                                 }
                             }
 
-                            // Un único aviso resumido por inicio de sesión, sin duplicarlo por cada persona.
-                            if (popupsActivos && !popupResumenMostrado && nuevasSolicitudes.length && container) {
-                                nuevasSolicitudes.forEach(demanda => notificacionesMostradas.add(String(demanda.id)));
-                                popupResumenMostrado = true;
-                                const toast = document.createElement('div');
-                                toast.id = 'demanda-toast-resumen';
-                                toast.style.cssText = 'order:1;background:white;border-left:5px solid #3b82f6;padding:16px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:320px;max-width:460px;position:relative;opacity:0;transform:translateX(100%);transition:all .4s ease;';
-                                const cerrar = document.createElement('button');
-                                cerrar.type = 'button';
-                                cerrar.setAttribute('aria-label', 'Cerrar aviso');
-                                cerrar.style.cssText = 'position:absolute;top:10px;right:10px;background:transparent;border:0;font-size:20px;cursor:pointer;color:#9ca3af;';
-                                cerrar.innerHTML = '<i class="bx bx-x"></i>';
-                                cerrar.addEventListener('click', () => window.cerrarToastSip('resumen'));
-                                const titulo = document.createElement('div');
-                                titulo.style.cssText = 'font-weight:600;margin-bottom:5px;color:#1e3a8a;padding-right:15px;';
-                                titulo.innerHTML = '<i class="bx bx-info-circle"></i> Solicitudes de actualización desde el SIP';
-                                const mensaje = document.createElement('div');
-                                mensaje.style.cssText = 'font-size:13px;color:#4b5563;line-height:1.4;';
-                                mensaje.textContent = `Hay ${nuevasSolicitudes.length} ${nuevasSolicitudes.length === 1 ? 'solicitud nueva' : 'solicitudes nuevas'} de actualización de datos desde el SIP. Revisa el detalle en la campanita.`;
-                                toast.append(cerrar, titulo, mensaje);
-                                container.appendChild(toast);
-                                setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; }, 100);
-                                setTimeout(() => window.cerrarToastSip('resumen'), 7000);
+                            // Igual que Pendientes Etapa 2: mostrar las solicitudes SIP
+                            // pendientes una vez al iniciar sesión, sin depender de si sus
+                            // IDs ya se habían visto en una sesión anterior.
+                            if (mostrarResumenRecordatorio && container) {
+                                result.data.forEach(demanda => notificacionesMostradas.add(String(demanda.id)));
+                                mostrarPopupResumenSolicitudesSip(result.data, container);
+                                guardarSolicitudesVistas();
+                                mostrarResumenRecordatorio = false;
+                            } else if (primeraConsultaDemandas && popupSolicitudAlInicio && result.data.length && container) {
+                                result.data.forEach(demanda => notificacionesMostradas.add(String(demanda.id)));
+                                mostrarPopupResumenSolicitudesSip(result.data, container);
+                                guardarSolicitudesVistas();
+                            } else if (!primeraConsultaDemandas && nuevasSolicitudes.length) {
+                                nuevasSolicitudes.forEach(demanda => {
+                                    if (mostrarPopupSolicitudSip(demanda)) {
+                                        notificacionesMostradas.add(String(demanda.id));
+                                    }
+                                });
+                                guardarSolicitudesVistas();
                             }
                         } else if (result.success) {
                             demandasPorId.clear();
                             document.getElementById('campana-demanda-sip-grupo')?.remove();
+                            mostrarResumenRecordatorio = false;
                         }
 
-                        // Después del primer check ya no se muestran más pop-ups
-                        popupsActivos = false;
+                        primeraConsultaDemandas = false;
+                        popupSolicitudAlInicio = false;
                     })
                     .catch(error => console.error('Error revisando demandas del SIP:', error));
             }
+
+            // Repite el resumen de solicitudes SIP pendientes cada dos horas.
+            // sessionStorage conserva el horario al navegar entre pantallas.
+            let siguienteRecordatorioSip = Number(sessionStorage.getItem(SIP_RECORDATORIO_KEY)) || 0;
+            if (!siguienteRecordatorioSip) {
+                siguienteRecordatorioSip = Date.now() + INTERVALO_RECORDATORIO_POPUP;
+                sessionStorage.setItem(SIP_RECORDATORIO_KEY, String(siguienteRecordatorioSip));
+            }
+            function programarRecordatorioSolicitudesSip() {
+                window.setTimeout(function() {
+                    mostrarResumenRecordatorio = true;
+                    checkDemandasAdmin().finally(function() {
+                        siguienteRecordatorioSip = Date.now() + INTERVALO_RECORDATORIO_POPUP;
+                        sessionStorage.setItem(SIP_RECORDATORIO_KEY, String(siguienteRecordatorioSip));
+                        programarRecordatorioSolicitudesSip();
+                    });
+                }, Math.max(1000, siguienteRecordatorioSip - Date.now()));
+            }
+            programarRecordatorioSolicitudesSip();
 
             // ── CERRAR EL POP-UP: solo lo oculta en esta sesión ──
             // La notificación NO se borra: sigue en la campanita y volverá a

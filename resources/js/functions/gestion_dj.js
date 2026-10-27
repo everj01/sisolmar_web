@@ -1275,13 +1275,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // DNI obligatorio: solo para hijos MENORES de edad
+                // DNI obligatorio para todos los hijos, independientemente de la edad.
                 // (la regla NO aplica para el rol ADMINS RRHH)
                 if (!esAdminRrhhDj()) {
                     const filasHijosDni = filasHijosDj();
                     for (let i = 0; i < filasHijosDni.length; i++) {
-                        const fechaH = filasHijosDni[i].querySelector('input[name="fechaNacimiento[]"]')?.value;
-                        if (!esMenorDeEdadDj(fechaH)) continue;   // solo menores de edad
                         const stH = estadoDniHijo(filasHijosDni[i]);
                         const okA = !!(stH.anverso || stH.tieneAnverso);
                         const okR = !!(stH.reverso || stH.tieneReverso);
@@ -2513,7 +2511,7 @@ async function llenarFormulario(data) {
     setValue('#brevete', data.PERS_BREVETE ? data.PERS_BREVETE.trim() : '');
     setValue('#clase_brevete', data.CLASE_BREVETE ? data.CLASE_BREVETE.trim() : '');
     actualizarCategorias();  // ← puebla el select tipo_vehiculo según la clase
-    setValue('#tipo_vehiculo', data.CATEGORIA_BREVETE ? data.CATEGORIA_BREVETE.trim() : '');
+    setValue('#tipo_vehiculo', data.CATEGORIA_BREVETE ?? data.PERS_TIPO_VEHICULO ?? '');
     setValue('#vehiculo_propio', data.PERS_VEHICULO_PROPIO ? data.PERS_VEHICULO_PROPIO.trim() : '');
 
     setValue('#empresa_anterior', data.PERS_CTRABANT ? data.PERS_CTRABANT.trim() : '');
@@ -2567,7 +2565,7 @@ function estadoDniHijo(fila) {
     return st;
 }
 
-// Regla DNI del hijo: OBLIGATORIO solo para menores de edad.
+// Regla DNI: obligatorio para todos los parentescos de hijo.
 // El rol ADMINS RRHH (tipo 17) está exento de la regla.
 function esMenorDeEdadDj(fecha) {
     if (!fecha) return false;
@@ -2598,8 +2596,7 @@ function actualizarEstadoDniHijo(fila) {
         span.style.color = '#16a34a';
         return;
     }
-    const fecha = fila.querySelector('input[name="fechaNacimiento[]"]')?.value;
-    const obligatorio = esMenorDeEdadDj(fecha) && !esAdminRrhhDj();
+    const obligatorio = !esAdminRrhhDj();
     const detalle = (okA || okR) ? 'falta ' + (okA ? 'reverso' : 'anverso') : 'sin DNI';
     if (obligatorio) {
         span.textContent = '⚠ ' + detalle + ' (obligatorio)';

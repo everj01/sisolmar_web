@@ -513,6 +513,7 @@ class DjController extends Controller
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($nuevoCod, $data);
             $this->aplicarAsigFami($nuevoCod, $data);
+            $this->aplicarConHijos($nuevoCod, $data);
 
             // Crear registro en DJ2026_PERSONAL para que el SP de Gestion DJ lo muestre
             $this->insertOrUpdateDJ2026Personal($nuevoCod, $data, 'nueva_dj');
@@ -738,7 +739,7 @@ class DjController extends Controller
 
         // 2. Obtener teléfonos desde la tabla correspondiente
         $telefonos = DB::select(
-            "SELECT * FROM {$tablaTel} WHERE CODI_PERS = ?",
+            "SELECT * FROM {$tablaTel} WHERE CODI_PERS = ? AND (TELE_VIGENCIA = 'SI' OR TELE_VIGENCIA IS NULL)",
             [$codiPers]
         );
 
@@ -1389,6 +1390,7 @@ class DjController extends Controller
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
             $this->aplicarAsigFami($codiPers, $data);
+            $this->aplicarConHijos($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, $source);
 
             // ✅ 2.5. SINCRONIZAR DJ2026_PERSONAL → PERSONAL (solo columnas con valor NO NULL)
@@ -1591,8 +1593,8 @@ class DjController extends Controller
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
-            if (! preg_match('/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/u', trim($nombreCompleto))) {
-                throw new \InvalidArgumentException('Los apellidos y nombres de familiares solo admiten letras y espacios.');
+            if (! preg_match('/^\p{L}+(?:[ \'-]\p{L}+)*(?:,\s*\p{L}+(?:[ \'-]\p{L}+)*)?$/u', trim($nombreCompleto))) {
+                throw new \InvalidArgumentException('Revisa los nombres de familiares: usa letras y separa apellidos de nombres con una coma.');
             }
 
             // Split del nombre
@@ -2952,8 +2954,8 @@ class DjController extends Controller
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
-            if (! preg_match('/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/u', trim($nombreCompleto))) {
-                throw new \InvalidArgumentException('Los apellidos y nombres de familiares solo admiten letras y espacios.');
+            if (! preg_match('/^\p{L}+(?:[ \'-]\p{L}+)*(?:,\s*\p{L}+(?:[ \'-]\p{L}+)*)?$/u', trim($nombreCompleto))) {
+                throw new \InvalidArgumentException('Revisa los nombres de familiares: usa letras y separa apellidos de nombres con una coma.');
             }
 
             // ✅ Split mejorado del nombre completo
@@ -3491,6 +3493,754 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         }
     }
 
+    private function usuarioPuedeRevisarSolicitudSip(): bool
+    {
+        if ((int) (session('tipo_rol') ?? 0) === 1) return true;
+        foreach ((array) session('permisos', []) as $menu) {
+            if (($menu['modulo'] ?? '') !== 'dj') continue;
+            foreach (($menu['submenus'] ?? []) as $submenu) {
+                if (($submenu['vista'] ?? '') === 'actualizar_dj') return true;
+            }
+        }
+        return false;
+    }
+
+    private function usuarioPuedeResolverSolicitudSip(): bool
+    {
+        // Códigos confirmados en sisolm_web.dbo.sw_roles:
+        // 11 = Super Usuario, 17 = Admins RRHH.
+        return in_array((int) session('tipo_rol', 0), [11, self::ROL_ADMIN_RRHH], true);
+    }
+
+    public function detalleSolicitudSip($id)
+    {
+        if (!$this->usuarioPuedeRevisarSolicitudSip()) {
+            return response()->json(['success' => false, 'message' => 'No tiene permiso para revisar solicitudes DJ.'], 403);
+        }
+
+        $solicitud = DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD')
+            ->where('SOLI_CODIGO', $id)
+            ->first();
+        if (!$solicitud) return response()->json(['success' => false, 'message' => 'No se encontró la solicitud.'], 404);
+
+        $detalles = DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD_DETALLE')
+            ->where('SOLI_CODIGO', $id)
+            ->orderBy('SOLD_CODIGO')
+            ->get()
+            ->map(function ($fila) {
+                $fila->SOLD_VALOR_ANTERIOR = json_decode($fila->SOLD_VALOR_ANTERIOR, true) ?? $fila->SOLD_VALOR_ANTERIOR;
+                $fila->SOLD_VALOR_PROPUESTO = json_decode($fila->SOLD_VALOR_PROPUESTO, true) ?? $fila->SOLD_VALOR_PROPUESTO;
+                return $fila;
+            });
+
+        $personal = DB::selectOne(
+            'SELECT p.CODI_PERS, p.NRO_DOCU_IDEN, p.APEL_1, p.APEL_2, p.NOMB_1, p.NOMB_2,
+                    p.SUCU_CODIGO, s.SUCU_ABREVIATURA, p.PERS_TIPOTRAB, tp.TIPE_DESCRIPCION,
+                    p.CODI_CARG, c.DESC_CARGO
+             FROM si_solm.dbo.PERSONAL p
+             LEFT JOIN si_solm.dbo.SISO_SUCURSAL s ON s.SUCU_CODIGO = p.SUCU_CODIGO
+             LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp ON tp.TIPE_CODIGO = p.PERS_TIPOTRAB
+             LEFT JOIN si_solm.dbo.CARGOS c ON c.CODI_CARG = p.CODI_CARG
+             WHERE p.CODI_PERS = ?',
+            [$solicitud->CODI_PERS]
+        );
+
+        $familiaresActuales = DB::select(
+            "SELECT TIPO_RELA,
+                    ISNULL(APEL_1, '') + ' ' + ISNULL(APEL_2, '') + ' ' +
+                    ISNULL(NOMB_1, '') + ' ' + ISNULL(NOMB_2, '') AS Nombres,
+                    OCUPACION, CONVERT(CHAR(10), FECH_NACI, 103) AS FECH_NACI
+             FROM si_solm.dbo.DERECHO_HABIENTE
+             WHERE CODI_PERS = ?",
+            [$solicitud->CODI_PERS]
+        );
+
+        return response()->json([
+            'success' => true,
+            'solicitud' => $solicitud,
+            'personal' => $personal,
+            'familiares_actuales' => $familiaresActuales,
+            'detalles' => $detalles,
+        ]);
+    }
+
+    public function resolverSolicitudSip(Request $request, $id)
+    {
+        if (!$this->usuarioPuedeResolverSolicitudSip()) {
+            return response()->json(['success' => false, 'message' => 'Solo Admins RRHH y Super Usuario pueden aprobar o rechazar solicitudes DJ.'], 403);
+        }
+
+        $data = $request->validate([
+            'decision' => 'required|in:APROBADA,RECHAZADA',
+            'comentario' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            DB::transaction(function () use ($id, $data) {
+                $solicitud = DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD')
+                    ->where('SOLI_CODIGO', $id)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$solicitud || $solicitud->SOLI_ESTADO !== 'PENDIENTE') {
+                    throw new \RuntimeException('La solicitud ya fue atendida o no existe.');
+                }
+
+                if ($data['decision'] === 'APROBADA') {
+                    if (!DB::table('si_solm.dbo.PERSONAL')->where('CODI_PERS', $solicitud->CODI_PERS)->exists()) {
+                        throw new \RuntimeException('No se encontró el personal en SISOL.');
+                    }
+                    $detallesSolicitud = DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD_DETALLE')
+                        ->where('SOLI_CODIGO', $id)
+                        ->orderBy('SOLD_CODIGO')
+                        ->get(['SOLD_CAMPO', 'SOLD_VALOR_ANTERIOR', 'SOLD_VALOR_PROPUESTO']);
+                    $propuesta = [];
+                    foreach ($detallesSolicitud as $detalle) {
+                        $campo = (string) $detalle->SOLD_CAMPO;
+                        $anterior = $this->decodificarValorSolicitudCorreo($detalle->SOLD_VALOR_ANTERIOR);
+                        $solicitado = $this->decodificarValorSolicitudCorreo($detalle->SOLD_VALOR_PROPUESTO);
+                        if (in_array($campo, ['DJ_DATOS_ACTUALES', 'DJ_PROPUESTA_COMPLETA'], true)) continue;
+                        if ($campo === 'DJ_FAMILIARES') {
+                            if ($this->normalizarValorSolicitudCorreo($anterior, $campo) === $this->normalizarValorSolicitudCorreo($solicitado, $campo)) continue;
+                            $propuesta['FAM_PARENTESCO'] = [];
+                            $propuesta['FAM_NOMBRES'] = [];
+                            $propuesta['FAM_FECHA_NACI'] = [];
+                            foreach ((array) $solicitado as $familiar) {
+                                if (!is_array($familiar) || trim((string) ($familiar['nombres'] ?? $familiar['Nombres'] ?? '')) === '') continue;
+                                $propuesta['FAM_PARENTESCO'][] = $familiar['parentesco'] ?? $familiar['TIPO_RELA'] ?? '';
+                                $propuesta['FAM_NOMBRES'][] = $familiar['nombres'] ?? $familiar['Nombres'] ?? '';
+                                $propuesta['FAM_FECHA_NACI'][] = $familiar['fech_naci'] ?? $familiar['FECH_NACI'] ?? '';
+                            }
+                            continue;
+                        }
+                        if ($this->normalizarValorSolicitudCorreo($anterior, $campo) === $this->normalizarValorSolicitudCorreo($solicitado, $campo)) continue;
+                        $propuesta[$campo] = $solicitado;
+                    }
+                    if (!$propuesta) throw new \RuntimeException('La solicitud no contiene cambios registrados.');
+                    $this->aplicarPropuestaSipEnPersonal(
+                        $solicitud->CODI_PERS,
+                        $propuesta
+                    );
+                }
+
+                DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD')
+                    ->where('SOLI_CODIGO', $id)
+                    ->update([
+                        'SOLI_ESTADO' => $data['decision'],
+                        'SOLI_FECHA_REV' => DB::raw('GETDATE()'),
+                        'SOLI_USUA_REV' => (string) (session('usuario') ?? 'SISOL'),
+                        'SOLI_COMENTARIO_REV' => $data['comentario'] ?? null,
+                        'SOLI_FECHA_APLICA' => $data['decision'] === 'APROBADA' ? DB::raw('GETDATE()') : null,
+                    ]);
+            });
+
+            $mensaje = $data['decision'] === 'APROBADA' ? 'Solicitud aprobada y aplicada.' : 'Solicitud rechazada.';
+            $correoEnviado = null;
+
+            if ($data['decision'] === 'APROBADA') {
+                $correoEnviado = false;
+                try {
+                    $personal = DB::selectOne(
+                        'SELECT PERS_EMAIL, NRO_DOCU_IDEN, NOMB_1, NOMB_2, APEL_1, APEL_2
+                         FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?',
+                        [DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD')->where('SOLI_CODIGO', $id)->value('CODI_PERS')]
+                    );
+                    $correoDestino = trim((string) ($personal->PERS_EMAIL ?? ''));
+
+                    if ($personal && filter_var($correoDestino, FILTER_VALIDATE_EMAIL)) {
+                        $nombre = trim(implode(' ', array_filter([
+                            $personal->NOMB_1 ?? null,
+                            $personal->NOMB_2 ?? null,
+                            $personal->APEL_1 ?? null,
+                            $personal->APEL_2 ?? null,
+                        ])));
+                        $cambiosCorreo = $this->obtenerCambiosSolicitudParaCorreo($id);
+
+                        Mail::mailer('sip')
+                            ->to($correoDestino)
+                            ->cc(config('mail.dj_aprobada_cc', []))
+                            ->send(new \App\Mail\SolicitudDjAprobadaMail([
+                                'nombre' => $nombre !== '' ? $nombre : 'Personal',
+                                'dni' => trim((string) ($personal->NRO_DOCU_IDEN ?? '')),
+                                'fecha' => now()->format('d/m/Y H:i'),
+                                'cambios' => $cambiosCorreo,
+                            ]));
+                        $correoEnviado = true;
+                    } else {
+                        Log::warning('DJ aprobada: el personal no tiene un correo válido.', ['solicitud' => $id]);
+                    }
+                } catch (\Throwable $e) {
+                    // La aprobación ya quedó confirmada en la BD; el fallo del SMTP
+                    // no debe revertirla ni mostrarla como si no se hubiera aplicado.
+                    Log::error('No se pudo enviar la confirmación de DJ aprobada.', [
+                        'solicitud' => $id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                if (!$correoEnviado) {
+                    $mensaje .= ' No se pudo enviar el correo de confirmación; revisa el correo registrado y la configuración SMTP.';
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $mensaje,
+                'correo_enviado' => $correoEnviado,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            Log::error('Error resolviendo solicitud DJ del SIP', ['solicitud' => $id, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'No se pudo resolver la solicitud.'], 500);
+        }
+    }
+
+    private function obtenerCambiosSolicitudParaCorreo($id): array
+    {
+        $etiquetas = [
+            'FECH_CADUCA_DNI' => 'Caducidad del DNI',
+            'PERS_ESTADO_CIVIL' => 'Estado civil',
+            'PERS_TELEFONO' => 'Teléfono personal',
+            'PERS_EMAIL' => 'Correo electrónico',
+            'PERS_WHATSAPP' => 'WhatsApp',
+            'SABE_NADAR' => 'Sabe nadar',
+            'PERS_GRUP_SANGRE' => 'Tipo de sangre',
+            'PERS_PESO' => 'Peso (kg)',
+            'PERS_TALLA' => 'Talla (m)',
+            'PERS_SIST_PREV' => 'Sistema previsional',
+            'PERS_ESSALUD' => 'EsSalud Vida',
+            'PERS_PENSIONISTA' => 'Pensionista',
+            'PERS_GRADO_INST' => 'Grado de instrucción',
+            'PERS_INSTITUCION' => 'Institución educativa',
+            'PERS_CARRERA' => 'Carrera',
+            'PERS_ANIO_EGRESO' => 'Año de egreso',
+            'dj2026_experiencia_anios' => 'Experiencia laboral anterior (años)',
+            'PERS_EMBARGO' => 'Embargos financieros',
+            'PERS_BANCO' => 'Cuenta de sueldo',
+            'DEPA_CODIGO_NACI' => 'Departamento de nacimiento',
+            'PROVI_CODIGO_NACI' => 'Provincia de nacimiento',
+            'DIST_NACI' => 'Distrito de nacimiento',
+            'PERS_DEPT_ACT' => 'Departamento actual',
+            'PERS_PROV_ACT' => 'Provincia actual',
+            'PERS_DIST_ACT' => 'Distrito actual',
+            'DIRECCION' => 'Dirección actual',
+            'PERS_DEPT_DNI' => 'Departamento del DNI',
+            'PERS_PROV_DNI' => 'Provincia del DNI',
+            'PERS_DIST_DNI' => 'Distrito del DNI',
+            'DIRECCION_DNI' => 'Dirección del DNI',
+            'PERS_NOMCONTACTO' => 'Contacto de emergencia',
+            'PERS_NROEMERGENCIA' => 'Teléfono de emergencia',
+            'PERS_PARENT_EME' => 'Parentesco de emergencia',
+            'LAB_SMO' => 'Servicio militar',
+            'LAB_SUCAMEC' => 'Curso SUCAMEC',
+            'LAB_SUCAMEC_OBS' => 'Detalle SUCAMEC',
+            'LAB_LIC_ARMA' => 'Licencia de arma',
+            'LAB_ARMA_PROPIA' => 'Arma propia',
+            'PERS_BREVETE' => 'Número de brevete',
+            'CLASE_BREVETE' => 'Clase de brevete',
+            'PERS_TIPO_VEHICULO' => 'Categoría de brevete',
+            'PERS_VEHICULO_PROPIO' => 'Vehículo propio',
+            'PERS_ULTIMA_EMP' => 'Última empresa',
+            'PERS_ULTIMO_CARGO' => 'Último cargo',
+            'PERS_ULTIMA_DURACION' => 'Duración en el último cargo',
+            'dj2026_ocupacion_principal' => 'Ocupación principal',
+            'dj2026_descripcion' => 'Ocupaciones adicionales',
+            'dj2026_ciudad_naci' => 'Ciudad de nacimiento',
+            'dj2026_familiar_empresa' => 'Familiar en la empresa',
+            'dj2026_familiar_nombre' => 'Nombre del familiar',
+            'dj2026_familiar_parentesco' => 'Parentesco del familiar',
+            'DJ_FAMILIARES' => 'Datos familiares',
+        ];
+
+        $filas = DB::table('sisolm_web.dbo.sw_DJ_SOLICITUD_DETALLE')
+            ->where('SOLI_CODIGO', $id)
+            ->orderBy('SOLD_CODIGO')
+            ->get(['SOLD_CAMPO', 'SOLD_VALOR_ANTERIOR', 'SOLD_VALOR_PROPUESTO']);
+
+        $cambios = [];
+        foreach ($filas as $fila) {
+            $campo = (string) $fila->SOLD_CAMPO;
+            if (in_array($campo, ['DJ_DATOS_ACTUALES', 'DJ_PROPUESTA_COMPLETA'], true)) continue;
+
+            $anterior = $this->decodificarValorSolicitudCorreo($fila->SOLD_VALOR_ANTERIOR);
+            $solicitado = $this->decodificarValorSolicitudCorreo($fila->SOLD_VALOR_PROPUESTO);
+            if ($this->normalizarValorSolicitudCorreo($anterior, $campo) === $this->normalizarValorSolicitudCorreo($solicitado, $campo)) continue;
+
+            $cambios[] = [
+                'campo' => $etiquetas[$campo] ?? ucwords(str_replace('_', ' ', strtolower($campo))),
+                'anterior' => $this->formatearValorSolicitudCorreo($anterior, $campo),
+                'solicitado' => $this->formatearValorSolicitudCorreo($solicitado, $campo),
+            ];
+        }
+
+        return $cambios;
+    }
+
+    private function decodificarValorSolicitudCorreo($valor)
+    {
+        if (!is_string($valor)) return $valor;
+        $texto = trim($valor);
+        if ($texto === '') return '';
+
+        $decodificado = json_decode($texto, true);
+        return json_last_error() === JSON_ERROR_NONE ? $decodificado : $texto;
+    }
+
+    private function normalizarValorSolicitudCorreo($valor, string $campo): string
+    {
+        if ($campo === 'DJ_FAMILIARES') {
+            $familiares = [];
+            foreach ((array) $valor as $familiar) {
+                if (!is_array($familiar)) continue;
+                $familiares[] = [
+                    mb_strtoupper(trim((string) ($familiar['TIPO_RELA'] ?? $familiar['parentesco'] ?? '')), 'UTF-8'),
+                    trim((string) ($familiar['Nombres'] ?? $familiar['nombres'] ?? '')),
+                    $this->normalizarFechaSolicitudCorreo($familiar['FECH_NACI'] ?? $familiar['fech_naci'] ?? ''),
+                ];
+            }
+            sort($familiares);
+            return json_encode($familiares, JSON_UNESCAPED_UNICODE) ?: '[]';
+        }
+
+        if ($campo === 'dj2026_descripcion' && is_array($valor)) {
+            $ocupaciones = array_map(static function ($item) {
+                return trim((string) $item);
+            }, array_values($valor));
+            return json_encode($ocupaciones, JSON_UNESCAPED_UNICODE) ?: '[]';
+        }
+
+        if (is_array($valor) && array_key_exists('date', $valor)) {
+            $valor = $valor['date'];
+        }
+        if ($valor === null) return '';
+        $texto = trim((string) $valor);
+        if (stripos($campo, 'FECH') !== false || stripos($campo, 'FECHA') !== false) {
+            $fecha = $this->normalizarFechaSolicitudCorreo($texto);
+            if ($fecha !== '') return $fecha;
+        }
+        if (in_array($campo, ['PERS_PESO', 'PERS_TALLA', 'dj2026_experiencia_anios'], true) && is_numeric($texto)) {
+            return rtrim(rtrim(number_format((float) $texto, 8, '.', ''), '0'), '.');
+        }
+        if ($campo === 'PERS_BANCO') {
+            $banco = mb_strtoupper($texto, 'UTF-8');
+            return [
+                'BCP' => '01',
+                'BANCO DE CREDITO DEL PERU' => '01',
+                'INTERBANK' => '03',
+                'BANCO INTERNACIONAL DEL PERU - INTERBANK' => '03',
+            ][$banco] ?? $banco;
+        }
+        return $texto;
+    }
+
+    private function normalizarFechaSolicitudCorreo($valor): string
+    {
+        if (is_array($valor) && isset($valor['date'])) $valor = $valor['date'];
+        $texto = trim((string) $valor);
+        if ($texto === '') return '';
+        foreach (['Y-m-d', 'd/m/Y', 'Y-m-d H:i:s.u'] as $formato) {
+            $fecha = \DateTime::createFromFormat($formato, $texto);
+            if ($fecha && $fecha->format($formato) === $texto) return $fecha->format('Y-m-d');
+        }
+        return $texto;
+    }
+
+    private function formatearValorSolicitudCorreo($valor, string $campo): string
+    {
+        if ($campo === 'DJ_FAMILIARES') {
+            $lineas = [];
+            foreach ((array) $valor as $familiar) {
+                if (!is_array($familiar)) continue;
+                $parentesco = trim((string) ($familiar['TIPO_RELA'] ?? $familiar['parentesco'] ?? ''));
+                $nombres = trim((string) ($familiar['Nombres'] ?? $familiar['nombres'] ?? ''));
+                $fecha = $familiar['FECH_NACI'] ?? $familiar['fech_naci'] ?? '';
+                if (is_array($fecha) && isset($fecha['date'])) $fecha = $fecha['date'];
+                $fechaTexto = trim((string) $fecha) !== '' ? ' · Nacimiento: ' . $this->formatearFechaSolicitudCorreo($fecha) : '';
+                $lineas[] = trim($parentesco . ': ' . $nombres . $fechaTexto);
+            }
+            return $lineas ? implode("\n", $lineas) : 'Sin registros';
+        }
+
+        if ($campo === 'dj2026_descripcion' && is_array($valor)) {
+            $ocupaciones = array_values(array_filter(array_map(static function ($item) {
+                return trim((string) $item);
+            }, $valor), static function ($item) { return $item !== ''; }));
+            return $ocupaciones ? implode("\n", array_map(static function ($item, $i) {
+                return 'Ocupación ' . ($i + 1) . ': ' . $item;
+            }, $ocupaciones, array_keys($ocupaciones))) : 'Sin dato';
+        }
+
+        if (is_array($valor) && array_key_exists('date', $valor)) $valor = $valor['date'];
+        if (is_array($valor)) return json_encode($valor, JSON_UNESCAPED_UNICODE) ?: 'Sin dato';
+        if ($valor === null || trim((string) $valor) === '') return 'Sin dato';
+        $texto = trim((string) $valor);
+
+        $catalogo = $this->buscarEtiquetaCatalogoSolicitudCorreo($campo, $texto);
+        if ($catalogo !== null) return $catalogo;
+
+        if (stripos($campo, 'FECH') !== false || stripos($campo, 'FECHA') !== false) {
+            return $this->formatearFechaSolicitudCorreo($texto);
+        }
+        if (in_array($campo, ['PERS_PESO', 'PERS_TALLA'], true) && is_numeric($valor)) {
+            $numero = number_format((float) $valor, 2, '.', '');
+            if ($campo === 'PERS_PESO') $numero = rtrim(rtrim($numero, '0'), '.');
+            return $numero . ($campo === 'PERS_PESO' ? ' kg' : ' m');
+        }
+        if ($campo === 'dj2026_experiencia_anios' && is_numeric($valor)) {
+            $numero = rtrim(rtrim(number_format((float) $valor, 2, '.', ''), '0'), '.');
+            return $numero . ((float) $valor === 1.0 ? ' año' : ' años');
+        }
+        if (in_array($campo, [
+            'SABE_NADAR', 'PERS_ESSALUD', 'PERS_PENSIONISTA', 'PERS_EMBARGO', 'LAB_SMO', 'LAB_SUCAMEC',
+            'LAB_ARMA_PROPIA', 'PERS_VEHICULO_PROPIO', 'dj2026_familiar_empresa',
+        ], true)) {
+            $booleanos = ['1' => 'Sí', '0' => 'No', 'S' => 'Sí', 'N' => 'No', 'SI' => 'Sí', 'SÍ' => 'Sí', 'NO' => 'No'];
+            return $booleanos[mb_strtoupper($texto, 'UTF-8')] ?? $texto;
+        }
+        return $texto;
+    }
+
+    /** Devuelve nombres en vez de códigos para los valores que vienen de catálogos del SISOL. */
+    private function buscarEtiquetaCatalogoSolicitudCorreo(string $campo, string $valor): ?string
+    {
+        $catalogos = [
+            'PERS_ESTADO_CIVIL' => ['si_solm.dbo.ADMI_ESTADO_CIVIL', 'ESCI_CODIGO', 'ESCI_DESCRIPCION'],
+            'PERS_SIST_PREV' => ['si_solm.dbo.SISTEMA_PENSIONES', 'CODI_SIST_PENS', 'DESC_SIST_PENS'],
+            'PERS_GRADO_INST' => ['si_solm.dbo.SUNAT_NIVEL_EDUCATIVO', 'NIED_CODIGO', 'NIED_ABREVIADO'],
+            'PERS_INSTITUCION' => ['si_solm.dbo.SUNAT_IEDUCATIVA', 'IEDU_CODIGO', 'IEDU_DESCRIPCION'],
+            'PERS_CARRERA' => ['si_solm.dbo.SUNAT_CARRERAS', 'CARR_CODIGO', 'CARR_DESCRIPCION'],
+            'PERS_BANCO' => ['si_solm.dbo.BANCOS', 'CODI_BANC', 'DESC_BANC'],
+            'DEPA_CODIGO_NACI' => ['si_solm.dbo.ADMI_DEPARTAMENTO', 'DEPA_CODIGO', 'DEPA_DESCRIPCION'],
+            'PROVI_CODIGO_NACI' => ['si_solm.dbo.ADMI_PROVINCIA', 'PROVI_CODIGO', 'PROVI_DESCRIPCION'],
+            'DIST_NACI' => ['si_solm.dbo.ADMI_DISTRITO', 'DIST_CODIGO', 'DIST_DESCRIPCION'],
+            'PERS_DEPT_ACT' => ['si_solm.dbo.ADMI_DEPARTAMENTO', 'DEPA_CODIGO', 'DEPA_DESCRIPCION'],
+            'PERS_DEPT_DNI' => ['si_solm.dbo.ADMI_DEPARTAMENTO', 'DEPA_CODIGO', 'DEPA_DESCRIPCION'],
+            'PERS_PROV_ACT' => ['si_solm.dbo.ADMI_PROVINCIA', 'PROVI_CODIGO', 'PROVI_DESCRIPCION'],
+            'PERS_PROV_DNI' => ['si_solm.dbo.ADMI_PROVINCIA', 'PROVI_CODIGO', 'PROVI_DESCRIPCION'],
+            'PERS_DIST_ACT' => ['si_solm.dbo.ADMI_DISTRITO', 'DIST_CODIGO', 'DIST_DESCRIPCION'],
+            'PERS_DIST_DNI' => ['si_solm.dbo.ADMI_DISTRITO', 'DIST_CODIGO', 'DIST_DESCRIPCION'],
+        ];
+
+        if (!isset($catalogos[$campo]) || !preg_match('/^[A-Za-z0-9_-]+$/', $valor)) return null;
+        [$tabla, $columnaCodigo, $columnaNombre] = $catalogos[$campo];
+
+        try {
+            $fila = DB::selectOne(
+                "SELECT TOP 1 {$columnaNombre} AS etiqueta FROM {$tabla} WHERE {$columnaCodigo} = ?",
+                [$valor]
+            );
+            $etiqueta = trim((string) ($fila->etiqueta ?? ''));
+            if ($etiqueta !== '') {
+                if ($campo === 'PERS_SIST_PREV' && trim($valor) === '01') return 'ONP';
+                return $etiqueta;
+            }
+        } catch (\Throwable $e) {
+            // Si un catálogo no está disponible, el correo conserva el valor original.
+        }
+
+        return null;
+    }
+
+    private function formatearFechaSolicitudCorreo($valor): string
+    {
+        $fecha = $this->normalizarFechaSolicitudCorreo($valor);
+        if ($fecha === '') return 'Sin dato';
+        $date = \DateTime::createFromFormat('!Y-m-d', substr($fecha, 0, 10));
+        return $date ? $date->format('d/m/Y') : $fecha;
+    }
+
+    private function aplicarPropuestaSipEnPersonal(string $codiPers, array $propuesta): void
+    {
+        // La solicitud contiene únicamente diferencias confirmadas al enviarse;
+        // por eso se aplican exactamente esos campos, sin recomparar el formulario entero.
+        $camposTelefono = ['PERS_TELEFONO', 'PERS_WHATSAPP', 'PERS_NROEMERGENCIA', 'PERS_NOMCONTACTO', 'PERS_PARENT_EME'];
+        $telefonosCambiaron = count(array_intersect($camposTelefono, array_keys($propuesta))) > 0;
+        $propuestaCompleta = $propuesta;
+        $datosAntes = [];
+
+        if ($telefonosCambiaron) {
+            $telefonosActuales = $this->getTelefonos($codiPers, 'pendiente');
+            $telefonosActuales['PERS_PARENT_EME'] = $telefonosActuales['PERS_EMERC_FAMILIAR'] ?? null;
+            foreach ($camposTelefono as $campoTelefono) {
+                if (array_key_exists($campoTelefono, $propuesta)) {
+                    $telefonosActuales[$campoTelefono] = $propuesta[$campoTelefono];
+                }
+            }
+            $propuestaCompleta = array_merge($telefonosActuales, $propuesta);
+            $nombresPersonal = DB::selectOne(
+                'SELECT APEL_1, APEL_2, NOMB_1, NOMB_2 FROM si_solm.dbo.PERSONAL WHERE CODI_PERS = ?',
+                [$codiPers]
+            );
+            $datosAntes = (array) ($nombresPersonal ?? []);
+        }
+
+        $mapa = [
+            'FECH_CADUCA_DNI' => ['PERS_FECHCADUCADNI'],
+            'PERS_TELEFONO' => ['PERS_TELEFONO'],
+            'PERS_EMAIL' => ['PERS_EMAIL'],
+            'PERS_WHATSAPP' => ['PERS_WHATSAPP'],
+            'SABE_NADAR' => ['PERS_SNADAR'],
+            'PERS_GRUP_SANGRE' => ['tipo_sangr'],
+            'PERS_PESO' => ['peso_kilo'],
+            'PERS_TALLA' => ['tall_metr'],
+            'PERS_SIST_PREV' => ['CODI_SIST_PENS'],
+            'PERS_ESSALUD' => ['ESSALUD'],
+            'PERS_PENSIONISTA' => ['PERS_PENSIONISTA'],
+            'PERS_GRADO_INST' => ['PERS_GRADO_INSTRUCCION'],
+            'PERS_INSTITUCION' => ['IEDU_CODIGO'],
+            'PERS_CARRERA' => ['CARR_CODIGO'],
+            'PERS_ANIO_EGRESO' => ['EGRESO_EDUCATIVO'],
+            'PERS_EMBARGO' => ['PERS_EMBARGO'],
+            'PERS_BANCO' => ['dj2026_banco'],
+            'DIRECCION' => ['DIRECCION'],
+            'DIRECCION_DNI' => ['PERS_DIREC_DNI'],
+            'PERS_NOMCONTACTO' => ['PERS_NOMCONTACTO'],
+            'PERS_NROEMERGENCIA' => ['PERS_NROEMERGENCIA'],
+            'PERS_PARENT_EME' => ['PERS_EMERC_FAMILIAR'],
+            'DEPA_CODIGO_NACI' => ['DEPA_CODIGO_NACI'],
+            'PROVI_CODIGO_NACI' => ['PROVI_CODIGO_NACI'],
+            'DIST_NACI' => ['DIST_NACI'],
+            'PERS_DEPT_ACT' => ['PERS_DEPT_ACT'],
+            'PERS_PROV_ACT' => ['PERS_PROV_ACT'],
+            'PERS_DIST_ACT' => ['PERS_DIST_ACT'],
+            'PERS_DEPT_DNI' => ['PERS_DPTO_DIRDNI'],
+            'PERS_PROV_DNI' => ['PERS_PROV_DIRDNI'],
+            'PERS_DIST_DNI' => ['PERS_DIST_DIRDNI'],
+            'LAB_SUCAMEC' => ['PERS_CONDISCAMEC'],
+            'LAB_SUCAMEC_OBS' => ['PERS_NRODISCAMEC'],
+            'LAB_LIC_ARMA' => ['PERS_NROLICENCIA'],
+            'LAB_ARMA_PROPIA' => ['PERS_CONARMAS'],
+            'PERS_BREVETE' => ['PERS_BREVETE'],
+            'CLASE_BREVETE' => ['CLASE_BREVETE'],
+            'PERS_TIPO_VEHICULO' => ['CATEGORIA_BREVETE'],
+            'PERS_VEHICULO_PROPIO' => ['PERS_VEHICULO_PROPIO'],
+            'PERS_ULTIMA_EMP' => ['PERS_CTRABANT'],
+            'PERS_ULTIMO_CARGO' => ['PERS_CARGOTRABANT'],
+            'PERS_ULTIMA_DURACION' => ['PERS_DURACIONANT'],
+            'dj2026_ocupacion_principal' => ['dj2026_ocupacion_principal'],
+            'dj2026_experiencia_anios' => ['dj2026_experiencia_anios'],
+            'dj2026_familiar_empresa' => ['dj2026_familiar_empresa'],
+            'dj2026_familiar_nombre' => ['dj2026_familiar_nombre'],
+            'dj2026_familiar_parentesco' => ['dj2026_familiar_parentesco'],
+        ];
+
+        $updates = [];
+        foreach ($mapa as $campo => $columnas) {
+            if (!array_key_exists($campo, $propuesta) || is_array($propuesta[$campo])) continue;
+            $valor = $propuesta[$campo] === '' ? null : $propuesta[$campo];
+            if (str_starts_with($campo, 'FECH_') && $valor !== null) {
+                $valor = $this->fechaSipParaSql($valor);
+            }
+            foreach ($columnas as $columna) $updates[$columna] = $valor;
+        }
+
+        // SIP envía el código ESCI_CODIGO (por ejemplo, 2007000001), pero
+        // ESTA_CIVI es el campo legado CHAR(1) y debe recibir S/C/D/V/O.
+        if (array_key_exists('PERS_ESTADO_CIVIL', $propuesta)) {
+            $estadoCivilIngresado = trim((string) $propuesta['PERS_ESTADO_CIVIL']);
+            $codigoLegadoPorDescripcion = [
+                'SOLTERO' => 'S', 'CASADO' => 'C', 'DIVORCIADO' => 'D',
+                'VIUDO' => 'V', 'CONVIVIENTE' => 'O',
+            ];
+            $descripcionBuscada = $codigoLegadoPorDescripcion[strtoupper($estadoCivilIngresado)] ?? null;
+            $estadoCivil = DB::table('si_solm.dbo.ADMI_ESTADO_CIVIL')
+                ->where('ESCI_CODIGO', $estadoCivilIngresado)
+                ->first(['ESCI_CODIGO', 'ESCI_DESCRIPCION']);
+
+            if (!$estadoCivil && $descripcionBuscada === null) {
+                $descripcionBuscada = strtoupper($estadoCivilIngresado);
+            }
+            if (!$estadoCivil && $descripcionBuscada !== null) {
+                $estadoCivil = DB::table('si_solm.dbo.ADMI_ESTADO_CIVIL')
+                    ->whereRaw('UPPER(LTRIM(RTRIM(ESCI_DESCRIPCION))) = ?', [$descripcionBuscada])
+                    ->first(['ESCI_CODIGO', 'ESCI_DESCRIPCION']);
+            }
+            if (!$estadoCivil) {
+                throw new \RuntimeException('No se encontró el estado civil seleccionado en el catálogo del SISOL.');
+            }
+
+            $descripcionEstado = strtoupper(trim((string) $estadoCivil->ESCI_DESCRIPCION));
+            if (!isset($codigoLegadoPorDescripcion[$descripcionEstado])) {
+                throw new \RuntimeException('El estado civil seleccionado no tiene un código compatible con el registro del personal.');
+            }
+            $updates['ESCI_CODIGO'] = $estadoCivil->ESCI_CODIGO;
+            $updates['ESTA_CIVI'] = $codigoLegadoPorDescripcion[$descripcionEstado];
+        }
+
+        if (array_key_exists('LAB_SMO', $propuesta)) {
+            $smo = trim((string) $propuesta['LAB_SMO']);
+            if ($smo !== '') {
+                $updates['PERS_CONSMO'] = (strtoupper($smo) !== 'NO') ? 'SI' : 'NO';
+                $updates['PERS_LUGARSMO'] = ($updates['PERS_CONSMO'] === 'SI') ? $smo : 'NO';
+            }
+        }
+
+        $ocupaciones = $propuesta['dj2026_descripcion'] ?? null;
+        if (array_key_exists('dj2026_descripcion', $propuesta) && is_array($ocupaciones)) {
+            $ocupaciones = array_values(array_filter($ocupaciones, fn ($v) => trim((string) $v) !== ''));
+            $updates['dj2026_cantprofesion'] = count($ocupaciones);
+            $updates['dj2026_laboral_1'] = isset($ocupaciones[0]) ? mb_strtoupper($ocupaciones[0], 'UTF-8') : null;
+            $updates['dj2026_laboral_2'] = isset($ocupaciones[1]) ? mb_strtoupper($ocupaciones[1], 'UTF-8') : null;
+        }
+        if (array_key_exists('dj2026_ciudad_naci', $propuesta)) $updates['dj2026_ciudad_naci'] = $propuesta['dj2026_ciudad_naci'] ?: null;
+
+        if (!$updates && !$telefonosCambiaron && !isset($propuesta['FAM_NOMBRES'])) return;
+        if ($telefonosCambiaron) {
+            // La migración telefónica necesita el estado final completo aunque
+            // solo uno de los teléfonos haya cambiado.
+            $propuestaTelefonos = $propuestaCompleta;
+        }
+        $updates['USUA_CODIGO_MOD'] = (string) (session('usuario') ?? 'SISOL');
+        $sets = [];
+        $params = [];
+        foreach ($updates as $columna => $valor) {
+            $sets[] = '[' . $columna . '] = ?';
+            $params[] = $valor;
+        }
+        $sets[] = '[USUA_FECHA_MOD] = GETDATE()';
+        $params[] = $codiPers;
+        DB::update('UPDATE si_solm.dbo.PERSONAL SET ' . implode(', ', $sets) . ' WHERE CODI_PERS = ?', $params);
+
+        // Los datos relacionados se aplican con los mismos métodos que Actualizar DJ.
+        if (isset($propuesta['FAM_NOMBRES']) && is_array($propuesta['FAM_NOMBRES'])) {
+            $this->saveFamiliaresTemp($codiPers, $propuesta);
+            $this->migrarFamiliares($codiPers);
+        }
+        if ($telefonosCambiaron) {
+            $datosTelefono = $propuestaTelefonos;
+            $telefonos = [
+                'celular' => $datosTelefono['PERS_TELEFONO'] ?? '',
+                'whatsapp' => $datosTelefono['PERS_WHATSAPP'] ?? '',
+                'celular_emergencia' => $datosTelefono['PERS_NROEMERGENCIA'] ?? '',
+                'contacto_emergencia' => $datosTelefono['PERS_NOMCONTACTO'] ?? '',
+                'parentesco_emergencia' => $datosTelefono['PERS_PARENT_EME'] ?? '',
+                'apellido_paterno' => $datosAntes['APEL_1'] ?? '',
+                'apellido_materno' => $datosAntes['APEL_2'] ?? '',
+                'nombre1' => $datosAntes['NOMB_1'] ?? '',
+                'nombre2' => $datosAntes['NOMB_2'] ?? '',
+            ];
+            $this->saveTelefonosTemp($codiPers, $telefonos);
+            $this->migrarTelefonos($codiPers);
+        }
+    }
+
+    private function solicitudSipCampoCambio(string $campo, array $aliases, array $datosAntes, array $propuesta): bool
+    {
+        if (!array_key_exists($campo, $propuesta)) return false;
+        $valorAnterior = null;
+        $seEncontroAlias = false;
+        foreach ($aliases as $alias) {
+            if (array_key_exists($alias, $datosAntes)) {
+                if (!$seEncontroAlias) {
+                    $valorAnterior = $datosAntes[$alias];
+                    $seEncontroAlias = true;
+                }
+                $valorAlias = $datosAntes[$alias];
+                if (is_array($valorAlias) && array_key_exists('date', $valorAlias)) $valorAlias = $valorAlias['date'];
+                if ($valorAlias instanceof \DateTimeInterface) $valorAlias = $valorAlias->format('Y-m-d');
+                if ($valorAlias !== null && trim((string) $valorAlias) !== '') {
+                    return !$this->valoresSolicitudSipEquivalentes($valorAlias, $propuesta[$campo], $campo);
+                }
+            }
+        }
+        return $seEncontroAlias
+            ? !$this->valoresSolicitudSipEquivalentes($valorAnterior, $propuesta[$campo], $campo)
+            : false;
+    }
+
+    private function valoresSolicitudSipEquivalentes($antes, $propuesto, string $campo): bool
+    {
+        if (is_array($antes) && array_key_exists('date', $antes)) $antes = $antes['date'];
+        if (is_array($propuesto) && array_key_exists('date', $propuesto)) $propuesto = $propuesto['date'];
+        if ($antes instanceof \DateTimeInterface) $antes = $antes->format('Y-m-d');
+        if ($propuesto instanceof \DateTimeInterface) $propuesto = $propuesto->format('Y-m-d');
+        if ($antes === null || trim((string) $antes) === '') $antes = '';
+        if ($propuesto === null || trim((string) $propuesto) === '') $propuesto = '';
+        $a = trim((string) $antes);
+        $b = trim((string) $propuesto);
+
+        if ($a === '' || $b === '') return $a === $b;
+        if (stripos($campo, 'FECH') !== false || stripos($campo, 'FECHA') !== false) {
+            $normalizar = function (string $valor): string {
+                foreach (['Y-m-d', 'd/m/Y', 'Y-m-d H:i:s.u', 'Y-m-d H:i:s'] as $formato) {
+                    $fecha = \DateTime::createFromFormat($formato, $valor);
+                    if ($fecha) return $fecha->format('Y-m-d');
+                }
+                return $valor;
+            };
+            return $normalizar($a) === $normalizar($b);
+        }
+        if (in_array($campo, ['PERS_PESO', 'PERS_TALLA', 'PERS_ANIO_EGRESO', 'dj2026_experiencia_anios'], true)
+            && is_numeric($a) && is_numeric($b)) {
+            return (float) $a === (float) $b;
+        }
+        if (in_array($campo, [
+            'PERS_ESTADO_CIVIL', 'PERS_SIST_PREV', 'PERS_GRUP_SANGRE', 'PERS_BANCO',
+            'PERS_ESSALUD', 'PERS_PENSIONISTA', 'PERS_EMBARGO', 'LAB_SUCAMEC',
+            'LAB_ARMA_PROPIA', 'LAB_SMO', 'PERS_VEHICULO_PROPIO', 'CLASE_BREVETE',
+            'PERS_TIPO_VEHICULO', 'PERS_PARENT_EME', 'dj2026_familiar_empresa',
+            'dj2026_familiar_parentesco', 'dj2026_descripcion',
+        ], true)) {
+            $a = mb_strtoupper($a, 'UTF-8');
+            $b = mb_strtoupper($b, 'UTF-8');
+        }
+        if ($campo === 'PERS_BANCO') {
+            $bancos = [
+                'BCP' => '01', 'BANCO DE CREDITO DEL PERU' => '01',
+                'INTERBANK' => '03', 'BANCO INTERNACIONAL DEL PERU - INTERBANK' => '03',
+            ];
+            $a = $bancos[$a] ?? $a;
+            $b = $bancos[$b] ?? $b;
+        }
+        return $a === $b;
+    }
+
+    private function normalizarFamiliaresSolicitudSip(array $familiares): array
+    {
+        $normalizados = [];
+        foreach ($familiares as $familiar) {
+            if (!is_array($familiar)) continue;
+            $parentesco = mb_strtoupper(trim((string) ($familiar['TIPO_RELA'] ?? $familiar['parentesco'] ?? '')), 'UTF-8');
+            $nombre = mb_strtoupper(trim((string) ($familiar['Nombres'] ?? $familiar['nombres'] ?? '')), 'UTF-8');
+            if ($nombre === '') continue;
+            $fecha = $parentesco === 'HIJO MENOR DE EDAD'
+                ? $this->normalizarFechaSolicitudSip($familiar['FECH_NACI'] ?? $familiar['fech_naci'] ?? '')
+                : '';
+            $normalizados[] = [$parentesco, $nombre, $fecha];
+        }
+        sort($normalizados);
+        return $normalizados;
+    }
+
+    private function normalizarFechaSolicitudSip($valor): string
+    {
+        if (is_array($valor) && isset($valor['date'])) $valor = $valor['date'];
+        if ($valor instanceof \DateTimeInterface) return $valor->format('Y-m-d');
+        $texto = trim((string) $valor);
+        if ($texto === '') return '';
+        foreach (['Y-m-d', 'd/m/Y', 'Y-m-d H:i:s.u', 'Y-m-d H:i:s'] as $formato) {
+            $fecha = \DateTime::createFromFormat($formato, $texto);
+            if ($fecha) return $fecha->format('Y-m-d');
+        }
+        return $texto;
+    }
+
+    private function fechaSipParaSql($valor): ?string
+    {
+        $valor = trim((string) $valor);
+        if ($valor === '') return null;
+        foreach (['Y-m-d', 'd/m/Y'] as $formato) {
+            $fecha = \DateTime::createFromFormat($formato, $valor);
+            // SQL Server puede interpretar YYYY-MM-DD según DATEFORMAT de la
+            // conexión cuando el parámetro llega como nvarchar. YYYYMMDD es
+            // inequívoco para convertirlo a datetime en cualquier idioma.
+            if ($fecha && $fecha->format($formato) === $valor) return $fecha->format('Ymd');
+        }
+        throw new \RuntimeException('Una fecha propuesta no tiene un formato válido.');
+    }
+
     public function reportePersonalSinMigracion(Request $request)
     {
         try {
@@ -3509,20 +4259,33 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                 return $item;
             }, $queryAnual);
 
-            // 2. Ejecutamos A Demanda
-            $queryDemanda = DB::select(
-                "EXEC sisolm_web.dbo.SW_LISTAR_PERSONAL_DJ_MIGRACION_ETAPA2_VIGENTES_DNI ?, ?, '00', '00', NULL, 'demanda'",
-                [$usuario, $codEmpresa]
+            // Demanda se alimenta exclusivamente de solicitudes hechas desde el SIP.
+            // El SP de migración incluye registros históricos de sw_MIGRA_PERSONAL,
+            // que no representan solicitudes y no deben aparecer en esta pestaña.
+            $solicitudesSip = DB::select(
+                "SELECT r.SOLI_CODIGO AS solicitud_id, r.CODI_PERS AS codPersonal,
+                        p.CODI_PERS AS id, p.APEL_1 AS apellido1, p.APEL_2 AS apellido2,
+                        p.NOMB_1 AS nombres, p.NOMB_2 AS NOMB_2, p.NRO_DOCU_IDEN AS dni,
+                        p.SUCU_CODIGO AS codSucursal,
+                        COALESCE(s.SUCU_ABREVIATURA, p.SUCU_CODIGO) AS sucursal,
+                        COALESCE(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS tipoPer,
+                        COALESCE(tp.TIPE_DESCRIPCION, p.PERS_TIPOTRAB) AS TIPO_PER,
+                        p.CODI_CARG AS codCargo, c.DESC_CARGO AS cargo,
+                        CASE WHEN r.SOLI_ESTADO = 'APROBADA' THEN 'SI' ELSE 'NO' END AS migrado,
+                        r.SOLI_ESTADO AS estado_solicitud,
+                        'demanda' AS tipo_actualizacion,
+                        COALESCE(r.SOLI_FECHA_APLICA, r.SOLI_FECHA_REG) AS cambio,
+                        CAST(1 AS bit) AS es_solicitud_nueva
+                 FROM sisolm_web.dbo.sw_DJ_SOLICITUD r
+                 INNER JOIN si_solm.dbo.PERSONAL p ON LTRIM(RTRIM(p.CODI_PERS)) COLLATE DATABASE_DEFAULT = LTRIM(RTRIM(r.CODI_PERS)) COLLATE DATABASE_DEFAULT
+                 LEFT JOIN si_solm.dbo.SISO_SUCURSAL s ON s.SUCU_CODIGO COLLATE DATABASE_DEFAULT = p.SUCU_CODIGO COLLATE DATABASE_DEFAULT
+                 LEFT JOIN si_solm.dbo.ADMI_TIPO_PERSONAL tp ON tp.TIPE_CODIGO COLLATE DATABASE_DEFAULT = p.PERS_TIPOTRAB COLLATE DATABASE_DEFAULT
+                 LEFT JOIN si_solm.dbo.CARGOS c ON c.CODI_CARG COLLATE DATABASE_DEFAULT = p.CODI_CARG COLLATE DATABASE_DEFAULT
+                 WHERE r.SOLI_ESTADO IN ('PENDIENTE', 'APROBADA')
+                   AND r.EMPR_CODIGO <> '05'"
             );
 
-            // Inyectamos la columna faltante a la fuerza
-            $dataDemanda = array_map(function($item) {
-                $item->tipo_actualizacion = 'demanda';
-                return $item;
-            }, $queryDemanda);
-
-            // 3. Juntamos y enviamos
-            $data = array_merge($dataAnual, $dataDemanda);
+            $data = array_merge($dataAnual, $solicitudesSip);
 
             return response()->json([
                 'success' => true,
@@ -3819,33 +4582,92 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
     private function migrarTelefonos($codiPers)
     {
-        // 1. Borrar teléfonos existentes en tabla original
-        DB::delete(
-            'DELETE FROM si_solm.dbo.TELEFONO WHERE CODI_PERS = ?',
+        // La tabla temporal representa el estado final deseado. En TELEFONO
+        // reutilizamos las filas existentes por función (personal, WhatsApp,
+        // emergencia) para que cada edición no borre y vuelva a crear todo.
+        $propuestos = DB::select(
+            'SELECT CODI_PERS, NRO_TELE, TIPO_TELE, OBSERVACION,
+                    TELE_VIGENCIA, TELE_RESERVADO, TELE_EMERGENCIA,
+                    NRO_WSP, TELE_CONTACTO, VINCULO_FAMILIAR
+             FROM (
+                SELECT *, ROW_NUMBER() OVER (
+                    PARTITION BY CODI_PERS, LTRIM(RTRIM(NRO_TELE))
+                    ORDER BY CASE WHEN TELE_EMERGENCIA IS NULL OR TELE_EMERGENCIA = \'1\' THEN 0 ELSE 1 END
+                ) AS numero_fila
+                FROM sisolm_web.dbo.sw_MIGRA_TELEFONO
+                WHERE CODI_PERS = ?
+             ) AS t WHERE numero_fila = 1',
             [$codiPers]
         );
 
-        // 2. Insertar desde sw_MIGRA_TELEFONO a TELEFONO
-        DB::statement(
-            'INSERT INTO si_solm.dbo.TELEFONO
-            (CODI_PERS, NRO_TELE, TIPO_TELE, OBSERVACION,
-            TELE_VIGENCIA, TELE_RESERVADO, TELE_EMERGENCIA,
-            NRO_WSP, TELE_CONTACTO, VINCULO_FAMILIAR)
-            SELECT
-                CODI_PERS,
-                NRO_TELE,
-                TIPO_TELE,
-                OBSERVACION,
-                TELE_VIGENCIA,
-                TELE_RESERVADO,
-                TELE_EMERGENCIA,
-                NRO_WSP,
-                TELE_CONTACTO,
-                VINCULO_FAMILIAR
-            FROM sisolm_web.dbo.sw_MIGRA_TELEFONO
-            WHERE CODI_PERS = ?',
+        $existentes = DB::select(
+            'SELECT CODI_PERS, NRO_TELE, TIPO_TELE, OBSERVACION,
+                    TELE_VIGENCIA, TELE_RESERVADO, TELE_EMERGENCIA,
+                    NRO_WSP, TELE_CONTACTO, VINCULO_FAMILIAR
+             FROM si_solm.dbo.TELEFONO WHERE CODI_PERS = ?',
             [$codiPers]
         );
+
+        $usados = [];
+        $activos = [];
+        foreach ($propuestos as $propuesto) {
+            $emergencia = $propuesto->TELE_EMERGENCIA === null || $propuesto->TELE_EMERGENCIA == '1';
+            $rol = $emergencia ? 'emergencia' : ((int) $propuesto->NRO_WSP === 1 ? 'whatsapp' : 'personal');
+
+            // Primero reutilizar la fila del mismo rol. Si personal y WhatsApp
+            // comparten número, cualquiera de esas dos filas puede representar ambos.
+            $candidatos = array_values(array_filter($existentes, function ($fila) use ($rol, $propuesto) {
+                $esEmergencia = $fila->TELE_EMERGENCIA === null || $fila->TELE_EMERGENCIA == '1';
+                if ($rol === 'emergencia') return $esEmergencia;
+                if ($esEmergencia) return false;
+                if ($rol === 'whatsapp') return (int) $fila->NRO_WSP === 1
+                    || trim((string) $fila->NRO_TELE) === trim((string) $propuesto->NRO_TELE);
+                return (int) $fila->NRO_WSP === 0;
+            }));
+
+            $fila = null;
+            foreach ($candidatos as $candidato) {
+                $clave = trim((string) $candidato->NRO_TELE);
+                if (!isset($usados[$clave])) { $fila = $candidato; break; }
+            }
+
+            $valores = [
+                'NRO_TELE' => trim((string) $propuesto->NRO_TELE),
+                'TIPO_TELE' => $propuesto->TIPO_TELE,
+                'OBSERVACION' => $propuesto->OBSERVACION,
+                'TELE_VIGENCIA' => 'SI',
+                'TELE_RESERVADO' => trim((string) ($propuesto->TELE_RESERVADO ?? '')) ?: '0',
+                'TELE_EMERGENCIA' => $propuesto->TELE_EMERGENCIA,
+                'NRO_WSP' => $propuesto->NRO_WSP,
+                'TELE_CONTACTO' => $propuesto->TELE_CONTACTO,
+                'VINCULO_FAMILIAR' => $propuesto->VINCULO_FAMILIAR,
+            ];
+
+            if ($fila) {
+                DB::table('si_solm.dbo.TELEFONO')
+                    ->where('CODI_PERS', $codiPers)
+                    ->where('NRO_TELE', $fila->NRO_TELE)
+                    ->update($valores);
+                $usados[trim((string) $fila->NRO_TELE)] = true;
+            } else {
+                // Solo se inserta cuando realmente se agrega un teléfono nuevo
+                // y no existe una fila previa que se pueda reutilizar.
+                DB::table('si_solm.dbo.TELEFONO')->insert(['CODI_PERS' => $codiPers] + $valores);
+            }
+            $activos[] = trim((string) $propuesto->NRO_TELE);
+        }
+
+        // Si personal y WhatsApp se unificaron en un número, desactivar la fila
+        // sobrante en vez de borrarla; así no queda como teléfono vigente.
+        foreach ($existentes as $fila) {
+            $clave = trim((string) $fila->NRO_TELE);
+            if (!isset($usados[$clave]) && !in_array($clave, $activos, true)) {
+                DB::table('si_solm.dbo.TELEFONO')
+                    ->where('CODI_PERS', $codiPers)
+                    ->where('NRO_TELE', $fila->NRO_TELE)
+                    ->update(['TELE_VIGENCIA' => 'NO']);
+            }
+        }
 
         Log::info('migrarTelefonos: teléfonos migrados a si_solm.dbo.TELEFONO', [
             'CODI_PERS' => $codiPers,
@@ -3973,15 +4795,23 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
     /**
      * ASIG_FAMI (si_solm.dbo.PERSONAL / DJ2026_PERSONAL):
-     * 'SI' si registra al menos un HIJO menor de 18 años; en caso contrario 'NO'
-     * (sin hijos, o solo hijos mayores de edad).
+     * 'SI' si registra un hijo menor de 18 años o un hijo mayor incapacitado
+     * permanentemente; 'NO' para hijos mayores de edad sin esa condición.
      */
     private function aplicarAsigFami($codiPers, &$data)
     {
         $asig = 'NO';
 
         $evaluar = function ($parentesco, $fechaNaci) use (&$asig) {
-            if (!preg_match('/^HIJ/i', trim((string) $parentesco))) return;
+            $parentesco = mb_strtoupper(trim((string) $parentesco), 'UTF-8');
+            if ($parentesco === 'HIJO MAYOR DE EDAD INCAPACITADO PERMANENTE') {
+                $asig = 'SI';
+                return;
+            }
+
+            // Solo esta opción se valida además con la fecha de nacimiento.
+            if ($parentesco !== 'HIJO MENOR DE EDAD') return;
+
             $f = trim((string) $fechaNaci);
             if ($f === '') return;
             try {
@@ -4020,6 +4850,43 @@ private function migrarFamiliares_solo_nuevo($codiPers)
         );
 
         Log::info('aplicarAsigFami', ['CODI_PERS' => $codiPers, 'ASIG_FAMI' => $asig]);
+    }
+
+    /**
+     * PERS_CONHIJOS indica si hay al menos un familiar registrado como hijo,
+     * independientemente de su edad.
+     */
+    private function aplicarConHijos($codiPers, &$data)
+    {
+        $hayHijos = false;
+        $parentescos = $data['FAM_PARENTESCO'] ?? null;
+
+        if (is_array($parentescos)) {
+            foreach ($parentescos as $parentesco) {
+                if (preg_match('/^HIJ/i', trim((string) $parentesco))) {
+                    $hayHijos = true;
+                    break;
+                }
+            }
+        } elseif (!empty($codiPers)) {
+            $rows = DB::select(
+                "SELECT TOP 1 1 AS TIENE_HIJOS
+                 FROM si_solm.dbo.DERECHO_HABIENTE
+                 WHERE CODI_PERS = ? AND UPPER(LTRIM(RTRIM(TIPO_RELA))) LIKE 'HIJ%'",
+                [$codiPers]
+            );
+            $hayHijos = !empty($rows);
+        }
+
+        $valor = $hayHijos ? 'SI' : 'NO';
+        $data['PERS_CONHIJOS'] = $valor;
+
+        DB::update(
+            'UPDATE si_solm.dbo.PERSONAL SET PERS_CONHIJOS = ? WHERE CODI_PERS = ?',
+            [$valor, $codiPers]
+        );
+
+        Log::info('aplicarConHijos', ['CODI_PERS' => $codiPers, 'PERS_CONHIJOS' => $valor]);
     }
 
     /**
@@ -4350,6 +5217,7 @@ $tipotrab    = $tipoPer;
             // SCTR: OP (01/03) → 'SI' automático; ADMIN (02/05) → según checkbox
             $this->aplicarScrt($codiPers, $data);
             $this->aplicarAsigFami($codiPers, $data);
+            $this->aplicarConHijos($codiPers, $data);
             $this->insertOrUpdateDJ2026Personal($codiPers, $data, 'recontratacion');
 
             // ── Subir foto y DNI al servidor de archivos ──────────────────
