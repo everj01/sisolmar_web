@@ -805,18 +805,19 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
         const codiPersDJ = (document.getElementById('cod_postulante')?.value || '').trim();
         const bioData = await fetchBiometrico(codiPersDJ);
 
+        const bioHeaderH = 10;
         function drawImageInBox(b64, x, boxY, w, h) {
             if (!b64 || b64.error) return false;
             try {
                 const padding = 2;
                 const maxW = w - padding * 2;
-                const maxH = h - 12;
+                const maxH = h - bioHeaderH - padding * 2;
                 const props = pdf.getImageProperties(b64);
                 const ratio = Math.min(maxW / props.width, maxH / props.height);
                 const finalW = props.width * ratio;
                 const finalH = props.height * ratio;
                 const offsetX = x + padding + (maxW - finalW) / 2;
-                const offsetY = boxY + padding + (maxH - finalH) / 2;
+                const offsetY = boxY + bioHeaderH + padding + (maxH - finalH) / 2;
                 let format = "JPEG";
                 if (b64.startsWith("data:image/png")) format = "PNG";
                 if (b64.startsWith("data:image/webp")) format = "WEBP";
@@ -828,19 +829,18 @@ export async function generarDeclaracionJuradaPDF(returnBlob = false) {
             }
         }
 
-        const tieneFirma  = drawImageInBox(bioData.firma_nueva || bioData.firma_antigua, boxX, y, firmaW, firmaH);
-        const tieneHuella = drawImageInBox(bioData.huella_nueva || bioData.huella_antigua, boxX + firmaW, y, huellaW, firmaH);
+        drawImageInBox(bioData.firma_nueva || bioData.firma_antigua, boxX, y, firmaW, firmaH);
+        drawImageInBox(bioData.huella_nueva || bioData.huella_antigua, boxX + firmaW, y, huellaW, firmaH);
 
-        const firmaLabelY = y + firmaH - 6;
         pdf.setFont(FONT_FAMILY, "bold"); pdf.setFontSize(7.5); pdf.setTextColor(0);
-        if (!tieneFirma) {
-            pdf.text("Firma Registrada",              boxX + firmaW / 2,          firmaLabelY,     { align: "center" });
-            pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2,          firmaLabelY + 3, { align: "center" });
-        }
-        if (!tieneHuella) {
-            pdf.text("Huella Registrada",              boxX + firmaW + huellaW / 2, firmaLabelY,   { align: "center" });
-            pdf.text("INDICE DERECHO",                 boxX + firmaW + huellaW / 2, firmaLabelY + 3, { align: "center" });
-        }
+        const bioHeaderY = y + 4;
+        pdf.text("Firma", boxX + firmaW / 2, bioHeaderY, { align: "center" });
+        pdf.text("GRANDE Y CLARA SIMILAR AL DNI", boxX + firmaW / 2, bioHeaderY + 3, { align: "center" });
+        pdf.text("Huella", boxX + firmaW + huellaW / 2, bioHeaderY, { align: "center" });
+        pdf.text("INDICE DERECHO", boxX + firmaW + huellaW / 2, bioHeaderY + 3, { align: "center" });
+        pdf.setDrawColor(0); pdf.setLineWidth(0.20);
+        pdf.line(boxX, y + bioHeaderH, boxX + firmaW, y + bioHeaderH);
+        pdf.line(boxX + firmaW, y + bioHeaderH, boxX + boxWidth, y + bioHeaderH);
  
         const footerY          = y + firmaH;
         const fechaW           = boxWidth * 0.25;

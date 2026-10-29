@@ -1593,8 +1593,8 @@ class DjController extends Controller
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
-            if (! preg_match('/^\p{L}+(?:[ \'-]\p{L}+)*(?:,\s*\p{L}+(?:[ \'-]\p{L}+)*)?$/u', trim($nombreCompleto))) {
-                throw new \InvalidArgumentException('Revisa los nombres de familiares: usa letras y separa apellidos de nombres con una coma.');
+            if (! preg_match('/^[\p{L}\p{M}]+(?:[\s.,\'’-]+[\p{L}\p{M}]+)*$/u', trim($nombreCompleto))) {
+                throw new \InvalidArgumentException('Revisa el nombre del familiar: usa letras y separadores válidos.');
             }
 
             // Split del nombre
@@ -2954,8 +2954,8 @@ class DjController extends Controller
                 ? ($data['FAM_FECHA_NACI'][$index] ?? null)
                 : null;
 
-            if (! preg_match('/^\p{L}+(?:[ \'-]\p{L}+)*(?:,\s*\p{L}+(?:[ \'-]\p{L}+)*)?$/u', trim($nombreCompleto))) {
-                throw new \InvalidArgumentException('Revisa los nombres de familiares: usa letras y separa apellidos de nombres con una coma.');
+            if (! preg_match('/^[\p{L}\p{M}]+(?:[\s.,\'’-]+[\p{L}\p{M}]+)*$/u', trim($nombreCompleto))) {
+                throw new \InvalidArgumentException('Revisa el nombre del familiar: usa letras y separadores válidos.');
             }
 
             // ✅ Split mejorado del nombre completo
