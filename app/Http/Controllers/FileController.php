@@ -13,6 +13,7 @@ use Barryvdh\Snappy\Facades\SnappyPdf;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -1764,7 +1765,7 @@ class FileController extends Controller
         try {
             $request->validate([
                 'fecha_emision' => 'required|date',
-                'codPersonal' => 'required',
+                'codPersonal' => 'required|digits:5',
                 'pdf' => 'required|file|mimes:pdf|max:5120',
             ]);
 
@@ -1780,16 +1781,16 @@ class FileController extends Controller
 
             $nameFile = $codPersonal.'.pdf';
 
-            // Carpeta dentro de storage/app
+            // Guardar en la carpeta compartida del servidor de producción.
+            $directorioDj = config('firmahuella.destinos.dj');
+            File::ensureDirectoryExists($directorioDj, 0770, true);
+            $rutaFisica = $directorioDj . DIRECTORY_SEPARATOR . $nameFile;
+            $contenido = file_get_contents($archivo->getRealPath());
+            if ($contenido === false || file_put_contents($rutaFisica, $contenido, LOCK_EX) !== strlen($contenido)) {
+                return response()->json(['error' => 'No se pudo guardar el archivo PDF en la carpeta compartida del servidor.'], 500);
+            }
+
             $rutaStorage = 'dj/2026/'.$nameFile;
-
-            // Guardar archivo
-            Storage::disk('local')->putFileAs('dj/2026', $archivo, $nameFile);
-
-            // Ruta física real (opcional, por si la necesitas)
-            $rutaFisica = storage_path('app/'.$rutaStorage);
-
-            // Ruta que puedes guardar en BD (depende cómo lo consumas luego)
             $rutaArchivo = 'file://192.168.10.5/Extranet_2024/apps/sisolmar/storage/app/'.$rutaStorage;
 
             // Guardar en BD

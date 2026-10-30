@@ -4610,25 +4610,47 @@ private function migrarFamiliares_solo_nuevo($codiPers)
 
         $usados = [];
         $activos = [];
+        $numerosPropuestos = [];
+        foreach ($propuestos as $telefonoPropuesto) {
+            $numero = trim((string) $telefonoPropuesto->NRO_TELE);
+            if ($numero !== '') $numerosPropuestos[$numero] = true;
+        }
         foreach ($propuestos as $propuesto) {
             $emergencia = $propuesto->TELE_EMERGENCIA === null || $propuesto->TELE_EMERGENCIA == '1';
             $rol = $emergencia ? 'emergencia' : ((int) $propuesto->NRO_WSP === 1 ? 'whatsapp' : 'personal');
+            $numeroPropuesto = trim((string) $propuesto->NRO_TELE);
+
+            // La clave primaria de TELEFONO es (CODI_PERS, NRO_TELE). Si el
+            // número destino ya existe con otro rol, se reutiliza esa fila para
+            // evitar que una actualización genere una clave duplicada.
+            $fila = null;
+            foreach ($existentes as $existente) {
+                $claveExistente = trim((string) $existente->NRO_TELE);
+                if ($claveExistente === $numeroPropuesto && !isset($usados[$claveExistente])) {
+                    $fila = $existente;
+                    break;
+                }
+            }
 
             // Primero reutilizar la fila del mismo rol. Si personal y WhatsApp
             // comparten número, cualquiera de esas dos filas puede representar ambos.
-            $candidatos = array_values(array_filter($existentes, function ($fila) use ($rol, $propuesto) {
-                $esEmergencia = $fila->TELE_EMERGENCIA === null || $fila->TELE_EMERGENCIA == '1';
+            $candidatos = array_values(array_filter($existentes, function ($filaExistente) use ($rol, $numeroPropuesto) {
+                $esEmergencia = $filaExistente->TELE_EMERGENCIA === null || $filaExistente->TELE_EMERGENCIA == '1';
                 if ($rol === 'emergencia') return $esEmergencia;
                 if ($esEmergencia) return false;
-                if ($rol === 'whatsapp') return (int) $fila->NRO_WSP === 1
-                    || trim((string) $fila->NRO_TELE) === trim((string) $propuesto->NRO_TELE);
-                return (int) $fila->NRO_WSP === 0;
+                if ($rol === 'whatsapp') return (int) $filaExistente->NRO_WSP === 1
+                    || trim((string) $filaExistente->NRO_TELE) === $numeroPropuesto;
+                return (int) $filaExistente->NRO_WSP === 0;
             }));
 
-            $fila = null;
-            foreach ($candidatos as $candidato) {
-                $clave = trim((string) $candidato->NRO_TELE);
-                if (!isset($usados[$clave])) { $fila = $candidato; break; }
+            if (!$fila) {
+                foreach ($candidatos as $candidato) {
+                    $clave = trim((string) $candidato->NRO_TELE);
+                    // Reserva los destinos de esta misma operación para evitar
+                    // cruces entre roles al actualizar varias filas.
+                    if (isset($numerosPropuestos[$clave])) continue;
+                    if (!isset($usados[$clave])) { $fila = $candidato; break; }
+                }
             }
 
             $valores = [
@@ -4649,12 +4671,13 @@ private function migrarFamiliares_solo_nuevo($codiPers)
                     ->where('NRO_TELE', $fila->NRO_TELE)
                     ->update($valores);
                 $usados[trim((string) $fila->NRO_TELE)] = true;
+                $usados[$numeroPropuesto] = true;
             } else {
                 // Solo se inserta cuando realmente se agrega un teléfono nuevo
                 // y no existe una fila previa que se pueda reutilizar.
                 DB::table('si_solm.dbo.TELEFONO')->insert(['CODI_PERS' => $codiPers] + $valores);
             }
-            $activos[] = trim((string) $propuesto->NRO_TELE);
+            $activos[] = $numeroPropuesto;
         }
 
         // Si personal y WhatsApp se unificaron en un número, desactivar la fila

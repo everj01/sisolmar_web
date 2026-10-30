@@ -6,6 +6,7 @@ use App\Http\Controllers\ExamenesController;
 use App\Http\Controllers\ConsultaController;
 use App\Http\Controllers\DjController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\FirmaHuellaDjController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ReporteAvancesController;
@@ -36,6 +37,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/get-personal-dj', [FileController::class, 'getListaDJXusuario']);
     Route::get('/get-personal-dj-2026', [FileController::class, 'getListaDJ2026']);
     Route::post('/save-dj-folio-2', [FileController::class, 'saveDjFolioAux']);
+    Route::post('/dj/guardar-escaneada-y-biometricos', [FirmaHuellaDjController::class, 'guardar'])->name('dj.guardar-escaneada-y-biometricos');
+    Route::post('/dj/extraer-firma-huella', [FirmaHuellaDjController::class, 'extraer'])->name('dj.extraer-firma-huella');
     Route::get('/get-personal', [FileController::class, 'getPersonal']);
     Route::get('/get-personal-total', [FileController::class, 'getPersonalTotal']);
     Route::get('/carga-escaneo-dj', [FileController::class, 'ViewEscaneoDJ'])->name('carga.escaneo.dj');
